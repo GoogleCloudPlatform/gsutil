@@ -1756,11 +1756,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Test resumable, gzip encoded files upload correctly in parallel."""
     # Setup the bucket and local data.
     bucket_uri = self.CreateBucket()
-    random.seed(0)
-
-    contents = str([random.choice(string.ascii_letters)
-                 for _ in xrange(self.halt_size)]).encode('ascii')
-    random.seed()  # Reset the seed for any other tests.
+    contents = self.get_random_ascii_chars(self.halt_size)
     tmpdir = self.CreateTempDir(test_files=10, contents=contents)
     # Upload the data.
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
@@ -2220,10 +2216,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Setup the bucket and local data. File contents are randomized to prevent
     # them from compressing below the resumable-threshold and failing the test.
     bucket_uri = self.CreateBucket()
-    random.seed(0)
-    contents = str([random.choice(string.ascii_letters)
-                    for _ in xrange(self.halt_size)]).encode('ascii')
-    random.seed()  # Reset the seed for any other tests.
+    contents = self.get_random_ascii_chars(self.halt_size)
     local_uri = self.CreateTempFile(file_name='test.txt', contents=contents)
     # Configure boto
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
