@@ -207,6 +207,9 @@ class GsUtilTestCase(unittest.TestCase):
     with open(fpath, 'wb') as f:
       contents = (contents if contents is not None
                   else self.MakeTempName('contents').encode(UTF8))
+      if not isinstance(contents, six.binary_type):
+        if six.PY3:
+          contents = bytes(contents, "utf-8")
       f.write(contents)
     if mtime is not None:
       # Set the atime and mtime to be the same.
