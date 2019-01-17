@@ -287,17 +287,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     """
     random.seed(0)
     def _random_ascii_char():
-      return random.choice(string.ascii_letters)
-
-    if six.PY2:
-      range = xrange
+      return random.choice(string.printable)
 
     contents = ''
-    for _ in range(size):
+    for _ in six.moves.range(size):
       contents += _random_ascii_char()
 
     random.seed()  # Reset the seed for any other tests.
-    return contents
+    return contents.encode('ascii')
 
 
   def SetPOSIXMetadata(self, provider, bucket_name, object_name, atime=None,
