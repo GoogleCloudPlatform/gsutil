@@ -50,7 +50,7 @@ requires = [
     'pyOpenSSL>=0.13',
     'python-gflags>=3.1.2',
     'retry_decorator>=1.0.0',
-    'six>=1.9.0',
+    'six>=1.12.0',
     # Not using 1.02 because of:
     #   https://code.google.com/p/socksipy-branch/issues/detail?id=3
     'SocksiPy-branch==1.01',
