@@ -139,18 +139,19 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     os.unlink(self.stdout_file)
     os.unlink(self.stderr_file)
 
+    _id = six.ensure_text(self.id())
     if self.is_debugging and stdout:
-      sys.stderr.write(b'==== stdout %s ====\n' % self.id())
+      sys.stderr.write('==== stdout {} ====\n'.format(_id))
       sys.stderr.write(stdout)
-      sys.stderr.write(b'==== end stdout ====\n')
+      sys.stderr.write('==== end stdout ====\n')
     if self.is_debugging and stderr:
-      sys.stderr.write(b'==== stderr %s ====\n' % self.id())
+      sys.stderr.write('==== stderr {} ====\n'.format(_id))
       sys.stderr.write(stderr)
-      sys.stderr.write(b'==== end stderr ====\n')
+      sys.stderr.write('==== end stderr ====\n')
     if self.is_debugging and log_output:
-      sys.stderr.write(b'==== log output %s ====\n' % self.id())
+      sys.stderr.write('==== log output {} ====\n'.format(_id))
       sys.stderr.write(log_output)
-      sys.stderr.write(b'==== end log output ====\n')
+      sys.stderr.write('==== end log output ====\n')
 
   def RunCommand(self, command_name, args=None, headers=None, debug=0,
                  return_stdout=False, return_stderr=False,
@@ -235,19 +236,21 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
           '%s:\n  ' % level + '\n  '.join(records)
           for level, records in six.iteritems(mock_log_handler.messages)
           if records)
+
+      _id = six.ensure_text(self.id())
       if self.is_debugging and log_output:
         self.stderr_save.write(
-            '==== logging RunCommand %s %s ====\n' % (self.id(), command_line))
+            '==== logging RunCommand {} {} ====\n'.format(_id, command_line))
         self.stderr_save.write(log_output)
         self.stderr_save.write('\n==== end logging ====\n')
       if self.is_debugging and stdout:
         self.stderr_save.write(
-            '==== stdout RunCommand %s %s ====\n' % (self.id(), command_line))
+            '==== stdout RunCommand {} {} ====\n'.format(_id, command_line))
         self.stderr_save.write(stdout)
         self.stderr_save.write('==== end stdout ====\n')
       if self.is_debugging and stderr:
         self.stderr_save.write(
-            '==== stderr RunCommand %s %s ====\n' % (self.id(), command_line))
+            '==== stderr RunCommand {} {} ====\n'.format(_id, command_line))
         self.stderr_save.write(stderr)
         self.stderr_save.write('==== end stderr ====\n')
 
