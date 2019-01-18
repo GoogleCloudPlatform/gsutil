@@ -1509,8 +1509,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                    'Unicode handling on Windows requires mods to site-packages')
   @SequentialAndParallelTransfer
   def test_cp_manifest_upload_unicode(self):
-    return self._ManifestUpload('foo-unicöde', 'bar-unicöde',
-                                'manifest-unicöde')
+    return self._ManifestUpload('foo-unicöde'.encode('utf-8'), 'bar-unicöde'.encode('utf-8'),
+                                'manifest-unicöde'.encode('utf-8'))
 
   @SequentialAndParallelTransfer
   def test_cp_manifest_upload(self):

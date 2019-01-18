@@ -429,7 +429,7 @@ class TestCommand(Command):
           new_stderr = result.stderr.split(b'\n')
           print('Results for failed test %s:' % result.name)
           for line in new_stderr:
-            print(line.decode('utf-8'))
+            print(line.decode('utf-8').strip())
 
     return (num_parallel_failures,
             (process_run_finish_time - parallel_start_time))
