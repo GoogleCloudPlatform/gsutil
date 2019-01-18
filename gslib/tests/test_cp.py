@@ -3296,7 +3296,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertTrue(os.path.isfile(tracker_filename))
 
       with open(fpath + '_.gstmp', 'r+b') as f:
-        f.write('altered file contents')
+        f.write(b'altered file contents')
 
       stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
                               return_stderr=True, expected_status=1)
