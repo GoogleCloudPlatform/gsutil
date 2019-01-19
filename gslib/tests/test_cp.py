@@ -1689,44 +1689,88 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     that the contents of the files are uncompressed in GCS. This test uses the
     -j flag to target specific extensions.
     """
-    # Setup the bucket and local data.
-    bucket_uri = self.CreateBucket()
-    contents = b'x' * 10000
-    tmpdir = self.CreateTempDir()
-    local_uri1 = self.CreateTempFile(
-        file_name='test.html', tmpdir=tmpdir, contents=contents)
-    local_uri2 = self.CreateTempFile(
-        file_name='test.js', tmpdir=tmpdir, contents=contents)
-    local_uri3 = self.CreateTempFile(
-        file_name='test.txt', tmpdir=tmpdir, contents=contents)
-    # Upload the data.
-    stderr = self.RunGsUtil(
-        ['-D', 'cp', '-j', 'js, html', os.path.join(tmpdir, 'test*'),
-         suri(bucket_uri)],
-        return_stderr=True)
-    self.AssertNObjectsInBucket(bucket_uri, 3)
-    # Ensure the correct files were marked for compression.
-    self.assertIn(
-        'Using compressed transport encoding for file://%s.' % (local_uri1),
-        stderr)
-    self.assertIn(
-        'Using compressed transport encoding for file://%s.' % (local_uri2),
-        stderr)
-    self.assertNotIn(
-        'Using compressed transport encoding for file://%s.' % (local_uri3),
-        stderr)
-    # Ensure the files do not have a stored encoding of gzip and are stored
-    # uncompressed.
-    local_uri1 = suri(bucket_uri, 'test.html')
-    local_uri2 = suri(bucket_uri, 'test.js')
-    local_uri3 = suri(bucket_uri, 'test.txt')
-    fpath4 = self.CreateTempFile()
-    for uri in (local_uri1, local_uri2, local_uri3):
-      stdout = self.RunGsUtil(['stat', uri], return_stdout=True)
-      self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
-      self.RunGsUtil(['cp', uri, suri(fpath4)])
-      with open(fpath4, 'rb') as f:
-        self.assertEqual(f.read(), contents)
+    def _create_test_data():
+      """Setup the bucket and local data to test with.
+
+        Returns:
+          Triplet containing the following values:
+            bucket_uri: String URI of cloud storage bucket to upload mock data to.
+            tmpdir: String, path of a temporary directory to write mock data to.
+            local_uris: Tuple of three strings; each is the file path to a file
+                        containing mock data.
+      """
+      bucket_uri = self.CreateBucket()
+      contents = b'x' * 10000
+      tmpdir = self.CreateTempDir()
+
+      local_uris = [
+        self.CreateTempFile(file_name=filename, tmpdir=tmpdir, contents=contents)
+        for filename in ('test.html', 'test.js', 'test.txt')]
+
+      return (bucket_uri, tmpdir, local_uris)
+
+
+    def _upload_test_data(tmpdir, bucket_uri):
+      """Upload local test data.
+
+        Args:
+          tmpdir: String, path of a temporary directory to write mock data to.
+          bucket_uri: String URI of cloud storage bucket to upload mock data to.
+
+        Returns:
+          stderr: String output from running the gsutil command to upload mock data.
+      """
+      stderr = self.RunGsUtil(
+          ['-D', 'cp', '-j', 'js, html', os.path.join(tmpdir, 'test*'),
+          suri(bucket_uri)],
+          return_stderr=True)
+      self.AssertNObjectsInBucket(bucket_uri, 3)
+      return stderr
+
+
+    def _assert_sent_compressed(local_uris, stderr):
+      """Ensure the correct files were marked for compression.
+
+        Args:
+          local_uris: Tuple of three strings; each is the file path to a file
+                      containing mock data.
+          stderr: String output from running the gsutil command to upload mock data.
+      """
+      local_uri_html, local_uri_js, local_uri_txt = local_uris
+      assert_base_string = 'Using compressed transport encoding for file://{}.'
+      self.assertIn(assert_base_string.format(local_uri_html), stderr)
+      self.assertIn(assert_base_string.format(local_uri_js), stderr)
+      self.assertNotIn(assert_base_string.format(local_uri_txt), stderr)
+
+
+    def _assert_stored_uncompressed(bucket_uri, contents=b'x'*10000):
+      """Ensure the files are not compressed when they are stored in the bucket.
+
+        Args:
+          bucket_uri: String with URI for bucket containing uploaded test data.
+          contents: Byte string that are stored in each file in the bucket.
+      """
+      local_uri_html = suri(bucket_uri, 'test.html')
+      local_uri_js = suri(bucket_uri, 'test.js')
+      local_uri_txt = suri(bucket_uri, 'test.txt')
+      fpath4 = self.CreateTempFile()
+
+      for uri in (local_uri_html, local_uri_js, local_uri_txt):
+        stdout = self.RunGsUtil(['stat', uri], return_stdout=True)
+        self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
+        self.RunGsUtil(['cp', uri, suri(fpath4)])
+        with open(fpath4, 'rb') as f:
+          self.assertEqual(f.read(), contents)
+
+
+    # Get mock data, run tests
+    bucket_uri, tmpdir, local_uris = _create_test_data()
+    stderr = _upload_test_data(tmpdir, bucket_uri)
+    _assert_sent_compressed(local_uris, stderr)
+    _assert_stored_uncompressed(bucket_uri)
+
+
+              
 
   @SkipForS3('No compressed transport encoding support for S3.')
   @SkipForXML('No compressed transport encoding support for the XML API.')
