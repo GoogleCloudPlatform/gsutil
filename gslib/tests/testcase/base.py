@@ -204,12 +204,13 @@ class GsUtilTestCase(unittest.TestCase):
       fpath = os.path.join(tmpdir, six.ensure_str(file_name))
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
-
+    contents = contents if contents is not None else \
+      self.MakeTempName(six.ensure_str('contents'))
+    if isinstance(contents, bytearray):
+      contents = bytes(contents)
+    else:
+      contents = six.ensure_binary(contents)
     with open(fpath, 'wb') as f:
-      contents = six.ensure_binary(contents if contents is not None
-                  else self.MakeTempName('contents'))
-      # if isinstance(contents, six.text_type):
-      #   contents = contents.encode(UTF8)
       f.write(contents)
     if mtime is not None:
       # Set the atime and mtime to be the same.
