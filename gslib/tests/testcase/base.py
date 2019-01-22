@@ -102,9 +102,10 @@ class GsUtilTestCase(unittest.TestCase):
       providers (e.g. replacing "_" with "-", converting uppercase letters to
       lowercase, etc.).
     """
-    name = '%sgsutil-test-%s-%s' % (prefix, self.GetTestMethodName(), kind)
+    name = '{prefix}gsutil-test-{method}-{kind}'.format(
+      prefix=prefix, method=self.GetTestMethodName(), kind=kind)
     name = name[:MAX_BUCKET_LENGTH-9]
-    name = '%s-%s' % (name, self.MakeRandomTestString())
+    name = '{name}-{rand}'.format(name=name, rand=self.MakeRandomTestString())
     # As of March 2018, S3 no longer accepts underscores or uppercase letters in
     # bucket names.
     if kind == 'bucket':
