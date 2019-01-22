@@ -869,9 +869,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       If only one return_* value was specified, that value is returned directly
       rather than being returned within a 1-tuple.
     """
-    cmd = ([gslib.GSUTIL_PATH] + ['--testexceptiontraces'] +
-           ['-o', 'GSUtil:default_project_id=' + PopulateProjectId()] +
-           cmd)
+    cmd = [
+        gslib.GSUTIL_PATH,
+        '--testexceptiontraces',
+        '-o',
+        'GSUtil:default_project_id=' + PopulateProjectId()
+    ] + cmd
     cmd_bytes = [part.encode('utf-8')
                  if isinstance(part, six.text_type) else part for part in cmd]
     if stdin is not None:
