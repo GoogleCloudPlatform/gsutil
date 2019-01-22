@@ -110,7 +110,7 @@ class GsUtilTestCase(unittest.TestCase):
     # As of March 2018, S3 no longer accepts underscores or uppercase letters in
     # bucket names.
     if kind == 'bucket':
-      name = util.MakeBucketNameValid(name)
+      name = util.MakeBucketNameValid(six.ensure_str(name)).lower()
     return name
 
   # TODO: Convert tests to use this for object names.
@@ -196,20 +196,20 @@ class GsUtilTestCase(unittest.TestCase):
     Returns:
       The path to the new temporary file.
     """
-    tmpdir = tmpdir or self.CreateTempDir()
-    file_name = file_name or self.MakeTempName('file')
-    if isinstance(file_name, six.text_type):
-      fpath = os.path.join(tmpdir, file_name)
-    else:
+    tmpdir = six.ensure_str(tmpdir or self.CreateTempDir())
+    file_name = file_name or self.MakeTempName(six.ensure_str('file'))
+    if isinstance(file_name, tuple):
       fpath = os.path.join(tmpdir, *file_name)
+    else:
+      fpath = os.path.join(tmpdir, six.ensure_str(file_name))
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
 
     with open(fpath, 'wb') as f:
-      contents = (contents if contents is not None
-                  else self.MakeTempName('contents').encode(UTF8))
-      if isinstance(contents, six.text_type):
-        contents = contents.encode(UTF8)
+      contents = six.ensure_binary(contents if contents is not None
+                  else self.MakeTempName('contents'))
+      # if isinstance(contents, six.text_type):
+      #   contents = contents.encode(UTF8)
       f.write(contents)
     if mtime is not None:
       # Set the atime and mtime to be the same.
