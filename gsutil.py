@@ -92,7 +92,7 @@ THIRD_PARTY_LIBS = [
     ('httplib2', submodule_pyvers),
     ('python-gflags', ''),
     ('retry-decorator', ''),
-    ('six', ''),
+    # ('six', ''),
     ('socksipy-branch', ''),
 ]
 for libdir, subdir in THIRD_PARTY_LIBS:
@@ -109,7 +109,7 @@ for libdir, subdir in THIRD_PARTY_LIBS:
 THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
 
 CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', submodule_pyvers)
-CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
+CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx', submodule_pyvers)
 try:
   # pylint: disable=g-import-not-at-top
   import crcmod
