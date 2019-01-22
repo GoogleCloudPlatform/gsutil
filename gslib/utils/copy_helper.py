@@ -2648,7 +2648,7 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
         data = fp.read(bytes_to_read)
         bytes_digested += bytes_to_read
         for alg_name in digesters:
-          digesters[alg_name].update(six.ensure_binary(data))
+          digesters[alg_name].update(data)
         hash_callback.Progress(len(data))
 
     elif not is_sliced:
