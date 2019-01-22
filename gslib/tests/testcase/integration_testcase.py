@@ -902,7 +902,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       self.assertEqual(
         status, expected_status,
         msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
-          expected_status, status, ' '.join(cmd), stderr))
+          expected_status,status,
+          ' '.join([six.ensure_text(element) for element in cmd]), stderr))
 
     toreturn = []
     if return_status:
