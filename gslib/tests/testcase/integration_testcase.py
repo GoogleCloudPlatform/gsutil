@@ -659,10 +659,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       A StorageUri for the created object.
     """
     bucket_uri = bucket_uri or self.CreateBucket()
-
-    if contents and not isinstance(contents, six.binary_type):
-      raise TypeError(
-        'contents must be either none or bytes, not {}'.format(type(contents)))
+    # checking for valid types - None or unicode/binary text
+    if contents is not None:
+      if not isinstance(contents, (six.binary_type, six.text_type)):
+        raise TypeError(
+          'contents must be either none or bytes, not {}'.format(type(contents)))
+      contents = six.ensure_binary(contents)
     if (contents and
         bucket_uri.scheme == 'gs' and
         (prefer_json_api or encryption_key or kms_key_name)):
