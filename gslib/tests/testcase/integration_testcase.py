@@ -287,10 +287,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       String of length equal to size argument.
     """
     random.seed(seed)
-    charset = string.printable.encode('ascii')
-
+    charset = string.printable
     contents = ''.join([random.choice(charset) for _ in range(size)]
-                        ).encode('ascii')
+                       ).encode('ascii')
 
     random.seed()  # Reset the seed for any other tests.
     return contents
