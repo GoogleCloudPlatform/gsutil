@@ -200,9 +200,9 @@ class GsUtilTestCase(unittest.TestCase):
     file_name = file_name or self.MakeTempName('file')
     # Create path from tmpdir and filename
     if isinstance(file_name, tuple):
-      fpath = os.path.join(tmpdir, *file_name)
+      fpath = os.path.join(tmpdir, *[six.ensure_str(part) for part in file_name])
     else:
-      fpath = os.path.join(tmpdir, file_name)
+      fpath = os.path.join(tmpdir, six.ensure_str(file_name))
     # Create file if it doesn't exist
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
