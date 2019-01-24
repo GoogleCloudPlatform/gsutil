@@ -2133,12 +2133,17 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     tmpdir = self.CreateTempDir()
     bucket_uri = self.CreateBucket()
-    # The Ì character is unicode 00CC, but OSX translates this to the second
-    # entry below.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='morales_suenÌƒos.jpg')
-    # The Ì character is unicode 0049+0300; OSX uses this value in both cases.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='morales_suenÌƒos.jpg')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='fooꝾoo')
+    # macOS displays the "Ì" (I\xcc\x80) unicode character the same
+    # as "Ì" (\xc3\x8c) in both the first and second filenames. Despite being
+    # different characters, the second filename will not be created since the OS
+    # detects them as the same name.
+    file_list = [
+        'morales_suenÌƒos.jpg',    # 'morales_suenI\xcc\x80\xc6\x92os.jpg'
+        'morales_suenÌƒos.jpg',    # 'morales_suen\xc3\x8c\xc6\x92os.jpg'
+        'fooꝾoo',                  # 'foo\xea\x9d\xbeoo'
+    ]
+    for filename in file_list:
+      self.CreateTempFile(tmpdir=tmpdir, file_name=filename)
 
     expected_list_results = (
         frozenset(['/morales_suenÌƒos.jpg', '/fooꝾoo'])
