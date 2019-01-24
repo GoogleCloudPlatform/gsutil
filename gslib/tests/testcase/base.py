@@ -197,24 +197,27 @@ class GsUtilTestCase(unittest.TestCase):
       The path to the new temporary file.
     """
     tmpdir = six.ensure_str(tmpdir or self.CreateTempDir())
-    file_name = file_name or self.MakeTempName(six.ensure_str('file'))
+    file_name = file_name or self.MakeTempName('file')
+    # Create path from tmpdir and filename
     if isinstance(file_name, tuple):
       fpath = os.path.join(tmpdir, *file_name)
     else:
-      fpath = os.path.join(tmpdir, six.ensure_str(file_name))
+      fpath = os.path.join(tmpdir, file_name)
+    # Create file if it doesn't exist
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
-    contents = contents if contents is not None else \
-      self.MakeTempName(six.ensure_str('contents'))
-    if isinstance(contents, bytearray):
-      contents = bytes(contents)
-    else:
+    # Create contents if not passed in
+    contents = contents if contents is not None else self.MakeTempName('contents')
+    # format contents
+    if isinstance(contents, six.text_type):
       contents = six.ensure_binary(contents)
+    # Write contents to file
     with open(fpath, 'wb') as f:
       f.write(contents)
     if mtime is not None:
       # Set the atime and mtime to be the same.
       os.utime(fpath, (mtime, mtime))
+    # Set file permissions and ownership
     if uid != NA_ID or int(gid) != NA_ID:
       os.chown(fpath, uid, int(gid))
     if int(mode) != NA_MODE:
