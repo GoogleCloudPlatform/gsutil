@@ -1186,7 +1186,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     # rsync should decompress the destination file.
     with open(os.path.join(tmpdir, 'bar'), 'rb') as fp:
-      self.assertEqual('foo', fp.read())
+      self.assertEqual(b'foo', fp.read())
     self.assertIn('bar has a compressed content-encoding', stderr)
 
   @SequentialAndParallelTransfer
