@@ -344,7 +344,9 @@ def _ReadJSONKeystore(ks_contents, passwd=None):
     ValueError: If unable to parse ks_contents or keystore is missing
                 required fields.
   """
-  ks = json.loads(ks_contents)
+  # ensuring that json.loads receives unicode in Python 3 and bytes in Python 2
+  # Previous to Python 3.6, there was no automatic conversion and str was req.
+  ks = json.loads(six.ensure_str(ks_contents))
 
   if 'client_email' not in ks or 'private_key' not in ks:
     raise ValueError('JSON keystore doesn\'t contain required fields')
