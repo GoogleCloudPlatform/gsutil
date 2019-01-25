@@ -61,6 +61,13 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
           'Couldn\'t find Access Id in output string:\n"%s"' % output_string)
     return id_match.group(0)
 
+  def ExtractEtag(self, output_string):
+    etag_match = re.search(r'\sEtag:\s+([\S]+)$', output_string)
+    if not etag_match:
+      self.fail(
+          'Couldn\'t find Etag in output string:\n"%s"' % output_string)
+    return etag_match.group(1)
+
   def AssertKeyMetadataMatches(self,
                                output_string,
                                access_id='GOOG.*',
@@ -289,10 +296,12 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     access_id = self.CreateHelper(ALT_SERVICE_ACCOUNT)
 
     stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
+    etag = self.ExtractEtag(stdout)
     self.AssertKeyMetadataMatches(stdout, state='ACTIVE')
 
-    stdout = self.RunGsUtil(['hmac', 'update', '-s', 'INACTIVE', access_id],
-                            return_stdout=True)
+    stdout = self.RunGsUtil(
+        ['hmac', 'update', '-s', 'INACTIVE', '-e', etag, access_id],
+        return_stdout=True)
     self.AssertKeyMetadataMatches(stdout, state='INACTIVE')
     stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
     self.AssertKeyMetadataMatches(stdout, state='INACTIVE')
@@ -303,6 +312,11 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
     self.AssertKeyMetadataMatches(stdout, state='ACTIVE')
 
+    stderr = self.RunGsUtil(
+        ['hmac', 'update', '-s', 'INACTIVE', '-e', 'badEtag', access_id],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('Etag does not match expected value.', stderr)
     self.CleanupHelper(access_id)
 
 
