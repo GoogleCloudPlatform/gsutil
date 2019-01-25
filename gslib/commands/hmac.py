@@ -156,6 +156,27 @@ def _KeyMetadataOutput(metadata):
   message += FormatInfo('Time Created',
                         metadata.timeCreated.strftime(_TIME_FORMAT))
   message += FormatInfo('Time Last Updated',
+                        metadata.updated.strftime(_TIME_FORMAT), new_line=False)
+  return message
+
+def _KeyMetadataOutput(metadata):
+  """Format the key metadata for printing to the console."""
+
+  def FormatInfo(name, value, new_line=True):
+    """Format the metadata name-value pair into two aligned columns."""
+    width = 22
+    info_str = '\t%-*s %s' % (width, name + ':', value)
+    if new_line:
+      info_str += '\n'
+    return info_str
+
+  message = 'Access ID %s:\n' % metadata.accessId
+  message += FormatInfo('State', metadata.state)
+  message += FormatInfo('Service Account', metadata.serviceAccountEmail)
+  message += FormatInfo('Project', metadata.projectId)
+  message += FormatInfo('Time Created',
+                        metadata.timeCreated.strftime(_TIME_FORMAT))
+  message += FormatInfo('Time Last Updated',
                         metadata.updated.strftime(_TIME_FORMAT))
   message += FormatInfo('Etag', metadata.etag, new_line=False)
   return message
