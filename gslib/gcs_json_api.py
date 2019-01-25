@@ -2002,6 +2002,26 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
+  def CreateHmacKey(self, project_id, service_account_email):
+    """See CloudApi class for function doc strings."""
+    raise NotImplementedError('Unimplemented')
+
+  def DeleteHmacKey(self, project_id, access_id):
+    """See CloudApi class for function doc strings."""
+    raise NotImplementedError('Unimplemented')
+
+  def GetHmacKey(self, project_id, access_id):
+    """See CloudApi class for function doc strings."""
+    raise NotImplementedError('Unimplemented')
+
+  def ListHmacKeys(self, project_id, service_account_email):
+    """See CloudApi class for function doc strings."""
+    raise NotImplementedError('Unimplemented')
+
+  def UpdateHmacKey(self, project_id, access_id, state):
+    """See CloudApi class for function doc strings."""
+    raise NotImplementedError('Unimplemented')
+
   def _BucketCannedAclToPredefinedAcl(self, canned_acl_string):
     """Translates the input string to a bucket PredefinedAcl string.
 
