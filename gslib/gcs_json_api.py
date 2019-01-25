@@ -1800,7 +1800,7 @@ class GcsJsonApi(CloudApi):
       for key in response.items:
         yield key
 
-  def UpdateHmacKey(self, project_id, access_id, state):
+  def UpdateHmacKey(self, project_id, access_id, state, etag):
     """See CloudApi class for function doc strings."""
     try:
       request = apitools_messages.StorageProjectsHmacKeysUpdateRequest(
@@ -1808,6 +1808,8 @@ class GcsJsonApi(CloudApi):
           accessId=access_id)
       metadata = apitools_messages.HmacKeyMetadata()
       metadata.state = state
+      if etag:
+        metadata.etag = etag
       request.resource = metadata
       return self.api_client.hmacKeys.Update(request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
