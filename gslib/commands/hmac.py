@@ -44,7 +44,7 @@ _LIST_SYNOPSIS = """
 """
 
 _UPDATE_SYNOPSIS = """
-  gsutil hmac update -s [ACTIVE|INACTIVE] [-p project] access_id
+  gsutil hmac update -s [ACTIVE|INACTIVE] [-e etag] [-p project] access_id
 """
 
 _CREATE_DESCRIPTION = """
@@ -96,9 +96,11 @@ _UPDATE_DESCRIPTION = """
 <B>UPDATE</B>
   The ``hmac update`` command sets the state of the specified key.
   Valid state arguments are ACTIVE and INACTIVE. To set a key to state DELETED
-  use the "hmac delete" command on an INACTIVE key.
+  use the "hmac delete" command on an INACTIVE key. If an etag is set in the
+  command, it will only succeed if the provided etag matches the etag of the
+  stored key.
 
-    gsutil hmac update -s INACTIVE GOOG56JBMFZX6PMPTQ62VD2
+    gsutil hmac update -s INACTIVE -e M42da= GOOG56JBMFZX6PMPTQ62VD2
 """
 
 _SYNOPSIS = (
@@ -154,28 +156,8 @@ def _KeyMetadataOutput(metadata):
   message += FormatInfo('Time Created',
                         metadata.timeCreated.strftime(_TIME_FORMAT))
   message += FormatInfo('Time Last Updated',
-                        metadata.updated.strftime(_TIME_FORMAT), new_line=False)
-  return message
-
-def _KeyMetadataOutput(metadata):
-  """Format the key metadata for printing to the console."""
-
-  def FormatInfo(name, value, new_line=True):
-    """Format the metadata name-value pair into two aligned columns."""
-    width = 22
-    info_str = '\t%-*s %s' % (width, name + ':', value)
-    if new_line:
-      info_str += '\n'
-    return info_str
-
-  message = 'Access ID %s:\n' % metadata.accessId
-  message += FormatInfo('State', metadata.state)
-  message += FormatInfo('Service Account', metadata.serviceAccountEmail)
-  message += FormatInfo('Project', metadata.projectId)
-  message += FormatInfo('Time Created',
-                        metadata.timeCreated.strftime(_TIME_FORMAT))
-  message += FormatInfo('Time Last Updated',
-                        metadata.updated.strftime(_TIME_FORMAT), new_line=False)
+                        metadata.updated.strftime(_TIME_FORMAT))
+  message += FormatInfo('Etag', metadata.etag, new_line=False)
   return message
 
 
@@ -185,7 +167,7 @@ class HmacCommand(Command):
       'hmac',
       min_args=1,
       max_args=8,
-      supported_sub_args='alp:s:u:',
+      supported_sub_args='ae:lp:s:u:',
       file_url_ok=True,
       urls_start_arg=1,
       gs_api_support=[ApiSelector.JSON],
@@ -314,7 +296,7 @@ class HmacCommand(Command):
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
     response = gsutil_api.UpdateHmacKey(
-        self.project_id, access_id, self.state, provider='gs')
+        self.project_id, access_id, self.state, self.etag, provider='gs')
 
     print(_KeyMetadataOutput(response))
 
@@ -335,6 +317,7 @@ class HmacCommand(Command):
     self.state = None
     self.show_all = False
     self.long_list = False
+    self.etag = None
 
     if self.sub_opts:
       for o, a in self.sub_opts:
@@ -350,6 +333,8 @@ class HmacCommand(Command):
           self.show_all = True
         elif o == '-l':
           self.long_list = True
+        elif o == '-e':
+          self.etag = a
 
     if not self.project_id:
       self.project_id = PopulateProjectId(None)

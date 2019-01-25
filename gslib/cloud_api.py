@@ -898,13 +898,15 @@ class CloudApi(object):
     """
     raise NotImplementedError('ListHmacKeys must be overloaded')
 
-  def UpdateHmacKeys(self, project_id, access_id, state):
+  def UpdateHmacKey(self, project_id, access_id, state, etag):
     """Updates the state of an HMAC key.
 
     Args:
       project_id: Project ID owning the service account of the updated key.
       access_id: Name of the HMAC key being updated.
       state: The state to which the key should be updated.
+      etag: None or a string matching the key's etag to ensure the appropriate
+            version of the key is updated.
 
     Raises:
         NotImplementedError: not implemented TODO(tuckerkirven)
@@ -912,7 +914,7 @@ class CloudApi(object):
     Returns:
         The updated key metadata.
     """
-    raise NotImplementedError('UpdateHmacKeys must be overloaded')
+    raise NotImplementedError('UpdateHmacKey must be overloaded')
 
 
 class Preconditions(object):
