@@ -31,46 +31,53 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.constants import NO_MAX
 from gslib.utils.text_util import InsistOnOrOff
 
-_BUCKETPOLICYONLY_SYNOPSIS = """
+_SET_SYNOPSIS = """
   gsutil bucketpolicyonly set [on|off] bucket_url...
+"""
+
+_GET_SYNOPSIS = """
   gsutil bucketpolicyonly get bucket_url...
 """
 
-_SYNOPSIS = _BUCKETPOLICYONLY_SYNOPSIS
+_SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 
-# pylint: disable=line-too-long
-_BUCKETPOLICYONLY_DESCRIPTION = """
-<B>BUCKETPOLICYONLY</B>
-  The bucketpolicyonly sub-command enables or disables the Bucket Policy Only
-  feature on Google Cloud Storage buckets.
+_SET_DESCRIPTION = """
+<B>SET</B>
+  The ``bucketpolicyonly set`` command enables or disables the Bucket Policy
+  Only feature on Google Cloud Storage bucket(s).
 
-<B>BUCKETPOLICYONLY EXAMPLE</B>
-  Configure your bucket to use Bucket Policy Only:
+<B>SET EXAMPLES</B>
+  Configure your buckets to use Bucket Policy Only:
 
     gsutil bucketpolicyonly set on gs://redbucket gs://bluebucket
 
-  Configure your bucket to not use Bucket Policy Only:
+  Configure your buckets to NOT use Bucket Policy Only:
 
     gsutil bucketpolicyonly set off gs://redbucket gs://bluebucket
+"""
 
-  Check if your bucket is using Bucket Policy Only:
+_GET_DESCRIPTION = """
+<B>GET</B>
+  The ``bucketpolicyonly get`` command shows whether Bucket Policy Only is
+  enabled for the specified Cloud Storage bucket(s).
+
+<B>GET EXAMPLES</B>
+  Check if your buckets are using Bucket Policy Only:
 
     gsutil bucketpolicyonly get gs://redbucket gs://bluebucket
-
 """
 
 _DESCRIPTION = """
-  The command is used to configure Bucket Policy Only feature.
-
-  The command has a single sub-command:
-
-""" + _BUCKETPOLICYONLY_DESCRIPTION
+  The ``bucketpolicyonly`` command is used to retrieve or configure the Bucket
+  Policy Only setting of Cloud Storage bucket(s). This command has two
+  sub-commands, ``get`` and ``set``.
+""" + _GET_DESCRIPTION + _SET_DESCRIPTION
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
+_set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
+_get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 
-_bucketpolicyonly_help_text = CreateHelpText(
-    _BUCKETPOLICYONLY_SYNOPSIS, _BUCKETPOLICYONLY_DESCRIPTION)
-
+# Aliases to make these more likely to fit on one line.
 IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
 BucketPolicyOnlyValue = IamConfigurationValue.BucketPolicyOnlyValue
 
@@ -106,7 +113,8 @@ class BucketPolicyOnlyCommand(Command):
       help_one_line_summary='Configure Bucket Policy Only',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
-          'bucketpolicyonly': _bucketpolicyonly_help_text,
+          'get': _get_help_text,
+          'set': _set_help_text,
       },
   )
 
