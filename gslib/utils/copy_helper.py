@@ -775,24 +775,16 @@ def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
   download_hashes = {}
   upload_hashes = {}
   if src_obj_metadata.md5Hash:
-    src_md5hash = src_obj_metadata.md5Hash
-    if six.PY3 and isinstance(src_md5hash, str):
-      src_md5hash = src_md5hash.encode('ascii')
+    src_md5hash = six.ensure_binary(src_obj_metadata.md5Hash)
     download_hashes['md5'] = src_md5hash
   if src_obj_metadata.crc32c:
-    src_crc32c_hash = src_obj_metadata.crc32c
-    if six.PY3 and isinstance(src_crc32c_hash, str):
-      src_crc32c_hash = src_crc32c_hash.encode('ascii')
+    src_crc32c_hash = six.ensure_binary(src_obj_metadata.crc32c)
     download_hashes['crc32c'] = src_crc32c_hash
   if dst_obj_metadata.md5Hash:
-    dst_md5hash = dst_obj_metadata.md5Hash
-    if six.PY3 and isinstance(dst_md5hash, str):
-      dst_md5hash = dst_md5hash.encode('ascii')
+    dst_md5hash = six.ensure_binary(dst_obj_metadata.md5Hash)
     upload_hashes['md5'] = dst_md5hash
   if dst_obj_metadata.crc32c:
-    dst_crc32c_hash = dst_obj_metadata.crc32c
-    if six.PY3 and isinstance(dst_crc32c_hash, str):
-      dst_crc32c_hash = dst_crc32c_hash.encode('ascii')
+    dst_crc32c_hash = six.ensure_binary(dst_obj_metadata.crc32c)
     upload_hashes['crc32c'] = dst_crc32c_hash
 
   for alg, upload_b64_digest in six.iteritems(upload_hashes):
@@ -848,14 +840,10 @@ def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
   local_hashes = digests
   cloud_hashes = {}
   if obj_metadata.md5Hash:
-    md5_b64_digest = obj_metadata.md5Hash
-    if six.PY3 and isinstance(md5_b64_digest, str):
-      md5_b64_digest = md5_b64_digest.encode('ascii')
+    md5_b64_digest = six.ensure_binary(obj_metadata.md5Hash)
     cloud_hashes['md5'] = md5_b64_digest.rstrip(b'\n')
   if obj_metadata.crc32c:
-    crc32c_b64_hash = obj_metadata.crc32c
-    if six.PY3 and isinstance(crc32c_b64_hash, str):
-      crc32c_b64_hash = crc32c_b64_hash.encode('ascii')
+    crc32c_b64_hash = six.ensure_binary(obj_metadata.crc32c)
     cloud_hashes['crc32c'] = crc32c_b64_hash.rstrip(b'\n')
 
   checked_one = False
@@ -863,9 +851,7 @@ def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
     if alg not in cloud_hashes:
       continue
 
-    local_b64_digest = local_hashes[alg]
-    if six.PY3 and isinstance(local_b64_digest, str):
-      local_b64_digest = local_b64_digest.encode('ascii')
+    local_b64_digest = six.ensure_binary(local_hashes[alg])
     cloud_b64_digest = cloud_hashes[alg]
     logger.debug(
         'Comparing local vs cloud %s-checksum for %s. (%s/%s)', alg, file_name,
@@ -990,7 +976,7 @@ def _PartitionFile(fp, file_size, src_url, content_type, canned_acl,
     # we don't run into problems with name length. Using a deterministic
     # naming scheme for the temporary components allows users to take
     # advantage of resumable uploads for each component.
-    encoded_name = (PARALLEL_UPLOAD_STATIC_SALT + fp.name).encode(UTF8)
+    encoded_name = six.ensure_binary(PARALLEL_UPLOAD_STATIC_SALT + fp.name)
     content_md5 = md5()
     content_md5.update(encoded_name)
     digest = content_md5.hexdigest()
