@@ -347,8 +347,8 @@ class CommandRunner(object):
         # name for that command.
         translated_command_name = (
             OLD_ALIAS_MAP.get(close_matches[0], close_matches)[0])
-        print >> sys.stderr, 'Did you mean this?'
-        print >> sys.stderr, '\t%s' % translated_command_name
+        print('Did you mean this?', file=sys.stderr)
+        print('\t%s' % translated_command_name, file=sys.stderr)
       elif command_name == 'update' and gslib.IS_PACKAGE_INSTALL:
         sys.stderr.write(
             'Update command is not supported for package installs; '
