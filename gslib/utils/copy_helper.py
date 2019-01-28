@@ -2056,14 +2056,17 @@ def _UploadFileToObject(
     delegate = CallResumableUpload
 
   elapsed_time, uploaded_object = _DelegateUploadFileToObject(
-      delegate, upload_url, upload_stream, zipped_file, gzip_encoded_file,
-      parallel_composite_upload, logger)
+    upload_delegate=delegate, upload_url=upload_url,
+    upload_stream=upload_stream, zipped_file=zipped_file,
+    gzip_encoded_file=gzip_encoded_file,
+    parallel_composite_upload=parallel_composite_upload, logger=logger)
 
   if not parallel_composite_upload:
     try:
       digests = _CreateDigestsFromDigesters(digesters)
-      _CheckHashes(logger, dst_url, uploaded_object, src_url.object_name,
-                   digests, is_upload=True)
+      _CheckHashes(logger=logger, obj_url=dst_url, obj_metadata=uploaded_object,
+                   file_name=src_url.object_name, digests=digests,
+                   is_upload=True)
     except HashMismatchException:
       if _RENAME_ON_HASH_MISMATCH:
         corrupted_obj_metadata = apitools_messages.Object(
