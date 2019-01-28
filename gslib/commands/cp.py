@@ -1216,8 +1216,10 @@ class CpCommand(Command):
             MakeHumanReadable(self.total_bytes_per_second))
     if self.op_failure_count:
       plural_str = 's' if self.op_failure_count > 1 else ''
-      raise CommandException('%d file%s/object%s could not be transferred.' % (
-          self.op_failure_count, plural_str, plural_str))
+      raise CommandException(
+        '{count} file{pl}/object{pl} could '
+        'not be transferred.'.format(count=self.op_failure_count,
+                                     pl=plural_str))
 
     return 0
 
