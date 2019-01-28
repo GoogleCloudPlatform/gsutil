@@ -253,7 +253,7 @@ class CommandRunner(object):
 
     Args:
       main_parser: argparse object that can be called to get subparsers to add
-      subcommands (called just 'commands' in gsutil)
+          subcommands (called just 'commands' in gsutil)
     """
     gsutil_api = self.GetGsutilApiForTabComplete()
 
