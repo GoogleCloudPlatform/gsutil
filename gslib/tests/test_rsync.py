@@ -1334,47 +1334,72 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     tmpdir = self.CreateTempDir()
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
-    # Create an object with an invalid mode. Must also specify a UID.
-    obj1 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
-                             contents=b'obj1', mode='222', uid=os.getuid())
-    obj2 = self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                             contents=b'.obj2', gid=INVALID_GID(), mode='540')
-    self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj3',
-                      contents=b'subdir/obj3')
-    obj6 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj6',
-                             contents=b'obj6', gid=INVALID_GID(), mode='440')
-    obj7 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
-                             contents=b'obj7', gid=NON_PRIMARY_GID(), mode='333')
-    obj8 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj8',
-                             contents=b'obj8', uid=INVALID_UID())
-    obj9 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj9',
-                             contents=b'obj9', uid=INVALID_UID(), mode='777')
-    obj10 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj10',
-                              contents=b'obj10', gid=INVALID_GID(),
-                              uid=INVALID_UID())
-    obj11 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj11',
-                              contents=b'obj11', gid=INVALID_GID(),
-                              uid=INVALID_UID(), mode='544')
-    obj12 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj12',
-                              contents=b'obj12', uid=INVALID_UID(), gid=USER_ID)
-    obj13 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj13',
-                              contents=b'obj13', uid=INVALID_UID(),
-                              gid=PRIMARY_GID, mode='644')
-    obj14 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj14',
-                              contents=b'obj14', uid=USER_ID, gid=INVALID_GID())
-    obj15 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj15',
-                              contents=b'obj15', uid=USER_ID, gid=INVALID_GID(),
-                              mode='655')
-    obj16 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj16',
-                              contents=b'obj16', uid=USER_ID, mode='244')
-    obj17 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj17',
-                              contents=b'obj17', uid=USER_ID, gid=PRIMARY_GID,
-                              mode='222')
-    obj18 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj18',
-                              contents=b'obj18', uid=USER_ID,
-                              gid=NON_PRIMARY_GID(), mode='333')
-    obj19 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj19',
-                              contents=b'obj19', mode='222')
+    # obj1 - Invalid Mode
+    obj1 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj1', contents=b'obj1',
+      mode='222', uid=os.getuid())
+    # obj2 - Invalid GID
+    obj2 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='.obj2', contents=b'.obj2',
+      gid=INVALID_GID(), mode='540')
+    self.CreateObject(
+      bucket_uri=bucket_uri, object_name='subdir/obj3',
+      contents=b'subdir/obj3')
+    # obj6 - Invalid GID
+    obj6 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj6', contents=b'obj6',
+      gid=INVALID_GID(), mode='440')
+    # obj7 - Invalid Mode
+    obj7 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj7', contents=b'obj7',
+      gid=NON_PRIMARY_GID(), mode='333')
+    # obj8 - Invalid UID
+    obj8 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj8',contents=b'obj8',
+      uid=INVALID_UID())
+    # obj9 - Invalid UID w/ mode 777
+    obj9 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj9', contents=b'obj9',
+      uid=INVALID_UID(), mode='777')
+    # obj10 - Invalid UID & GID
+    obj10 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj10', contents=b'obj10',
+      gid=INVALID_GID(), uid=INVALID_UID())
+    # obj11 - Invalid UID & GID with mode 554
+    obj11 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj11', contents=b'obj11',
+      gid=INVALID_GID(), uid=INVALID_UID(), mode='544')
+    # obj12 - Invalid UID & GID
+    obj12 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj12', contents=b'obj12',
+      uid=INVALID_UID(), gid=USER_ID)
+    # obj13 - Invalid UID, good GID, mode 644
+    obj13 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj13', contents=b'obj13',
+      uid=INVALID_UID(), gid=PRIMARY_GID, mode='644')
+    # obj14 - Good UID, Invalid GID, no mode specified
+    obj14 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj14', contents=b'obj14',
+      uid=USER_ID, gid=INVALID_GID())
+    # obj15 - Good UID, Invalid GID, mode 655
+    obj15 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj15', contents=b'obj15',
+      uid=USER_ID, gid=INVALID_GID(), mode='655')
+    # obj16 - Invalid Permissions - mode 244
+    obj16 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj16', contents=b'obj16',
+      uid=USER_ID, mode='244')
+    # obj17 - Invalid Mode
+    obj17 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj17', contents=b'obj17',
+      uid=USER_ID, gid=PRIMARY_GID, mode='222')
+    # obj18 - Invalid GID, mode 333
+    obj18 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj18', contents=b'obj18',
+      uid=USER_ID, gid=NON_PRIMARY_GID(), mode='333')
+    # obj19 - No UID/GID with mod 222
+    obj19 = self.CreateObject(
+      bucket_uri=bucket_uri, object_name='obj19', contents=b'obj19', mode='222')
     self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.OBJ2')
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents=b'obj4')
     self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents=b'subdir/obj5')
