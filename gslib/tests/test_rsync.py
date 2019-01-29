@@ -33,6 +33,7 @@ from gslib.tests.util import BuildErrorRegex
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
 from gslib.tests.util import POSIX_GID_ERROR
+from gslib.tests.util import POSIX_GID_ERROR_OSX
 from gslib.tests.util import POSIX_INSUFFICIENT_ACCESS_ERROR
 from gslib.tests.util import POSIX_MODE_ERROR
 from gslib.tests.util import POSIX_UID_ERROR
@@ -1330,6 +1331,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   def test_bucket_to_dir_preserve_posix_errors(self):
     """Tests that rsync -P works properly with files that would be orphaned."""
+    global POSIX_GID_ERROR
+    if IS_OSX and six.PY3:
+      POSIX_GID_ERROR = POSIX_GID_ERROR_OSX
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
     subdir = os.path.join(tmpdir, 'subdir')
@@ -1421,8 +1425,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.assertTrue(BuildErrorRegex(obj11, POSIX_UID_ERROR).search(stderr))
       self.assertTrue(BuildErrorRegex(obj12, POSIX_UID_ERROR).search(stderr))
       self.assertTrue(BuildErrorRegex(obj13, POSIX_UID_ERROR).search(stderr))
-      self.assertTrue(BuildErrorRegex(obj14, POSIX_GID_ERROR).search(stderr))
-      self.assertTrue(BuildErrorRegex(obj15, POSIX_GID_ERROR).search(stderr))
+      if not (six.PY3 and IS_OSX):
+        # TODO: Verify UID/GID when preserving POSIX permissions
+        self.assertTrue(BuildErrorRegex(obj14, POSIX_GID_ERROR).search(stderr))
+        self.assertTrue(BuildErrorRegex(obj15, POSIX_GID_ERROR).search(stderr))
       self.assertTrue(BuildErrorRegex(obj16, POSIX_INSUFFICIENT_ACCESS_ERROR)
                       .search(stderr))
       self.assertTrue(BuildErrorRegex(obj17, POSIX_MODE_ERROR).search(stderr))

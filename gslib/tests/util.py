@@ -144,6 +144,7 @@ ORPHANED_FILE = ('This sync will orphan file(s), please fix their permissions '
 
 POSIX_MODE_ERROR = 'Mode for %s won\'t allow read access.'
 POSIX_GID_ERROR = 'GID for %s doesn\'t exist on current system.'
+POSIX_GID_ERROR_OSX = 'There was a problem validating %s.'
 POSIX_UID_ERROR = 'UID for %s doesn\'t exist on current system.'
 POSIX_INSUFFICIENT_ACCESS_ERROR = 'Insufficient access with uid/gid/mode for %s'
 
