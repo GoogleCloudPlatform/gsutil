@@ -1,4 +1,4 @@
-Release 4.36 (release date: 2019-01-25)
+Release 4.36 (release date: 2019-01-28)
 =======================================
 New features
 ------------------
