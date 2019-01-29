@@ -900,6 +900,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     status = p.returncode
 
     if expected_status is not None:
+      cmd = [six.ensure_text(item) for item in cmd]
       self.assertEqual(
         status, expected_status,
         msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
