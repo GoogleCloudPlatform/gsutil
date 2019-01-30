@@ -184,12 +184,14 @@ def FixWindowsEncodingIfNeeded(input_str):
     (unicode) The converted string (or the original, if conversion wasn't needed).
   """
   if IS_CP1252:
-    assert(isinstance(input_str, six.binary_type))
-    return input_str.decode(WINDOWS_1252)
+    return six.ensure_str(input_str, WINDOWS_1252)
+    # assert(isinstance(input_str, six.binary_type))
+    # return input_str.decode(WINDOWS_1252)
   else:
-    if isinstance(input_str, six.binary_type):
-      return input_str.decode(UTF8)
-    return input_str
+    return six.ensure_str(input_str)
+    # if isinstance(input_str, six.binary_type):
+    #   return input_str.decode(UTF8)
+  # return input_str
 
 
 def GetPrintableExceptionString(exc):
