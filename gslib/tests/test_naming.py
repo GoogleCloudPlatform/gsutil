@@ -687,7 +687,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                 suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
                 suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')}
     expected.add(b'')  # Blank line between subdir listings.
-    actual = set(output.split(b'\n'))
+    actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
 
   def testLsBucketRecursive(self):
@@ -703,7 +703,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                 suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
                 suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')}
     expected.add(b'')  # Blank line between subdir listings.
-    actual = set(output.split(b'\n'))
+    actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
 
   def testLsBucketRecursiveWithLeadingSlashObjectName(self):
@@ -713,7 +713,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                              return_stdout=True)
     expected = {suri(dst_bucket_uri, 'f0').encode('utf-8')}
     expected.add(b'')  # Blank line between subdir listings.
-    actual = set(output.split(b'\n'))
+    actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
 
   def testLsBucketSubdirNonRecursive(self):
@@ -726,7 +726,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
           suri(src_bucket_uri, 'src_subdir',
                'nested') + src_bucket_uri.delim).encode('utf-8')}
     expected.add(b'')  # Blank line between subdir listings.
-    actual = set(output.split(b'\n'))
+    actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
 
   def testLsBucketSubdirRecursive(self):
@@ -744,7 +744,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                   suri(src_bucket_uri, 'src_subdir', 'nested', 'foo2').encode(
                     'utf-8')}
       expected.add(b'')  # Blank line between subdir listings.
-      actual = set(output.split(b'\n'))
+      actual = set([line.strip() for line in output.split(b'\n')])
       self.assertEqual(expected, actual)
 
   def testSetAclOnBucketRuns(self):

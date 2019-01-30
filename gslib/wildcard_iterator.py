@@ -673,6 +673,11 @@ class FileWildcardIterator(WildcardIterator):
           # require the user to remove or rename the files and try again.
           raise CommandException('\n'.join(textwrap.wrap(
               _UNICODE_EXCEPTION_TEXT % repr(os.path.join(dirpath, f)))))
+        except TypeError:
+          raise CommandException('\n'.join(textwrap.wrap(
+            "File (%s) encountered an error. Cannot continue. For more details "
+            "(including how to convert to a gsutil-compatible encoding) see "
+            "`gsutil help encoding`." % repr(os.path.join(dirpath, f)))))
 
   # pylint: disable=unused-argument
   def IterObjects(self, bucket_listing_fields=None):
