@@ -34,6 +34,7 @@ class Bucket(_messages.Message):
     CorsValueListEntry: A CorsValueListEntry object.
     EncryptionValue: Encryption configuration used by default for newly
       inserted objects, when no encryption config is specified.
+    IamConfigurationValue: The bucket's IAM features configuration.
     LabelsValue: User-provided labels, in key/value pairs.
     LifecycleValue: The bucket's lifecycle configuration. See lifecycle
       management for more information.
@@ -76,7 +77,8 @@ class Bucket(_messages.Message):
     encryption: Encryption configuration used by default for newly inserted
       objects, when no encryption config is specified.
     etag: HTTP 1.1 Entity tag for the bucket.
-    id: The ID of the bucket. For buckets, the id and name properities are the
+    iamConfiguration: The bucket's IAM features configuration.
+    id: The ID of the bucket. For buckets, the id and name properties are the
       same.
     kind: The kind of item this is. For buckets, this is always
       storage#bucket.
@@ -156,6 +158,34 @@ class Bucket(_messages.Message):
     """
 
     defaultKmsKeyName = _messages.StringField(1)
+
+  class IamConfigurationValue(_messages.Message):
+    r"""The bucket's IAM features configuration.
+
+    Messages:
+      BucketPolicyOnlyValue: A BucketPolicyOnlyValue object.
+
+    Fields:
+      bucketPolicyOnly: A BucketPolicyOnlyValue attribute.
+    """
+
+    class BucketPolicyOnlyValue(_messages.Message):
+      r"""A BucketPolicyOnlyValue object.
+
+      Fields:
+        enabled: If set, access checks only use bucket-level IAM policies or
+          above.
+        lockedTime: The deadline time for changing
+          iamConfiguration.bucketPolicyOnly.enabled from true to false in RFC
+          3339 format. iamConfiguration.bucketPolicyOnly.enabled may be
+          changed from true to false until the locked time, after which the
+          field is immutable.
+      """
+
+      enabled = _messages.BooleanField(1)
+      lockedTime = _message_types.DateTimeField(2)
+
+    bucketPolicyOnly = _messages.MessageField('BucketPolicyOnlyValue', 1)
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class LabelsValue(_messages.Message):
@@ -336,29 +366,24 @@ class Bucket(_messages.Message):
   defaultObjectAcl = _messages.MessageField('ObjectAccessControl', 5, repeated=True)
   encryption = _messages.MessageField('EncryptionValue', 6)
   etag = _messages.StringField(7)
-  id = _messages.StringField(8)
-  kind = _messages.StringField(9, default=u'storage#bucket')
-  labels = _messages.MessageField('LabelsValue', 10)
-  lifecycle = _messages.MessageField('LifecycleValue', 11)
-  location = _messages.StringField(12)
-  logging = _messages.MessageField('LoggingValue', 13)
-  metageneration = _messages.IntegerField(14)
-  name = _messages.StringField(15)
-  owner = _messages.MessageField('OwnerValue', 16)
-  projectNumber = _messages.IntegerField(17, variant=_messages.Variant.UINT64)
-  selfLink = _messages.StringField(18)
-  storageClass = _messages.StringField(19)
-  timeCreated = _message_types.DateTimeField(20)
-  updated = _message_types.DateTimeField(21)
-  versioning = _messages.MessageField('VersioningValue', 22)
-  website = _messages.MessageField('WebsiteValue', 23)
-  retentionPolicy = _messages.MessageField('RetentionPolicyValue', 24)
-  selfLink = _messages.StringField(25)
-  storageClass = _messages.StringField(26)
-  timeCreated = _message_types.DateTimeField(27)
-  updated = _message_types.DateTimeField(28)
-  versioning = _messages.MessageField('VersioningValue', 29)
-  website = _messages.MessageField('WebsiteValue', 30)
+  iamConfiguration = _messages.MessageField('IamConfigurationValue', 8)
+  id = _messages.StringField(9)
+  kind = _messages.StringField(10, default=u'storage#bucket')
+  labels = _messages.MessageField('LabelsValue', 11)
+  lifecycle = _messages.MessageField('LifecycleValue', 12)
+  location = _messages.StringField(13)
+  logging = _messages.MessageField('LoggingValue', 14)
+  metageneration = _messages.IntegerField(15)
+  name = _messages.StringField(16)
+  owner = _messages.MessageField('OwnerValue', 17)
+  projectNumber = _messages.IntegerField(18, variant=_messages.Variant.UINT64)
+  retentionPolicy = _messages.MessageField('RetentionPolicyValue', 19)
+  selfLink = _messages.StringField(20)
+  storageClass = _messages.StringField(21)
+  timeCreated = _message_types.DateTimeField(22)
+  updated = _message_types.DateTimeField(23)
+  versioning = _messages.MessageField('VersioningValue', 24)
+  website = _messages.MessageField('WebsiteValue', 25)
 
 
 class BucketAccessControl(_messages.Message):

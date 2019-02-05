@@ -101,6 +101,15 @@ _DETAILED_HELP_TEXT = ("""
     sudo pip uninstall crcmod
     sudo pip install -U crcmod
 
+  Enterprise SUSE
+  -----------------
+
+  To compile and install crcmod:
+
+    sudo zypper install gcc python-devel
+    sudo pip uninstall crcmod
+    sudo pip install -U crcmod
+
   macOS
   -----
 
