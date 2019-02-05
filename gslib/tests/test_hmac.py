@@ -173,7 +173,6 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     finally:
       self.CleanupHelper(access_id)
 
-
   def test_delete_key_not_found(self):
     stderr = self.RunGsUtil(['hmac', 'delete', 'GOOG1234DNE'],
                             return_stderr=True,
