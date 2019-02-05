@@ -655,6 +655,8 @@ class CloudApi(object):
 
     Args:
       bucket_name: Bucket containing the objects
+      provider: Cloud storage provider to connect to.  If not present,
+                class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -797,13 +799,17 @@ class CloudApi(object):
     """
     raise NotImplementedError('GetHmacKey must be overloaded')
 
-  def ListHmacKeys(self, project_id, service_account_email):
+  def ListHmacKeys(self,
+                   project_id,
+                   service_account_email,
+                   show_deleted_keys=False):
     """Lists HMAC keys matching the criteria.
 
     Args:
         project_id: Name of the project from which to list HMAC keys.
         service_account_email: If present, only keys for the given service
                                account will be returned.
+        show_deleted_keys: If set, show keys in the DELETED state.
     Raises:
         NotImplementedError: not implemented TODO(tuckerkirven)
 

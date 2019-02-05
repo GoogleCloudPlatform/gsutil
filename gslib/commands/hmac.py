@@ -23,6 +23,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.metrics import LogCommandParams
+from gslib.project_id import PopulateProjectId
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.text_util import InsistAscii
 
@@ -39,7 +40,7 @@ _GET_SYNOPSIS = """
 """
 
 _LIST_SYNOPSIS = """
-  gsutil hmac list [-p project] [-u service_account_email]
+  gsutil hmac list [-a] [-l] [-p project] [-u service_account_email]
 """
 
 _UPDATE_SYNOPSIS = """
@@ -82,6 +83,11 @@ _LIST_DESCRIPTION = """
 <B>LIST OPTIONS</B>
   The "list" sub-command has the following options
 
+      -a                          Show all keys, including recently deleted key.
+
+      -l                          Use long listing format. Shows each key's full
+                                  metadata.
+
       -p <project_id>             Specify a project from which to list keys.
 
       -u <service_account_email>  Filter keys for a single service account.
@@ -114,6 +120,9 @@ _DESCRIPTION = """
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
+_VALID_UPDATE_STATES = ['INACTIVE', 'ACTIVE']
+_TIME_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+
 _create_help_text = CreateHelpText(_CREATE_SYNOPSIS, _CREATE_DESCRIPTION)
 _delete_help_text = CreateHelpText(_DELETE_SYNOPSIS, _DELETE_DESCRIPTION)
 _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
@@ -126,7 +135,27 @@ def _AccessIdException(command_name, subcommand, synopsis):
       '%s %s requires an Access ID to be specified as the last argument.\n%s' %
       (command_name, subcommand, synopsis))
 
-_VALID_UPDATE_STATES = ['INACTIVE', 'ACTIVE']
+
+def _KeyMetadataOutput(metadata):
+  """Format the key metadata for printing to the console."""
+
+  def FormatInfo(name, value, new_line=True):
+    """Format the metadata name-value pair into two aligned columns."""
+    width = 22
+    info_str = '\t%-*s %s' % (width, name + ':', value)
+    if new_line:
+      info_str += '\n'
+    return info_str
+
+  message = 'Access ID %s:\n' % metadata.accessId
+  message += FormatInfo('State', metadata.state)
+  message += FormatInfo('Service Account', metadata.serviceAccountEmail)
+  message += FormatInfo('Project', metadata.projectId)
+  message += FormatInfo('Time Created',
+                        metadata.timeCreated.strftime(_TIME_FORMAT))
+  message += FormatInfo('Time Last Updated',
+                        metadata.updated.strftime(_TIME_FORMAT), new_line=False)
+  return message
 
 
 class HmacCommand(Command):
@@ -134,8 +163,8 @@ class HmacCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'hmac',
       min_args=1,
-      max_args=6,
-      supported_sub_args='s:p:u:',
+      max_args=8,
+      supported_sub_args='alp:s:u:',
       file_url_ok=True,
       urls_start_arg=1,
       gs_api_support=[ApiSelector.JSON],
@@ -189,8 +218,11 @@ class HmacCommand(Command):
 
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
-    gsutil_api.CreateHmacKey(
+    response = gsutil_api.CreateHmacKey(
         self.project_id, self.service_account_email, provider='gs')
+
+    print('%-12s %s' % ('Access ID:', response.metadata.accessId))
+    print('%-12s %s' % ('Secret:', response.secret))
 
   def _DeleteHmacKey(self, thread_state=None):
     """Deletes an HMAC key."""
@@ -214,10 +246,12 @@ class HmacCommand(Command):
 
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
-    gsutil_api.GetHmacKey(self.project_id, access_id, provider='gs')
+    response = gsutil_api.GetHmacKey(self.project_id, access_id, provider='gs')
+
+    print(_KeyMetadataOutput(response))
 
   def _ListHmacKeys(self, thread_state=None):
-    """Listss HMAC keys for a project or service account."""
+    """Lists HMAC keys for a project or service account."""
     if self.args:
       raise CommandException(
           '%s %s received unexpected arguments.\n%s' %
@@ -225,8 +259,21 @@ class HmacCommand(Command):
 
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
-    gsutil_api.ListHmacKeys(
-        self.project_id, self.service_account_email, provider='gs')
+    response = gsutil_api.ListHmacKeys(
+        self.project_id,
+        self.service_account_email,
+        self.show_all,
+        provider='gs')
+
+    short_list_format = '%s\t%-12s %s'
+    if self.long_list:
+      for item in response:
+        print(_KeyMetadataOutput(item))
+        print()
+    else:
+      for item in response:
+        print(short_list_format %
+              (item.accessId, item.state, item.serviceAccountEmail))
 
   def _UpdateHmacKey(self, thread_state=None):
     """Update an HMAC key's state."""
@@ -245,11 +292,18 @@ class HmacCommand(Command):
 
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
-    gsutil_api.UpdateHmacKey(
+    response = gsutil_api.UpdateHmacKey(
         self.project_id, access_id, self.state, provider='gs')
+
+    print(_KeyMetadataOutput(response))
 
   def RunCommand(self):
     """Command entry point for the hmac command."""
+
+    if self.gsutil_api.GetApiSelector(provider='gs') != ApiSelector.JSON:
+      raise CommandException(
+          'The "hmac" command can only be used with the GCS JSON API')
+
     self.action_subcommand = self.args.pop(0)
     self.ParseSubOpts(check_args=True)
     # Commands with both suboptions and subcommands need to reparse for
@@ -258,6 +312,8 @@ class HmacCommand(Command):
 
     self.service_account_email = None
     self.state = None
+    self.show_all = False
+    self.long_list = False
 
     if self.sub_opts:
       for o, a in self.sub_opts:
@@ -269,6 +325,13 @@ class HmacCommand(Command):
           self.project_id = a
         elif o == '-s':
           self.state = a
+        elif o == '-a':
+          self.show_all = True
+        elif o == '-l':
+          self.long_list = True
+
+    if not self.project_id:
+      self.project_id = PopulateProjectId(None)
 
     method_for_arg = {
         'create': self._CreateHmacKey,
