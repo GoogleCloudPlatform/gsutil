@@ -328,7 +328,7 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
     for k, v in six.iteritems(env):
       envstr[six.ensure_str(k)] = six.ensure_str(v)
     process_list.append(subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE, env=env))
+                                         stderr=subprocess.PIPE, env=envstr))
     test_index += 1
     process_done.append(False)
     if time.time() - last_log_time > 5:
