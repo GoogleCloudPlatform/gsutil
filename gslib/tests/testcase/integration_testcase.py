@@ -893,8 +893,6 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         '-o',
         'GSUtil:default_project_id=' + PopulateProjectId()
     ] + cmd
-    cmd_bytes = [part.encode('utf-8')
-                 if isinstance(part, six.text_type) else part for part in cmd]
     if stdin is not None:
       if six.PY3:
         if isinstance(stdin, bytes):
@@ -908,6 +906,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     env = os.environ.copy()
     if env_vars:
       env.update(env_vars)
+    # Ensuring correct text types
+    envstr = dict()
+    for k, v in six.iteritems(env):
+      envstr[six.ensure_str(k)] = six.ensure_str(v)
+    cmd_bytes = [six.ensure_binary(part) for part in cmd]
+    # executing command
     p = subprocess.Popen(cmd_bytes, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, stdin=subprocess.PIPE, env=env)
     likely_encoding = sys.stdout.encoding or UTF8
