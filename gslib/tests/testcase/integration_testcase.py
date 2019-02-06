@@ -895,10 +895,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     envstr = dict()
     for k, v in six.iteritems(env):
       envstr[six.ensure_str(k)] = six.ensure_str(v)
-    cmd_bytes = [six.ensure_binary(part) for part in cmd]
+    cmd = [six.ensure_str(part) for part in cmd]
     # executing command
-    p = subprocess.Popen(cmd_bytes, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, stdin=subprocess.PIPE, env=env)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, stdin=subprocess.PIPE, env=envstr)
     likely_encoding = sys.stdout.encoding or UTF8
     stdout, stderr = map(
         lambda b: b.decode(likely_encoding).replace(os.linesep, '\n'),
