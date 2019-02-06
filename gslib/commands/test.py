@@ -314,12 +314,21 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
     env = os.environ.copy()
     if root_coverage_file:
       env['GSUTIL_COVERAGE_OUTPUT_FILE'] = root_coverage_file
-    process_list.append(subprocess.Popen(
-        executable_prefix + [gslib.GSUTIL_PATH] + project_id_arg +
-        ['test'] + s3_argument + multiregional_buckets +
+    envstr = dict()
+    # constructing command list and ensuring each part is str
+    cmd = [six.ensure_str(part) for part in list(
+        executable_prefix +
+        [gslib.GSUTIL_PATH] +
+        project_id_arg +
+        ['test'] +
+        s3_argument +
+        multiregional_buckets +
         ['--' + _SEQUENTIAL_ISOLATION_FLAG] +
-        [parallel_tests[test_index][len('gslib.tests.test_'):]],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env))
+        [parallel_tests[test_index][len('gslib.tests.test_'):]])]
+    for k, v in six.iteritems(env):
+      envstr[six.ensure_str(k)] = six.ensure_str(v)
+    process_list.append(subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE, env=env))
     test_index += 1
     process_done.append(False)
     if time.time() - last_log_time > 5:
