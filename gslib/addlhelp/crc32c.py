@@ -83,11 +83,22 @@ _DETAILED_HELP_TEXT = ("""
   CentOS, RHEL, and Fedora
   ------------------------
 
-  To compile and install crcmod:
+  Note that CentOS 6 and similar variants use Python 2.6 by default, which will
+  not run gsutil. To enable Python 2.7 and compile/install crcmod on CentOS 6:
+
+    sudo su  # Run as root; need shell session with Python 2.7 enabled
+    yum install gcc python-devel python-setuptools redhat-rpm-config
+    source /opt/rh/python27/enable  # Make default `python` executable use 2.7.X
+    python -m pip install -U pip  # Upgrade old default version of pip
+    python -m pip uninstall crcmod
+    python -m pip install --no-cache-dir -U crcmod
+    exit  # Exit su session
+
+  To compile and install crcmod on OS versions that use Python 2.7 by default:
 
     sudo yum install gcc python-devel python-setuptools redhat-rpm-config
     sudo pip uninstall crcmod
-    sudo pip install -U crcmod
+    sudo pip install --no-cache-dir -U crcmod
 
   Debian and Ubuntu
   -----------------
@@ -96,7 +107,7 @@ _DETAILED_HELP_TEXT = ("""
 
     sudo apt-get install gcc python-dev python-setuptools
     sudo pip uninstall crcmod
-    sudo pip install -U crcmod
+    sudo pip install --no-cache-dir -U crcmod
 
   Enterprise SUSE
   -----------------
@@ -105,7 +116,7 @@ _DETAILED_HELP_TEXT = ("""
 
     sudo zypper install gcc python-devel
     sudo pip uninstall crcmod
-    sudo pip install -U crcmod
+    sudo pip install --no-cache-dir -U crcmod
 
   macOS
   -----
