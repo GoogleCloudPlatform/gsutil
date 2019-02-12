@@ -18,6 +18,9 @@ see: https://cloud.google.com/storage/docs/access-control#Signed-URLs)
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import base64
 import calendar
@@ -27,8 +30,10 @@ import getpass
 import hashlib
 import json
 import re
-import urllib
+import sys
 
+import six
+from six.moves import urllib
 from apitools.base.py.exceptions import HttpError
 from apitools.base.py.http_wrapper import MakeRequest
 from apitools.base.py.http_wrapper import Request
@@ -260,7 +265,7 @@ def _GenSignedUrl(key, client_id, method, duration,
 
   canonical_resource = '/{}'.format(gcs_path)
   canonical_query_string = '&'.join(
-      ['{}={}'.format(param, urllib.quote_plus(signed_query_params[param]))
+      ['{}={}'.format(param, urllib.parse.quote_plus(signed_query_params[param]))
        for param in sorted(signed_query_params.keys())])
   canonical_headers = '\n'.join(
       ['{}:{}'.format(header.lower(), signed_headers[header])
@@ -393,6 +398,9 @@ class UrlSignCommand(Command):
     region = _AUTO_DETECT_REGION
 
     for o, v in self.sub_opts:
+      # TODO(PY3-ONLY): Delete this if block.
+      if six.PY2:
+        v = v.decode(sys.stdin.encoding or UTF8)
       if o == '-d':
         if delta is not None:
           delta += _DurationToTimeDelta(v)
@@ -492,7 +500,7 @@ class UrlSignCommand(Command):
         raise CommandException('Unable to parse private key from {0}'.format(
             self.args[0]))
 
-    print 'URL\tHTTP Method\tExpiration\tSigned URL'
+    print('URL\tHTTP Method\tExpiration\tSigned URL')
     for url in storage_urls:
       if url.scheme != 'gs':
         raise CommandException('Can only create signed urls from gs:// urls')
@@ -510,7 +518,7 @@ class UrlSignCommand(Command):
         # Need to url encode the object name as Google Cloud Storage does when
         # computing the string to sign when checking the signature.
         gcs_path = '{0}/{1}'.format(url.bucket_name,
-                                    urllib.quote(url.object_name.encode(UTF8)))
+                                    urllib.parse.quote(url.object_name.encode(UTF8)))
 
       if region == _AUTO_DETECT_REGION:
         if url.bucket_name in region_cache:
@@ -519,7 +527,7 @@ class UrlSignCommand(Command):
           try:
             _, bucket = self.GetSingleBucketUrlFromArg(
                 'gs://{}'.format(url.bucket_name), bucket_fields=['location'])
-          except Exception, e:
+          except Exception as e:
             raise CommandException(
                 '{}: Failed to auto-detect location for bucket \'{}\'. Please '
                 'ensure you have storage.buckets.get permission on the bucket '
@@ -537,10 +545,19 @@ class UrlSignCommand(Command):
       expiration = calendar.timegm((datetime.utcnow() + delta).utctimetuple())
       expiration_dt = datetime.fromtimestamp(expiration)
 
-      print '{0}\t{1}\t{2}\t{3}'.format(url.url_string.encode(UTF8), method,
-                                        (expiration_dt
-                                         .strftime('%Y-%m-%d %H:%M:%S')),
-                                        final_url.encode(UTF8))
+      time_str = expiration_dt.strftime('%Y-%m-%d %H:%M:%S')
+      # TODO(PY3-ONLY): Delete this if block.
+      if six.PY2:
+        time_str = time_str.decode(UTF8)
+
+      url_info_str = '{0}\t{1}\t{2}\t{3}'.format(
+          url.url_string, method, time_str, final_url)
+
+      # TODO(PY3-ONLY): Delete this if block.
+      if six.PY2:
+        url_info_str = url_info_str.encode(UTF8)
+
+      print(url_info_str)
 
       response_code = self._ProbeObjectAccessWithClient(
           key, client_email, gcs_path, self.logger, bucket_region)

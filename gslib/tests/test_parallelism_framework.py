@@ -22,6 +22,9 @@
 """Unit tests for gsutil parallelism framework."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import functools
 import os
@@ -29,6 +32,7 @@ import signal
 import threading
 import time
 
+import six
 from boto.storage_uri import BucketStorageUri
 from gslib import cs_api_map
 from gslib.command import Command
@@ -177,7 +181,7 @@ def _SkipEvenNumbersArgChecker(cls, arg):
   return arg % 2 != 0
 
 
-class FailingIterator(object):
+class FailingIterator(six.Iterator):
 
   def __init__(self, size, failure_indices):
     self.size = size
@@ -187,7 +191,7 @@ class FailingIterator(object):
   def __iter__(self):
     return self
 
-  def next(self):
+  def __next__(self):
     if self.current_index == self.size:
       raise StopIteration('')
     elif self.current_index in self.failure_indices:
@@ -353,7 +357,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
       usage_dict[(process_id, thread_id)] = (
           usage_dict.get((process_id, thread_id), 0) + 1)
 
-    for (id_tuple, num_tasks_completed) in usage_dict.iteritems():
+    for (id_tuple, num_tasks_completed) in six.iteritems(usage_dict):
       self.assertEqual(num_tasks_completed, expected_calls_per_thread,
                        'Process %s thread %s completed %s tasks. Expected: %s' %
                        (id_tuple[0], id_tuple[1], num_tasks_completed,
@@ -521,9 +525,9 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
         test_func()
         self.fail(
             'Setting fail_on_error should raise any exception encountered.')
-      except CustomException, e:
+      except CustomException as e:
         pass
-      except Exception, e:  # pylint: disable=broad-except
+      except Exception as e:  # pylint: disable=broad-except
         self.fail('Got unexpected error: ' + str(e))
 
     def _RunFailureFunc():

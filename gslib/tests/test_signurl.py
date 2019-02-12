@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Tests for signurl command."""
+
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from datetime import datetime
 from datetime import timedelta
 import pkgutil
@@ -80,7 +86,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     """Tests signurl output of a sample object."""
 
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='z')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
     cmd_base = ['signurl'] if json_keystore else ['signurl', '-p', 'notasecret']
     stdout = self.RunGsUtil(cmd_base + ['-m', 'PUT', ks_file, suri(object_uri)],
                             return_stdout=True)
@@ -131,7 +137,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
 
     for obj_name in objs:
       obj_urls.append(self.CreateObject(bucket_uri=bucket,
-                                        object_name=obj_name, contents=''))
+                                        object_name=obj_name, contents=b''))
 
     stdout = self.RunGsUtil(['signurl', '-p',
                              'notasecret', self._GetKsFile(),
@@ -165,7 +171,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
         ks_contents, 'notasecret')
 
     def fake_now():
-      return datetime(1900, 01, 01, 00, 05, 55)
+      return datetime(1900, 1, 1, 0, 5, 55)
 
     gslib.commands.signurl._NowUTC = fake_now
 

@@ -22,6 +22,9 @@
 """Tests for gsutil utility functions."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from gslib.utils import boto_util
 from gslib.utils import constants
@@ -38,7 +41,10 @@ from gslib.utils.unit_util import DecimalShort
 from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
 from gslib.utils.unit_util import PrettyTime
 import httplib2
-import mock
+
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 
 # TODO: Split tests for <foo>_util methods out into their own test classes.
@@ -320,20 +326,20 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.DoTestAddQueryParamToUrl(old_url, param_name, param_val, expected_url)
 
   def testAddQueryParamToUrlWorksForUTF8Values(self):
-    old_url = u'http://foo.bar/path/êndpoint?Â=1&a=2&ß=3&c='.encode('utf-8')
-    param_name = u'nêwparam'.encode('utf-8')
-    param_val = u'nêwvalue'.encode('utf-8')
+    old_url = 'http://foo.bar/path/êndpoint?Â=1&a=2&ß=3&c='
+    param_name = 'nêwparam'
+    param_val = 'nêwvalue'
     # Expected return value is a UTF-8 encoded `str`.
     expected_url = '{}&{}={}'.format(old_url, param_name, param_val)
 
     self.DoTestAddQueryParamToUrl(old_url, param_name, param_val, expected_url)
 
   def testAddQueryParamToUrlWorksForRawUnicodeValues(self):
-    old_url = u'http://foo.bar/path/êndpoint?Â=1&a=2&ß=3&c='
-    param_name = u'nêwparam'
-    param_val = u'nêwvalue'
+    old_url = 'http://foo.bar/path/êndpoint?Â=1&a=2&ß=3&c='
+    param_name = 'nêwparam'
+    param_val = 'nêwvalue'
     # Since the original URL was a `unicode`, the returned URL should also be.
-    expected_url = u'{}&{}={}'.format(old_url, param_name, param_val)
+    expected_url = '{}&{}={}'.format(old_url, param_name, param_val)
 
     self.DoTestAddQueryParamToUrl(old_url, param_name, param_val, expected_url)
 

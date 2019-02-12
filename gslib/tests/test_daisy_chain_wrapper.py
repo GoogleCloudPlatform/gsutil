@@ -15,10 +15,14 @@
 """Unit tests for daisy chain wrapper class."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import os
 import pkgutil
 
+import six
 import gslib.cloud_api
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.storage_url import StorageUrlFromString
@@ -131,7 +135,7 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
         self._dummy_url, self.test_data_file_len, mock_api,
         download_chunk_size=TRANSFER_BUFFER_SIZE)
     self._WriteFromWrapperToFile(daisy_chain_wrapper, upload_file)
-    num_expected_calls = self.test_data_file_len / TRANSFER_BUFFER_SIZE
+    num_expected_calls = self.test_data_file_len // TRANSFER_BUFFER_SIZE
     if self.test_data_file_len % TRANSFER_BUFFER_SIZE:
       num_expected_calls += 1
     # Since the chunk size is < the file size, multiple calls to GetObjectMedia
@@ -167,9 +171,9 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
     """Tests unaligned writes to the download stream from GetObjectMedia."""
     with open(self.test_data_file, 'rb') as stream:
       chunk = stream.read(TRANSFER_BUFFER_SIZE)
-    one_byte = chunk[0]
+    one_byte = chunk[0:1]
     chunk_minus_one_byte = chunk[1:TRANSFER_BUFFER_SIZE]
-    half_chunk = chunk[0:TRANSFER_BUFFER_SIZE/2]
+    half_chunk = chunk[0:TRANSFER_BUFFER_SIZE//2]
 
     write_values_dict = {
         'First byte first chunk unaligned':
@@ -191,7 +195,7 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
              chunk_minus_one_byte, chunk, one_byte, half_chunk, one_byte)
         }
     upload_file = self.CreateTempFile()
-    for case_name, write_values in write_values_dict.iteritems():
+    for case_name, write_values in six.iteritems(write_values_dict):
       expected_contents = b''
       for write_value in write_values:
         expected_contents += write_value
@@ -275,7 +279,7 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
     try:
       self._WriteFromWrapperToFile(daisy_chain_wrapper, upload_file)
       self.fail('Expected exception')
-    except DownloadException, e:
+    except DownloadException as e:
       self.assertIn('Download thread forces failure', str(e))
 
   def testInvalidSeek(self):
@@ -286,12 +290,12 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
       # SEEK_CUR is invalid.
       daisy_chain_wrapper.seek(0, whence=os.SEEK_CUR)
       self.fail('Expected exception')
-    except IOError, e:
+    except IOError as e:
       self.assertIn('does not support seek mode', str(e))
 
     try:
       # Seeking from the end with an offset is invalid.
       daisy_chain_wrapper.seek(1, whence=os.SEEK_END)
       self.fail('Expected exception')
-    except IOError, e:
+    except IOError as e:
       self.assertIn('Invalid seek during daisy chain', str(e))

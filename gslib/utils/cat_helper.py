@@ -15,6 +15,9 @@
 """Helper for cat and cp streaming download."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import io
 import sys
@@ -28,6 +31,8 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
 from gslib.utils.metadata_util import ObjectIsGzipEncoded
+from gslib.utils import text_util
+
 
 _CAT_BUCKET_LISTING_FIELDS = ['bucket',
                               'contentEncoding',
@@ -65,7 +70,7 @@ class CatHelper(object):
       buf = src_fd.read(io.DEFAULT_BUFFER_SIZE)
       if not buf:
         break
-      dst_fd.write(buf)
+      text_util.ttywrite(dst_fd, buf)
 
   def CatUrlStrings(self, url_strings, show_header=False, start_byte=0,
                     end_byte=None, cat_out_fd=None):
@@ -123,8 +128,8 @@ class CatHelper(object):
             did_some_work = True
             if show_header:
               if printed_one:
-                print
-              print '==> %s <==' % blr
+                print()
+              print('==> %s <==' % blr)
               printed_one = True
             cat_object = blr.root_object
             storage_url = StorageUrlFromString(blr.url_string)

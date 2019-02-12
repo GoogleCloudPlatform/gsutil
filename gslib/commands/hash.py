@@ -15,6 +15,9 @@
 """Implementation of hash command for calculating hashes of local files."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from hashlib import md5
 import logging
@@ -22,6 +25,7 @@ import os
 import time
 
 import crcmod
+import six
 
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
@@ -36,6 +40,8 @@ from gslib.utils import boto_util
 from gslib.utils import constants
 from gslib.utils import hashing_helper
 from gslib.utils import parallelism_framework_util
+from gslib.utils import text_util
+
 
 _PutToQueueWithTimeout = parallelism_framework_util.PutToQueueWithTimeout
 
@@ -133,7 +139,7 @@ class HashCommand(Command):
           output_format = 'hex'
           format_func = lambda digest: digest.hexdigest()
           cloud_format_func = (
-              lambda digest: hashing_helper.Base64ToHexHash(digest))
+              lambda digest: hashing_helper.Base64ToHexHash(digest).decode('ascii'))
         elif o == '-m':
           calc_md5 = True
           found_hash_option = True
@@ -209,11 +215,11 @@ class HashCommand(Command):
             hash_dict['md5'] = obj_metadata.md5Hash
           if crc32c_present:
             hash_dict['crc32c'] = obj_metadata.crc32c
-        print 'Hashes [%s] for %s:' % (output_format, file_name)
-        for name, digest in hash_dict.iteritems():
-          print '\tHash (%s):\t\t%s' % (name,
+        text_util.ttyprint('Hashes [%s] for %s:' % (output_format, file_name))
+        for name, digest in six.iteritems(hash_dict):
+          text_util.ttyprint('\tHash (%s):\t\t%s' % (name,
                                         (format_func(digest) if url.IsFileUrl()
-                                         else cloud_format_func(digest)))
+                                         else cloud_format_func(digest))))
 
     if not matched_one:
       raise CommandException('No files matched')

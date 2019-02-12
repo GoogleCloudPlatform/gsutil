@@ -57,9 +57,9 @@ def get_sorted_initialization_times(items=10):
 
 def print_sorted_initialization_times():
   """Prints the most expensive imports in descending order."""
-  print '\n***Most expensive imports***'
+  print('\n***Most expensive imports***')
   for item in get_sorted_initialization_times().iteritems():
-    print item
+    print(item)
 
 
 def timed_importer(name, *args, **kwargs):

@@ -15,9 +15,13 @@
 """Implementation of Unix-like ls command for cloud storage providers."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import re
 
+import six
 from gslib.cloud_api import NotFoundException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
@@ -33,6 +37,7 @@ from gslib.utils.ls_helper import LsHelper
 from gslib.utils.ls_helper import PrintFullInfoAboutObject
 from gslib.utils.ls_helper import UNENCRYPTED_FULL_LISTING_FIELDS
 from gslib.utils.text_util import InsistAscii
+from gslib.utils import text_util
 from gslib.utils.translation_helper import AclTranslation
 from gslib.utils.translation_helper import LabelTranslation
 from gslib.utils.unit_util import MakeHumanReadable
@@ -317,7 +322,7 @@ class LsCommand(Command):
     """
     if (listing_style == ListingStyle.SHORT or
         listing_style == ListingStyle.LONG):
-      print bucket_blr
+      text_util.ttyprint(bucket_blr)
       return
     # listing_style == ListingStyle.LONG_LONG:
     # We're guaranteed by the caller that the root object is populated.
@@ -367,7 +372,7 @@ class LsCommand(Command):
     # prettier.
     for key in fields:
       previous_value = fields[key]
-      if (not isinstance(previous_value, basestring) or
+      if (not isinstance(previous_value, six.string_types) or
           '\n' not in previous_value):
         continue
       new_value = previous_value.replace('\n', '\n\t  ')
@@ -400,7 +405,7 @@ class LsCommand(Command):
                                          '{bucket_policy_only_enabled}\n')
 
 
-    print(('{bucket} :\n'
+    text_util.ttyprint((('{bucket} :\n'
            '\tStorage class:\t\t\t{storage_class}\n'
            '\tLocation constraint:\t\t{location_constraint}\n'
            '\tVersioning enabled:\t\t{versioning}\n'
@@ -418,9 +423,9 @@ class LsCommand(Command):
            metageneration_line +
            bucket_policy_only_enabled_line +
            '\tACL:\t\t\t\t{acl}\n'
-           '\tDefault ACL:\t\t\t{default_acl}').format(**fields))
+           '\tDefault ACL:\t\t\t{default_acl}').format(**fields)))
     if bucket_blr.storage_url.scheme == 's3':
-      print('Note: this is an S3 bucket so configuration values may be '
+      text_util.ttyprint('Note: this is an S3 bucket so configuration values may be '
             'blank. To retrieve bucket configuration values, use '
             'individual configuration commands such as gsutil acl get '
             '<bucket>.')
@@ -441,25 +446,24 @@ class LsCommand(Command):
       num_bytes = obj.size
       num_objs = 1
 
-    timestamp = JSON_TIMESTAMP_RE.sub(
-        r'\1T\2Z', str(obj.timeCreated).decode(UTF8).encode('ascii'))
+    timestamp = JSON_TIMESTAMP_RE.sub(r'\1T\2Z', str(obj.timeCreated))
     printstr = '%(size)10s  %(timestamp)s  %(url)s'
     encoded_etag = None
     encoded_metagen = None
     if self.all_versions:
       printstr += '  metageneration=%(metageneration)s'
-      encoded_metagen = str(obj.metageneration).encode(UTF8)
+      encoded_metagen = str(obj.metageneration)
     if self.include_etag:
       printstr += '  etag=%(etag)s'
-      encoded_etag = obj.etag.encode(UTF8)
+      encoded_etag = obj.etag
     format_args = {
         'size': size_string,
         'timestamp': timestamp,
-        'url': url_str.encode(UTF8),
+        'url': url_str,
         'metageneration': encoded_metagen,
         'etag': encoded_etag
     }
-    print printstr % format_args
+    text_util.ttyprint(printstr % format_args)
     return (num_objs, num_bytes)
 
   def RunCommand(self):
@@ -505,7 +509,7 @@ class LsCommand(Command):
 
     def MaybePrintBucketHeader(blr):
       if len(self.args) > 1:
-        print '%s:' % blr.url_string.encode(UTF8)
+        text_util.ttyprint('%s:' % blr.url_string.decode('utf-8'))
     print_bucket_header = MaybePrintBucketHeader
 
     for url_str in self.args:
@@ -562,7 +566,7 @@ class LsCommand(Command):
         # URL names a bucket, object, or object subdir ->
         # list matching object(s) / subdirs.
         def _PrintPrefixLong(blr):
-          print '%-33s%s' % ('', blr.url_string.encode(UTF8))
+          text_util.ttyprint('%-33s%s' % ('', blr.url_string.decode('utf-8')))
 
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.
@@ -613,8 +617,8 @@ class LsCommand(Command):
         total_objs += exp_objs
 
     if total_objs and listing_style != ListingStyle.SHORT:
-      print ('TOTAL: %d objects, %d bytes (%s)' %
-             (total_objs, total_bytes, MakeHumanReadable(float(total_bytes))))
+      text_util.ttyprint(('TOTAL: %d objects, %d bytes (%s)' %
+             (total_objs, total_bytes, MakeHumanReadable(float(total_bytes)))))
     if got_nomatch_errors:
       raise CommandException('One or more URLs matched no objects.')
     if got_bucket_nomatch_errors:

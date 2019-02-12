@@ -15,6 +15,9 @@
 """Unit tests for hashing helper functions and classes."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from hashlib import md5
 import os
@@ -45,7 +48,7 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
 
   def testReadToEOF(self):
     digesters = {'md5': md5()}
-    tmp_file = self.CreateTempFile(contents='a' * TRANSFER_BUFFER_SIZE * 4)
+    tmp_file = self.CreateTempFile(contents=b'a' * TRANSFER_BUFFER_SIZE * 4)
     with open(tmp_file, 'rb') as stream:
       wrapper = HashingFileUploadWrapper(stream, digesters, {'md5': md5},
                                          self._dummy_url, self.logger)
@@ -239,7 +242,7 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
       try:
         wrapper.read()
         self.fail('Expected CommandException for invalid seek.')
-      except CommandException, e:
+      except CommandException as e:
         self.assertIn(
             'Read called on hashing file pointer in an unknown position',
             str(e))

@@ -15,6 +15,9 @@
 """Tests for du command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -31,18 +34,18 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     obj_uris = []
     obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/five', contents='5five'))
+        bucket_uri=bucket_uri, object_name='sub1材/five', contents=b'5five'))
     obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/four', contents='four'))
+        bucket_uri=bucket_uri, object_name='sub1材/four', contents=b'four'))
     obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/sub2/five', contents='5five'))
+        bucket_uri=bucket_uri, object_name='sub1材/sub2/five', contents=b'5five'))
     obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/sub2/four', contents='four'))
+        bucket_uri=bucket_uri, object_name='sub1材/sub2/four', contents=b'four'))
     self.AssertNObjectsInBucket(bucket_uri, 4)
     return bucket_uri, obj_uris
 
   def test_object(self):
-    obj_uri = self.CreateObject(contents='foo')
+    obj_uri = self.CreateObject(contents=b'foo')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
@@ -52,7 +55,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
 
   def test_bucket(self):
     bucket_uri = self.CreateBucket()
-    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
@@ -81,8 +84,8 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
   def test_multi_args(self):
     """Tests running du with multiple command line arguments."""
     bucket_uri = self.CreateBucket()
-    obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
-    obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='foo2')
+    obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo2')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
@@ -97,8 +100,8 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
   def test_total(self):
     """Tests total size listing via the -c flag."""
     bucket_uri = self.CreateBucket()
-    obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
-    obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='zebra')
+    obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'zebra')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
@@ -112,7 +115,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   def test_human_readable(self):
-    obj_uri = self.CreateObject(contents='x' * 2048)
+    obj_uri = self.CreateObject(contents=b'x' * 2048)
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
@@ -159,9 +162,9 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     """Tests listing all versions with the -a flag."""
     bucket_uri = self.CreateVersionedBucket()
     object_uri1 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo', contents='foo')
+        bucket_uri=bucket_uri, object_name='foo', contents=b'foo')
     object_uri2 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo', contents='foo2',
+        bucket_uri=bucket_uri, object_name='foo', contents=b'foo2',
         gs_idempotent_generation=urigen(object_uri1))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -187,8 +190,8 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
   def test_null_endings(self):
     """Tests outputting 0-endings with the -0 flag."""
     bucket_uri = self.CreateBucket()
-    obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
-    obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents='zebra')
+    obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'zebra')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
@@ -223,7 +226,8 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
   def test_excludes_file(self):
     """Tests file exclusion with the -X flag."""
     bucket_uri, obj_uris = self._create_nested_subdir()
-    fpath = self.CreateTempFile(contents='*sub2/five*\n*sub1材/four')
+    fpath = self.CreateTempFile(
+      contents='*sub2/five*\n*sub1材/four'.encode('utf-8'))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)

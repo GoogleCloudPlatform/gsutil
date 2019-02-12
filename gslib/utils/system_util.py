@@ -21,12 +21,16 @@ creating directories, fetching environment variables, etc.).
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import errno
 import locale
 import os
 import struct
 import sys
+
+import six
 
 from gslib.utils.constants import WINDOWS_1252
 
@@ -100,7 +104,7 @@ def CloudSdkVersion():
   return os.environ.get('CLOUDSDK_VERSION', '')
 
 
-def CreateDirIfNeeded(dir_path, mode=0777):
+def CreateDirIfNeeded(dir_path, mode=0o777):
   """Creates a directory, suppressing already-exists errors."""
   if not os.path.exists(dir_path):
     try:
@@ -240,3 +244,18 @@ def StdinIterator():
   for line in sys.stdin:
     # Strip CRLF.
     yield line.rstrip()
+
+
+class StdinIteratorCls(six.Iterator):
+  """An iterator that returns lines from stdin.
+     This is needed because Python 3 balks at pickling the
+     generator version above.
+  """
+  def __iter__(self):
+    return self
+
+  def __next__(self):
+    line = sys.stdin.readline()
+    if not line:
+      raise StopIteration()
+    return line.rstrip()

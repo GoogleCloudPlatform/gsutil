@@ -16,6 +16,9 @@
 """Implementation of Unix-like cp command for cloud storage providers."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import itertools
 import logging
@@ -60,6 +63,7 @@ from gslib.utils.posix_util import SerializeFileAttributesToObjectMetadata
 from gslib.utils.posix_util import ValidateFilePermissionAccess
 from gslib.utils.system_util import GetStreamFromFileUrl
 from gslib.utils.system_util import StdinIterator
+from gslib.utils.system_util import StdinIteratorCls
 from gslib.utils.text_util import NormalizeStorageClass
 from gslib.utils.text_util import RemoveCRLFFromString
 from gslib.utils.unit_util import CalculateThroughput
@@ -1004,18 +1008,18 @@ class CpCommand(Command):
       self.logger.info(message)
       if copy_helper_opts.use_manifest:
         self.manifest.SetResult(exp_src_url.url_string, 0, 'skip', message)
-    except SkipUnsupportedObjectError, e:
+    except SkipUnsupportedObjectError as e:
       message = ('Skipping item %s with unsupported object type %s' %
                  (exp_src_url.url_string, e.unsupported_type))
       self.logger.info(message)
       if copy_helper_opts.use_manifest:
         self.manifest.SetResult(exp_src_url.url_string, 0, 'skip', message)
-    except copy_helper.FileConcurrencySkipError, e:
+    except copy_helper.FileConcurrencySkipError as e:
       self.logger.warn('Skipping copy of source URL %s because destination URL '
                        '%s is already being copied by another gsutil process '
                        'or thread (did you specify the same source URL twice?) '
                        % (src_url, dst_url))
-    except Exception, e:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
       if (copy_helper_opts.no_clobber and
           copy_helper.IsNoClobberServerException(e)):
         message = 'Rejected (noclobber): %s' % dst_url
@@ -1130,7 +1134,9 @@ class CpCommand(Command):
     if copy_helper_opts.read_args_from_stdin:
       if len(self.args) != 1:
         raise CommandException('Source URLs cannot be specified with -I option')
-      src_url_strs = [StdinIterator()]
+      # Use StdinIteratorCls instead of StdinIterator here to avoid Python 3
+      # generator pickling errors when multiprocessing a command.
+      src_url_strs = [StdinIteratorCls()]
     else:
       if len(self.args) < 2:
         raise CommandException('Wrong number of arguments for "cp" command.')
