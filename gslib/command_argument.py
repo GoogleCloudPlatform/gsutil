@@ -14,8 +14,12 @@
 # limitations under the License.
 
 """Contains classes related to argparse-based argument parsing."""
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
-from tab_complete import CompleterType
+from .tab_complete import CompleterType
 
 
 class CommandArgument(object):

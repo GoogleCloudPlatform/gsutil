@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import collections
 import errno
@@ -33,7 +35,7 @@ try:
   # This module doesn't necessarily exist on Windows.
   import resource
   _HAS_RESOURCE_MODULE = True
-except ImportError, e:
+except ImportError as e:
   _HAS_RESOURCE_MODULE = False
 
 # Maximum time to wait (join) on the SeekAheadThread after the ProducerThread

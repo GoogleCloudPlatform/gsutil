@@ -14,11 +14,18 @@
 # limitations under the License.
 """Helper functions for dealing with encryption keys used with cloud APIs."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import base64
 import binascii
 from hashlib import sha256
 import re
+import sys
 
+import six
 from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper
 
@@ -95,6 +102,9 @@ def FindMatchingCSEKInBotoConfig(key_sha256, boto_config):
     (str) Base64-encoded encryption key string if a match is found, None
     otherwise.
   """
+  if six.PY3:
+    if not isinstance(key_sha256, bytes):
+      key_sha256 = key_sha256.encode('ascii')
   keywrapper = CryptoKeyWrapperFromKey(
       boto_config.get('GSUtil', 'encryption_key', None))
   if (keywrapper is not None and
@@ -136,9 +146,14 @@ def GetEncryptionKeyWrapper(boto_config):
 
 
 def Base64Sha256FromBase64EncryptionKey(csek_encryption_key):
-  return base64.encodestring(binascii.unhexlify(
-      _CalculateSha256FromString(
-          base64.decodestring(csek_encryption_key)))).replace('\n', '')
+  if six.PY3:
+    if not isinstance(csek_encryption_key, bytes):
+      csek_encryption_key = csek_encryption_key.encode('ascii')
+  decoded_bytes = base64.decodestring(csek_encryption_key)
+  key_sha256 = _CalculateSha256FromString(decoded_bytes)
+  sha256_bytes = binascii.unhexlify(key_sha256)
+  sha256_base64 = base64.encodestring(sha256_bytes)
+  return sha256_base64.replace(b'\n', b'')
 
 
 def ValidateCMEK(key):

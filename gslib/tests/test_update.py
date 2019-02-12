@@ -22,6 +22,9 @@
 """Tests for the update command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import os.path
 import shutil
@@ -129,7 +132,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     p.stdout.close()
     p.stderr.close()
     self.assertEqual(p.returncode, 1)
-    self.assertIn('update command only works with tar.gz', stderr)
+    self.assertIn(b'update command only works with tar.gz', stderr)
 
     # Run with non-existent gs:// URI.
     p = subprocess.Popen(
@@ -139,7 +142,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     p.stdout.close()
     p.stderr.close()
     self.assertEqual(p.returncode, 1)
-    self.assertIn('NotFoundException', stderr)
+    self.assertIn(b'NotFoundException', stderr)
 
     # Run with file:// URI wihout -f option.
     p = subprocess.Popen(prefix + ['gsutil', 'update', suri(src_tarball)],
@@ -149,7 +152,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     p.stdout.close()
     p.stderr.close()
     self.assertEqual(p.returncode, 1)
-    self.assertIn('command does not support', stderr)
+    self.assertIn(b'command does not support', stderr)
 
     # Run with a file present that was not distributed with gsutil.
     with open(os.path.join(gsutil_dst, 'userdata.txt'), 'w') as fp:
@@ -165,15 +168,15 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     os.unlink(os.path.join(gsutil_dst, 'userdata.txt'))
     self.assertEqual(p.returncode, 1)
     self.assertIn(
-        'The update command cannot run with user data in the gsutil directory',
-        stderr.replace(os.linesep, ' '))
+        b'The update command cannot run with user data in the gsutil directory',
+        stderr.replace(os.linesep.encode('utf-8'), b' '))
 
     # Determine whether we'll need to decline the analytics prompt.
     analytics_prompt = not (
         os.path.exists(_UUID_FILE_PATH) or
         boto.config.get_value('GSUtil', 'disable_analytics_prompt'))
 
-    update_input = 'n\r\ny\r\n' if analytics_prompt else 'y\r\n'
+    update_input = b'n\r\ny\r\n' if analytics_prompt else b'y\r\n'
 
     # Now do the real update, which should succeed.
     p = subprocess.Popen(prefix + [gsutil_relative_dst, 'update', '-f',
@@ -185,7 +188,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     p.stderr.close()
     self.assertEqual(p.returncode, 0, msg=(
         'Non-zero return code (%d) from gsutil update. stderr = \n%s' %
-        (p.returncode, stderr)))
+        (p.returncode, stderr.decode('utf-8'))))
 
     # Verify that version file was updated.
     dst_version_file = os.path.join(tmpdir_dst, 'gsutil', 'VERSION')

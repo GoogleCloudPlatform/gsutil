@@ -16,9 +16,18 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
+import os
+import sys
+import io
 import re
-import urlparse
+import locale
+import collections
+
+import six
+from six.moves import urllib
 
 from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper
@@ -26,16 +35,21 @@ from gslib.utils.constants import UTF8
 from gslib.utils.constants import WINDOWS_1252
 from gslib.utils.system_util import IS_CP1252
 
+
+if six.PY3:
+  long = int
+
+
 STORAGE_CLASS_SHORTHAND_TO_FULL_NAME = {
-    # Values should remain uppercase, as required by non-gs providers.
-    'CL': 'COLDLINE',
-    'DRA': 'DURABLE_REDUCED_AVAILABILITY',
-    'NL': 'NEARLINE',
-    'S': 'STANDARD',
-    'STD': 'STANDARD'}
+  # Values should remain uppercase, as required by non-gs providers.
+  'CL': 'COLDLINE',
+  'DRA': 'DURABLE_REDUCED_AVAILABILITY',
+  'NL': 'NEARLINE',
+  'S': 'STANDARD',
+  'STD': 'STANDARD'}
 
 VERSION_MATCHER = LazyWrapper(
-    lambda: re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
+  lambda: re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
 
 
 def AddQueryParamToUrl(url_str, param_name, param_value):
@@ -62,22 +76,13 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
     (str or unicode) A string representing the modified url, of type `unicode`
     if the url_str argument was a `unicode`, otherwise a `str` encoded in UTF-8.
   """
-  url_was_unicode = isinstance(url_str, unicode)
-  if isinstance(url_str, unicode):
-    url_str = url_str.encode('utf-8')
-  if isinstance(param_name, unicode):
-    param_name = param_name.encode('utf-8')
-  if isinstance(param_value, unicode):
-    param_value = param_value.encode('utf-8')
-  scheme, netloc, path, query_str, fragment = urlparse.urlsplit(url_str)
+  scheme, netloc, path, query_str, fragment = urllib.parse.urlsplit(url_str)
 
-  query_params = urlparse.parse_qsl(query_str, keep_blank_values=True)
+  query_params = urllib.parse.parse_qsl(query_str, keep_blank_values=True)
   query_params.append((param_name, param_value))
   new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
 
-  new_url = urlparse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
-  if url_was_unicode:
-    new_url = new_url.decode('utf-8')
+  new_url = urllib.parse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
   return new_url
 
 
@@ -174,19 +179,22 @@ def FixWindowsEncodingIfNeeded(input_str):
   to Unicode.
 
   Args:
-    input_str: (str) The input string.
+    input_str: (str or bytes) The input string.
   Returns:
-    (str) The converted string (or the original, if conversion wasn't needed).
+    (unicode) The converted string (or the original, if conversion wasn't needed).
   """
   if IS_CP1252:
-    return input_str.decode(WINDOWS_1252).encode(UTF8)
+    assert(isinstance(input_str, six.binary_type))
+    return input_str.decode(WINDOWS_1252)
   else:
+    if isinstance(input_str, six.binary_type):
+      return input_str.decode(UTF8)
     return input_str
 
 
 def GetPrintableExceptionString(exc):
   """Returns a short Unicode string describing the exception."""
-  return unicode(exc).encode(UTF8) or unicode(exc.__class__)
+  return six.text_type(exc).encode(UTF8) or six.text_type(exc.__class__)
 
 
 def InsistAscii(string, message):
@@ -203,7 +211,7 @@ def InsistAsciiHeaderValue(header, value):
       value,
       'Invalid non-ASCII value (%s) was provided for header %s.\nOnly ASCII '
       'characters are allowed in headers other than x-goog-meta- and '
-      'x-amz-meta- headers' % (value, header))
+      'x-amz-meta- headers' % (repr(value), header))
 
 
 def InsistOnOrOff(value, message):
@@ -245,8 +253,85 @@ def PrintableStr(input_val):
   Returns:
     (str) A UTF-8 encoded string, or None.
   """
-  return input_val.encode(UTF8) if input_val is not None else None
+  return input_val
 
+
+def ttyprint(*objects, **kwargs):
+  """ A Python 2&3 compatible version of the print function.
+
+  The main purpose of this function is to favor binary output
+  over text output.
+
+  Args are the same as documented for the print function in Python2.
+  """
+  kw_params = collections.OrderedDict([('sep', ' '),
+                                       ('end', os.linesep),
+                                       ('file', sys.stdout)])
+  for key, value in kwargs.items():
+    if key not in kw_params:
+      raise TypeError(
+        "'{}' is an invalid keyword argument for this function".format(key))
+    kw_params[key] = value
+  sep, end, file = kw_params.values()
+  if six.PY2:
+    if hasattr(file, 'mode') and 'b' not in file.mode and end == os.linesep:
+      end = b'\n'
+    pref_enc = 'utf-8'
+    if isinstance(sep, unicode):
+      sep = sep.encode(pref_enc)
+    if isinstance(end, unicode):
+      end = end.encode(pref_enc)
+    byte_objects = []
+    for object in objects:
+      if isinstance(object, str):
+        byte_objects.append(object)
+      elif isinstance(object, unicode):
+        byte_objects.append(object.encode(pref_enc))
+      else:
+        byte_objects.append(str(object).encode(pref_enc))
+    data = sep.join(byte_objects)
+    data += end
+    ttywrite(file, data)
+  else:  # PY3
+    pref_enc = locale.getpreferredencoding(False)
+    if isinstance(sep, str):
+      sep = sep.encode(pref_enc)
+    if isinstance(end, str):
+      end = end.encode(pref_enc)
+    byte_objects = []
+    for object in objects:
+      if isinstance(object, bytes):
+        byte_objects.append(object)
+      elif isinstance(object, str):
+        byte_objects.append(object.encode(pref_enc))
+      else:
+        byte_objects.append(str(object).encode(pref_enc))
+    data = sep.join(byte_objects)
+    data += end
+    ttywrite(file, data)
+
+
+def ttywrite(fp, data):
+  if six.PY2:
+    fp.write(data)
+  else:  # PY3
+    if isinstance(data, bytes):
+      if (hasattr(fp, 'mode') and 'b' in fp.mode) or isinstance(fp, io.BytesIO):
+        # data is bytes, and fp is binary
+        fp.write(data)
+      elif hasattr(fp, 'buffer'):
+        # data is bytes, but fp is text - try the underlying buffer
+        fp.buffer.write(data)
+      else:
+        # data is bytes, but fp is text - try to decode bytes
+        fp.write(
+          data.decode(locale.getpreferredencoding(False)))
+    elif 'b' in fp.mode:
+      # data is not bytes, but fp is binary
+      fp.write(data.encode(locale.getpreferredencoding(False)))
+    else:
+      # data is not bytes, and fp is text
+      fp.write(data)
 
 def RemoveCRLFFromString(input_str):
   r"""Returns the input string with all \n and \r removed."""

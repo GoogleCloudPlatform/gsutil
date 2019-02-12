@@ -15,6 +15,9 @@
 """Implementation of gsutil help command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import itertools
 import os
@@ -33,6 +36,7 @@ from gslib.help_provider import MAX_HELP_NAME_LEN
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.system_util import IsRunningInteractively
 from gslib.utils.system_util import GetTermLines
+from gslib.utils import text_util
 
 _SYNOPSIS = """
   gsutil help [command or topic]
@@ -188,7 +192,7 @@ class HelpCommand(Command):
     if IS_WINDOWS or not IsRunningInteractively():
       help_str = re.sub('<B>', '', help_str)
       help_str = re.sub('</B>', '', help_str)
-      print help_str
+      text_util.ttyprint(help_str)
       return
     help_str = re.sub('<B>', '\033[1m', help_str)
     help_str = re.sub('</B>', '\033[0;0m', help_str)
@@ -200,11 +204,11 @@ class HelpCommand(Command):
         pager.append('-r')
       try:
         Popen(pager, stdin=PIPE).communicate(input=help_str)
-      except OSError, e:
+      except OSError as e:
         raise CommandException('Unable to open pager (%s): %s' %
                                (' '.join(pager), e))
     else:
-      print help_str
+      text_util.ttyprint(help_str)
 
   def _LoadHelpMaps(self):
     """Returns tuple of help type and help name.

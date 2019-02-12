@@ -16,9 +16,18 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import math
 import re
+
+import six
+
+
+if six.PY3:
+  long = int
+
 
 # Binary exponentiation strings.
 _EXP_STRINGS = [
@@ -66,7 +75,7 @@ TWO_MIB = 2 * ONE_MIB
 EIGHT_MIB = 8 * ONE_MIB
 TEN_MIB = 10 * ONE_MIB
 
-SECONDS_PER_DAY = 60 * 60 * 24L
+SECONDS_PER_DAY = long(60 * 60 * 24)
 SUFFIX_TO_SI, MATCH_HUMAN_BYTES = _GenerateSuffixRegex()
 
 
@@ -74,7 +83,7 @@ def _RoundToNearestExponent(num):
   i = 0
   while i + 1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
     i += 1
-  return i, round(float(num) / 2 ** _EXP_STRINGS[i][0], 2)
+  return i, round(float(num) / 2.0 ** _EXP_STRINGS[i][0], 2)
 
 
 def CalculateThroughput(total_bytes_transferred, total_elapsed_time):
@@ -244,14 +253,14 @@ def PrettyTime(remaining_time):
     Else, it returns the same message it received.
   """
   remaining_time = int(round(remaining_time))
-  hours = int(remaining_time / 3600)
+  hours = remaining_time // 3600
   if hours >= 100:
     # Too large to display with precision of minutes and seconds.
     # If over 1000, saying 999+ hours should be enough.
     return '%d+ hrs' % min(hours, 999)
   remaining_time -= (3600 * hours)
-  minutes = int(remaining_time / 60)
+  minutes = remaining_time // 60
   remaining_time -= (60 * minutes)
-  seconds = int(remaining_time)
+  seconds = remaining_time
   return (str('%02d' % hours) + ':' + str('%02d' % minutes)+':' +
           str('%02d' % seconds))
