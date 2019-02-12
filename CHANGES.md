@@ -1,3 +1,23 @@
+Release 4.36 (release date: 2019-01-28)
+=======================================
+New features
+------------------
+- Added Bucket Policy Only support to gsutil. This includes a new
+  "bucketpolicyonly" command to get/set BPO on existing buckets, as well adding
+  the ability to set BPO at bucket creation time with "mb -b". Currently, your
+  project must be whitelisted for use with the new BPO functionality. This
+  restriction will be lifted in the near future.
+
+Bug Fixes
+------------------
+- Fixed a bug where "cp -n" would overwrite a local file at the destination if
+  its size differed from the source's size.
+
+Other Changes
+------------------
+- Updated crcmod installation instructions for enterprise SUSE systems.
+
+
 Release 4.35 (release date: 2018-12-18)
 =======================================
 New features
