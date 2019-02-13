@@ -154,15 +154,12 @@ class BucketPolicyOnlyCommand(Command):
     self._ValidateBucketListingRefAndReturnBucketName(blr)
     bucket_url = blr.storage_url
 
-    bucket_metadata = self.gsutil_api.GetBucket(
-        bucket_url.bucket_name,
-        fields=[],
-        provider=bucket_url.scheme)
-
-    bucket_metadata.iamConfiguration = IamConfigurationValue()
-    iam_config = bucket_metadata.iamConfiguration
+    iam_config = IamConfigurationValue()
     iam_config.bucketPolicyOnly = BucketPolicyOnlyValue()
     iam_config.bucketPolicyOnly.enabled = (setting_arg == 'on')
+
+    bucket_metadata = apitools_messages.Bucket(
+        iamConfiguration=iam_config)
 
     setting_verb = 'Enabling' if setting_arg == 'on' else 'Disabling'
     print('%s Bucket Policy Only for %s...'
