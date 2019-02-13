@@ -283,7 +283,7 @@ def _GenSignedUrl(key, client_id, method, duration,
   canonical_request_hasher = hashlib.sha256()
   canonical_request_hasher.update(canonical_request)
   hashed_canonical_request = base64.b16encode(
-      canonical_request_hasher.digest()).lower()
+      canonical_request_hasher.digest()).lower().decode()
 
   string_to_sign = _STRING_TO_SIGN_FORMAT.format(
       signing_algo=_SIGNING_ALGO, request_time=canonical_time,
@@ -303,7 +303,7 @@ def _GenSignedUrl(key, client_id, method, duration,
     digest = 'RSA-SHA256'
 
   signature = base64.b16encode(
-      sign(key, string_to_sign, digest)).lower()
+      sign(key, string_to_sign, digest)).lower().decode()
 
   final_url = _SIGNED_URL_FORMAT.format(
       host=gs_host, path=gcs_path, sig=signature,
