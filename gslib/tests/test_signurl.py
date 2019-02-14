@@ -22,7 +22,6 @@ from __future__ import unicode_literals
 from datetime import datetime
 from datetime import timedelta
 import pkgutil
-from six import PY2, PY3
 
 import gslib.commands.signurl
 from gslib.commands.signurl import HAVE_OPENSSL
