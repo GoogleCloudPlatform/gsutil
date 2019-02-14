@@ -217,7 +217,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignResumable(self):
     """Tests the _GenSignedUrl function with a RESUMABLE method."""
-      expected = sigs.TEST_SIGN_RESUMABLE
+    expected = sigs.TEST_SIGN_RESUMABLE
 
     class MockLogger(object):
 
