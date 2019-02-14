@@ -277,10 +277,13 @@ def _GenSignedUrl(key, client_id, method, duration,
       query_string=canonical_query_string, headers=canonical_headers,
       signed_headers=canonical_signed_headers, hashed_payload=_UNSIGNED_PAYLOAD)
 
+  if six.PY3:
+    canonical_request = canonical_request.encode()
+
   canonical_request_hasher = hashlib.sha256()
   canonical_request_hasher.update(canonical_request)
   hashed_canonical_request = base64.b16encode(
-      canonical_request_hasher.digest()).lower()
+      canonical_request_hasher.digest()).lower().decode()
 
   string_to_sign = _STRING_TO_SIGN_FORMAT.format(
       signing_algo=_SIGNING_ALGO, request_time=canonical_time,
@@ -292,8 +295,20 @@ def _GenSignedUrl(key, client_id, method, duration,
     logger.debug('String to sign (ignore opening/closing brackets): [[[%s]]]'
                  % string_to_sign)
 
+  if six.PY2:
+    digest = b'RSA-SHA256'
+  else:
+    # Your IDE may complain about this due to a bad docstring in pyOpenSsl:
+    # https://github.com/pyca/pyopenssl/issues/741
+    digest = 'RSA-SHA256'
+
+  # If string looks like u'...', strip off the u' '
+  # See: https://github.com/GoogleCloudPlatform/gsutil/pull/619/files/19fe4b93543d1423f10792c96de2edc4a5a06db9#r256283790
+  if string_to_sign[:2] == "'u" and string_to_sign[-1:] == "'":
+    string_to_sign = string_to_sign[2:-1]
+
   signature = base64.b16encode(
-      sign(key, string_to_sign, b'RSA-SHA256')).lower()
+      sign(key, string_to_sign, digest)).lower().decode()
 
   final_url = _SIGNED_URL_FORMAT.format(
       host=gs_host, path=gcs_path, sig=signature,
