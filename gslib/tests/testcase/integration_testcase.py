@@ -877,8 +877,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           stdin = (stdin + os.linesep).encode('utf-8')
       else:
           stdin = (stdin + os.linesep).encode('utf-8')
-    if IS_WINDOWS:
-      cmd = [sys.executable] + cmd
+    cmd = [sys.executable] + cmd
     env = os.environ.copy()
     if env_vars:
       env.update(env_vars)

@@ -292,7 +292,7 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
     Index of last created test.
   """
   orig_test_index = test_index
-  executable_prefix = [sys.executable] if sys.executable and IS_WINDOWS else []
+  executable_prefix = [sys.executable] if sys.executable else []
   s3_argument = ['-s'] if tests.util.RUN_S3_TESTS else []
   multiregional_buckets = ['-b'] if tests.util.USE_MULTIREGIONAL_BUCKETS else []
   project_id_arg = []
