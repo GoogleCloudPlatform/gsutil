@@ -199,10 +199,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignPut(self):
     """Tests the _GenSignedUrl function with a PUT method."""
-    if PY2:
-      expected = sigs.TEST_SIGN_PUT_SIG_PY2
-    else:
-      expected = sigs.TEST_SIGN_PUT_SIG_PY3
+    expected = sigs.TEST_SIGN_PUT_SIG
 
     duration = timedelta(seconds=3600)
     with SetBotoConfigForTest([
@@ -220,10 +217,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignResumable(self):
     """Tests the _GenSignedUrl function with a RESUMABLE method."""
-    if PY2:
-      expected = sigs.TEST_SIGN_RESUMABLE_PY2
-    else:
-      expected = sigs.TEST_SIGN_RESUMABLE_PY3
+      expected = sigs.TEST_SIGN_RESUMABLE
 
     class MockLogger(object):
 
@@ -267,10 +261,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignurlPutContentype(self):
     """Tests the _GenSignedUrl function a PUT method and content type."""
-    if PY2:
-      expected = sigs.TEST_SIGN_URL_PUT_CONTENT_PY2
-    else:
-      expected = sigs.TEST_SIGN_URL_PUT_CONTENT_PY3      
+    expected = sigs.TEST_SIGN_URL_PUT_CONTENT
 
     duration = timedelta(seconds=3600)
     with SetBotoConfigForTest([
@@ -288,10 +279,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignurlGet(self):
     """Tests the _GenSignedUrl function with a GET method."""
-    if PY2:
-      expected = sigs.TEST_SIGN_URL_GET_PY2
-    else:
-      expected = sigs.TEST_SIGN_URL_GET_PY3
+    expected = sigs.TEST_SIGN_URL_GET
 
     duration = timedelta(seconds=0)
     with SetBotoConfigForTest([
@@ -309,10 +297,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignurlGetWithJSONKey(self):
     """Tests _GenSignedUrl with a GET method and the test JSON private key."""
-    if PY2:
-      expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY_PY2
-    else:
-      expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY_PY3
+    expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY
 
     json_contents = pkgutil.get_data('gslib', 'tests/test_data/test.json').decode()
     key, client_email = gslib.commands.signurl._ReadJSONKeystore(
