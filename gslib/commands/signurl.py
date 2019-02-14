@@ -302,6 +302,11 @@ def _GenSignedUrl(key, client_id, method, duration,
     # https://github.com/pyca/pyopenssl/issues/741
     digest = 'RSA-SHA256'
 
+  # If string looks like u'...', strip off the u' '
+  # See: https://github.com/GoogleCloudPlatform/gsutil/pull/619/files/19fe4b93543d1423f10792c96de2edc4a5a06db9#r256283790
+  if string_to_sign[:2] == "'u" and string_to_sign[-1:] == "'":
+    string_to_sign = string_to_sign[2:-1]
+
   signature = base64.b16encode(
       sign(key, string_to_sign, digest)).lower().decode()
 
