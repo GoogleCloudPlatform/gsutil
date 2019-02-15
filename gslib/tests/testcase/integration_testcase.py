@@ -51,6 +51,7 @@ from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase import base
 import gslib.tests.util as util
+from gslib.tests.util import InvokedFromParFile
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigForTest
@@ -877,7 +878,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           stdin = (stdin + os.linesep).encode('utf-8')
       else:
           stdin = (stdin + os.linesep).encode('utf-8')
-    cmd = [sys.executable] + cmd
+    # checking to see if test was invoked from a par file (bundled archive)
+    # if not, add python executable path to ensure correct version of python
+    # is used for testing
+    cmd = [sys.executable] + cmd if not InvokedFromParFile() else cmd
     env = os.environ.copy()
     if env_vars:
       env.update(env_vars)
