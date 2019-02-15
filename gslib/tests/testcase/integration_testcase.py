@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 
 from contextlib import contextmanager
 from six.moves import cStringIO
-import cStringIO
 import datetime
 import locale
 import logging

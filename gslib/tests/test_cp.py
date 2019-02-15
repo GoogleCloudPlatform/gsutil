@@ -482,17 +482,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SequentialAndParallelTransfer
   def test_noclobber_different_size(self):
-    key_uri = self.CreateObject(contents='foo')
-    fpath = self.CreateTempFile(contents='quux')
+    key_uri = self.CreateObject(contents=b'foo')
+    fpath = self.CreateTempFile(contents=b'quux')
     stderr = self.RunGsUtil(['cp', '-n', fpath, suri(key_uri)],
                             return_stderr=True)
     self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
-    self.assertEqual(key_uri.get_contents_as_string(), 'foo')
+    self.assertEqual(key_uri.get_contents_as_string(), b'foo')
     stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
                             return_stderr=True)
     with open(fpath, 'r') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
-      self.assertEqual(f.read(), 'quux')
+      self.assertEqual(f.read(), b'quux')
 
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents=b'foo')
