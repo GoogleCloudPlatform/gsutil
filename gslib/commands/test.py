@@ -41,6 +41,7 @@ from gslib.exception import CommandException
 from gslib.project_id import PopulateProjectId
 import gslib.tests as tests
 from gslib.tests.util import GetTestNames
+from gslib.tests.util import InvokedFromParFile
 from gslib.tests.util import unittest
 from gslib.utils.constants import NO_MAX
 from gslib.utils.system_util import IS_WINDOWS
@@ -292,7 +293,10 @@ def CreateTestProcesses(parallel_tests, test_index, process_list, process_done,
     Index of last created test.
   """
   orig_test_index = test_index
-  executable_prefix = [sys.executable] if sys.executable and IS_WINDOWS else []
+  # checking to see if test was invoked from a par file (bundled archive)
+  # if not, add python executable path to ensure correct version of python
+  # is used for testing
+  executable_prefix = [sys.executable] if not InvokedFromParFile() else []
   s3_argument = ['-s'] if tests.util.RUN_S3_TESTS else []
   multiregional_buckets = ['-b'] if tests.util.USE_MULTIREGIONAL_BUCKETS else []
   project_id_arg = []

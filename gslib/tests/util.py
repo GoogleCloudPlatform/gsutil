@@ -618,6 +618,13 @@ def WorkingDirectory(new_working_directory):
       os.chdir(prev_working_directory)
 
 
+def InvokedFromParFile():
+  loader = globals().get('__loader__', None)
+  if not loader:
+    return False
+  return 'zipimport' in loader.__class__.__module__
+
+
 # Custom test callbacks must be pickleable, and therefore at global scope.
 class HaltingCopyCallbackHandler(object):
   """Test callback handler for intentionally stopping a resumable transfer."""
