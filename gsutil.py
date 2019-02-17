@@ -73,24 +73,40 @@ THIRD_PARTY_LIBS = [
     ('pyasn1-modules', ''),  # oauth2client dependency
     ('rsa', ''),  # oauth2client dependency
     ('apitools', ''),
-    ('boto', ''),
+    ('boto', ''), # XML API and AWS interop dependency
     ('gcs-oauth2-boto-plugin', ''),
     ('fasteners', ''), # oauth2client and apitools dependency
     ('monotonic', ''), # fasteners dependency
     ('httplib2', 'python2'),
     ('python-gflags', ''),
     ('retry-decorator', ''),
-    ('six', ''),
+    ('six', ''), # Python 2 / 3 compatibility dependency
     ('socksipy-branch', ''),
 ]
-for libdir, subdir in THIRD_PARTY_LIBS:
-  if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):
-    OutputAndExit(
-        'There is no %s library under the gsutil third-party directory (%s).\n'
-        'The gsutil command cannot work properly when installed this way.\n'
-        'Please re-install gsutil per the installation instructions.' % (
-            libdir, THIRD_PARTY_DIR))
-  sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
+
+# These are special third party libraries that live in
+# `gsutil/third_party/vendored`. These libraries have modifications specifically
+# for gsutil to operate smoothly that may not yet be present in the latest
+# release of the package maintainer's repositoy.
+VENDORED_THIRD_PARTY_LIBS = [
+    ('boto', 'vendored') # XML API and AWS interop dependency
+]
+
+
+def prepend_to_path(THIRD_PARTY_LIBS, THIRD_PARTY_DIR):
+  for libdir, subdir in THIRD_PARTY_LIBS:
+    if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):
+      OutputAndExit(
+          'There is no %s library under the gsutil third-party directory (%s).\n'
+          'The gsutil command cannot work properly when installed this way.\n'
+          'Please re-install gsutil per the installation instructions.' % (
+              libdir, THIRD_PARTY_DIR))
+    sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
+
+# Libraries in vendored will be preferred over their counterparts in third_party
+# by prepending them earlier in the system path.
+prepend_to_path(THIRD_PARTY_LIBS, THIRD_PARTY_DIR)
+prepend_to_path(VENDORED_THIRD_PARTY_LIBS, THIRD_PARTY_DIR)
 
 # The wrapper script adds all third_party libraries to the Python path, since
 # we don't assume any third party libraries are installed system-wide.
@@ -110,6 +126,12 @@ except ImportError:
                        else CRCMOD_PATH)
   sys.path.insert(0, local_crcmod_path)
 
+try:
+  import boto
+  boto.init_logging()
+  print(sys.path)
+except Exception as e:
+  print(str(e))
 
 def RunMain():
   # pylint: disable=g-import-not-at-top
