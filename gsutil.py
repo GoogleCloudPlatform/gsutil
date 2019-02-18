@@ -101,7 +101,7 @@ def prepend_to_path(THIRD_PARTY_LIBS, THIRD_PARTY_DIR):
           'The gsutil command cannot work properly when installed this way.\n'
           'Please re-install gsutil per the installation instructions.' % (
               libdir, THIRD_PARTY_DIR))
-    sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
+    sys.path.insert(1, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
 
 # Libraries in vendored will be preferred over their counterparts in third_party
 # by prepending them earlier in the system path.
@@ -126,12 +126,6 @@ except ImportError:
                        else CRCMOD_PATH)
   sys.path.insert(0, local_crcmod_path)
 
-try:
-  import boto
-  boto.init_logging()
-  print(sys.path)
-except Exception as e:
-  print(str(e))
 
 def RunMain():
   # pylint: disable=g-import-not-at-top
