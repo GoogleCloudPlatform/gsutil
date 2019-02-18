@@ -141,7 +141,7 @@ class DuCommand(Command):
   def _PrintSummaryLine(self, num_bytes, name):
     size_string = (MakeHumanReadable(num_bytes)
                    if self.human_readable else str(num_bytes))
-    sys.stdout.write('%(size)-10s  %(name)s%(ending)s' % {
+    sys.stdout.write('%(size)-11s  %(name)s%(ending)s' % {
         'size': size_string, 'name': name, 'ending': self.line_ending})
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
@@ -171,7 +171,7 @@ class DuCommand(Command):
       num_objs = 1
 
     if not self.summary_only:
-      sys.stdout.write('%(size)-10s  %(url)s%(ending)s' % {
+      sys.stdout.write('%(size)-11s  %(url)s%(ending)s' % {
           'size': size_string,
           'url': url_str.encode(UTF8),
           'ending': self.line_ending})
