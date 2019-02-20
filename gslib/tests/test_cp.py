@@ -108,6 +108,7 @@ from gslib.utils.posix_util import ValidateFilePermissionAccess
 from gslib.utils.posix_util import ValidatePOSIXMode
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.text_util import get_random_ascii_chars
 from gslib.utils.unit_util import EIGHT_MIB
 from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import MakeHumanReadable
@@ -1810,7 +1811,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """
     # Setup the bucket and local data.
     bucket_uri = self.CreateBucket()
-    contents = self.get_random_ascii_chars(self.halt_size)
+    contents = get_random_ascii_chars(size=self.halt_size)
     tmpdir = self.CreateTempDir(test_files=10, contents=contents)
     # Upload the data.
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
@@ -2270,7 +2271,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Setup the bucket and local data. File contents are randomized to prevent
     # them from compressing below the resumable-threshold and failing the test.
     bucket_uri = self.CreateBucket()
-    contents = self.get_random_ascii_chars(self.halt_size)
+    contents = get_random_ascii_chars(size=self.halt_size)
     local_uri = self.CreateTempFile(file_name='test.txt', contents=contents)
     # Configure boto
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
