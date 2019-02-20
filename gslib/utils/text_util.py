@@ -25,8 +25,9 @@ import io
 import re
 import locale
 import collections
-
+import random
 import six
+import string
 from six.moves import urllib
 
 from gslib.exception import CommandException
@@ -333,6 +334,30 @@ def ttywrite(fp, data):
       # data is not bytes, and fp is text
       fp.write(data)
 
+
 def RemoveCRLFFromString(input_str):
   r"""Returns the input string with all \n and \r removed."""
   return re.sub(r'[\r\n]', '', input_str)
+
+
+def get_random_ascii_chars(size, seed=None):
+  """Generates random ASCII characters up to a given size.
+
+  Args:
+    size: Integer quantity of characters to generate.
+    seed: A seed may be specified for deterministic behavior.
+          None is used as the default value.
+
+  Returns:
+    ASCII encoded bytestring of length equal to size argument.
+    Please note Python 2 strings are bytes by default, while
+    Python 3 string are Unicode by default.
+  """
+  random.seed(seed)
+  charset = string.printable.encode('ascii')
+
+  contents = ''.join([random.choice(charset) for _ in range(size)]
+                      ).encode('ascii')
+
+  random.seed()  # Reset the seed for any other tests.
+  return contents

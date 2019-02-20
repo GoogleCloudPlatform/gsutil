@@ -108,6 +108,7 @@ from gslib.utils.posix_util import ValidateFilePermissionAccess
 from gslib.utils.posix_util import ValidatePOSIXMode
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils.text_util import get_random_ascii_chars
 from gslib.utils.unit_util import EIGHT_MIB
 from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import MakeHumanReadable
@@ -1509,8 +1510,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                    'Unicode handling on Windows requires mods to site-packages')
   @SequentialAndParallelTransfer
   def test_cp_manifest_upload_unicode(self):
-    return self._ManifestUpload('foo-unicöde', 'bar-unicöde',
-                                'manifest-unicöde')
+    return self._ManifestUpload('foo-unicöde'.encode('utf-8'), 'bar-unicöde'.encode('utf-8'),
+                                'manifest-unicöde'.encode('utf-8'))
 
   @SequentialAndParallelTransfer
   def test_cp_manifest_upload(self):
@@ -1689,50 +1690,99 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     that the contents of the files are uncompressed in GCS. This test uses the
     -j flag to target specific extensions.
     """
-    # Setup the bucket and local data.
-    bucket_uri = self.CreateBucket()
-    contents = b'x' * 10000
-    tmpdir = self.CreateTempDir()
-    local_uri1 = self.CreateTempFile(
-        file_name='test.html', tmpdir=tmpdir, contents=contents)
-    local_uri2 = self.CreateTempFile(
-        file_name='test.js', tmpdir=tmpdir, contents=contents)
-    local_uri3 = self.CreateTempFile(
-        file_name='test.txt', tmpdir=tmpdir, contents=contents)
-    # Upload the data.
-    stderr = self.RunGsUtil(
-        ['-D', 'cp', '-j', 'js, html', os.path.join(tmpdir, 'test*'),
-         suri(bucket_uri)],
-        return_stderr=True)
-    self.AssertNObjectsInBucket(bucket_uri, 3)
-    # Ensure the correct files were marked for compression.
-    self.assertIn(
-        'Using compressed transport encoding for file://%s.' % (local_uri1),
-        stderr)
-    self.assertIn(
-        'Using compressed transport encoding for file://%s.' % (local_uri2),
-        stderr)
-    self.assertNotIn(
-        'Using compressed transport encoding for file://%s.' % (local_uri3),
-        stderr)
-    # Ensure the files do not have a stored encoding of gzip and are stored
-    # uncompressed.
-    local_uri1 = suri(bucket_uri, 'test.html')
-    local_uri2 = suri(bucket_uri, 'test.js')
-    local_uri3 = suri(bucket_uri, 'test.txt')
-    fpath4 = self.CreateTempFile()
-    for uri in (local_uri1, local_uri2, local_uri3):
-      stdout = self.RunGsUtil(['stat', uri], return_stdout=True)
-      self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
-      self.RunGsUtil(['cp', uri, suri(fpath4)])
-      with open(fpath4, 'rb') as f:
-        self.assertEqual(f.read(), contents)
+    def _create_test_data():
+      """Setup the bucket and local data to test with.
+
+        Returns:
+          Triplet containing the following values:
+            bucket_uri: String URI of cloud storage bucket to upload mock data to.
+            tmpdir: String, path of a temporary directory to write mock data to.
+            local_uris: Tuple of three strings; each is the file path to a file
+                        containing mock data.
+      """
+      bucket_uri = self.CreateBucket()
+      contents = b'x' * 10000
+      tmpdir = self.CreateTempDir()
+
+      local_uris = [
+        self.CreateTempFile(file_name=filename, tmpdir=tmpdir, contents=contents)
+        for filename in ('test.html', 'test.js', 'test.txt')]
+
+      return (bucket_uri, tmpdir, local_uris)
+
+
+    def _upload_test_data(tmpdir, bucket_uri):
+      """Upload local test data.
+
+        Args:
+          tmpdir: String, path of a temporary directory to write mock data to.
+          bucket_uri: String URI of cloud storage bucket to upload mock data to.
+
+        Returns:
+          stderr: String output from running the gsutil command to upload mock data.
+      """
+      stderr = self.RunGsUtil(
+          ['-D', 'cp', '-j', 'js, html', os.path.join(tmpdir, 'test*'),
+          suri(bucket_uri)],
+          return_stderr=True)
+      self.AssertNObjectsInBucket(bucket_uri, 3)
+      return stderr
+
+
+    def _assert_sent_compressed(local_uris, stderr):
+      """Ensure the correct files were marked for compression.
+
+        Args:
+          local_uris: Tuple of three strings; each is the file path to a file
+                      containing mock data.
+          stderr: String output from running the gsutil command to upload mock data.
+      """
+      local_uri_html, local_uri_js, local_uri_txt = local_uris
+      assert_base_string = 'Using compressed transport encoding for file://{}.'
+      self.assertIn(assert_base_string.format(local_uri_html), stderr)
+      self.assertIn(assert_base_string.format(local_uri_js), stderr)
+      self.assertNotIn(assert_base_string.format(local_uri_txt), stderr)
+
+
+    def _assert_stored_uncompressed(bucket_uri, contents=b'x'*10000):
+      """Ensure the files are not compressed when they are stored in the bucket.
+
+        Args:
+          bucket_uri: String with URI for bucket containing uploaded test data.
+          contents: Byte string that are stored in each file in the bucket.
+      """
+      local_uri_html = suri(bucket_uri, 'test.html')
+      local_uri_js = suri(bucket_uri, 'test.js')
+      local_uri_txt = suri(bucket_uri, 'test.txt')
+      fpath4 = self.CreateTempFile()
+
+      for uri in (local_uri_html, local_uri_js, local_uri_txt):
+        stdout = self.RunGsUtil(['stat', uri], return_stdout=True)
+        self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
+        self.RunGsUtil(['cp', uri, suri(fpath4)])
+        with open(fpath4, 'rb') as f:
+          self.assertEqual(f.read(), contents)
+
+
+    # Get mock data, run tests
+    bucket_uri, tmpdir, local_uris = _create_test_data()
+    stderr = _upload_test_data(tmpdir, bucket_uri)
+    _assert_sent_compressed(local_uris, stderr)
+    _assert_stored_uncompressed(bucket_uri)
+
+
+              
 
   @SkipForS3('No compressed transport encoding support for S3.')
   @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer
   def test_gzip_transport_encoded_parallel_upload_non_resumable(self):
-    """Test non resumable, gzip encoded files upload correctly in parallel."""
+    """Test non resumable, gzip encoded files upload correctly in parallel.
+    
+    This test generates a small amount of data (e.g. 100 chars) to upload.
+    Due to the small size, it will be below the resumable threshold,
+    and test the behavior of non-resumable uploads.
+    """
     # Setup the bucket and local data.
     bucket_uri = self.CreateBucket()
     contents = b'x' * 100
@@ -1753,14 +1803,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer
   def test_gzip_transport_encoded_parallel_upload_resumable(self):
-    """Test resumable, gzip encoded files upload correctly in parallel."""
+    """Test resumable, gzip encoded files upload correctly in parallel.
+    
+    This test generates a large amount of data (e.g. halt_size amount of chars)
+    to upload. Due to the large size, it will be above the resumable threshold,
+    and test the behavior of resumable uploads.
+    """
     # Setup the bucket and local data.
     bucket_uri = self.CreateBucket()
-    random.seed(0)
-
-    contents = str([random.choice(string.ascii_letters)
-                 for _ in xrange(self.halt_size)]).encode('ascii')
-    random.seed()  # Reset the seed for any other tests.
+    contents = get_random_ascii_chars(size=self.halt_size)
     tmpdir = self.CreateTempDir(test_files=10, contents=contents)
     # Upload the data.
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
@@ -2220,10 +2271,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Setup the bucket and local data. File contents are randomized to prevent
     # them from compressing below the resumable-threshold and failing the test.
     bucket_uri = self.CreateBucket()
-    random.seed(0)
-    contents = str([random.choice(string.ascii_letters)
-                    for _ in xrange(self.halt_size)]).encode('ascii')
-    random.seed()  # Reset the seed for any other tests.
+    contents = get_random_ascii_chars(size=self.halt_size)
     local_uri = self.CreateTempFile(file_name='test.txt', contents=contents)
     # Configure boto
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))

@@ -25,12 +25,15 @@ import datetime
 import locale
 import logging
 import os
+import random
+import string
 import subprocess
 import sys
 import tempfile
 import time
 
 import six
+from six.moves import range
 
 import boto
 from boto import config
@@ -272,6 +275,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     else:
       self.xml_api.PatchObjectMetadata(bucket_name, object_name, obj_metadata,
                                        provider=provider)
+
 
   def SetPOSIXMetadata(self, provider, bucket_name, object_name, atime=None,
                        mtime=None, uid=None, gid=None, mode=None):
@@ -893,6 +897,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     status = p.returncode
 
     if expected_status is not None:
+      cmd = [six.ensure_text(item) for item in cmd]
       self.assertEqual(
         status, expected_status,
         msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
