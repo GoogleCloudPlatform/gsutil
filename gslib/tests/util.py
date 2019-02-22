@@ -53,9 +53,9 @@ if not IS_WINDOWS:
   def GetInvalidGid():
     # get a list of all GIDs on the system for quick reference
     all_gid = sorted([group.gr_gid for group in grp.getgrall()])
-    # current GID being tested, 100k is close to a large empty span on most
+    # current GID being tested, 2k is close to a large empty span on most
     # unix systems and a good starting point
-    gid = 100000
+    gid = 2000
     # Overflow should prevent loop from reaching 5b but number ensures that
     # infinite loop does not occur
     while gid < 5000000000:
