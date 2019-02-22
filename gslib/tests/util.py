@@ -51,10 +51,31 @@ if not IS_WINDOWS:
   import pwd
 
   def GetInvalidGid():
-    # Get a list of all groups on the system which are not necessarily sorted by
-    # GID, then sort them and take the last element and add one to the GID to
-    # get a GID that is guaranteed not to be on the current system.
-    return sorted([group.gr_gid for group in grp.getgrall()])[-1] + 1
+    # get a list of all GIDs on the system for quick reference
+    all_gid = sorted([group.gr_gid for group in grp.getgrall()])
+    # current GID being tested, 100k is close to a large empty span on most
+    # unix systems and a good starting point
+    gid = 100000
+    # Overflow should prevent loop from reaching 5b but number ensures that
+    # infinite loop does not occur
+    while gid < 5000000000:
+      if gid in all_gid:
+        # quick check, if gid is in list the group exists
+        gid += 1
+        continue
+      try:
+        # group could exist even if not in the list, testing for expected
+        # behaviour while testing POSIX permissions for more on grp see:
+        # https://docs.python.org/3.7/library/grp.html
+        grp.getgrgid(gid)
+        gid += 1
+      except KeyError:
+        # this is the target exception for invalid GID and the behaviour needed
+        return gid
+      except OverflowError:
+        # number limit reached without a usable GID found
+        break
+    raise Exception("Unable to generate GID for ")
 
   def GetNonPrimaryGid():
     # Select a group for the current user that is not the user's primary group.
