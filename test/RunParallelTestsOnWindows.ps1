@@ -19,7 +19,7 @@
 .PARAMETER PyExe
   This is the path to the Python executable. If not supplied, this script will
   search for a "python.exe" in the system PATH.
-.PARAMETER tests
+.PARAMETER Tests
   The names of test files or individual tests to run, separated by commas. E.g.
   to run tests in test_cp.py and test_label.py, one should pass the string
   "cp,label". To run individual cp tests, one might pass
