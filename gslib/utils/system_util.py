@@ -230,6 +230,15 @@ def InvokedViaCloudSdk():
   return os.environ.get('CLOUDSDK_WRAPPER') == '1'
 
 
+def IsRunningInCiEnvironment():
+  """Returns True if running in a CI environment, e.g. TravisCI."""
+  # TravisCI exports several env vars, the two most obvious ones being CI=true
+  # and TRAVIS=true. We check for the latter.
+  on_travis = 'TRAVIS' in os.environ
+  on_kokoro = 'KOKORO_ROOT' in os.environ
+  return on_travis or on_kokoro
+
+
 def IsRunningInteractively():
   """Returns True if currently running interactively on a TTY."""
   return sys.stdout.isatty() and sys.stderr.isatty() and sys.stdin.isatty()

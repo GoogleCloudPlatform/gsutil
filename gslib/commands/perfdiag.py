@@ -60,6 +60,7 @@ from gslib.utils.system_util import CheckFreeSpace
 from gslib.utils.system_util import GetDiskCounters
 from gslib.utils.system_util import GetFileSize
 from gslib.utils.system_util import IS_LINUX
+from gslib.utils.system_util import IsRunningInCiEnvironment
 from gslib.utils.unit_util import DivideAndCeil
 from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import MakeBitsHumanReadable
@@ -1451,7 +1452,11 @@ class PerfDiagCommand(Command):
         hostname = socket.gethostname()
         cmd = ['gcloud', 'compute', 'instances', 'list', '--filter=', hostname]
         try:
-          sysinfo['gce_instance_info'] = self._Exec(cmd, return_output=True)
+          # "gcloud compute" commands will (hopefully) fail on these envs due to
+          # lack of credentials/permissions to access compute resources.
+          mute_stderr = IsRunningInCiEnvironment()
+          sysinfo['gce_instance_info'] = (
+              self._Exec(cmd, return_output=True, mute_stderr=mute_stderr))
         except (CommandException, OSError):
           sysinfo['gce_instance_info'] = ''
 
