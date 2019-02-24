@@ -1,6 +1,9 @@
 language: python
 python:
   - "2.7"
+  - "3.5"
+  - "3.6"
+  - "3.7"
   - "pypy"
 before_install:
   - sudo rm -f /etc/boto.cfg
@@ -11,3 +14,9 @@ install:
 script:
   - gsutil version -l
   - gsutil test -u
+matrix:
+    fast_finish: true
+    allow_failures:
+        - python: "3.5"
+        - python: "3.6"
+        - python: "3.7"
