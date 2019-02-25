@@ -279,10 +279,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignurlGet(self):
     """Tests the _GenSignedUrl function with a GET method."""
-    if PY2:
-      expected = sigs.TEST_SIGN_URL_GET_PY2
-    else:
-      expected = sigs.TEST_SIGN_URL_GET_PY3
+    expected = sigs.TEST_SIGN_URL_GET
 
     duration = timedelta(seconds=0)
     with SetBotoConfigForTest([
@@ -300,10 +297,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignurlGetWithJSONKey(self):
     """Tests _GenSignedUrl with a GET method and the test JSON private key."""
-    if PY2:
-      expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY_PY2
-    else:
-      expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY_PY3
+    expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY
 
     json_contents = pkgutil.get_data('gslib', 'tests/test_data/test.json').decode()
     key, client_email = gslib.commands.signurl._ReadJSONKeystore(

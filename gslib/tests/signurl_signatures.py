@@ -67,21 +67,3 @@ TEST_SIGN_URL_GET_WITH_JSON_KEY = ('https://storage.googleapis.com/test/test.txt
                                    'ential=test%40developer.gserviceaccount.com%2F19000101%2Fasia%'
                                    '2Fstorage%2Fgoog4_request&x-goog-date=19000101T000555Z&x-goog-'
                                    'expires=0&x-goog-signedheaders=host')
-
-TEST_SIGN_URL_GET_PY3 = "https://storage.googleapis.com/test/test.txt?x-goog-signature=b'5d2c2179fe191b95f52a8df108c5d71ade3c758cdc56cac4409012629bfbc9f0343a473bd8fc98cb05b6510e2e05a89c3a410dd2b6dc0ca48546221bec9b0a4d73a16c45eb3e2ea115482caf5547ca24c1e388d33a59be583b730f268998a47b9b284b25a66d611564f8b56c7cad1eea4049e8838d8d8cfc85c1d2d073f513118446b59bfd7f20bc59786e1034a8d7c4d565fb2deeb89ffea1eaa535f9cb87e78eb87c479cdda95f23551b8b7c6974b82105210806d7285c5361c4203192dbf12de7ac376681ee72cc460ab6828eef3b8ca2e6ac5590f925f7497bc3fb15d3e4a1d8084c6b02b09e1be96070c776511669bfa47a6e250b429e2298c05470a9d5'&x-goog-algorithm=GOOG4-RSA-SHA256&x-goog-credential=test%40developer.gserviceaccount.com%2F19000101%2Fasia%2Fstorage%2Fgoog4_request&x-goog-date=19000101T000555Z&x-goog-expires=0&x-goog-signedheaders=host"
-
-TEST_SIGN_URL_GET_WITH_JSON_KEY_PY2 = ('https://storage.googleapis.com/test/test.txt?x-goog-signature='
-                                       '2ed227f18d31cdf2b01da7cd4fcea45330fbfcc0dda1d327a8c27124a276ee'
-                                       'e0de835e9cd4b0bee609d6b4b21a88a8092a9c089574a300243dde38351f0d'
-                                       '183df007211ded41f2f0854290b995be6c9d0367d9c00976745ba27740238b'
-                                       '0dd49fee7c41e7ed1569bbab8ffbb00a2078e904ebeeec2f8e55e93d4baba1'
-                                       '3db5dc670b1b16183a15d5067f1584db88b3dc55e3edd3c97c0f31fec99ea4'
-                                       'ce96ddb8235b0352c9ce5110dad1a580072d955fe9203b6701364ddd85226b'
-                                       '55bec84ac46e48cd324fd5d8d8ad264d1aa0b7dbad3ac04b87b2a6c2c8ef95'
-                                       '3285cbe3b431e5def84552e112899459fcb64d2d84320c06faa1e8efa26eca'
-                                       'cce2eff41f2d2364&x-goog-algorithm=GOOG4-RSA-SHA256&x-goog-cred'
-                                       'ential=test%40developer.gserviceaccount.com%2F19000101%2Fasia%'
-                                       '2Fstorage%2Fgoog4_request&x-goog-date=19000101T000555Z&x-goog-'
-                                       'expires=0&x-goog-signedheaders=host')
-
-TEST_SIGN_URL_GET_WITH_JSON_KEY_PY3 = "https://storage.googleapis.com/test/test.txt?x-goog-signature=b'5d2c2179fe191b95f52a8df108c5d71ade3c758cdc56cac4409012629bfbc9f0343a473bd8fc98cb05b6510e2e05a89c3a410dd2b6dc0ca48546221bec9b0a4d73a16c45eb3e2ea115482caf5547ca24c1e388d33a59be583b730f268998a47b9b284b25a66d611564f8b56c7cad1eea4049e8838d8d8cfc85c1d2d073f513118446b59bfd7f20bc59786e1034a8d7c4d565fb2deeb89ffea1eaa535f9cb87e78eb87c479cdda95f23551b8b7c6974b82105210806d7285c5361c4203192dbf12de7ac376681ee72cc460ab6828eef3b8ca2e6ac5590f925f7497bc3fb15d3e4a1d8084c6b02b09e1be96070c776511669bfa47a6e250b429e2298c05470a9d5'&x-goog-algorithm=GOOG4-RSA-SHA256&x-goog-credential=test%40developer.gserviceaccount.com%2F19000101%2Fasia%2Fstorage%2Fgoog4_request&x-goog-date=19000101T000555Z&x-goog-expires=0&x-goog-signedheaders=host"
