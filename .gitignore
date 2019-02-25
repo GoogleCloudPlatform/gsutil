@@ -11,3 +11,4 @@ gsutil_*.zip
 .metadata/*
 .idea/*
 .vscode/*
+venv*/*
