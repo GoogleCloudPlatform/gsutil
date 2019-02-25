@@ -199,10 +199,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignPut(self):
     """Tests the _GenSignedUrl function with a PUT method."""
-    if PY2:
-      expected = sigs.TEST_SIGN_PUT_SIG_PY2
-    else:
-      expected = sigs.TEST_SIGN_PUT_SIG_PY3
+    expected = sigs.TEST_SIGN_PUT_SIG
 
     duration = timedelta(seconds=3600)
     with SetBotoConfigForTest([
@@ -220,10 +217,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignResumable(self):
     """Tests the _GenSignedUrl function with a RESUMABLE method."""
-    if PY2:
-      expected = sigs.TEST_SIGN_RESUMABLE_PY2
-    else:
-      expected = sigs.TEST_SIGN_RESUMABLE_PY3
+    expected = sigs.TEST_SIGN_RESUMABLE
 
     class MockLogger(object):
 
@@ -267,10 +261,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
   def testSignurlPutContentype(self):
     """Tests the _GenSignedUrl function a PUT method and content type."""
-    if PY2:
-      expected = sigs.TEST_SIGN_URL_PUT_CONTENT_PY2
-    else:
-      expected = sigs.TEST_SIGN_URL_PUT_CONTENT_PY3
+    expected = sigs.TEST_SIGN_URL_PUT_CONTENT
 
     duration = timedelta(seconds=3600)
     with SetBotoConfigForTest([
