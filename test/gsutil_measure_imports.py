@@ -17,7 +17,12 @@
 
 from __future__ import absolute_import
 
-import __builtin__
+import six
+if six.PY3:
+  import builtins as builtin
+else:
+  import __builtin__ as builtin
+
 import atexit
 from collections import OrderedDict
 from operator import itemgetter
@@ -36,7 +41,7 @@ import timeit
 # used and take a significant amount of time to initialize (e.g. 100ms).
 INITIALIZATION_TIMES = {}
 
-real_importer = __builtin__.__import__
+real_importer = builtin.__import__
 
 
 def get_sorted_initialization_times(items=10):
@@ -81,7 +86,7 @@ def timed_importer(name, *args, **kwargs):
   INITIALIZATION_TIMES[name] = import_end_time - import_start_time
   return import_value
 
-__builtin__.__import__ = timed_importer
+builtin.__import__ = timed_importer
 
 
 def initialize():

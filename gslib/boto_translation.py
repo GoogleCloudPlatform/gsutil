@@ -919,10 +919,9 @@ class BotoTranslation(CloudApi):
     try:
       md5 = None
       if object_metadata.md5Hash:
-        md5 = []
         # boto expects hex at index 0, base64 at index 1
-        md5.append(Base64ToHexHash(object_metadata.md5Hash))
-        md5.append(object_metadata.md5Hash.strip('\n"\''))
+        md5 = [Base64ToHexHash(object_metadata.md5Hash),
+               object_metadata.md5Hash.strip('\n"\'')]
       self._PerformSimpleUpload(dst_uri, upload_stream, md5=md5,
                                 canned_acl=canned_acl,
                                 progress_callback=progress_callback,
