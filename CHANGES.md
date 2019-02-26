@@ -1,3 +1,16 @@
+Release 4.37 (release date: 2019-02-26)
+=======================================
+Bug Fixes
+------------------
+- Fixed a bug where XML API requests would sometimes fail with SSLError
+  exceptions due to SNI not being used for https connections.
+- Fixed "du" output spacing for 6-digit sizes.
+
+Other Changes
+------------------
+- Updated crcmod installation instructions for CentOS 6.
+
+
 Release 4.36 (release date: 2019-01-28)
 =======================================
 New features
