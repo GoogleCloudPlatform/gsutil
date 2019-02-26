@@ -957,7 +957,8 @@ class GcsJsonApi(CloudApi):
     if end_byte:
       outer_total_size = end_byte + 1
     elif serialization_data:
-      outer_total_size = json.loads(serialization_data)['total_size']
+      outer_total_size = json.loads(
+          six.ensure_str(serialization_data))['total_size']
 
     if progress_callback:
       if outer_total_size is None:
@@ -984,7 +985,7 @@ class GcsJsonApi(CloudApi):
       # a well-defined way to express query parameters. Currently, we assume
       # the URL ends in ?alt=media, and this will break if that changes.
       if self.trace_token:
-        serialization_dict = json.loads(serialization_data)
+        serialization_dict = json.loads(six.ensure_str(serialization_data))
         serialization_dict['url'] += '&trace=token%%3A%s' % self.trace_token
         serialization_data = json.dumps(serialization_dict)
 
@@ -1814,7 +1815,7 @@ class GcsJsonApi(CloudApi):
     if isinstance(http_error, apitools_exceptions.HttpError):
       if getattr(http_error, 'content', None):
         try:
-          json_obj = json.loads(http_error.content)
+          json_obj = json.loads(six.ensure_str(http_error.content))
           if 'error' in json_obj and 'message' in json_obj['error']:
             return json_obj['error']['message']
         except Exception:  # pylint: disable=broad-except

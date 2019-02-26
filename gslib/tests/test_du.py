@@ -32,15 +32,17 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
   def _create_nested_subdir(self):
     """Creates a nested subdirectory for use by tests in this module."""
     bucket_uri = self.CreateBucket()
-    obj_uris = []
-    obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/five', contents=b'5five'))
-    obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/four', contents=b'four'))
-    obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/sub2/five', contents=b'5five'))
-    obj_uris.append(self.CreateObject(
-        bucket_uri=bucket_uri, object_name='sub1材/sub2/four', contents=b'four'))
+    obj_uris = [
+      self.CreateObject(
+        bucket_uri=bucket_uri, object_name='sub1材/five', contents=b'5five'),
+      self.CreateObject(
+        bucket_uri=bucket_uri, object_name='sub1材/four', contents=b'four'),
+      self.CreateObject(
+        bucket_uri=bucket_uri, object_name='sub1材/sub2/five',
+        contents=b'5five'),
+      self.CreateObject(
+        bucket_uri=bucket_uri, object_name='sub1材/sub2/four', contents=b'four')
+    ]
     self.AssertNObjectsInBucket(bucket_uri, 4)
     return bucket_uri, obj_uris
 
