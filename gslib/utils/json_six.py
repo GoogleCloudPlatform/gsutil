@@ -24,23 +24,21 @@ Public functions:
   encode_message: Encodes a message in to a JSON string.
   decode_message: Merge from a JSON string in to a message.
 """
-
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import json
-from six import PY3
-from six import binary_type
+import six
 
-# used for including both loads and dumps methods for ease of importing
-from json import dumps
+
+dumps = json.dumps
+
 
 def loads(json_data):
+  """Converts a string OR bytes into a json structure.
+
+  Args:
+    json_data: JSON text that will be converted to a dictionary.
+
+  Returns:
+    A dictionary, based on the text provided in the json_data argument.
   """
-  Converts a string OR bytes into a json structure
-  """
-  if PY3 and isinstance(json_data, binary_type):
-    json_data = str(json_data, "utf-8")
-  return json.loads(json_data)
+
+  return json.loads(six.ensure_str(json_data))
