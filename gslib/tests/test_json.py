@@ -5,17 +5,15 @@ import six
 class TestJsonConversion(testcase.GsUtilUnitTestCase):
   @classmethod
   def setUpClass(cls):
-    cls.text_json = six.ensure_text('[{"integer": 1,"decimal": 3.14,"text": '
-                        '"testing, 1, 2"}]')
-    cls.binary_json = six.ensure_binary(b'[{"integer": 1,"decimal": 3.14,"text": '
-                            b'"testing, 1, 2"}]')
     cls.keys = {"integer", "decimal", "text"}
+    cls.text_json = six.ensure_text(
+        '[{"integer": 1,"decimal": 3.14,"text": "testing, 1, 2"}]'
+    )
+    cls.binary_json = six.ensure_binary(
+        '[{"integer": 1,"decimal": 3.14,"text": "testing, 1, 2"}]'
+    )
     cls.json = [
-      {
-        "integer": 1,
-        "decimal": 3.14,
-        "text": "testing, 1, 2"
-      }
+        {"integer": 1, "decimal": 3.14, "text": "testing, 1, 2"}
     ]
 
   def test_json_load_text(self):
