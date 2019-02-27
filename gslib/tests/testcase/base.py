@@ -195,9 +195,10 @@ class GsUtilTestCase(unittest.TestCase):
     Returns:
       The path to the new temporary file.
     """
-    tmpdir = tmpdir or self.CreateTempDir()
-    file_name = file_name or self.MakeTempName('file')
-    if isinstance(file_name, six.text_type):
+
+    tmpdir = six.ensure_str(tmpdir or self.CreateTempDir())
+    file_name = file_name or self.MakeTempName(str('file'))
+    if isinstance(file_name, (six.text_type, six.binary_type)):
       fpath = os.path.join(tmpdir, file_name)
     else:
       fpath = os.path.join(tmpdir, *file_name)
@@ -206,7 +207,7 @@ class GsUtilTestCase(unittest.TestCase):
 
     with open(fpath, 'wb') as f:
       contents = (contents if contents is not None
-                  else self.MakeTempName('contents').encode(UTF8))
+                  else self.MakeTempName(str('contents')))
       f.write(six.ensure_binary(contents))
     if mtime is not None:
       # Set the atime and mtime to be the same.
