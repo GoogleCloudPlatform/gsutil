@@ -330,9 +330,9 @@ def ObjectToURI(obj, *suffixes):
       os.path.abspath(os.path.join(obj.name, *suffixes)))
   if isinstance(obj, six.string_types):
     return 'file://{}'.format(os.path.join(obj, *suffixes))
-  uri = obj.uri
+  uri = six.ensure_text(obj.uri)
   if suffixes:
-    suffixes_list = list(suffixes)
+    suffixes_list = [six.ensure_text(suffix) for suffix in suffixes]
     uri = _NormalizeURI('/'.join([uri] + suffixes_list))
 
   # Storage URIs shouldn't contain a trailing slash.
@@ -623,14 +623,19 @@ def MakeBucketNameValid(name):
   """Returns a copy of the given name with any invalid characters replaced.
 
   Args:
-    name (str): The bucket name to transform into a valid name.
+    name Union[str, unicode, bytes]: The bucket name to transform into a valid name.
 
   Returns:
-    (str) The version of the bucket name containing only valid characters.
+    Union[str, unicode, bytes] The version of the bucket name containing only
+      valid characters.
   """
   # Neither underscores nor uppercase letters are valid characters for a
   # bucket name. Replace those with hyphens and lowercase characters.
-  return name.replace('_', '-').lower()
+  if isinstance(name, (six.text_type, six.binary_type)):
+    return name.replace('_', '-').lower()
+  else:
+    raise TypeError('Unable to format name. Incorrect Type: {0}'.format(
+        type(name)))
 
 
 @contextmanager

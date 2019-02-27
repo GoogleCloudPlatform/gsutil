@@ -547,8 +547,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     if provider == 'gs':
       # Apply API version and project ID headers if necessary.
-      headers = {'x-goog-api-version': self.api_version}
-      headers[GOOG_PROJ_ID_HDR] = PopulateProjectId()
+      headers = {'x-goog-api-version': self.api_version,
+                 GOOG_PROJ_ID_HDR: PopulateProjectId()}
     else:
       headers = {}
 
@@ -871,8 +871,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     cmd = ([gslib.GSUTIL_PATH] + ['--testexceptiontraces'] +
            ['-o', 'GSUtil:default_project_id=' + PopulateProjectId()] +
            cmd)
-    cmd_bytes = [part.encode('utf-8')
-                 if isinstance(part, six.text_type) else part for part in cmd]
+    cmd = [six.ensure_str(part) for part in cmd]
     if stdin is not None:
       if six.PY3:
         if isinstance(stdin, bytes):
@@ -884,12 +883,16 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # checking to see if test was invoked from a par file (bundled archive)
     # if not, add python executable path to ensure correct version of python
     # is used for testing
-    cmd = [sys.executable] + cmd if not InvokedFromParFile() else cmd
+    cmd = [str(sys.executable)] + cmd if not InvokedFromParFile() else cmd
     env = os.environ.copy()
     if env_vars:
       env.update(env_vars)
-    p = subprocess.Popen(cmd_bytes, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, stdin=subprocess.PIPE, env=env)
+    env_str = dict()
+    for k, v in six.iteritems(env):
+      env_str[six.ensure_str(k)] = six.ensure_str(v)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, stdin=subprocess.PIPE,
+                         env=env_str)
     likely_encoding = sys.stdout.encoding or UTF8
     stdout, stderr = map(
         lambda b: b.decode(likely_encoding).replace(os.linesep, '\n'),

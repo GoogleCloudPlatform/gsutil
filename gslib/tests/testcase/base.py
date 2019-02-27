@@ -102,9 +102,10 @@ class GsUtilTestCase(unittest.TestCase):
       providers (e.g. replacing "_" with "-", converting uppercase letters to
       lowercase, etc.).
     """
-    name = '%sgsutil-test-%s-%s' % (prefix, self.GetTestMethodName(), kind)
+    name = '{prefix}gsutil-test-{method}-{kind}'.format(
+      prefix=prefix, method=self.GetTestMethodName(), kind=kind)
     name = name[:MAX_BUCKET_LENGTH-9]
-    name = '%s-%s' % (name, self.MakeRandomTestString())
+    name = '{name}-{rand}'.format(name=name, rand=self.MakeRandomTestString())
     # As of March 2018, S3 no longer accepts underscores or uppercase letters in
     # bucket names.
     if kind == 'bucket':
@@ -194,9 +195,10 @@ class GsUtilTestCase(unittest.TestCase):
     Returns:
       The path to the new temporary file.
     """
-    tmpdir = tmpdir or self.CreateTempDir()
-    file_name = file_name or self.MakeTempName('file')
-    if isinstance(file_name, six.text_type):
+
+    tmpdir = six.ensure_str(tmpdir or self.CreateTempDir())
+    file_name = file_name or self.MakeTempName(str('file'))
+    if isinstance(file_name, (six.text_type, six.binary_type)):
       fpath = os.path.join(tmpdir, file_name)
     else:
       fpath = os.path.join(tmpdir, *file_name)
@@ -205,7 +207,11 @@ class GsUtilTestCase(unittest.TestCase):
 
     with open(fpath, 'wb') as f:
       contents = (contents if contents is not None
-                  else self.MakeTempName('contents').encode(UTF8))
+                  else self.MakeTempName(str('contents')))
+      if isinstance(contents, bytearray):
+        contents = bytes(contents)
+      else:
+        contents = six.ensure_binary(contents)
       f.write(contents)
     if mtime is not None:
       # Set the atime and mtime to be the same.

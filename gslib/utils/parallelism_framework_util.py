@@ -248,6 +248,8 @@ def ShouldProhibitMultiprocessing():
   """
   if system_util.IS_WINDOWS:
     return (True, 'Windows')
+  if system_util.IS_OSX:
+    return (False, "macOS")
   try:
     with open('/etc/os-release', 'r') as f:
       os_name = f.read().split('\n')[0].split('=')[1].strip('"')
@@ -256,7 +258,7 @@ def ShouldProhibitMultiprocessing():
     if e.errno == errno.ENOENT:
       logging.debug('Unable to open /etc/os-release to determine whether OS '
                     'supports multiprocessing: errno=%d, message=%s'
-                    % (e.errno, e.message))
+                    % (e.errno, str(e)))
       return (False, 'Unknown')
     else:
       raise
