@@ -623,10 +623,10 @@ def MakeBucketNameValid(name):
   """Returns a copy of the given name with any invalid characters replaced.
 
   Args:
-    name (str, unicode, bytes): The bucket name to transform into a valid name.
+    name Union[str, unicode, bytes]: The bucket name to transform into a valid name.
 
   Returns:
-    (str, unicode, bytes) The version of the bucket name containing only
+    Union[str, unicode, bytes] The version of the bucket name containing only
       valid characters.
   """
   # Neither underscores nor uppercase letters are valid characters for a
@@ -634,7 +634,7 @@ def MakeBucketNameValid(name):
   if isinstance(name, (six.text_type, six.binary_type)):
     return name.replace('_', '-').lower()
   else:
-    raise TypeError("Unable to format name. Incorrect Type: {0}".format(
+    raise TypeError('Unable to format name. Incorrect Type: {0}'.format(
         type(name)))
 
 
