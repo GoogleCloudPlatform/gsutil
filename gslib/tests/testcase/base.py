@@ -208,7 +208,11 @@ class GsUtilTestCase(unittest.TestCase):
     with open(fpath, 'wb') as f:
       contents = (contents if contents is not None
                   else self.MakeTempName(str('contents')))
-      f.write(six.ensure_binary(contents))
+      if isinstance(contents, bytearray):
+        contents = bytes(contents)
+      else:
+        contents = six.ensure_binary(contents)
+      f.write(contents)
     if mtime is not None:
       # Set the atime and mtime to be the same.
       os.utime(fpath, (mtime, mtime))
