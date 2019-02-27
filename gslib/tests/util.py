@@ -623,7 +623,7 @@ def MakeBucketNameValid(name):
   """Returns a copy of the given name with any invalid characters replaced.
 
   Args:
-    name: The bucket name to transform into a valid name.
+    name (str, unicode, bytes): The bucket name to transform into a valid name.
 
   Returns:
     (str, unicode, bytes) The version of the bucket name containing only
