@@ -206,7 +206,7 @@ class GsUtilTestCase(unittest.TestCase):
     with open(fpath, 'wb') as f:
       contents = (contents if contents is not None
                   else self.MakeTempName('contents').encode(UTF8))
-      f.write(contents)
+      f.write(six.ensure_binary(contents))
     if mtime is not None:
       # Set the atime and mtime to be the same.
       os.utime(fpath, (mtime, mtime))
