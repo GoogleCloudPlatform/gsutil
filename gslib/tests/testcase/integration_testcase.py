@@ -650,10 +650,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       A StorageUri for the created object.
     """
     bucket_uri = bucket_uri or self.CreateBucket()
-
-    if contents and not isinstance(contents, six.binary_type):
-      raise TypeError(
-        'contents must be either none or bytes, not {}'.format(type(contents)))
+    # checking for valid types - None or unicode/binary text
+    if contents is not None:
+      if not isinstance(contents, (six.binary_type, six.text_type)):
+        raise TypeError(
+          'contents must be either none or bytes, not {}'.format(type(contents)))
+      contents = six.ensure_binary(contents)
     if (contents and
         bucket_uri.scheme == 'gs' and
         (prefer_json_api or encryption_key or kms_key_name)):
@@ -868,10 +870,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       If only one return_* value was specified, that value is returned directly
       rather than being returned within a 1-tuple.
     """
-    cmd = ([gslib.GSUTIL_PATH] + ['--testexceptiontraces'] +
-           ['-o', 'GSUtil:default_project_id=' + PopulateProjectId()] +
-           cmd)
-    cmd = [six.ensure_str(part) for part in cmd]
+    cmd = [
+        gslib.GSUTIL_PATH,
+        '--testexceptiontraces',
+        '-o',
+        'GSUtil:default_project_id=' + PopulateProjectId()
+    ] + cmd
+    cmd_bytes = [part.encode('utf-8')
+                 if isinstance(part, six.text_type) else part for part in cmd]
     if stdin is not None:
       if six.PY3:
         if isinstance(stdin, bytes):
@@ -900,7 +906,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     status = p.returncode
 
     if expected_status is not None:
-      cmd = [six.ensure_text(item) for item in cmd]
+      map(six.ensure_text, cmd)
       self.assertEqual(
         status, expected_status,
         msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(

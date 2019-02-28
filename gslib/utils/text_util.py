@@ -354,7 +354,7 @@ def get_random_ascii_chars(size, seed=None):
     Python 3 string are Unicode by default.
   """
   random.seed(seed)
-  charset = string.printable.encode('ascii')
+  charset = string.printable
 
   contents = ''.join([random.choice(charset) for _ in range(size)]
                       ).encode('ascii')

@@ -201,6 +201,7 @@ class GsUtilTestCase(unittest.TestCase):
     if isinstance(file_name, (six.text_type, six.binary_type)):
       fpath = os.path.join(tmpdir, file_name)
     else:
+      file_name = map(six.ensure_str, file_name)
       fpath = os.path.join(tmpdir, *file_name)
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
