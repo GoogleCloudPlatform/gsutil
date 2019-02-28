@@ -164,7 +164,7 @@ setup(
         'Topic :: System :: Filesystems',
         'Topic :: Utilities',
     ],
-    python_requires='>=2.7, <3',
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, <4',
     platforms='any',
     packages=find_packages(exclude=['third_party']),
     include_package_data=True,
