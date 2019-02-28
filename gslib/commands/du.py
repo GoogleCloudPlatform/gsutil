@@ -147,8 +147,8 @@ class DuCommand(Command):
   def _PrintSummaryLine(self, num_bytes, name):
     size_string = (MakeHumanReadable(num_bytes)
                    if self.human_readable else six.text_type(num_bytes))
-    text_util.ttyprint('%(size)-10s  %(name)s' % {
-        'size': size_string, 'name': name}, end=self.line_ending)
+    text_util.ttyprint('%(size)-11s  %(name)s' % {
+        'size': size_string, 'name': name, 'ending':self.line_ending})
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
     """Print listing info for given bucket_listing_ref.
@@ -177,10 +177,10 @@ class DuCommand(Command):
       num_objs = 1
 
     if not self.summary_only:
-      text_util.ttyprint('%(size)-10s  %(url)s' % {
+      sys.stdout.write('%(size)-11s  %(url)s%(ending)s' % {
           'size': size_string,
-          'url': url_str},
-          end=self.line_ending)
+          'url': url_str.encode(UTF8),
+          'ending': self.line_ending})
 
     return (num_objs, num_bytes)
 

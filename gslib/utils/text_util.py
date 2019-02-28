@@ -182,15 +182,12 @@ def FixWindowsEncodingIfNeeded(input_str):
   Args:
     input_str: (str or bytes) The input string.
   Returns:
-    (unicode) The converted string (or the original, if conversion wasn't needed).
+    (unicode) The converted string or the original, if conversion wasn't needed.
   """
   if IS_CP1252:
-    assert(isinstance(input_str, six.binary_type))
-    return input_str.decode(WINDOWS_1252)
+    return six.ensure_text(input_str, WINDOWS_1252)
   else:
-    if isinstance(input_str, six.binary_type):
-      return input_str.decode(UTF8)
-    return input_str
+    return six.ensure_text(input_str, UTF8)
 
 
 def GetPrintableExceptionString(exc):
@@ -213,6 +210,11 @@ def InsistAsciiHeaderValue(header, value):
       'Invalid non-ASCII value (%s) was provided for header %s.\nOnly ASCII '
       'characters are allowed in headers other than x-goog-meta- and '
       'x-amz-meta- headers' % (repr(value), header))
+
+
+def InsistOnOrOff(value, message):
+  if value != 'on' and value != 'off':
+    raise CommandException(message)
 
 
 def InsistOnOrOff(value, message):
