@@ -298,6 +298,7 @@ class DaisyChainWrapper(object):
           self.bytes_buffered = 0
           self.last_position = 0
           self.last_data = None
+        self.stop_download.clear()
         self.StartDownloadThread(start_byte=offset,
                                  progress_callback=self.progress_callback)
     else:
