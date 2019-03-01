@@ -167,9 +167,15 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     # this file around.
     os.unlink(os.path.join(gsutil_dst, 'userdata.txt'))
     self.assertEqual(p.returncode, 1)
+    # Additional check for Windows since it has \r\n and string may have just \n
+    os_ls = os.linesep.encode('utf-8')
+    if os_ls in stderr:
+      stderr = stderr.replace(os_ls, b' ')
+    elif b'\n' in stderr:
+      stderr = stderr.replace(b'\n', b' ')
     self.assertIn(
         b'The update command cannot run with user data in the gsutil directory',
-        stderr.replace(os.linesep.encode('utf-8'), b' '))
+        stderr)
 
     # Determine whether we'll need to decline the analytics prompt.
     analytics_prompt = not (
