@@ -27,7 +27,7 @@ gs_service_key_file = "$GSUTIL_KEY"
 [GSUtil]
 test_notification_url = https://bigstore-test-notify.appspot.com/notify
 default_project_id = bigstore-gsutil-testing
-prefer_api = "$2"
+prefer_api = "$API"
 
 [OAuth2]
 client_id = 909320924072.apps.googleusercontent.com
