@@ -22,8 +22,8 @@ import warnings
 
 # TODO: gsutil-beta: Distribute a pylint rc file.
 
-#if not (2, 6) <= sys.version_info[:3] < (3,):
-#  sys.exit('gsutil requires python 2.6 or 2.7.')
+if not (2, 6) <= sys.version_info[:3] < (3,):
+  sys.exit('gsutil requires python 2.6 or 2.7.')
 
 
 def UsingCrcmodExtension(crcmod_module):
