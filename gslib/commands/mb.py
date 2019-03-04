@@ -35,7 +35,7 @@ from gslib.utils.text_util import NormalizeStorageClass
 
 
 _SYNOPSIS = """
-  gsutil mb [-b bucket_policy_only] [-c class] [-l location] [-p proj_id]
+  gsutil mb [-b [on|off]] [-c class] [-l location] [-p proj_id]
             [--retention time] url...
 """
 

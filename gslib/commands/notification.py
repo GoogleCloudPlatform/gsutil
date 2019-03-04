@@ -87,7 +87,7 @@ _LIST_DESCRIPTION = """
     gsutil notification list gs://example-bucket
 
   The same as above, but for Object Change Notifications instead of Cloud
-  Pub/Sub notification subscription configs.
+  Pub/Sub notification subscription configs:
 
     gsutil notification list -o gs://example-bucket
 
