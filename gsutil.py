@@ -22,8 +22,8 @@ import warnings
 
 # TODO: gsutil-beta: Distribute a pylint rc file.
 
-if not (2, 6) <= sys.version_info[:3] < (3,):
-  sys.exit('gsutil requires python 2.6 or 2.7.')
+#if not (2, 6) <= sys.version_info[:3] < (3,):
+#  sys.exit('gsutil requires python 2.6 or 2.7.')
 
 
 def UsingCrcmodExtension(crcmod_module):
@@ -104,8 +104,8 @@ def PrependThirdPartyLibToPath(path_component_groups, component_path):
 
 # Libraries in vendored will be preferred over their counterparts in third_party
 # by prepending them earlier in the system path.
-prepend_to_path(THIRD_PARTY_LIBS, THIRD_PARTY_DIR)
-prepend_to_path(VENDORED_THIRD_PARTY_LIBS, VENDORED_DIR)
+PrependThirdPartyLibToPath(THIRD_PARTY_LIBS, THIRD_PARTY_DIR)
+PrependThirdPartyLibToPath(VENDORED_THIRD_PARTY_LIBS, VENDORED_DIR)
 
 # The wrapper script adds all third_party libraries to the Python path, since
 # we don't assume any third party libraries are installed system-wide.
