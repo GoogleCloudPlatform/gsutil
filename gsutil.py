@@ -92,15 +92,15 @@ VENDORED_THIRD_PARTY_LIBS = [
 ]
 
 
-def PrependThirdPartyLibToPath(path_component_groups, component_path):
+def PrependThirdPartyLibToPath(path_component_groups, parent_path):
   for libdir, subdir in path_component_groups:
-    if not os.path.isdir(os.path.join(component_path, libdir)):
+    if not os.path.isdir(os.path.join(parent_path, libdir)):
       OutputAndExit(
           'There is no %s library under the gsutil third-party directory (%s).\n'
           'The gsutil command cannot work properly when installed this way.\n'
           'Please re-install gsutil per the installation instructions.' % (
               libdir, THIRD_PARTY_DIR))
-    sys.path.insert(0, os.path.join(component_path, libdir, subdir))
+    sys.path.insert(0, os.path.join(parent_path, libdir, subdir))
 
 # Libraries in vendored will be preferred over their counterparts in third_party
 # by prepending them earlier in the system path.
