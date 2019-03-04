@@ -219,16 +219,16 @@ _DETAILED_HELP_TEXT = ("""
   my-bucket containing the data from the files to which the symlinks point. This
   can cause various problems:
 
-    * If you use gsutil rsync as a simple way to backup a directory to a bucket,
-      restoring from that bucket will result in files where the symlinks used
-      to be. At best this is wasteful of space, and at worst it can result in
-      outdated data or broken applications -- depending on what is consuming
-      the symlinks.
+  * If you use gsutil rsync as a simple way to backup a directory to a bucket,
+    restoring from that bucket will result in files where the symlinks used
+    to be. At best this is wasteful of space, and at worst it can result in
+    outdated data or broken applications -- depending on what is consuming
+    the symlinks.
 
-    * If you use gsutil rsync over directories containing broken symlinks,
-      gsutil rsync will abort (unless you pass the -e option).
+  * If you use gsutil rsync over directories containing broken symlinks,
+    gsutil rsync will abort (unless you pass the -e option).
 
-    * gsutil rsync skips symlinks that point to directories.
+  * gsutil rsync skips symlinks that point to directories.
 
   Since gsutil rsync is intended to support data operations (like moving a data
   set to the cloud for computational processing) and it needs to be compatible
@@ -252,7 +252,7 @@ _DETAILED_HELP_TEXT = ("""
   synchronizes using stale listing data when working with these other cloud
   providers. For example, if you run rsync immediately after uploading an
   object to an eventually consistent cloud provider, the added object may not
-  yet appear in the provider’s listing. Consequently, rsync will miss adding
+  yet appear in the provider's listing. Consequently, rsync will miss adding
   the object to the destination. If this happens you can rerun the rsync
   operation again later (after the object listing has "caught up").
 

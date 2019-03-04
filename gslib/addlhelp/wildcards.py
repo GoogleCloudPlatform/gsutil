@@ -102,39 +102,38 @@ _DETAILED_HELP_TEXT = ("""
   There are a couple of ways that using wildcards can result in surprising
   behavior:
 
-    1. Shells (like bash and zsh) can attempt to expand wildcards before passing
-       the arguments to gsutil. If the wildcard was supposed to refer to a cloud
-       object, this can result in surprising "Not found" errors (e.g., if the
-       shell tries to expand the wildcard "gs://my-bucket/*" on the local
-       machine, matching no local files, and failing the command).
+  1. Shells (like bash and zsh) can attempt to expand wildcards before passing
+     the arguments to gsutil. If the wildcard was supposed to refer to a cloud
+     object, this can result in surprising "Not found" errors (e.g., if the
+     shell tries to expand the wildcard "gs://my-bucket/*" on the local
+     machine, matching no local files, and failing the command).
 
-       Note that some shells include additional characters in their wildcard
-       character sets. For example, if you use zsh with the extendedglob option
-       enabled it will treat "#" as a special character, which conflicts with
-       that character's use in referencing versioned objects (see
-       "gsutil help versions" for details).
+     Note that some shells include additional characters in their wildcard
+     character sets. For example, if you use zsh with the extendedglob option
+     enabled it will treat "#" as a special character, which conflicts with
+     that character's use in referencing versioned objects (see
+     "gsutil help versions" for details).
 
-       To avoid these problems, surround the wildcarded expression with single
-       quotes (on Linux) or double quotes (on Windows).
+     To avoid these problems, surround the wildcarded expression with single
+     quotes (on Linux) or double quotes (on Windows).
 
-    2. Attempting to specify a filename that contains wildcard characters won't
-       work, because gsutil will try to expand the wildcard characters rather
-       than using them as literal characters. For example, running the command:
+  2. Attempting to specify a filename that contains wildcard characters won't
+     work, because gsutil will try to expand the wildcard characters rather
+     than using them as literal characters. For example, running the command:
 
-             gsutil cp './file[1]' gs://my-bucket
+       gsutil cp './file[1]' gs://my-bucket
 
-       will cause gsutil to try to match the '[1]' part as a wildcard.
+     will cause gsutil to try to match the '[1]' part as a wildcard.
 
-       There's an open issue to support a "raw" mode for gsutil to provide a
-       way to work with file names that contain wildcard characters, but until /
-       unless that support is implemented there's no really good way to use
-       gsutil with such file names. You could use a wildcard to name such files,
-       for example replacing the above command with:
+     There's an open issue to support a "raw" mode for gsutil to provide a
+     way to work with file names that contain wildcard characters, but until /
+     unless that support is implemented there's no really good way to use
+     gsutil with such file names. You could use a wildcard to name such files,
+     for example replacing the above command with:
 
-             gsutil cp './file*1*' gs://my-bucket
+       gsutil cp './file*1*' gs://my-bucket
 
-       but that approach may be difficult to use in general.
-
+     but that approach may be difficult to use in general.
 
 
 <B>DIFFERENT BEHAVIOR FOR "DOT" FILES IN LOCAL FILE SYSTEM</B>
