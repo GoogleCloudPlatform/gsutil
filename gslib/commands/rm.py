@@ -53,7 +53,7 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
-  The gsutil rm command removes objects.
+  The gsutil rm command removes objects and/or buckets.
   For example, the command:
 
     gsutil rm gs://bucket/subdir/*
@@ -66,9 +66,9 @@ _DETAILED_HELP_TEXT = ("""
   will remove all objects under gs://bucket/subdir or any of its
   subdirectories.
 
-  You can also use the -r option to specify recursive object deletion. Thus, for
-  example, either of the following two commands will remove gs://bucket/subdir
-  and all objects and subdirectories under it:
+  You can also use the -r option to specify recursive object and/or bucket
+  deletion. Thus, for example, either of the following two commands will remove
+  gs://bucket/subdir and all objects and subdirectories under it:
 
     gsutil rm gs://bucket/subdir**
     gsutil rm -r gs://bucket/subdir
