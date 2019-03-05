@@ -36,7 +36,6 @@ management tasks, including:
 
 requires = [
     'argcomplete>=1.9.4',
-    'boto==2.49.0',
     'crcmod>=1.7',
     'fasteners>=0.14.1',
     'gcs-oauth2-boto-plugin>=2.2',
@@ -56,16 +55,8 @@ requires = [
     'SocksiPy-branch==1.01',
 ]
 
-dependency_links = [
-    # Note: this commit ID should be kept in sync with the 'third_party/boto'
-    # entry in 'git submodule status'.
-    # pylint: disable=line-too-long
-    'https://github.com/boto/boto/archive/8fac1878734c5ac085b781f619c70ea4b6e913c3.tar.gz#egg=boto-2.49.0',
-    # pylint: enable=line-too-long
-]
-
 CURDIR = os.path.abspath(os.path.dirname(__file__))
-BOTO_DIR = os.path.join(CURDIR, 'third_party', 'boto')
+BOTO_DIR = os.path.join(CURDIR, 'third_party', 'vendored', 'boto')
 
 with open(os.path.join(CURDIR, 'VERSION'), 'r') as f:
   VERSION = f.read().strip()
@@ -174,7 +165,6 @@ setup(
         ],
     },
     install_requires=requires,
-    dependency_links=dependency_links,
     cmdclass={
         'build_py': CustomBuildPy,
         'sdist': CustomSDist,
