@@ -1077,7 +1077,7 @@ class Command(HelpProvider):
               'on %s and therefore do not have permission to read the '
               'default object ACL. It could also mean that %s has Bucket '
               'Policy Only enabled and therefore object ACLs and default '
-              'object ACLs are disabled (See '
+              'object ACLs are disabled (see '
               'https://cloud.google.com/storage/docs/bucket-policy-only).',
               url_str, url_str, url_str)
       else:
