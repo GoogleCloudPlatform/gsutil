@@ -28,7 +28,7 @@ from gslib.utils.constants import NO_MAX
 
 
 _SET_SYNOPSIS = """
-  gsutil requesterpays set [on|off] bucket_url...
+  gsutil requesterpays set <on|off> bucket_url...
 """
 
 _GET_SYNOPSIS = """
@@ -115,7 +115,7 @@ class RequesterPaysCommand(Command):
     """Gets requesterpays configuration for a bucket."""
     requesterpays_arg = self.args[0].lower()
     if requesterpays_arg not in ('on', 'off'):
-      raise CommandException('Argument to "%s set" must be either [on|off]'
+      raise CommandException('Argument to "%s set" must be either <on|off>'
                              % (self.command_name))
     url_args = self.args[1:]
     if not url_args:
