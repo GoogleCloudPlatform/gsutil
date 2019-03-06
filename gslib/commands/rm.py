@@ -53,7 +53,7 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
-  The gsutil rm command removes objects.
+  The gsutil rm command removes objects and/or buckets.
   For example, the command:
 
     gsutil rm gs://bucket/subdir/*
