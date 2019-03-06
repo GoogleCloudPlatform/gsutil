@@ -491,7 +491,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(key_uri.get_contents_as_string(), b'foo')
     stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
                             return_stderr=True)
-    with open(fpath, 'r') as f:
+    with open(fpath, 'rb') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
       self.assertEqual(f.read(), b'quux')
 
