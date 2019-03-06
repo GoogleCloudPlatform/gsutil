@@ -245,11 +245,22 @@ def ShouldProhibitMultiprocessing():
     (bool indicator if multiprocessing should be prohibited, OS name)
   """
   if system_util.IS_WINDOWS:
+    # Issues have been observed while trying to use multi-processing in Windows
     return (True, 'Windows')
+  if system_util.IS_OSX:
+    # macOS does not contain /etc/os-release, used in this method. This
+    # shortcuts raising an exception and returning 'Unknown' as an OS.
+    return (False, 'macOS')
   try:
     with open('/etc/os-release', 'r') as f:
-      os_name = f.read().split('\n')[0].split('=')[1].strip('"')
-      return ('alpine linux' in os_name.lower(), os_name)
+      # look for line that contains 'NAME=' both PRETTY_NAME and NAME should
+      # be acceptable to try to find if alpine linux is being used.
+      for line in f.read().splitlines():
+        if 'NAME=' in line:
+          os_name = line.split('=')[1].strip('"')
+          return ('alpine linux' in os_name.lower(), os_name)
+      # Unable to determine OS. NAME line not found in /etc/os-release file.
+      return (False, 'Unknown')
   except IOError as e:
     if e.errno == errno.ENOENT:
       logging.debug('Unable to open /etc/os-release to determine whether OS '
@@ -258,6 +269,11 @@ def ShouldProhibitMultiprocessing():
       return (False, 'Unknown')
     else:
       raise
+  except Exception as exc:
+    logging.debug('Something went wrong while trying to determine '
+                  'multiprocessing capabilities.\nMessage: {0}'.format(
+      str(exc)))
+    return (False, 'Unknown')
 
 
 def CheckMultiprocessingAvailableAndInit(logger=None):
