@@ -102,7 +102,7 @@ _SET_DESCRIPTION = """
     gsutil -m acl set acl.txt gs://bucket/*.jpg
 
   Note that multi-threading/multi-processing is only done when the named URLs
-  refer to objects, which happens either if you name specific objects or 
+  refer to objects, which happens either if you name specific objects or
   if you enumerate objects by using an object wildcard or specifying
   the acl -r flag.
 

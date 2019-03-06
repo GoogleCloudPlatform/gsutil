@@ -146,9 +146,9 @@ class DuCommand(Command):
 
   def _PrintSummaryLine(self, num_bytes, name):
     size_string = (MakeHumanReadable(num_bytes)
-                   if self.human_readable else six.text_type(num_bytes))
-    text_util.ttyprint('%(size)-11s  %(name)s' % {
-        'size': size_string, 'name': name, 'ending':self.line_ending})
+                   if self.human_readable else str(num_bytes))
+    sys.stdout.write('%(size)-11s  %(name)s%(ending)s' % {
+        'size': size_string, 'name': name, 'ending': self.line_ending})
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
     """Print listing info for given bucket_listing_ref.
