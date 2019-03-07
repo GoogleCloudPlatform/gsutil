@@ -56,7 +56,7 @@ if not GSUTIL_DIR:
 # The wrapper script adds all third_party libraries to the Python path, since
 # we don't assume any third party libraries are installed system-wide.
 THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
-
+VENDORED_DIR = os.path.join(THIRD_PARTY_DIR, 'vendored')
 
 # Flag for whether or not an import wrapper is used to measure time taken for
 # individual imports.
@@ -85,24 +85,39 @@ THIRD_PARTY_LIBS = [
     ('pyasn1-modules', ''),  # oauth2client dependency
     ('rsa', ''),  # oauth2client dependency
     ('apitools', ''),
-    ('boto', ''),
     ('gcs-oauth2-boto-plugin', ''),
     ('fasteners', ''), # oauth2client and apitools dependency
     ('monotonic', ''), # fasteners dependency
     ('httplib2', submodule_pyvers),
     ('python-gflags', ''),
     ('retry-decorator', ''),
-    ('six', ''),
+    ('six', ''), # Python 2 / 3 compatibility dependency
     ('socksipy-branch', ''),
 ]
-for libdir, subdir in THIRD_PARTY_LIBS:
-  if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):
-    OutputAndExit(
-        'There is no %s library under the gsutil third-party directory (%s).\n'
-        'The gsutil command cannot work properly when installed this way.\n'
-        'Please re-install gsutil per the installation instructions.' % (
-            libdir, THIRD_PARTY_DIR))
-  sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
+
+# These are special third party libraries that live in
+# `gsutil/third_party/vendored`. These libraries have modifications specifically
+# for gsutil to operate smoothly that may not yet be present in the latest
+# release of the package.
+VENDORED_THIRD_PARTY_LIBS = [
+    ('boto', '') # XML API and AWS interop dependency
+]
+
+
+def PrependThirdPartyLibToPath(path_component_groups, parent_path):
+  for libdir, subdir in path_component_groups:
+    if not os.path.isdir(os.path.join(parent_path, libdir)):
+      OutputAndExit(
+          'There is no %s library under the gsutil third-party directory (%s).\n'
+          'The gsutil command cannot work properly when installed this way.\n'
+          'Please re-install gsutil per the installation instructions.' % (
+              libdir, THIRD_PARTY_DIR))
+    sys.path.insert(0, os.path.join(parent_path, libdir, subdir))
+
+# Libraries in vendored will be preferred over their counterparts in third_party
+# by prepending them earlier in the system path.
+PrependThirdPartyLibToPath(THIRD_PARTY_LIBS, THIRD_PARTY_DIR)
+PrependThirdPartyLibToPath(VENDORED_THIRD_PARTY_LIBS, VENDORED_DIR)
 
 # The wrapper script adds all third_party libraries to the Python path, since
 # we don't assume any third party libraries are installed system-wide.

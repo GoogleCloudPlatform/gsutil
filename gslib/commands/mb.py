@@ -38,7 +38,7 @@ from gslib.utils.text_util import NormalizeStorageClass
 
 
 _SYNOPSIS = """
-  gsutil mb [-b bucket_policy_only] [-c class] [-l location] [-p proj_id]
+  gsutil mb [-b <on|off>] [-c class] [-l location] [-p proj_id]
             [--retention time] url...
 """
 
@@ -107,17 +107,17 @@ _DETAILED_HELP_TEXT = ("""
 <B>Retention Policy</B>
   You can specify retention period in one of the following formats:
 
-    --retention <number>s     Specifies retention period of <number> seconds for
-                              objects in this bucket.
+  --retention <number>s
+      Specifies retention period of <number> seconds for objects in this bucket.
 
-    --retention <number>d     Specifies retention period of <number> days for
-                              objects in this bucket.
+  --retention <number>d
+      Specifies retention period of <number> days for objects in this bucket.
 
-    --retention <number>m     Specifies retention period of <number> months for
-                              objects in this bucket.
+  --retention <number>m
+      Specifies retention period of <number> months for objects in this bucket.
 
-    --retention <number>y     Specifies retention period of <number> years for
-                              objects in this bucket.
+  --retention <number>y
+      Specifies retention period of <number> years for objects in this bucket.
 
   Examples:
 
@@ -139,7 +139,7 @@ _DETAILED_HELP_TEXT = ("""
     gsutil mb -b on gs://bucket-with-no-acls
 
 <B>OPTIONS</B>
-  -b bucket_policy_only  Specifies the Bucket Policy Only setting.
+  -b <on|off>            Specifies the Bucket Policy Only setting.
                          Default is "off"
 
   -c class               Specifies the default storage class.
@@ -224,7 +224,7 @@ class MbCommand(Command):
           seconds = RetentionInSeconds(a)
         elif o == '-b':
           if self.gsutil_api.GetApiSelector('gs') != ApiSelector.JSON:
-            raise CommandException('The -b [on|off] option '
+            raise CommandException('The -b <on|off> option '
                                    'can only be used with the JSON API')
           InsistOnOrOff(a, 'Only on and off values allowed for -b option')
           bucket_policy_only = (a == 'on')

@@ -210,7 +210,7 @@ class DuCommand(Command):
           if a == '-':
             f = sys.stdin
           else:
-            f = open(a, 'rb')
+            f = open(a, 'r')
           try:
             for line in f:
               line = line.strip().decode(UTF8)
@@ -234,7 +234,7 @@ class DuCommand(Command):
 
     def _PrintDirectory(num_bytes, blr):
       if not self.summary_only:
-        self._PrintSummaryLine(num_bytes, blr.url_string)
+        self._PrintSummaryLine(num_bytes, blr.url_string.encode(UTF8))
 
     for url_arg in self.args:
       top_level_storage_url = StorageUrlFromString(url_arg)
@@ -280,7 +280,7 @@ class DuCommand(Command):
 
         if self.summary_only:
           self._PrintSummaryLine(exp_bytes,
-                                 blr.url_string.rstrip('/'))
+                                 blr.url_string.rstrip('/').encode(UTF8))
 
     if self.produce_total:
       self._PrintSummaryLine(total_bytes, 'total')
