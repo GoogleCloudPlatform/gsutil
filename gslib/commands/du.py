@@ -181,8 +181,6 @@ class DuCommand(Command):
       num_objs = 1
 
     if not self.summary_only:
-      if six.PY2:
-        url_str.encode(UTF8)
       sys.stdout.write('{size:<11}  {url}{ending}'.format(
           size=size_string,
           url=six.ensure_text(url_str),
