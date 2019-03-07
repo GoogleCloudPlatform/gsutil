@@ -461,33 +461,33 @@ def WrapDownloadHttpRequest(download_http):
         # Pick out the location header and basically start from the beginning
         # remembering first to strip the ETag header and decrement our 'depth'
         if redirections:
-          if not response.has_key('location') and response.status != 300:
+          if 'location' not in response and response.status != 300:
             raise httplib2.RedirectMissingLocation(
                 "Redirected but the response is missing a Location: header.",
                 response, content)
           # Fix-up relative redirects (which violate an RFC 2616 MUST)
-          if response.has_key('location'):
+          if 'location' in response:
             location = response['location']
             (scheme, authority, path, query, fragment) = parse_uri(location)
             if authority is None:
               response['location'] = urllib.parse.urljoin(absolute_uri, location)
           if response.status == 301 and method in ["GET", "HEAD"]:
             response['-x-permanent-redirect-url'] = response['location']
-            if not response.has_key('content-location'):
+            if 'content-location' not in response:
               response['content-location'] = absolute_uri
             httplib2._updateCache(headers, response, content, self.cache,
                                   cachekey)
-          if headers.has_key('if-none-match'):
+          if 'if-none-match' in headers:
             del headers['if-none-match']
-          if headers.has_key('if-modified-since'):
+          if 'if-modified-since' in headers:
             del headers['if-modified-since']
           if ('authorization' in headers and
               not self.forward_authorization_headers):
             del headers['authorization']
-          if response.has_key('location'):
+          if 'location' in response:
             location = response['location']
             old_response = copy.deepcopy(response)
-            if not old_response.has_key('content-location'):
+            if 'content-location' not in old_response:
               old_response['content-location'] = absolute_uri
             redirect_method = method
             if response.status in [302, 303]:
@@ -506,7 +506,7 @@ def WrapDownloadHttpRequest(download_http):
       elif response.status in [200, 203] and method in ["GET", "HEAD"]:
         # Don't cache 206's since we aren't going to handle byte range
         # requests
-        if not response.has_key('content-location'):
+        if 'content-location' in response:
           response['content-location'] = absolute_uri
         httplib2._updateCache(headers, response, content, self.cache,
                               cachekey)
