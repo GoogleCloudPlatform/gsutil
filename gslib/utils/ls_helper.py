@@ -460,8 +460,8 @@ class LsHelper(object):
       True if reference matches a pattern and should be excluded.
     """
     if self.exclude_patterns:
-      tomatch = blr.url_string
+      tomatch = six.ensure_str(blr.url_string)
       for pattern in self.exclude_patterns:
-        if fnmatch.fnmatch(tomatch, pattern):
+        if fnmatch.fnmatch(tomatch, six.ensure_str(pattern)):
           return True
     return False
