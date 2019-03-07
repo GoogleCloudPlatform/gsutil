@@ -147,8 +147,12 @@ class DuCommand(Command):
   def _PrintSummaryLine(self, num_bytes, name):
     size_string = (MakeHumanReadable(num_bytes)
                    if self.human_readable else six.text_type(num_bytes))
-    text_util.ttyprint('%(size)-11s  %(name)s' % {
-        'size': size_string, 'name': name, 'ending':self.line_ending})
+    if six.PY2:
+      name = name.decode(UTF8)
+
+    text_util.ttyprint('{size:<11}  {name}'.format(
+        size=size_string,
+        name=six.ensure_text(name)), end=self.line_ending)
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
     """Print listing info for given bucket_listing_ref.
@@ -177,10 +181,12 @@ class DuCommand(Command):
       num_objs = 1
 
     if not self.summary_only:
-      sys.stdout.write('%(size)-11s  %(url)s%(ending)s' % {
-          'size': size_string,
-          'url': url_str.encode(UTF8),
-          'ending': self.line_ending})
+      if six.PY2:
+        url_str.encode(UTF8)
+      sys.stdout.write('{size:<11}  {url}{ending}'.format(
+          size=size_string,
+          url=six.ensure_text(url_str),
+          ending=self.line_ending))
 
     return (num_objs, num_bytes)
 
@@ -213,7 +219,10 @@ class DuCommand(Command):
             f = open(a, 'r')
           try:
             for line in f:
-              line = line.strip().decode(UTF8)
+              if six.PY2:
+                line = line.strip().decode(UTF8)
+              else:
+                line = line.strip().encode(UTF8)
               if line:
                 self.exclude_patterns.append(line)
           finally:
