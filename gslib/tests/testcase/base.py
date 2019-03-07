@@ -199,7 +199,7 @@ class GsUtilTestCase(unittest.TestCase):
     tmpdir = six.ensure_str(tmpdir or self.CreateTempDir())
     file_name = file_name or self.MakeTempName(str('file'))
     if isinstance(file_name, (six.text_type, six.binary_type)):
-      fpath = os.path.join(tmpdir, file_name)
+      fpath = os.path.join(tmpdir, six.ensure_str(file_name))
     else:
       file_name = map(six.ensure_str, file_name)
       fpath = os.path.join(tmpdir, *file_name)
