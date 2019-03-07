@@ -906,8 +906,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     status = p.returncode
 
     if expected_status is not None:
-      if six.PY2:
-        cmd = [item.decode("utf-8") for item in cmd]
+      cmd = map(six.ensure_text, cmd)
       self.assertEqual(
         int(status), int(expected_status),
         msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
