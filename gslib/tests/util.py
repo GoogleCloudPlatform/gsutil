@@ -29,6 +29,8 @@ import urlparse
 
 import boto
 import crcmod
+import mock_storage_service  # From boto/tests/integration/s3
+
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadException
 from gslib.lazy_wrapper import LazyWrapper
@@ -288,22 +290,6 @@ def ObjectToURI(obj, *suffixes):
   if uri.endswith('/'):
     uri = uri[:-1]
   return uri
-
-# The mock storage service comes from the Boto library, but it is not
-# distributed with Boto when installed as a package. To get around this, we
-# copy the file to gslib/tests/mock_storage_service.py when building the gsutil
-# package. Try and import from both places here.
-# pylint: disable=g-import-not-at-top
-try:
-  from gslib.tests import mock_storage_service
-except ImportError:
-  try:
-    from boto.tests.integration.s3 import mock_storage_service
-  except ImportError:
-    try:
-      from tests.integration.s3 import mock_storage_service
-    except ImportError:
-      import mock_storage_service
 
 
 class GSMockConnection(mock_storage_service.MockConnection):

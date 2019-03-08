@@ -80,13 +80,31 @@ if not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, 'VERSION')):
   PROGRAM_FILES_DIR = os.path.normpath(os.path.join(GSLIB_DIR, '..'))
   IS_EDITABLE_INSTALL = True
 
-# If installed via editable mode, we have to add the mock_storage_service
-# module to the Python path, since the gsutil script path munging is not
-# executed in this mode.
-if IS_EDITABLE_INSTALL:
-  mock_storage_location = os.path.join(
-      PROGRAM_FILES_DIR, 'third_party', 'boto', 'tests', 'integration', 's3')
-  sys.path.append(mock_storage_location)
+
+def _AddVendoredDepsToPythonPath():
+  """Fix our Python path so that it correctly finds our vendored libraries."""
+  vendored_path = os.path.join(GSLIB_DIR, 'vendored')
+  # Similar structure to the THIRD_PARTY_LIBS list in gsutil.py:
+  vendored_lib_dirs = [
+      ('boto', ''),
+  ]
+
+  # Prepend our vendored libraries to be in the front of the Python path so that
+  # they're found before any system installations that might be present.
+  for libdir, subdir in vendored_lib_dirs:
+    sys.path.insert(0, os.path.join(vendored_path, libdir, subdir))
+
+  # This is the location of mock_storage_location module. Not every directory
+  # in this path has an __init__.py file, so we couldn't just run
+  # `from boto.tests.integration.s3 import mock_storage_service`.
+  #
+  # We add this to the end, rather than prepending it, so that if other
+  # modules in this directory have the same name as something in our library,
+  # we find our version first.
+  sys.path.append(
+      os.path.join(vendored_path, 'boto', 'tests', 'integration', 's3'))
+
+_AddVendoredDepsToPythonPath()
 
 
 def _GetFileContents(filename):
