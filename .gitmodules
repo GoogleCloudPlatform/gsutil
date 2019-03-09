@@ -61,3 +61,6 @@
 [submodule "third_party/pyu2f"]
 	path = third_party/pyu2f
 	url = git://github.com/google/pyu2f
+[submodule "gslib/vendored/boto"]
+	path = gslib/vendored/boto
+	url = git://github.com/gsutil-mirrors/boto.git
