@@ -302,30 +302,31 @@ def ttyprint(*objects, **kwargs):
     ttywrite(file, data)
   else:  # PY3
     def Py3Print(encoding, sep=sep, end=end):
-      """ Passing in encoding allows for a try-except block to attempt the
-      default encoding and then fall back to utf-8 on failure to encode
+      """ Encode and send data to ttywrite with specified encoding.
 
       Args:
         encoding: Encoding to be used for all encode operations while printing.
         sep: Line separator to be used for printing (defined in outer scope).
         end: End character to be used for printing (defined in outer scope).
-      Return: None
+
+      Returns: None
       """
       if isinstance(sep, str):
         sep = sep.encode(encoding)
       if isinstance(end, str):
         end = end.encode(encoding)
       byte_objects = []
-      for object in objects:
-        if isinstance(object, bytes):
-          byte_objects.append(object)
-        elif isinstance(object, str):
-          byte_objects.append(object.encode(encoding))
+      for item in objects:
+        if isinstance(item, bytes):
+          byte_objects.append(item)
+        elif isinstance(item, str):
+          byte_objects.append(item.encode(encoding))
         else:
-          byte_objects.append(str(object).encode(encoding))
+          byte_objects.append(str(item).encode(encoding))
       data = sep.join(byte_objects)
       data += end
       ttywrite(file, data)
+
     try:
       # Try to print with default encoding.
       Py3Print(locale.getpreferredencoding(False))
