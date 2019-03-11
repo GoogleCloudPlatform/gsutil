@@ -169,7 +169,7 @@ class VersionCommand(Command):
         m.update(content)
         f.close()
       else:
-        f = open(filepath, 'r')
+        f = open(filepath, 'r', encoding='utf-8')
         content = f.read()
         content = re.sub(r'(\r\n|\r|\n)', '\n', content)
         m.update(content.encode('utf-8'))
