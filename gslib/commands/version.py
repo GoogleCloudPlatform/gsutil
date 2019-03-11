@@ -33,6 +33,7 @@ from gslib.command import Command
 from gslib.utils import system_util
 from gslib.utils.boto_util import GetFriendlyConfigFilePaths
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import UTF8
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
 
 
@@ -169,10 +170,10 @@ class VersionCommand(Command):
         m.update(content)
         f.close()
       else:
-        f = open(filepath, 'r', encoding='utf-8')
+        f = open(filepath, 'r', encoding=UTF8)
         content = f.read()
         content = re.sub(r'(\r\n|\r|\n)', '\n', content)
-        m.update(content.encode('utf-8'))
+        m.update(content.encode(UTF8))
         f.close()
     return m.hexdigest()
 
