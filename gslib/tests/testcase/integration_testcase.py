@@ -899,10 +899,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # executing command
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, stdin=subprocess.PIPE, env=envstr)
-    likely_encoding = sys.stdout.encoding or UTF8
-    stdout, stderr = map(
-        lambda b: b.decode(likely_encoding).replace(os.linesep, '\n'),
-        p.communicate(stdin))
+    c_out = p.communicate(stdin)
+    try:
+      c_out = [six.ensure_text(output) for output in c_out]
+    except UnicodeDecodeError:
+      c_out = [six.ensure_text(output, locale.getpreferredencoding(False))
+               for output in c_out]
+    stdout = c_out[0].replace(os.linesep, '\n')
+    stderr = c_out[1].replace(os.linesep, '\n')
     status = p.returncode
 
     if expected_status is not None:
