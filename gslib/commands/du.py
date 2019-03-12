@@ -115,8 +115,6 @@ _DETAILED_HELP_TEXT = ("""
       gsutil -o GSUtil:default_project_id=project-name du -shc
 """)
 
-LOCAL_ENC = locale.getpreferredencoding(False)
-
 
 def _GetPatternExclusion(file, position, encoding):
   exclusion_patterns = []
@@ -232,12 +230,13 @@ class DuCommand(Command):
           if a == '-':
             f = sys.stdin
           else:
-            f = open(a, 'r', encoding=UTF8)
+            f = open(a, 'r') if six.PY2 else open(a, 'r', encoding=UTF8)
           position = f.tell()
           try:
             self.exclude_patterns = _GetPatternExclusion(f, position, UTF8)
           except:
-            self.exclude_patterns = _GetPatternExclusion(f, position, LOCAL_ENC)
+            self.exclude_patterns = _GetPatternExclusion(f, position,
+                locale.getpreferredencoding(False))
           finally:
             f.close()
 
