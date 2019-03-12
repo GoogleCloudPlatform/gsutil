@@ -116,19 +116,6 @@ _DETAILED_HELP_TEXT = ("""
 """)
 
 
-def _GetPatternExclusion(file, position, encoding):
-  exclusion_patterns = []
-  file.seek(position)
-  for line in file:
-    if six.PY2:
-      line = line.strip().decode(encoding)
-    else:
-      line = line.strip().encode(encoding)
-    if line:
-      exclusion_patterns.append(line)
-  return exclusion_patterns
-
-
 class DuCommand(Command):
   """Implementation of gsutil du command."""
 
@@ -229,15 +216,12 @@ class DuCommand(Command):
         elif o == '-X':
           if a == '-':
             f = sys.stdin
+            f_close = False
           else:
             f = open(a, 'r') if six.PY2 else open(a, 'r', encoding=UTF8)
-          position = f.tell()
-          try:
-            self.exclude_patterns = _GetPatternExclusion(f, position, UTF8)
-          except:
-            self.exclude_patterns = _GetPatternExclusion(f, position,
-                locale.getpreferredencoding(False))
-          finally:
+            f_close = True
+          self.exclude_patterns = [six.ensure_text(line.strip()) for line in f]
+          if f_close:
             f.close()
 
     if not self.args:
