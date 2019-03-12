@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import locale
 import sys
 
 import six
@@ -33,6 +34,7 @@ from gslib.utils import ls_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
+from gslib.utils.text_util import ttyprint
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils import text_util
 
@@ -113,6 +115,21 @@ _DETAILED_HELP_TEXT = ("""
       gsutil -o GSUtil:default_project_id=project-name du -shc
 """)
 
+LOCAL_ENC = locale.getpreferredencoding(False)
+
+
+def _GetPatternExclusion(file, position, encoding):
+  exclusion_patterns = []
+  file.seek(position)
+  for line in file:
+    if six.PY2:
+      line = line.strip().decode(encoding)
+    else:
+      line = line.strip().encode(encoding)
+    if line:
+      exclusion_patterns.append(line)
+  return exclusion_patterns
+
 
 class DuCommand(Command):
   """Implementation of gsutil du command."""
@@ -181,10 +198,11 @@ class DuCommand(Command):
       num_objs = 1
 
     if not self.summary_only:
-      sys.stdout.write('{size:<11}  {url}{ending}'.format(
+      url_detail = '{size:<11}  {url}{ending}'.format(
           size=size_string,
           url=six.ensure_text(url_str),
-          ending=self.line_ending))
+          ending=six.ensure_text(self.line_ending))
+      ttyprint(url_detail, file=sys.stdout, end='')
 
     return (num_objs, num_bytes)
 
@@ -214,15 +232,12 @@ class DuCommand(Command):
           if a == '-':
             f = sys.stdin
           else:
-            f = open(a, 'r')
+            f = open(a, 'r', encoding=UTF8)
+          position = f.tell()
           try:
-            for line in f:
-              if six.PY2:
-                line = line.strip().decode(UTF8)
-              else:
-                line = line.strip().encode(UTF8)
-              if line:
-                self.exclude_patterns.append(line)
+            self.exclude_patterns = _GetPatternExclusion(f, position, UTF8)
+          except:
+            self.exclude_patterns = _GetPatternExclusion(f, position, LOCAL_ENC)
           finally:
             f.close()
 
