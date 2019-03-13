@@ -730,11 +730,12 @@ class MetricsCollector(object):
       # so that the path is passed as a string to the metrics_reporter module.
       log_file_path = '"%s"' % log_file_path
 
-    reporting_code = ('from gslib.metrics_reporter import ReportMetrics; '
-                      'ReportMetrics("{0}", {1}, log_file_path={2})').format(
-                          temp_metrics_file.name,
-                          log_level,
-                          log_file_path).encode('utf-8').decode('unicode_escape')
+    reporting_code = six.ensure_str(
+        ('from gslib.metrics_reporter import ReportMetrics; '
+        'ReportMetrics("{0}", {1}, log_file_path={2})').format(
+            temp_metrics_file.name,
+            log_level,
+            log_file_path))
     execution_args = [sys.executable, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
