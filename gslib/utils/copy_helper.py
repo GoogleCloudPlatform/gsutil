@@ -3694,9 +3694,13 @@ class Manifest(object):
     # Aquire a lock to prevent multiple threads writing to the same file at
     # the same time. This would cause a garbled mess in the manifest file.
     with self.lock:
-      with open(self.manifest_path, 'a', 1) as f:  # 1 == line buffered
-        writer = csv.writer(f)
-        writer.writerow(data)
+      if IS_WINDOWS and six.PY3:
+        f = open(self.manifest_path, 'a', 1, newline='')
+      else:
+        f = open(self.manifest_path, 'a', 1)  # 1 == line buffered
+      writer = csv.writer(f)
+      writer.writerow(data)
+      f.close()
 
   def _RemoveItemFromManifest(self, url):
     # Remove the item from the dictionary since we're done with it and
