@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import itertools
 import json
 import re
+import textwrap
 
 from apitools.base.protorpclite import protojson
 from apitools.base.protorpclite.messages import DecodeError
@@ -29,6 +30,7 @@ from gslib.command import GetFailureCount
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
+from gslib.exception import IamChOnResourceWithConditionsException
 from gslib.help_provider import CreateHelpText
 from gslib.metrics import LogCommandParams
 from gslib.name_expansion import NameExpansionIterator
@@ -196,6 +198,11 @@ _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
 STORAGE_URI_REGEX = re.compile(r'[a-z]+://[a-z].*')
+
+IAM_CH_CONDITIONS_WORKAROUND_MSG = (
+    'To change the IAM policy of a resource that has bindings containing '
+    'conditions, perform a read-modify-write operation using "iam get" and '
+    '"iam set".')
 
 
 def _PatchIamWrapper(cls, iter_result, thread_state):
@@ -383,6 +390,14 @@ class IamCommand(Command):
         self.everything_set_okay = False
       else:
         raise
+    except IamChOnResourceWithConditionsException as e:
+      if self.continue_on_error:
+        self.everything_set_okay = False
+        self.tried_ch_on_resource_with_conditions = True
+        self.logger.debug(e.message)
+      else:
+        raise CommandException(e.message)
+
 
   @Retry(PreconditionException, tries=3, timeout_secs=1.0)
   def _PatchIamHelperInternal(
@@ -390,6 +405,19 @@ class IamCommand(Command):
 
     policy = self.GetIamHelper(storage_url, thread_state=thread_state)
     (etag, bindings) = (policy.etag, policy.bindings)
+
+    # If any of the bindings have conditions present, raise an exception.
+    # See the docstring for the IamChOnResourceWithConditionsException class
+    # for more details on why we raise this exception.
+    for binding in bindings:
+      if binding.condition:
+        message = 'Could not patch IAM policy for %s.' % storage_url
+        message += '\n'
+        message += '\n'.join(textwrap.wrap(
+            'The resource had conditions present in its IAM policy bindings, '
+            'which is not supported by "iam ch". %s' %
+            IAM_CH_CONDITIONS_WORKAROUND_MSG))
+        raise IamChOnResourceWithConditionsException(message)
 
     # Create a backup which is untainted by any references to the original
     # bindings.
@@ -450,6 +478,7 @@ class IamCommand(Command):
       patterns.append(token)
 
     self.everything_set_okay = True
+    self.tried_ch_on_resource_with_conditions = False
     threaded_wildcards = []
     for pattern in patterns:
       surl = StorageUrlFromString(pattern)
@@ -499,7 +528,14 @@ class IamCommand(Command):
 
     # TODO: Add an error counter for files and objects.
     if not self.everything_set_okay:
-      raise CommandException('Some IAM policies could not be patched.')
+      msg = 'Some IAM policies could not be patched.'
+      if self.tried_ch_on_resource_with_conditions:
+        msg += '\n'
+        msg += '\n'.join(textwrap.wrap(
+           'Some resources had conditions present in their IAM policy '
+           'bindings, which is not supported by "iam ch". %s' % (
+               IAM_CH_CONDITIONS_WORKAROUND_MSG)))
+      raise CommandException(msg)
 
   # TODO(iam-beta): Add an optional flag to specify etag and edit the policy
   # accordingly to be passed into the helper functions.
@@ -536,7 +572,8 @@ class IamCommand(Command):
     except IOError:
       raise ArgumentException(
           'Specified IAM policy file "%s" does not exist.' % file_url)
-    except ValueError:
+    except ValueError as e:
+      self.logger.debug('Invalid IAM policy file, ValueError:\n', e)
       raise ArgumentException(
           'Invalid IAM policy file "%s".' % file_url)
 
