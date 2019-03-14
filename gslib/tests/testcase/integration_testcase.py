@@ -883,7 +883,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         else:
           stdin = (stdin + os.linesep).encode('utf-8')
       else:
-          stdin = (stdin + os.linesep).encode('utf-8')
+        stdin = (stdin + os.linesep).encode('utf-8')
     # checking to see if test was invoked from a par file (bundled archive)
     # if not, add python executable path to ensure correct version of python
     # is used for testing
