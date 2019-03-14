@@ -728,11 +728,11 @@ class MetricsCollector(object):
     if log_file_path is not None:
       # If the path is not None, we'll need to surround the path with quotes
       # so that the path is passed as a string to the metrics_reporter module.
-      log_file_path = '"%s"' % log_file_path
+      log_file_path = 'r"%s"' % log_file_path
 
     reporting_code = six.ensure_str(
         'from gslib.metrics_reporter import ReportMetrics; '
-        'ReportMetrics("{0}", {1}, log_file_path={2})'.format(
+        'ReportMetrics(r"{0}", {1}, log_file_path={2})'.format(
             temp_metrics_file.name,
             log_level,
             log_file_path))
@@ -744,6 +744,10 @@ class MetricsCollector(object):
     execution_args = [sys_exc, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
+
+    sm_env = dict()
+    for k, v in six.iteritems(exec_env):
+      sm_env[six.ensure_str(k)] = six.ensure_str(v)
 
     try:
       p = subprocess.Popen(execution_args, env=exec_env)
