@@ -731,12 +731,17 @@ class MetricsCollector(object):
       log_file_path = '"%s"' % log_file_path
 
     reporting_code = six.ensure_str(
-        ('from gslib.metrics_reporter import ReportMetrics; '
-        'ReportMetrics("{0}", {1}, log_file_path={2})').format(
+        'from gslib.metrics_reporter import ReportMetrics; '
+        'ReportMetrics("{0}", {1}, log_file_path={2})'.format(
             temp_metrics_file.name,
             log_level,
             log_file_path))
-    execution_args = [sys.executable, '-c', reporting_code]
+    # Python 3 path in windows usually involves spaces (ex: C:\Program Files...)
+    # so it has to be wrapped in double quotes.
+    sys_exc = sys.executable
+    if system_util.IS_WINDOWS and six.PY3:
+      sys_exc = '"%s"' % sys_exc
+    execution_args = [sys_exc, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
 
