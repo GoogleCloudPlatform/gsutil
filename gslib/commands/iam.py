@@ -66,8 +66,10 @@ _CH_SYNOPSIS = """
       -d ("user"|"serviceAccount"|"domain"|"group"):id
       -d ("allUsers"|"allAuthenticatedUsers")
 
-Note: Using ``iam ch`` on a resource that has an IAM policy containing conditions
-is not supported. See additional details below.
+Note: The ``iam ch`` command does not support changing IAM policies with
+bindings that contain conditions. As such, ``iam ch`` cannot be used to add
+conditions to a policy or to change the policy of a resource that already
+contains conditions. See additional details below.
 
 Note: The ``gsutil iam`` command disallows using project convenience groups
 (projectOwner, projectEditor, projectViewer) as the first segment of a binding
