@@ -736,21 +736,17 @@ class MetricsCollector(object):
             temp_metrics_file.name,
             log_level,
             log_file_path))
-    # Python 3 path in windows usually involves spaces (ex: C:\Program Files...)
-    # so it has to be wrapped in double quotes.
-    sys_exc = sys.executable
-    if system_util.IS_WINDOWS and six.PY3:
-      sys_exc = '"%s"' % sys_exc
-    execution_args = [sys_exc, '-c', reporting_code]
+    execution_args = [sys.executable, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
-
     sm_env = dict()
     for k, v in six.iteritems(exec_env):
       sm_env[six.ensure_str(k)] = six.ensure_str(v)
-
     try:
-      p = subprocess.Popen(execution_args, env=exec_env)
+      # In order for Popen to work correctly with Windows/Py3 and spaces in the
+      # path, shell needs to be True, in addition to
+      p = subprocess.Popen(execution_args, env=sm_env, shell=(
+          six.PY3 and system_util.IS_WINDOWS))
       self.logger.debug('Metrics reporting process started...')
 
       if wait_for_report:
