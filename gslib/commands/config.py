@@ -250,6 +250,8 @@ _DETAILED_HELP_TEXT = ("""
       tab_completion_time_logs
       tab_completion_timeout
       task_estimation_threshold
+      test_cmd_regional_bucket_location
+      test_notification_url
       use_magicfile
 
     [OAuth2]
@@ -616,6 +618,15 @@ content_language = en
 
 # Disables the prompt asking for opt-in to data collection for analytics.
 #disable_analytics_prompt = True
+
+# The "test" command runs tests against regional buckets (unless you supply the
+# `-b` option). By default, the region used is us-central1, but you can change
+# the default region using this option.
+#test_cmd_regional_bucket_location = us-central1
+
+# Tests for the "notification watchbucket" command require a notification URL.
+# If this option is not supplied, those tests will be skipped.
+#test_notification_url = https://yourdomain.url/notification-endpoint
 
 """ % {'hash_fast_else_fail': CHECK_HASH_IF_FAST_ELSE_FAIL,
        'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
