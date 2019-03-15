@@ -720,6 +720,7 @@ class MetricsCollector(object):
       log_level = logging.WARN
 
     temp_metrics_file = tempfile.NamedTemporaryFile(delete=False)
+    temp_metrics_file_name = six.ensure_str(temp_metrics_file.name)
     with temp_metrics_file:
       pickle.dump(self._metrics, temp_metrics_file)
     logging.debug(self._metrics)
@@ -728,19 +729,26 @@ class MetricsCollector(object):
     if log_file_path is not None:
       # If the path is not None, we'll need to surround the path with quotes
       # so that the path is passed as a string to the metrics_reporter module.
-      log_file_path = '"%s"' % log_file_path
+      log_file_path = six.ensure_str('r"%s"' % log_file_path)
 
-    reporting_code = ('from gslib.metrics_reporter import ReportMetrics; '
-                      'ReportMetrics("{0}", {1}, log_file_path={2})').format(
-                          temp_metrics_file.name,
-                          log_level,
-                          log_file_path).encode('utf-8').decode('unicode_escape')
+    reporting_code = six.ensure_str(
+        'from gslib.metrics_reporter import ReportMetrics; '
+        'ReportMetrics(r"{0}", {1}, log_file_path={2})'.format(
+            temp_metrics_file_name,
+            log_level,
+            log_file_path))
     execution_args = [sys.executable, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
-
+    # Ensuring submodule (sm) environment keys and values are all str.
+    sm_env = dict()
+    for k, v in six.iteritems(exec_env):
+      sm_env[six.ensure_str(k)] = six.ensure_str(v)
     try:
-      p = subprocess.Popen(execution_args, env=exec_env)
+      # In order for Popen to work correctly with Windows/Py3 shell needs
+      # to be True.
+      p = subprocess.Popen(execution_args, env=sm_env, shell=(
+          six.PY3 and system_util.IS_WINDOWS))
       self.logger.debug('Metrics reporting process started...')
 
       if wait_for_report:
