@@ -24,6 +24,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.iam_helper import BindingsToDict
 from gslib.utils.iam_helper import BindingStringToTuple as bstt
@@ -833,6 +834,7 @@ class TestIamSet(TestIamIntegration):
         self.public_bucket_read_binding[0],
         json.loads(set_iam_string)['bindings'])
 
+  @unittest.skip('Disabled until all projects whitelisted for conditions.')
   def test_set_and_get_valid_bucket_policy_with_conditions(self):
     """Tests setting and getting an IAM policy with conditions on a bucket."""
     self.RunGsUtil([
@@ -848,6 +850,7 @@ class TestIamSet(TestIamIntegration):
 
   # Note: We only test this for buckets, since objects cannot currently have
   # conditions in their policy bindings.
+  @unittest.skip('Disabled until all projects whitelisted for conditions.')
   def test_ch_fails_after_setting_conditions(self):
     """Tests that if we "set" a policy with conditions, "ch" won't patch it."""
     print()
