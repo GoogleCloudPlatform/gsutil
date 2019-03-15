@@ -507,7 +507,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     if self.multiregional_buckets or provider == 's3':
       location = None
     else:
-      location = 'us-central1'
+      # We default to the "us-central1" location for regional buckets, but allow
+      # overriding this value in the Boto config.
+      location = boto.config.get(
+          'GSUtil', 'test_cmd_regional_bucket_location', 'us-central1')
 
     if bucket_name:
       bucket_name = util.MakeBucketNameValid(bucket_name)
