@@ -18,11 +18,13 @@ from __future__ import absolute_import
 from collections import defaultdict
 import json
 from gslib.exception import CommandException
+from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.iam_helper import BindingsToDict
 from gslib.utils.iam_helper import BindingStringToTuple as bstt
@@ -40,31 +42,42 @@ IAM_BUCKET_READ_ROLE_ABBREV = 'legacyBucketReader'
 IAM_BUCKET_READ_ROLE = 'roles/storage.%s' % IAM_BUCKET_READ_ROLE_ABBREV
 # GCS IAM does not currently support new object-level roles.
 IAM_OBJECT_READ_ROLE = 'roles/storage.legacyObjectReader'
+IAM_OBJECT_VIEWER_ROLE = 'roles/storage.objectViewer'
+
+TEST_CONDITION_DESCRIPTION = 'Description for our test condition.'
+TEST_CONDITION_EXPR_RESOURCE_IS_OBJECT = (
+    'resource.type == "google.cloud.storage.Object"')
+TEST_CONDITION_TITLE = 'Test Condition Title'
 
 
-def gen_binding(role, members=None):
-  """Generate an IAM Policy object dictionary.
+def gen_binding(role, members=None, condition=None):
+  """Generate the "bindings" portion of an IAM Policy dictionary.
 
-  Generates Python dictionary representation of a storage_v1_messages.Policy
-  object with a single storage_v1_messages.Policy.BindingsValueListEntry.
+  Generates list of dicts which each represent a
+  storage_v1_messages.Policy.BindingsValueListEntry object. The list will
+  contain a single dict which has attributes corresponding to arguments passed
+  to this method.
 
   Args:
-    role: An IAM policy role (e.g. "roles/storage.objectViewer"). Fully
-          specified in BindingsValueListEntry.
-    members: A list of members (e.g. ["user:foo@bar.com"]). If None,
-             bind to ["allUsers"]. Fully specified in BindingsValueListEntry.
+    role: (str) An IAM policy role (e.g. "roles/storage.objectViewer"). Fully
+        specified in BindingsValueListEntry.
+    members: (List[str]) A list of members (e.g. ["user:foo@bar.com"]). If None,
+        bind to ["allUsers"]. Fully specified in BindingsValueListEntry.
+    condition: (Dict) A dictionary representing the JSON used to define a
+        binding condition, containing the keys "description", "expression", and
+        "title".
 
   Returns:
-    A Python dict representation of an IAM Policy object.
+    (List[Dict[str, Any]]) A Python representation of the "bindings" portion of
+    an IAM Policy.
   """
-  if members is None:
-    members = ['allUsers']
-  return [
-      {
-          'members': members,
-          'role': role,
-      }
-  ]
+  binding = {
+      'members': ['allUsers'] if members is None else members,
+      'role': role,
+  }
+  if condition:
+    binding['condition'] = condition
+  return [binding]
 
 
 class TestIamIntegration(testcase.GsUtilIntegrationTestCase):
@@ -699,14 +712,30 @@ class TestIamSet(TestIamIntegration):
 
     self.public_bucket_read_binding = gen_binding(IAM_BUCKET_READ_ROLE)
     self.public_object_read_binding = gen_binding(IAM_OBJECT_READ_ROLE)
+    self.project_viewer_objectviewer_with_cond_binding = gen_binding(
+        IAM_OBJECT_VIEWER_ROLE,
+        # Note: We use projectViewer:some-project-id here because conditions
+        # cannot be applied to a binding that only has allUsers in the members
+        # list; the API gives back a 400 error if you try.
+        members=['projectViewer:%s' % PopulateProjectId()],
+        condition={
+            'title': TEST_CONDITION_TITLE,
+            'description': TEST_CONDITION_DESCRIPTION,
+            'expression': TEST_CONDITION_EXPR_RESOURCE_IS_OBJECT,
+        })
 
     self.bucket = self.CreateBucket()
     self.versioned_bucket = self.CreateVersionedBucket()
 
+    # Create a bucket to fetch its policy, used as a base for other policies.
     self.bucket_iam_string = self.RunGsUtil(
         ['iam', 'get', self.bucket.uri], return_stdout=True)
     self.old_bucket_iam_path = self.CreateTempFile(
         contents=self.bucket_iam_string)
+
+    # Using the existing bucket's policy, make an altered policy that allows
+    # allUsers to be "legacyBucketReader"s. Some tests will later apply this
+    # policy.
     self.new_bucket_iam_policy = self._patch_binding(
         json.loads(self.bucket_iam_string),
         IAM_BUCKET_READ_ROLE,
@@ -714,12 +743,25 @@ class TestIamSet(TestIamIntegration):
     self.new_bucket_iam_path = self.CreateTempFile(
         contents=json.dumps(self.new_bucket_iam_policy))
 
-    # Create a temporary object to get the IAM policy.
+    # Using the existing bucket's policy, make an altered policy that contains
+    # a binding with a condition in it. Some tests will later apply this policy.
+    self.new_bucket_policy_with_conditions_policy = json.loads(
+        self.bucket_iam_string)
+    self.new_bucket_policy_with_conditions_policy['bindings'].append(
+        self.project_viewer_objectviewer_with_cond_binding[0])
+    self.new_bucket_policy_with_conditions_path = self.CreateTempFile(
+        contents=json.dumps(self.new_bucket_policy_with_conditions_policy))
+
+    # Create an object to fetch its policy, used as a base for other policies.
     tmp_object = self.CreateObject(contents='foobar')
     self.object_iam_string = self.RunGsUtil(
         ['iam', 'get', tmp_object.uri], return_stdout=True)
     self.old_object_iam_path = self.CreateTempFile(
         contents=self.object_iam_string)
+
+    # Using the existing object's policy, make an altered policy that allows
+    # allUsers to be "legacyObjectReader"s. Some tests will later apply this
+    # policy.
     self.new_object_iam_policy = self._patch_binding(
         json.loads(self.object_iam_string), IAM_OBJECT_READ_ROLE,
         self.public_object_read_binding)
@@ -791,6 +833,50 @@ class TestIamSet(TestIamIntegration):
     self.assertIn(
         self.public_bucket_read_binding[0],
         json.loads(set_iam_string)['bindings'])
+
+  @unittest.skip('Disabled until all projects whitelisted for conditions.')
+  def test_set_and_get_valid_bucket_policy_with_conditions(self):
+    """Tests setting and getting an IAM policy with conditions on a bucket."""
+    self.RunGsUtil([
+        'iam', 'set', '-e', '', self.new_bucket_policy_with_conditions_path,
+         self.bucket.uri])
+    get_iam_string = self.RunGsUtil(
+        ['iam', 'get', self.bucket.uri],
+        return_stdout=True)
+    self.assertIn(TEST_CONDITION_DESCRIPTION, get_iam_string)
+    self.assertIn(TEST_CONDITION_EXPR_RESOURCE_IS_OBJECT,
+                  get_iam_string.replace('\\', ''))
+    self.assertIn(TEST_CONDITION_TITLE, get_iam_string)
+
+  # Note: We only test this for buckets, since objects cannot currently have
+  # conditions in their policy bindings.
+  @unittest.skip('Disabled until all projects whitelisted for conditions.')
+  def test_ch_fails_after_setting_conditions(self):
+    """Tests that if we "set" a policy with conditions, "ch" won't patch it."""
+    print()
+    self.RunGsUtil([
+        'iam', 'set', '-e', '', self.new_bucket_policy_with_conditions_path,
+        self.bucket.uri])
+
+    # Assert that we get an error both with and without ch's `-f` option.
+    # Without `-f`:
+    stderr = self.RunGsUtil(
+        ['iam', 'ch', 'allUsers:objectViewer', self.bucket.uri],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('CommandException: Could not patch IAM policy for', stderr)
+    # Also make sure we print the workaround message.
+    self.assertIn('The resource had conditions present', stderr)
+
+    # With `-f`:
+    stderr = self.RunGsUtil(
+        ['iam', 'ch', '-f', 'allUsers:objectViewer', self.bucket.uri],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'CommandException: Some IAM policies could not be patched', stderr)
+    # Also make sure we print the workaround message.
+    self.assertIn('Some resources had conditions', stderr)
 
   def test_set_blank_etag(self):
     """Tests setting blank etag behaves appropriately."""
