@@ -644,6 +644,9 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
     cls.logger.error(
         'Caught non-retryable exception while listing %s: %s' %
         (base_url_str, e))
+    # Also print the full stack trace in debugging mode. This makes debugging
+    # a bit easier.
+    cls.logger.debug(traceback.format_exc())
     cls.non_retryable_listing_failures = 1
   out_file.close()
 
