@@ -34,7 +34,7 @@ from gslib.utils import ls_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
-from gslib.utils.text_util import ttyprint
+from gslib.utils.text_util import print_to_fd
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils import text_util
 
@@ -152,7 +152,7 @@ class DuCommand(Command):
     if six.PY2:
       name = name.decode(UTF8)
 
-    text_util.ttyprint('{size:<11}  {name}'.format(
+    text_util.print_to_fd('{size:<11}  {name}'.format(
         size=size_string,
         name=six.ensure_text(name)), end=self.line_ending)
 
@@ -187,7 +187,7 @@ class DuCommand(Command):
           size=size_string,
           url=six.ensure_text(url_str),
           ending=six.ensure_text(self.line_ending))
-      ttyprint(url_detail, file=sys.stdout, end='')
+      print_to_fd(url_detail, file=sys.stdout, end='')
 
     return (num_objs, num_bytes)
 

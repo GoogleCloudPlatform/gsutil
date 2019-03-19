@@ -1647,148 +1647,148 @@ class PerfDiagCommand(Command):
     mean = float(sum(trials)) / n
     stdev = math.sqrt(sum((x - mean)**2 for x in trials) / n)
 
-    text_util.ttyprint(str(n).rjust(6), '', end=' ')
-    text_util.ttyprint(('%.1f' % (mean * 1000)).rjust(9), '', end=' ')
-    text_util.ttyprint(('%.1f' % (stdev * 1000)).rjust(12), '', end=' ')
-    text_util.ttyprint(('%.1f' % (Percentile(trials, 0.5) * 1000)).rjust(11), '', end=' ')
-    text_util.ttyprint(('%.1f' % (Percentile(trials, 0.9) * 1000)).rjust(11), '')
+    text_util.print_to_fd(str(n).rjust(6), '', end=' ')
+    text_util.print_to_fd(('%.1f' % (mean * 1000)).rjust(9), '', end=' ')
+    text_util.print_to_fd(('%.1f' % (stdev * 1000)).rjust(12), '', end=' ')
+    text_util.print_to_fd(('%.1f' % (Percentile(trials, 0.5) * 1000)).rjust(11), '', end=' ')
+    text_util.print_to_fd(('%.1f' % (Percentile(trials, 0.9) * 1000)).rjust(11), '')
 
   def _DisplayResults(self):
     """Displays results collected from diagnostic run."""
-    text_util.ttyprint()
-    text_util.ttyprint('=' * 78)
-    text_util.ttyprint('DIAGNOSTIC RESULTS'.center(78))
-    text_util.ttyprint('=' * 78)
+    text_util.print_to_fd()
+    text_util.print_to_fd('=' * 78)
+    text_util.print_to_fd('DIAGNOSTIC RESULTS'.center(78))
+    text_util.print_to_fd('=' * 78)
 
     if 'latency' in self.results:
-      text_util.ttyprint()
-      text_util.ttyprint('-' * 78)
-      text_util.ttyprint('Latency'.center(78))
-      text_util.ttyprint('-' * 78)
-      text_util.ttyprint('Operation       Size  Trials  Mean (ms)  Std Dev (ms)  '
+      text_util.print_to_fd()
+      text_util.print_to_fd('-' * 78)
+      text_util.print_to_fd('Latency'.center(78))
+      text_util.print_to_fd('-' * 78)
+      text_util.print_to_fd('Operation       Size  Trials  Mean (ms)  Std Dev (ms)  '
              'Median (ms)  90th % (ms)')
-      text_util.ttyprint('=========  =========  ======  =========  ============  '
+      text_util.print_to_fd('=========  =========  ======  =========  ============  '
              '===========  ===========')
       for key in sorted(self.results['latency']):
         trials = sorted(self.results['latency'][key])
         op, numbytes = key.split('_')
         numbytes = int(numbytes)
         if op == 'METADATA':
-          text_util.ttyprint('Metadata'.rjust(9), '', end=' ')
-          text_util.ttyprint(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd('Metadata'.rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
           self._DisplayStats(trials)
         if op == 'DOWNLOAD':
-          text_util.ttyprint('Download'.rjust(9), '', end=' ')
-          text_util.ttyprint(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd('Download'.rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
           self._DisplayStats(trials)
         if op == 'UPLOAD':
-          text_util.ttyprint('Upload'.rjust(9), '', end=' ')
-          text_util.ttyprint(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd('Upload'.rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
           self._DisplayStats(trials)
         if op == 'DELETE':
-          text_util.ttyprint('Delete'.rjust(9), '', end=' ')
-          text_util.ttyprint(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd('Delete'.rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
           self._DisplayStats(trials)
 
     if 'write_throughput' in self.results:
-      text_util.ttyprint()
-      text_util.ttyprint('-' * 78)
-      text_util.ttyprint('Write Throughput'.center(78))
-      text_util.ttyprint('-' * 78)
+      text_util.print_to_fd()
+      text_util.print_to_fd('-' * 78)
+      text_util.print_to_fd('Write Throughput'.center(78))
+      text_util.print_to_fd('-' * 78)
       write_thru = self.results['write_throughput']
-      text_util.ttyprint('Copied %s %s file(s) for a total transfer size of %s.' % (
+      text_util.print_to_fd('Copied %s %s file(s) for a total transfer size of %s.' % (
           self.num_objects,
           MakeHumanReadable(write_thru['file_size']),
           MakeHumanReadable(write_thru['total_bytes_copied'])))
-      text_util.ttyprint('Write throughput: %s/s.' % (
+      text_util.print_to_fd('Write throughput: %s/s.' % (
           MakeBitsHumanReadable(write_thru['bytes_per_second'] * 8)))
       if 'parallelism' in write_thru:  # Compatibility with old versions.
-        text_util.ttyprint('Parallelism strategy: %s' % write_thru['parallelism'])
+        text_util.print_to_fd('Parallelism strategy: %s' % write_thru['parallelism'])
 
     if 'write_throughput_file' in self.results:
-      text_util.ttyprint()
-      text_util.ttyprint('-' * 78)
-      text_util.ttyprint('Write Throughput With File I/O'.center(78))
-      text_util.ttyprint('-' * 78)
+      text_util.print_to_fd()
+      text_util.print_to_fd('-' * 78)
+      text_util.print_to_fd('Write Throughput With File I/O'.center(78))
+      text_util.print_to_fd('-' * 78)
       write_thru_file = self.results['write_throughput_file']
-      text_util.ttyprint('Copied %s %s file(s) for a total transfer size of %s.' % (
+      text_util.print_to_fd('Copied %s %s file(s) for a total transfer size of %s.' % (
           self.num_objects,
           MakeHumanReadable(write_thru_file['file_size']),
           MakeHumanReadable(write_thru_file['total_bytes_copied'])))
-      text_util.ttyprint('Write throughput: %s/s.' % (
+      text_util.print_to_fd('Write throughput: %s/s.' % (
           MakeBitsHumanReadable(write_thru_file['bytes_per_second'] * 8)))
       if 'parallelism' in write_thru_file:  # Compatibility with old versions.
-        text_util.ttyprint('Parallelism strategy: %s' % write_thru_file['parallelism'])
+        text_util.print_to_fd('Parallelism strategy: %s' % write_thru_file['parallelism'])
 
     if 'read_throughput' in self.results:
-      text_util.ttyprint()
-      text_util.ttyprint('-' * 78)
-      text_util.ttyprint('Read Throughput'.center(78))
-      text_util.ttyprint('-' * 78)
+      text_util.print_to_fd()
+      text_util.print_to_fd('-' * 78)
+      text_util.print_to_fd('Read Throughput'.center(78))
+      text_util.print_to_fd('-' * 78)
       read_thru = self.results['read_throughput']
-      text_util.ttyprint('Copied %s %s file(s) for a total transfer size of %s.' % (
+      text_util.print_to_fd('Copied %s %s file(s) for a total transfer size of %s.' % (
           self.num_objects,
           MakeHumanReadable(read_thru['file_size']),
           MakeHumanReadable(read_thru['total_bytes_copied'])))
-      text_util.ttyprint('Read throughput: %s/s.' % (
+      text_util.print_to_fd('Read throughput: %s/s.' % (
           MakeBitsHumanReadable(read_thru['bytes_per_second'] * 8)))
       if 'parallelism' in read_thru:  # Compatibility with old versions.
-        text_util.ttyprint('Parallelism strategy: %s' % read_thru['parallelism'])
+        text_util.print_to_fd('Parallelism strategy: %s' % read_thru['parallelism'])
 
     if 'read_throughput_file' in self.results:
-      text_util.ttyprint()
-      text_util.ttyprint('-' * 78)
-      text_util.ttyprint('Read Throughput With File I/O'.center(78))
-      text_util.ttyprint('-' * 78)
+      text_util.print_to_fd()
+      text_util.print_to_fd('-' * 78)
+      text_util.print_to_fd('Read Throughput With File I/O'.center(78))
+      text_util.print_to_fd('-' * 78)
       read_thru_file = self.results['read_throughput_file']
-      text_util.ttyprint('Copied %s %s file(s) for a total transfer size of %s.' % (
+      text_util.print_to_fd('Copied %s %s file(s) for a total transfer size of %s.' % (
           self.num_objects,
           MakeHumanReadable(read_thru_file['file_size']),
           MakeHumanReadable(read_thru_file['total_bytes_copied'])))
-      text_util.ttyprint('Read throughput: %s/s.' % (
+      text_util.print_to_fd('Read throughput: %s/s.' % (
           MakeBitsHumanReadable(read_thru_file['bytes_per_second'] * 8)))
       if 'parallelism' in read_thru_file:  # Compatibility with old versions.
-        text_util.ttyprint('Parallelism strategy: %s' % read_thru_file['parallelism'])
+        text_util.print_to_fd('Parallelism strategy: %s' % read_thru_file['parallelism'])
 
     if 'listing' in self.results:
-      text_util.ttyprint()
-      text_util.ttyprint('-' * 78)
-      text_util.ttyprint('Listing'.center(78))
-      text_util.ttyprint('-' * 78)
+      text_util.print_to_fd()
+      text_util.print_to_fd('-' * 78)
+      text_util.print_to_fd('Listing'.center(78))
+      text_util.print_to_fd('-' * 78)
 
       listing = self.results['listing']
       insert = listing['insert']
       delete = listing['delete']
-      text_util.ttyprint('After inserting %s objects:' % listing['num_files'])
-      text_util.ttyprint(('  Total time for objects to appear: %.2g seconds' %
+      text_util.print_to_fd('After inserting %s objects:' % listing['num_files'])
+      text_util.print_to_fd(('  Total time for objects to appear: %.2g seconds' %
              insert['time_took']))
-      text_util.ttyprint('  Number of listing calls made: %s' % insert['num_listing_calls'])
-      text_util.ttyprint(('  Individual listing call latencies: [%s]' %
+      text_util.print_to_fd('  Number of listing calls made: %s' % insert['num_listing_calls'])
+      text_util.print_to_fd(('  Individual listing call latencies: [%s]' %
              ', '.join('%.2gs' % lat for lat in insert['list_latencies'])))
-      text_util.ttyprint(('  Files reflected after each call: [%s]' %
+      text_util.print_to_fd(('  Files reflected after each call: [%s]' %
              ', '.join(map(str, insert['files_seen_after_listing']))))
 
-      text_util.ttyprint('After deleting %s objects:' % listing['num_files'])
-      text_util.ttyprint(('  Total time for objects to appear: %.2g seconds' %
+      text_util.print_to_fd('After deleting %s objects:' % listing['num_files'])
+      text_util.print_to_fd(('  Total time for objects to appear: %.2g seconds' %
              delete['time_took']))
-      text_util.ttyprint('  Number of listing calls made: %s' % delete['num_listing_calls'])
-      text_util.ttyprint(('  Individual listing call latencies: [%s]' %
+      text_util.print_to_fd('  Number of listing calls made: %s' % delete['num_listing_calls'])
+      text_util.print_to_fd(('  Individual listing call latencies: [%s]' %
              ', '.join('%.2gs' % lat for lat in delete['list_latencies'])))
-      text_util.ttyprint(('  Files reflected after each call: [%s]' %
+      text_util.print_to_fd(('  Files reflected after each call: [%s]' %
              ', '.join(map(str, delete['files_seen_after_listing']))))
 
     if 'sysinfo' in self.results:
-      text_util.ttyprint()
-      text_util.ttyprint('-' * 78)
-      text_util.ttyprint('System Information'.center(78))
-      text_util.ttyprint('-' * 78)
+      text_util.print_to_fd()
+      text_util.print_to_fd('-' * 78)
+      text_util.print_to_fd('System Information'.center(78))
+      text_util.print_to_fd('-' * 78)
       info = self.results['sysinfo']
-      text_util.ttyprint('IP Address: \n  %s' % info['ip_address'])
-      text_util.ttyprint('Temporary Directory: \n  %s' % info['tempdir'])
-      text_util.ttyprint('Bucket URI: \n  %s' % self.results['bucket_uri'])
-      text_util.ttyprint('gsutil Version: \n  %s' % self.results.get('gsutil_version',
+      text_util.print_to_fd('IP Address: \n  %s' % info['ip_address'])
+      text_util.print_to_fd('Temporary Directory: \n  %s' % info['tempdir'])
+      text_util.print_to_fd('Bucket URI: \n  %s' % self.results['bucket_uri'])
+      text_util.print_to_fd('gsutil Version: \n  %s' % self.results.get('gsutil_version',
                                                         'Unknown'))
-      text_util.ttyprint('boto Version: \n  %s' % self.results.get('boto_version', 'Unknown'))
+      text_util.print_to_fd('boto Version: \n  %s' % self.results.get('boto_version', 'Unknown'))
 
       if 'gmt_timestamp' in info:
         ts_string = info['gmt_timestamp']
@@ -1803,29 +1803,29 @@ class PerfDiagCommand(Command):
           # Converts the GMT time tuple to local Linux timestamp.
           localtime = calendar.timegm(timetuple)
           localdt = datetime.datetime.fromtimestamp(localtime)
-          text_util.ttyprint('Measurement time: \n %s' % localdt.strftime(
+          text_util.print_to_fd('Measurement time: \n %s' % localdt.strftime(
               '%Y-%m-%d %I:%M:%S %p %Z'))
 
       if 'on_gce' in info:
-        text_util.ttyprint('Running on GCE: \n  %s' % info['on_gce'])
+        text_util.print_to_fd('Running on GCE: \n  %s' % info['on_gce'])
         if info['on_gce']:
-          text_util.ttyprint('GCE Instance:\n\t%s' %
+          text_util.print_to_fd('GCE Instance:\n\t%s' %
                  info['gce_instance_info'].replace('\n', '\n\t'))
-      text_util.ttyprint('Bucket location: \n  %s' % info['bucket_location'])
-      text_util.ttyprint('Bucket storage class: \n  %s' % info['bucket_storageClass'])
-      text_util.ttyprint('Google Server: \n  %s' % info['googserv_route'])
-      text_util.ttyprint('Google Server IP Addresses: \n  %s' %
+      text_util.print_to_fd('Bucket location: \n  %s' % info['bucket_location'])
+      text_util.print_to_fd('Bucket storage class: \n  %s' % info['bucket_storageClass'])
+      text_util.print_to_fd('Google Server: \n  %s' % info['googserv_route'])
+      text_util.print_to_fd('Google Server IP Addresses: \n  %s' %
              ('\n  '.join(info['googserv_ips'])))
-      text_util.ttyprint('Google Server Hostnames: \n  %s' %
+      text_util.print_to_fd('Google Server Hostnames: \n  %s' %
              ('\n  '.join(info['googserv_hostnames'])))
-      text_util.ttyprint('Google DNS thinks your IP is: \n  %s' % info['dns_o-o_ip'])
-      text_util.ttyprint('CPU Count: \n  %s' % info['cpu_count'])
-      text_util.ttyprint('CPU Load Average: \n  %s' % info['load_avg'])
+      text_util.print_to_fd('Google DNS thinks your IP is: \n  %s' % info['dns_o-o_ip'])
+      text_util.print_to_fd('CPU Count: \n  %s' % info['cpu_count'])
+      text_util.print_to_fd('CPU Load Average: \n  %s' % info['load_avg'])
       try:
-        text_util.ttyprint(('Total Memory: \n  %s' %
+        text_util.print_to_fd(('Total Memory: \n  %s' %
                MakeHumanReadable(info['meminfo']['mem_total'])))
         # Free memory is really MemFree + Buffers + Cached.
-        text_util.ttyprint('Free Memory: \n  %s' % MakeHumanReadable(
+        text_util.print_to_fd('Free Memory: \n  %s' % MakeHumanReadable(
             info['meminfo']['mem_free'] +
             info['meminfo']['mem_buffers'] +
             info['meminfo']['mem_cached']))
@@ -1839,90 +1839,90 @@ class PerfDiagCommand(Command):
           try:
             delta = (netstat_after['tcp_%s' % tcp_type] -
                      netstat_before['tcp_%s' % tcp_type])
-            text_util.ttyprint('TCP segments %s during test:\n  %d' % (tcp_type, delta))
+            text_util.print_to_fd('TCP segments %s during test:\n  %d' % (tcp_type, delta))
           except TypeError:
             pass
       else:
-        text_util.ttyprint('TCP segment counts not available because "netstat" was not '
+        text_util.print_to_fd('TCP segment counts not available because "netstat" was not '
                'found during test runs')
 
       if 'disk_counters_end' in info and 'disk_counters_start' in info:
-        text_util.ttyprint('Disk Counter Deltas:\n', end=' ')
+        text_util.print_to_fd('Disk Counter Deltas:\n', end=' ')
         disk_after = info['disk_counters_end']
         disk_before = info['disk_counters_start']
-        text_util.ttyprint('', 'disk'.rjust(6), end=' ')
+        text_util.print_to_fd('', 'disk'.rjust(6), end=' ')
         for colname in ['reads', 'writes', 'rbytes', 'wbytes', 'rtime',
                         'wtime']:
-          text_util.ttyprint(colname.rjust(8), end=' ')
-        text_util.ttyprint()
+          text_util.print_to_fd(colname.rjust(8), end=' ')
+        text_util.print_to_fd()
         for diskname in sorted(disk_after):
           before = disk_before[diskname]
           after = disk_after[diskname]
           (reads1, writes1, rbytes1, wbytes1, rtime1, wtime1) = before
           (reads2, writes2, rbytes2, wbytes2, rtime2, wtime2) = after
-          text_util.ttyprint('', diskname.rjust(6), end=' ')
+          text_util.print_to_fd('', diskname.rjust(6), end=' ')
           deltas = [reads2-reads1, writes2-writes1, rbytes2-rbytes1,
                     wbytes2-wbytes1, rtime2-rtime1, wtime2-wtime1]
           for delta in deltas:
-            text_util.ttyprint(str(delta).rjust(8), end=' ')
-          text_util.ttyprint()
+            text_util.print_to_fd(str(delta).rjust(8), end=' ')
+          text_util.print_to_fd()
 
       if 'tcp_proc_values' in info:
-        text_util.ttyprint('TCP /proc values:\n', end=' ')
+        text_util.print_to_fd('TCP /proc values:\n', end=' ')
         for item in six.iteritems(info['tcp_proc_values']):
-          text_util.ttyprint('   %s = %s' % item)
+          text_util.print_to_fd('   %s = %s' % item)
 
       if 'boto_https_enabled' in info:
-        text_util.ttyprint('Boto HTTPS Enabled: \n  %s' % info['boto_https_enabled'])
+        text_util.print_to_fd('Boto HTTPS Enabled: \n  %s' % info['boto_https_enabled'])
 
       if 'using_proxy' in info:
-        text_util.ttyprint('Requests routed through proxy: \n  %s' % info['using_proxy'])
+        text_util.print_to_fd('Requests routed through proxy: \n  %s' % info['using_proxy'])
 
       if 'google_host_dns_latency' in info:
-        text_util.ttyprint(('Latency of the DNS lookup for Google Storage server (ms): '
+        text_util.print_to_fd(('Latency of the DNS lookup for Google Storage server (ms): '
                '\n  %.1f' % (info['google_host_dns_latency'] * 1000.0)))
 
       if 'google_host_connect_latencies' in info:
-        text_util.ttyprint('Latencies connecting to Google Storage server IPs (ms):')
+        text_util.print_to_fd('Latencies connecting to Google Storage server IPs (ms):')
         for ip, latency in six.iteritems(info['google_host_connect_latencies']):
-          text_util.ttyprint('  %s = %.1f' % (ip, latency * 1000.0))
+          text_util.print_to_fd('  %s = %.1f' % (ip, latency * 1000.0))
 
       if 'proxy_dns_latency' in info:
-        text_util.ttyprint(('Latency of the DNS lookup for the configured proxy (ms): '
+        text_util.print_to_fd(('Latency of the DNS lookup for the configured proxy (ms): '
                '\n  %.1f' % (info['proxy_dns_latency'] * 1000.0)))
 
       if 'proxy_host_connect_latency' in info:
-        text_util.ttyprint(('Latency connecting to the configured proxy (ms): \n  %.1f' %
+        text_util.print_to_fd(('Latency connecting to the configured proxy (ms): \n  %.1f' %
                (info['proxy_host_connect_latency'] * 1000.0)))
 
     if 'request_errors' in self.results and 'total_requests' in self.results:
-      text_util.ttyprint()
-      text_util.ttyprint('-' * 78)
-      text_util.ttyprint('In-Process HTTP Statistics'.center(78))
-      text_util.ttyprint('-' * 78)
+      text_util.print_to_fd()
+      text_util.print_to_fd('-' * 78)
+      text_util.print_to_fd('In-Process HTTP Statistics'.center(78))
+      text_util.print_to_fd('-' * 78)
       total = int(self.results['total_requests'])
       numerrors = int(self.results['request_errors'])
       numbreaks = int(self.results['connection_breaks'])
       availability = (((total - numerrors) / float(total)) * 100
                       if total > 0 else 100)
-      text_util.ttyprint('Total HTTP requests made: %d' % total)
-      text_util.ttyprint('HTTP 5xx errors: %d' % numerrors)
-      text_util.ttyprint('HTTP connections broken: %d' % numbreaks)
-      text_util.ttyprint('Availability: %.7g%%' % availability)
+      text_util.print_to_fd('Total HTTP requests made: %d' % total)
+      text_util.print_to_fd('HTTP 5xx errors: %d' % numerrors)
+      text_util.print_to_fd('HTTP connections broken: %d' % numbreaks)
+      text_util.print_to_fd('Availability: %.7g%%' % availability)
       if 'error_responses_by_code' in self.results:
         sorted_codes = sorted(
             six.iteritems(self.results['error_responses_by_code']))
         if sorted_codes:
-          text_util.ttyprint('Error responses by code:')
-          text_util.ttyprint('\n'.join('  %s: %s' % c for c in sorted_codes))
+          text_util.print_to_fd('Error responses by code:')
+          text_util.print_to_fd('\n'.join('  %s: %s' % c for c in sorted_codes))
 
     if self.output_file:
       with open(self.output_file, 'w') as f:
         json.dump(self.results, f, indent=2)
-      text_util.ttyprint()
-      text_util.ttyprint("Output file written to '%s'." % self.output_file)
+      text_util.print_to_fd()
+      text_util.print_to_fd("Output file written to '%s'." % self.output_file)
 
-    text_util.ttyprint()
+    text_util.print_to_fd()
 
   def _ParsePositiveInteger(self, val, msg):
     """Tries to convert val argument to a positive integer.

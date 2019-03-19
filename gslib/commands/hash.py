@@ -215,9 +215,9 @@ class HashCommand(Command):
             hash_dict['md5'] = obj_metadata.md5Hash
           if crc32c_present:
             hash_dict['crc32c'] = obj_metadata.crc32c
-        text_util.ttyprint('Hashes [%s] for %s:' % (output_format, file_name))
+        text_util.print_to_fd('Hashes [%s] for %s:' % (output_format, file_name))
         for name, digest in six.iteritems(hash_dict):
-          text_util.ttyprint('\tHash (%s):\t\t%s' % (name,
+          text_util.print_to_fd('\tHash (%s):\t\t%s' % (name,
                                         (format_func(digest) if url.IsFileUrl()
                                          else cloud_format_func(digest))))
 

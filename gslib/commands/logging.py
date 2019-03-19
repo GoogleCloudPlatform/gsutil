@@ -163,15 +163,15 @@ class LoggingCommand(Command):
         self.args[0], bucket_fields=['logging'])
 
     if bucket_url.scheme == 's3':
-      text_util.ttyprint(self.gsutil_api.XmlPassThroughGetLogging(
+      text_util.print_to_fd(self.gsutil_api.XmlPassThroughGetLogging(
           bucket_url, provider=bucket_url.scheme), end='')
     else:
       if (bucket_metadata.logging and bucket_metadata.logging.logBucket and
           bucket_metadata.logging.logObjectPrefix):
-        text_util.ttyprint(str(encoding.MessageToJson(
+        text_util.print_to_fd(str(encoding.MessageToJson(
             bucket_metadata.logging)))
       else:
-        text_util.ttyprint('%s has no logging configuration.' % bucket_url)
+        text_util.print_to_fd('%s has no logging configuration.' % bucket_url)
     return 0
 
   def _Enable(self):
