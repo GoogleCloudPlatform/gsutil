@@ -52,8 +52,10 @@ _GET_DESCRIPTION = """
 """
 
 _DESCRIPTION = """
-  The Versioning Configuration feature enables you to configure a Google Cloud
-  Storage bucket to keep old versions of objects.
+  The `Versioning Configuration
+  <https://cloud.google.com/storage/docs/object-versioning>`_ feature
+  enables you to configure a Google Cloud Storage bucket to keep old
+  versions of objects.
 
   The gsutil versioning command has two sub-commands:
 """ + _SET_DESCRIPTION + _GET_DESCRIPTION
