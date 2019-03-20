@@ -274,7 +274,7 @@ def print_to_fd(*objects, **kwargs):
     """
     def _get_args(**kwargs):
         """Validates keyword arguments that would be used in Print
-        
+
         Valid keyword arguments, mirroring print(), are 'sep',
         'end', and 'file'. These must be of types string, string,
         and file / file interface respectively.
@@ -311,10 +311,7 @@ def print_to_fd(*objects, **kwargs):
 
 
 def write_to_fd(fd, data):
-    """Write given data to given file descriptor, doing any conversions needed.
-
-    Given string data that may be bytes or unicode, or 
-    """
+    """Write given data to given file descriptor, doing any conversions needed.isinstance"""
     if six.PY2:
         fd.write(data)
     else:
@@ -325,8 +322,10 @@ def write_to_fd(fd, data):
                 fd.buffer.write(data)
             else:
                 fd.write(six.ensure_text(data))
-        else:
+        elif 'b' in fd.mode:
             fd.write(six.ensure_binary(data))
+        else:
+            fd.write(data)
 
 
 def RemoveCRLFFromString(input_str):
