@@ -295,14 +295,6 @@ def print_to_fd(*objects, **kwargs):
                     error_msg.format(
                         key,
                         ' '.join(expected_keywords.keys())))
-            elif type(value) != type(expected_keywords[value]):
-                error_msg = (
-                    '{key} is an unexpected type. {key} must be '
-                    '{typeOfValue}')
-                raise TypeError(
-                    error_msg.format(
-                        key=key,
-                        typeOfValue=str(type(value))))
             else:
                 expected_keywords[key] = value
 
@@ -312,7 +304,7 @@ def print_to_fd(*objects, **kwargs):
 
     sep = six.ensure_binary(sep)
     end = six.ensure_binary(end)
-    byte_objects = [six.ensure_binary(str(item)) for item in objects]
+    byte_objects = [six.ensure_binary(item) for item in objects]
     data = sep.join(byte_objects)
     data += end
     write_to_fd(file, data)
