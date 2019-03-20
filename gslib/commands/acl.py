@@ -72,7 +72,7 @@ _SET_DESCRIPTION = """
 
   If you want to make an object or bucket publicly readable or writable, it is
   recommended to use "acl ch", to avoid accidentally removing OWNER permissions.
-  See "gsutil help acl ch" for details.
+  See the "acl ch" section for details.
 
   See "gsutil help acls" for a list of all canned ACLs.
 
