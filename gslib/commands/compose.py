@@ -44,19 +44,18 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>DESCRIPTION</B>
   The compose command creates a new object whose content is the concatenation
-  of a given sequence of component objects under the same bucket. gsutil uses
+  of a given sequence of source objects under the same bucket. gsutil uses
   the content type of the first source object to determine the destination
   object's content type. For more information, please see:
   https://cloud.google.com/storage/docs/composite-objects
 
   Note also that the gsutil cp command can automatically split uploads for
   large files into multiple component objects, upload them in parallel, and
-  compose them into a final object (which will be subject to the component
-  count limit). This will still perform all uploads from a single machine. For
-  extremely large files and/or very low per-machine bandwidth, you may want to
-  split the file and upload it from multiple machines, and later compose these
-  parts of the file manually. See the 'PARALLEL COMPOSITE UPLOADS' section under
-  'gsutil help cp' for details.
+  compose them into a final object. This will still perform all uploads from
+  a single machine. For extremely large files and/or very low per-machine
+  bandwidth, you may want to split the file and upload it from multiple
+  machines, and later compose these parts of the file manually. See the
+  'PARALLEL COMPOSITE UPLOADS' section under 'gsutil help cp' for details.
 
   Appending simply entails uploading your new data to a temporary object,
   composing it with the growing append-target, and deleting the temporary
@@ -69,17 +68,7 @@ _DETAILED_HELP_TEXT = ("""
 
   Note that there is a limit (currently %d) to the number of components that can
   be composed in a single operation.
-
-  There is a limit (currently %d) to the total number of components
-  for a given composite object. This means you can append to each object at most
-  %d times.
-
-  There is a per-project rate limit (currently %d) to the number of components
-  you can compose per second. This rate counts both the components being
-  appended to a composite object as well as the components being copied when
-  the composite object of which they are a part is copied.
-""" % (MAX_COMPOSE_ARITY, MAX_COMPONENT_COUNT, MAX_COMPONENT_COUNT - 1,
-       MAX_COMPONENT_RATE))
+""" % (MAX_COMPOSE_ARITY))
 
 
 class ComposeCommand(Command):
