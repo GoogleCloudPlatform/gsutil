@@ -264,68 +264,68 @@ def PrintableStr(input_val):
   return input_val
 
 def print_to_fd(*objects, **kwargs):
-    """A Python 2/3 compatible analogue to the print function.
+  """A Python 2/3 compatible analogue to the print function.
 
-    This function writes text to a file descriptor as the
-    builtin print function would, favoring unicode encoding.
+  This function writes text to a file descriptor as the
+  builtin print function would, favoring unicode encoding.
 
-    Aguments and return values are the same as documented in
-    the Python 2 print function.
+  Aguments and return values are the same as documented in
+  the Python 2 print function.
+  """
+  def _get_args(**kwargs):
+    """Validates keyword arguments that would be used in Print
+
+    Valid keyword arguments, mirroring print(), are 'sep',
+    'end', and 'file'. These must be of types string, string,
+    and file / file interface respectively.
+
+    Returns the above kwargs of the above types.
     """
-    def _get_args(**kwargs):
-        """Validates keyword arguments that would be used in Print
+    expected_keywords = collections.OrderedDict([
+      ('sep', ' '),
+      ('end', '\n'),
+      ('file', sys.stdout)])
 
-        Valid keyword arguments, mirroring print(), are 'sep',
-        'end', and 'file'. These must be of types string, string,
-        and file / file interface respectively.
+    for key, value in kwargs.items():
+      if key not in expected_keywords:
+        error_msg = (
+          '{} is not a valid keyword argument. '
+          'Please use one of: {}')
+        raise KeyError(
+          error_msg.format(
+            key,
+            ' '.join(expected_keywords.keys())))
+        else:
+          expected_keywords[key] = value
 
-        Returns the above kwargs of the above types.
-        """
-        expected_keywords = collections.OrderedDict([
-            ('sep', ' '),
-            ('end', '\n'),
-            ('file', sys.stdout)])
+    return expected_keywords.values()
 
-        for key, value in kwargs.items():
-            if key not in expected_keywords:
-                error_msg = (
-                    '{} is not a valid keyword argument. '
-                    'Please use one of: {}')
-                raise KeyError(
-                    error_msg.format(
-                        key,
-                        ' '.join(expected_keywords.keys())))
-            else:
-                expected_keywords[key] = value
+  sep, end, file = _get_args(**kwargs)
 
-        return expected_keywords.values()
-
-    sep, end, file = _get_args(**kwargs)
-
-    sep = six.ensure_binary(sep)
-    end = six.ensure_binary(end)
-    byte_objects = [six.ensure_binary(item) for item in objects]
-    data = sep.join(byte_objects)
-    data += end
-    write_to_fd(file, data)
+  sep = six.ensure_binary(sep)
+  end = six.ensure_binary(end)
+  byte_objects = [six.ensure_binary(item) for item in objects]
+  data = sep.join(byte_objects)
+  data += end
+  write_to_fd(file, data)
 
 
 def write_to_fd(fd, data):
-    """Write given data to given file descriptor, doing any conversions needed.isinstance"""
-    if six.PY2:
+  """Write given data to given file descriptor, doing any conversions needed.isinstance"""
+  if six.PY2:
+    fd.write(data)
+  else:
+    if isinstance(data, bytes):
+      if (hasattr(fd, 'mode') and 'b' in fd.mode) or isinstance(fd, io.BytesIO):
         fd.write(data)
+      elif hasattr(fd, 'buffer'):
+        fd.buffer.write(data)
+      else:
+        fd.write(six.ensure_text(data))
+    elif 'b' in fd.mode:
+      fd.write(six.ensure_binary(data))
     else:
-        if isinstance(data, bytes):
-            if (hasattr(fd, 'mode') and 'b' in fd.mode) or isinstance(fd, io.BytesIO):
-                fd.write(data)
-            elif hasattr(fd, 'buffer'):
-                fd.buffer.write(data)
-            else:
-                fd.write(six.ensure_text(data))
-        elif 'b' in fd.mode:
-            fd.write(six.ensure_binary(data))
-        else:
-            fd.write(data)
+      fd.write(data)
 
 
 def RemoveCRLFFromString(input_str):
