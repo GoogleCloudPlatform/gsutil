@@ -54,9 +54,9 @@ _DETAILED_HELP_TEXT = ("""
 
   but is more efficient because it avoids performing bucket listings and gets
   the minimum necessary amount of object metadata. Moreover, because it avoids
-  performing bucket listings (which are eventually consistent) the gsutil stat
-  command provides a strongly consistent way to check for the existence (and
-  read the metadata) of an object.
+  performing bucket listings (which for some storage providers are eventually
+  consistent) the gsutil stat command provides a strongly consistent way to
+  check for the existence (and read the metadata) of an object.
 
   The gsutil stat command will, however, perform bucket listings if you specify
   URLs using wildcards.
@@ -65,8 +65,9 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil -q stat gs://some-bucket/some-object
 
-  This can be useful for writing scripts, because the exit status will be 0 for
-  an existing object and 1 for a non-existent object.
+  This behavior can be useful when writing scripts: even though nothing is
+  printed from the command, it still has an exit status of 0 for an existing
+  object and 1 for a non-existent object.
 
   Note: Unlike the gsutil ls command, the stat command does not support
   operations on sub-directories. For example, if you run the command:

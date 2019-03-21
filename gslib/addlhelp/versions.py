@@ -43,8 +43,8 @@ _DETAILED_HELP_TEXT = ("""
   (discussed in a later section).
 
   To work with object versioning in gsutil, you can use a flavor of storage URLs
-  that that embed the object generation, which we refer to as version-specific
-  URLs. For example, the version-less object URL:
+  that embed the object generation, which we refer to as version-specific URLs.
+  For example, the version-less object URL:
 
     gs://bucket/object
 

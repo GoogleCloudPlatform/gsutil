@@ -84,7 +84,7 @@ _DESCRIPTION = """
   For example, suppose your company's Domain name is example.com. You could set
   up a website bucket as follows:
 
-  1. Create a bucket called example.com (see the "DOMAIN NAMED BUCKETS"
+  1. Create a bucket called www.example.com (see the "DOMAIN NAMED BUCKETS"
      section of "gsutil help naming" for details about creating such buckets).
 
   2. Create index.html and 404.html files and upload them to the bucket.
@@ -93,8 +93,8 @@ _DESCRIPTION = """
 
        gsutil web set -m index.html -e 404.html gs://www.example.com
 
-  4. Add a DNS CNAME record for example.com pointing to c.storage.googleapis.com
-     (ask your DNS administrator for help with this).
+  4. Add a DNS CNAME record for www.example.com pointing to
+     c.storage.googleapis.com (ask your DNS administrator for help with this).
 
   Now if you open a browser and navigate to http://www.example.com, it will
   display the main page instead of the default bucket listing. Note: It can
