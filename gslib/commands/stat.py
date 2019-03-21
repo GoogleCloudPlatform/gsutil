@@ -53,7 +53,10 @@ _DETAILED_HELP_TEXT = ("""
     gsutil ls -L gs://some-bucket/some-object
 
   but is more efficient because it avoids performing bucket listings and gets
-  the minimum necessary amount of object metadata.
+  the minimum necessary amount of object metadata. Moreover, because it avoids
+  performing bucket listings (which for some storage providers are eventually
+  consistent) the gsutil stat command provides a strongly consistent way to
+  check for the existence (and read the metadata) of an object.
 
   The gsutil stat command will, however, perform bucket listings if you specify
   URLs using wildcards.
