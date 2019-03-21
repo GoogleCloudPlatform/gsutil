@@ -22,9 +22,10 @@ set -xu
 PYVERSION="$PYMAJOR.$PYMINOR"
 API=${BOTO_CONFIG##*_}
 
-# Processes to use based on default Ubuntu Kokoro specs here:
+# Processes to use based on default Kokoro specs here:
 # go/gcp-ubuntu-vm-configuration-v32i
-PROCS="4"
+# go/kokoro-macos-external-configuration
+PROCS="8"
 
 GSUTIL_KEY="/tmpfs/src/keystore/74008_gsutil_kokoro_service_key"
 GSUTIL_SRC="/tmpfs/src/github/src/gsutil"
