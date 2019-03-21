@@ -14,13 +14,6 @@
 # Doc: https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html#The-Set-Builtin
 set -exu
 
-# For debugging on the CI branch, let me SSH in
-# go/kokoro-ssh-vm
-#echo "$SSH_AUTHORIZED_KEY" >> ~/.ssh/authoirized_keys
-#external_ip=$(curl -s -H "Metadata-Flavor: Google" http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip)
-#echo "INSTANCE_EXTERNAL_IP=${external_ip}"
-#sleep 2400
-
 GITHUB_REPO="https://github.com/GoogleCloudPlatform/gsutil"
 GSUTIL_KEY="/src/keystore/gsutil_kokoro_service_key.json"
 GSUTIL_SRC_PATH="/src/gsutil"
