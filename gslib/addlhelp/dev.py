@@ -98,9 +98,10 @@ _DETAILED_HELP_TEXT = ("""
      install some python modules. Change directories into the boto root
      directory at third_party/boto and run:
 
-       pip install -r requirements.txt
+       pip install --user -r requirements.txt
 
-     (You probably need to run this command using sudo.)
+     (You can use virtualenv if you'd prefer not to install these dependencies
+     globally in your system.)
      Make sure each of the individual installations succeeded. If they don't
      you may need to run the install command again.
 
