@@ -311,21 +311,21 @@ def print_to_fd(*objects, **kwargs):
 
 
 def write_to_fd(fd, data):
-  """Write given data to given file descriptor, doing any conversions needed.isinstance"""
+  """Write given data to given file descriptor, doing any conversions needed"""
   if six.PY2:
     fd.write(data)
-  else:
-    if isinstance(data, bytes):
-      if (hasattr(fd, 'mode') and 'b' in fd.mode) or isinstance(fd, io.BytesIO):
-        fd.write(data)
-      elif hasattr(fd, 'buffer'):
-        fd.buffer.write(data)
-      else:
-        fd.write(six.ensure_text(data))
-    elif 'b' in fd.mode:
-      fd.write(six.ensure_binary(data))
-    else:
+  # PY3 logic:
+  if isinstance(data, bytes):
+    if (hasattr(fd, 'mode') and 'b' in fd.mode) or isinstance(fd, io.BytesIO):
       fd.write(data)
+    elif hasattr(fd, 'buffer'):
+      fd.buffer.write(data)
+    else:
+      fd.write(six.ensure_text(data))
+  elif 'b' in fd.mode:
+    fd.write(six.ensure_binary(data))
+  else:
+    fd.write(data)
 
 
 def RemoveCRLFFromString(input_str):
