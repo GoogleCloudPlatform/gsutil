@@ -295,8 +295,8 @@ def print_to_fd(*objects, **kwargs):
           error_msg.format(
             key,
             ' '.join(expected_keywords.keys())))
-        else:
-          expected_keywords[key] = value
+      else:
+        expected_keywords[key] = value
 
     return expected_keywords.values()
 
