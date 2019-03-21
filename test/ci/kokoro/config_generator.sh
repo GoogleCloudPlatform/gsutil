@@ -14,22 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Create a config file for gsutil to use in Kokoro tests.
+# Create a .boto config file for gsutil to use in Kokoro tests.
 # https://cloud.google.com/storage/docs/gsutil/commands/config
 
 GSUTIL_KEY=$1
 API=$2
+OUTPUT_FILE=$3
 
-cat  << EOF
-[Credentials]
-gs_service_key_file = "$GSUTIL_KEY"
+cat > $3 <<- EOM
+	[Credentials]
+	gs_service_key_file = $GSUTIL_KEY
 
-[GSUtil]
-test_notification_url = https://bigstore-test-notify.appspot.com/notify
-default_project_id = bigstore-gsutil-testing
-prefer_api = "$API"
+	[GSUtil]
+	default_project_id = bigstore-gsutil-testing
+	prefer_api = $API
 
-[OAuth2]
-client_id = 909320924072.apps.googleusercontent.com
-client_secret = p3RlpR10xMFh9ZXBS/ZNLYUu
-EOF
+	[OAuth2]
+	client_id = 909320924072.apps.googleusercontent.com
+	client_secret = p3RlpR10xMFh9ZXBS/ZNLYUu
+EOM
