@@ -17,10 +17,9 @@
 set -xu
 
 
-# PYMAJOR, PYMINOR, and BOTO_CONFIG environment variables are set per job in:
+# PYMAJOR, PYMINOR, and API environment variables are set per job in:
 # go/kokoro-gsutil-configs
 PYVERSION="$PYMAJOR.$PYMINOR"
-API=${BOTO_CONFIG##*_}
 
 # Processes to use based on default Kokoro specs here:
 # go/gcp-ubuntu-vm-configuration-v32i
