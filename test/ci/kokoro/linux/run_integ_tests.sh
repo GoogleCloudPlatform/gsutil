@@ -55,7 +55,7 @@ function init_configs {
   # Create .boto config for gsutil
   # https://cloud.google.com/storage/docs/gsutil/commands/config
   "$CFG_GENERATOR" "$GSUTIL_KEY" "$API" "$BOTO_CONFIG"
-  grep -v private_key "$BOTO_CONFIG"
+  cat "$BOTO_CONFIG"
 }
 
 function init_python {
@@ -80,7 +80,7 @@ init_python
 update_submodules
 
 # Check that we're using the correct config
-gsutil version -l
+python "$GSUTIL_ENTRYPOINT" -l
 # Run integration tests
 python "$GSUTIL_ENTRYPOINT" test -p "$PROCS"
 
