@@ -58,7 +58,7 @@ from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailable
 from gslib.utils.text_util import CompareVersions
 from gslib.utils.text_util import InsistAsciiHeader
 from gslib.utils.text_util import InsistAsciiHeaderValue
-from gslib.utils.text_util import ttyprint
+from gslib.utils.text_util import print_to_fd
 from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.update_util import LookUpGsutilVersion
 from gslib.tests.util import HAS_NON_DEFAULT_GS_HOST
@@ -480,7 +480,7 @@ class CommandRunner(object):
         f.write(str(cur_ts))
       (g, m) = CompareVersions(cur_ver, gslib.VERSION)
       if m:
-        ttyprint('\n'.join(textwrap.wrap(
+        print_to_fd('\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). NOTE: This is a major new version, so it is '
             'strongly recommended that you review the release note details at '
@@ -488,18 +488,18 @@ class CommandRunner(object):
             'in scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
-        ttyprint('\n')
+        print_to_fd('\n')
         answer = input('Would you like to update [y/N]? ')
         return answer and answer.lower()[0] == 'y'
       elif g:
-        ttyprint('\n'.join(textwrap.wrap(
+        print_to_fd('\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). A detailed log of gsutil release changes is '
             'available at %s if you would like to read them before updating.'
             % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
-        ttyprint('\n')
+        print_to_fd('\n')
         answer = input('Would you like to update [Y/n]? ')
         return not answer or answer.lower()[0] != 'n'
     return False

@@ -263,99 +263,87 @@ def PrintableStr(input_val):
   """
   return input_val
 
+def print_to_fd(*objects, **kwargs):
+  """A Python 2/3 compatible analogue to the print function.
 
-def ttyprint(*objects, **kwargs):
-  """ A Python 2&3 compatible version of the print function.
+  This function writes text to a file descriptor as the
+  builtin print function would, favoring unicode encoding.
 
-  The main purpose of this function is to favor binary output
-  over text output.
-
-  Args are the same as documented for the print function in Python2.
+  Aguments and return values are the same as documented in
+  the Python 2 print function.
   """
-  kw_params = collections.OrderedDict([('sep', ' '),
-                                       ('end', os.linesep),
-                                       ('file', sys.stdout)])
-  for key, value in kwargs.items():
-    if key not in kw_params:
-      raise TypeError(
-        "'{}' is an invalid keyword argument for this function".format(key))
-    kw_params[key] = value
-  sep, end, file = kw_params.values()
-  if six.PY2:
-    if hasattr(file, 'mode') and 'b' not in file.mode and end == os.linesep:
-      end = b'\n'
-    pref_enc = 'utf-8'
-    if isinstance(sep, unicode):
-      sep = sep.encode(pref_enc)
-    if isinstance(end, unicode):
-      end = end.encode(pref_enc)
+  def _get_args(**kwargs):
+    """Validates keyword arguments that would be used in Print
+
+    Valid keyword arguments, mirroring print(), are 'sep',
+    'end', and 'file'. These must be of types string, string,
+    and file / file interface respectively.
+
+    Returns the above kwargs of the above types.
+    """
+    expected_keywords = collections.OrderedDict([
+      ('sep', ' '),
+      ('end', '\n'),
+      ('file', sys.stdout)])
+
+    for key, value in kwargs.items():
+      if key not in expected_keywords:
+        error_msg = (
+          '{} is not a valid keyword argument. '
+          'Please use one of: {}')
+        raise KeyError(
+          error_msg.format(
+            key,
+            ' '.join(expected_keywords.keys())))
+      else:
+        expected_keywords[key] = value
+
+    return expected_keywords.values()
+
+  
+  def _get_byte_strings(*objects):
+    """Gets a `bytes` string for each item in a list of printable objects."""
     byte_objects = []
-    for object in objects:
-      if isinstance(object, str):
-        byte_objects.append(object)
-      elif isinstance(object, unicode):
-        byte_objects.append(object.encode(pref_enc))
+    for item in objects:
+      if not isinstance(item, (six.binary_type, six.text_type)):
+        # If the item wasn't bytes or unicode, its __str__ method
+        # should return one of those types.
+        item = str(item)
+
+      if isinstance(item, six.binary_type):
+        byte_objects.append(item)
       else:
-        byte_objects.append(str(object).encode(pref_enc))
-    data = sep.join(byte_objects)
-    data += end
-    ttywrite(file, data)
-  else:  # PY3
-    def Py3Print(encoding, sep=sep, end=end):
-      """ Encode and send data to ttywrite with specified encoding.
-
-      Args:
-        encoding: Encoding to be used for all encode operations while printing.
-        sep: Line separator to be used for printing (defined in outer scope).
-        end: End character to be used for printing (defined in outer scope).
-
-      Returns: None
-      """
-      if isinstance(sep, str):
-        sep = sep.encode(encoding)
-      if isinstance(end, str):
-        end = end.encode(encoding)
-      byte_objects = []
-      for item in objects:
-        if isinstance(item, bytes):
-          byte_objects.append(item)
-        elif isinstance(item, str):
-          byte_objects.append(item.encode(encoding))
-        else:
-          byte_objects.append(str(item).encode(encoding))
-      data = sep.join(byte_objects)
-      data += end
-      ttywrite(file, data)
-
-    try:
-      # Try to print with default encoding.
-      Py3Print(locale.getpreferredencoding(False))
-    except UnicodeEncodeError:
-      # If default failed, try to print with UTF-8.
-      Py3Print(UTF8)
+        # The item should be unicode. If it's not, ensure_binary()
+        # will throw a TypeError.
+        byte_objects.append(six.ensure_binary(item))
+    return byte_objects
+    
+  sep, end, file = _get_args(**kwargs)
+  sep = six.ensure_binary(sep)
+  end = six.ensure_binary(end)
+  data = _get_byte_strings(*objects)
+  data = sep.join(data)
+  data += end
+  write_to_fd(file, data)
 
 
-def ttywrite(fp, data):
+def write_to_fd(fd, data):
+  """Write given data to given file descriptor, doing any conversions needed"""
   if six.PY2:
-    fp.write(data)
-  else:  # PY3
-    if isinstance(data, bytes):
-      if (hasattr(fp, 'mode') and 'b' in fp.mode) or isinstance(fp, io.BytesIO):
-        # data is bytes, and fp is binary
-        fp.write(data)
-      elif hasattr(fp, 'buffer'):
-        # data is bytes, but fp is text - try the underlying buffer
-        fp.buffer.write(data)
-      else:
-        # data is bytes, but fp is text - try to decode bytes
-        fp.write(
-          data.decode(locale.getpreferredencoding(False)))
-    elif 'b' in fp.mode:
-      # data is not bytes, but fp is binary
-      fp.write(data.encode(locale.getpreferredencoding(False)))
+    fd.write(data)
+    return
+  # PY3 logic:
+  if isinstance(data, bytes):
+    if (hasattr(fd, 'mode') and 'b' in fd.mode) or isinstance(fd, io.BytesIO):
+      fd.write(data)
+    elif hasattr(fd, 'buffer'):
+      fd.buffer.write(data)
     else:
-      # data is not bytes, and fp is text
-      fp.write(data)
+      fd.write(six.ensure_text(data))
+  elif 'b' in fd.mode:
+    fd.write(six.ensure_binary(data))
+  else:
+    fd.write(data)
 
 
 def RemoveCRLFFromString(input_str):

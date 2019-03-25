@@ -168,7 +168,7 @@ def _OutputAndExit(message, exception=None):
   else:
     err = '%s\n' % message
   try:
-    text_util.ttyprint(err, end='', file=sys.stderr)
+    text_util.print_to_fd(err, end='', file=sys.stderr)
   except UnicodeDecodeError:
     # Can happen when outputting invalid Unicode filenames.
     sys.stderr.write(err)

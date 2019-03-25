@@ -2366,7 +2366,7 @@ class SlicedDownloadFileWrapper(object):
     assert (self._start_byte <= current_file_pos and
             current_file_pos + len(data) <= self._end_byte + 1)
 
-    text_util.ttywrite(self._orig_fp, data)
+    text_util.write_to_fd(self._orig_fp, data)
     current_file_pos = self._orig_fp.tell()
 
     threshold = TRACKERFILE_UPDATE_THRESHOLD

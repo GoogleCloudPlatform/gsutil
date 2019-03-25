@@ -70,7 +70,7 @@ class CatHelper(object):
       buf = src_fd.read(io.DEFAULT_BUFFER_SIZE)
       if not buf:
         break
-      text_util.ttywrite(dst_fd, buf)
+      text_util.write_to_fd(dst_fd, buf)
 
   def CatUrlStrings(self, url_strings, show_header=False, start_byte=0,
                     end_byte=None, cat_out_fd=None):
