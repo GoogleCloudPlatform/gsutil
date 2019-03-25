@@ -200,7 +200,7 @@ _DETAILED_HELP_TEXT = ("""
   "data" under gs://your-bucket/data).
 
   In addition to paying careful attention to the source and destination you
-  specify with the rsync command, there are two more safety measures your can
+  specify with the rsync command, there are two more safety measures you can
   take when using gsutil rsync -d:
 
   1. Try running the command with the rsync -n option first, to see what it
@@ -217,7 +217,7 @@ _DETAILED_HELP_TEXT = ("""
      "gsutil help versions".
 
 
-<B>BE CAREFUL WHEN SYNCHRONIZING OVER OS-SPECIFIC FILE TYPTES (SYMLINKS, DEVICES, ETC.)</B>
+<B>BE CAREFUL WHEN SYNCHRONIZING OVER OS-SPECIFIC FILE TYPES (SYMLINKS, DEVICES, ETC.)</B>
   Running gsutil rsync over a directory containing operating system-specific
   file types (symbolic links, device files, sockets, named pipes, etc.) can
   cause various problems. For example, running a command like:
@@ -653,6 +653,9 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
     cls.logger.error(
         'Caught non-retryable exception while listing %s: %s' %
         (base_url_str, e))
+    # Also print the full stack trace in debugging mode. This makes debugging
+    # a bit easier.
+    cls.logger.debug(traceback.format_exc())
     cls.non_retryable_listing_failures = 1
   out_file.close()
 

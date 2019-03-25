@@ -2,33 +2,36 @@
 
 # This shell script is used for setting up our Kokoro Ubuntu environment
 # with necessary dependencies for running integration tests, and then
-# running tests when PRs are submitted.
+# running tests when PRs are submitted or code is pushed.
+#
+# This script is intentionally a bit verbose with what it writes to stdout.
+# Since its output is only visible in test run logs, and those logs are only
+# likely to be viewed in the event of an error, I decided it would be beneficial
+# to leave some settings like `set -x` and `cat`s and `echo`s in. This should
+# help future engineers debug what went wrong, and assert info about the test
+# environment at the cost of a small preamble in the logs.
 
-# For now, continuous.sh and presubmit.sh are both symlinks to this file.
-# Kokoro looks for files with those names, but our continuous and presubmit jobs
-# should be identical on Linux.
-
-# -e : Fail on any error
 # -x : Display commands being run
 # -u : Disallow unset variables
 # Doc: https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html#The-Set-Builtin
-set -exu
+set -xu
 
-GITHUB_REPO="https://github.com/GoogleCloudPlatform/gsutil"
-GSUTIL_KEY="/src/keystore/gsutil_kokoro_service_key.json"
-GSUTIL_SRC_PATH="/src/gsutil"
-GSUTIL_ENTRYPOINT="$GSUTIL_SRC_PATH/gsutil.py"
-PYTHON_PATH="/usr/local/bin/python"
-CONFIG_JSON="/src/.boto_json"
-CONFIG_XML="/src/.boto_xml"
 
-# Processes to use based on default Ubuntu Kokoro specs here:
-# go/gcp-ubuntu-vm-configuration-v32i
-PROCS="4"
-
-# PYMAJOR and PYMINOR environment variables are set for each Kokoro job in:
+# PYMAJOR, PYMINOR, and API environment variables are set per job in:
 # go/kokoro-gsutil-configs
 PYVERSION="$PYMAJOR.$PYMINOR"
+
+# Processes to use based on default Kokoro specs here:
+# go/gcp-ubuntu-vm-configuration-v32i
+# go/kokoro-macos-external-configuration
+PROCS="8"
+
+GSUTIL_KEY="/tmpfs/src/keystore/74008_gsutil_kokoro_service_key"
+GSUTIL_SRC="/tmpfs/src/github/src/gsutil"
+GSUTIL_ENTRYPOINT="$GSUTIL_SRC/gsutil.py"
+CFG_GENERATOR="$GSUTIL_SRC/test/ci/kokoro/config_generator.sh"
+BOTO_CONFIG="/tmpfs/src/.boto_$API"
+
 
 function latest_python_release {
   # Return string with latest Python version triplet for a given version tuple.
@@ -40,37 +43,38 @@ function latest_python_release {
     | tail -1
 }
 
-function install_latest_python {
+function install_python {
   pyenv update
   pyenv install -s "$PYVERSIONTRIPLET"
 }
 
 function init_configs {
-  # Create config files for gsutil if they don't exist already
+  # Create .boto config for gsutil
   # https://cloud.google.com/storage/docs/gsutil/commands/config
-  if [[ ! -f  $CONFIG_JSON ]]; then
-    ../config_generator.sh "$GSUTIL_KEY" "json" > "$CONFIG_JSON"
-  fi
-
-  if [[ ! -f  $CONFIG_XML ]]; then
-    ../config_generator.sh "$GSUTIL_KEY" "xml" > "$CONFIG_XML"
-  fi
+  "$CFG_GENERATOR" "$GSUTIL_KEY" "$API" "$BOTO_CONFIG"
+  cat "$BOTO_CONFIG" | grep -v private_key
 }
 
 function init_python {
   # Ensure latest release of desired Python version is installed, and that
-  # dependencies, e.g. crcmod, are installed.
+  # dependencies from pip, e.g. crcmod, are installed.
   PYVERSIONTRIPLET=$(latest_python_release)
-  install_latest_python
+  install_python
   pyenv global "$PYVERSIONTRIPLET"
   python -m pip install -U crcmod
 }
 
-init_python
-init_configs
+function update_submodules {
+  # Most dependencies are included in gsutil via submodules. We need to
+  # tell git to grab our dependencies' source before we can depend on them.
+  cd "$GSUTIL_SRC"
+  git submodule update --init --recursive
+}
 
-cd "$GSUTIL_SRC_PATH"
-git submodule update --init --recursive
+
+init_configs
+init_python
+update_submodules
 
 # Run integration tests
 python "$GSUTIL_ENTRYPOINT" test -p "$PROCS"

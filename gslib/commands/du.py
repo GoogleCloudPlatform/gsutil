@@ -149,10 +149,7 @@ class DuCommand(Command):
   def _PrintSummaryLine(self, num_bytes, name):
     size_string = (MakeHumanReadable(num_bytes)
                    if self.human_readable else six.text_type(num_bytes))
-    if six.PY2:
-      name = name.decode(UTF8)
-
-    text_util.ttyprint('{size:<11}  {name}'.format(
+    text_util.print_to_fd('{size:<11}  {name}'.format(
         size=size_string,
         name=six.ensure_text(name)), end=self.line_ending)
 
@@ -183,11 +180,18 @@ class DuCommand(Command):
       num_objs = 1
 
     if not self.summary_only:
+<<<<<<< HEAD
       url_detail = '{size:<11}  {url}{ending}'.format(
           size=size_string,
           url=six.ensure_text(url_str),
           ending=six.ensure_text(self.line_ending))
       ttyprint(url_detail, file=sys.stdout, end='')
+=======
+      sys.stdout.write('%(size)-11s  %(url)s%(ending)s' % {
+          'size': size_string,
+          'url': url_str.encode(UTF8),
+          'ending': self.line_ending})
+>>>>>>> origin/master
 
     return (num_objs, num_bytes)
 

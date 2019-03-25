@@ -246,7 +246,7 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     else:
       # Empty ACLs are possible with Bucket Policy Only and no longer imply
       # ACCESS DENIED anymore.
-      text_util.ttyprint(MakeMetadataLine('ACL', '[]'))
+      text_util.print_to_fd(MakeMetadataLine('ACL', '[]'))
 
   return (num_objs, num_bytes)
 
