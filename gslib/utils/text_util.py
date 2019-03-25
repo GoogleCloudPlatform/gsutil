@@ -300,8 +300,9 @@ def print_to_fd(*objects, **kwargs):
 
     return expected_keywords.values()
 
-  def _get_normalized_string(*objects, sep):
-    """Transform a list of string-like objects into a single string."""
+  
+  def _get_normalized_string(*objects):
+    """Ensure a list of string-like objects all have proper encoding"""
     byte_objects = []
     for item in objects:
       if not isinstance(item, (six.binary_type, six.text_type)):
@@ -315,12 +316,13 @@ def print_to_fd(*objects, **kwargs):
         # The item should be unicode. If it's not, ensure_binary()
         # will throw a TypeError.
         byte_objects.append(six.ensure_binary(item))
-    return sep.join(byte_objects)
+    return byte_objects
     
   sep, end, file = _get_args(**kwargs)
   sep = six.ensure_binary(sep)
   end = six.ensure_binary(end)
-  data = _get_normalized_strings(*objects, sep)
+  data = _get_normalized_strings(*objects)
+  data = sep.join(data)
   data += end
   write_to_fd(file, data)
 
