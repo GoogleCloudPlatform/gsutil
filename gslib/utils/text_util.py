@@ -301,7 +301,7 @@ def print_to_fd(*objects, **kwargs):
     return expected_keywords.values()
 
   
-  def _get_normalized_string(*objects):
+  def _get_normalized_strings(*objects):
     """Ensure a list of string-like objects all have proper encoding"""
     byte_objects = []
     for item in objects:
