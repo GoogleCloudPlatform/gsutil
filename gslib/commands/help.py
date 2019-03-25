@@ -192,7 +192,7 @@ class HelpCommand(Command):
     if IS_WINDOWS or not IsRunningInteractively():
       help_str = re.sub('<B>', '', help_str)
       help_str = re.sub('</B>', '', help_str)
-      text_util.ttyprint(help_str)
+      text_util.print_to_fd(help_str)
       return
     help_str = re.sub('<B>', '\033[1m', help_str)
     help_str = re.sub('</B>', '\033[0;0m', help_str)
@@ -208,7 +208,7 @@ class HelpCommand(Command):
         raise CommandException('Unable to open pager (%s): %s' %
                                (' '.join(pager), e))
     else:
-      text_util.ttyprint(help_str)
+      text_util.print_to_fd(help_str)
 
   def _LoadHelpMaps(self):
     """Returns tuple of help type and help name.

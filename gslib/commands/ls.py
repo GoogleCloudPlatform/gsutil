@@ -322,7 +322,7 @@ class LsCommand(Command):
     """
     if (listing_style == ListingStyle.SHORT or
         listing_style == ListingStyle.LONG):
-      text_util.ttyprint(bucket_blr)
+      text_util.print_to_fd(bucket_blr)
       return
     # listing_style == ListingStyle.LONG_LONG:
     # We're guaranteed by the caller that the root object is populated.
@@ -405,7 +405,7 @@ class LsCommand(Command):
                                          '{bucket_policy_only_enabled}\n')
 
 
-    text_util.ttyprint((('{bucket} :\n'
+    text_util.print_to_fd((('{bucket} :\n'
            '\tStorage class:\t\t\t{storage_class}\n'
            '\tLocation constraint:\t\t{location_constraint}\n'
            '\tVersioning enabled:\t\t{versioning}\n'
@@ -425,7 +425,7 @@ class LsCommand(Command):
            '\tACL:\t\t\t\t{acl}\n'
            '\tDefault ACL:\t\t\t{default_acl}').format(**fields)))
     if bucket_blr.storage_url.scheme == 's3':
-      text_util.ttyprint('Note: this is an S3 bucket so configuration values may be '
+      text_util.print_to_fd('Note: this is an S3 bucket so configuration values may be '
             'blank. To retrieve bucket configuration values, use '
             'individual configuration commands such as gsutil acl get '
             '<bucket>.')
@@ -463,7 +463,7 @@ class LsCommand(Command):
         'metageneration': encoded_metagen,
         'etag': encoded_etag
     }
-    text_util.ttyprint(printstr % format_args)
+    text_util.print_to_fd(printstr % format_args)
     return (num_objs, num_bytes)
 
   def RunCommand(self):
@@ -509,7 +509,7 @@ class LsCommand(Command):
 
     def MaybePrintBucketHeader(blr):
       if len(self.args) > 1:
-        text_util.ttyprint('%s:' % blr.url_string.decode('utf-8'))
+        text_util.print_to_fd('%s:' % blr.url_string.decode('utf-8'))
     print_bucket_header = MaybePrintBucketHeader
 
     for url_str in self.args:
@@ -566,7 +566,7 @@ class LsCommand(Command):
         # URL names a bucket, object, or object subdir ->
         # list matching object(s) / subdirs.
         def _PrintPrefixLong(blr):
-          text_util.ttyprint('%-33s%s' % ('', blr.url_string.decode('utf-8')))
+          text_util.print_to_fd('%-33s%s' % ('', blr.url_string.decode('utf-8')))
 
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.
@@ -617,7 +617,7 @@ class LsCommand(Command):
         total_objs += exp_objs
 
     if total_objs and listing_style != ListingStyle.SHORT:
-      text_util.ttyprint(('TOTAL: %d objects, %d bytes (%s)' %
+      text_util.print_to_fd(('TOTAL: %d objects, %d bytes (%s)' %
              (total_objs, total_bytes, MakeHumanReadable(float(total_bytes)))))
     if got_nomatch_errors:
       raise CommandException('One or more URLs matched no objects.')

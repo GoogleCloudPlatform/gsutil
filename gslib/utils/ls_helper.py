@@ -103,7 +103,7 @@ def PrintDir(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type BUCKET or PREFIX.
   """
-  text_util.ttyprint(bucket_listing_ref.url_string)
+  text_util.print_to_fd(bucket_listing_ref.url_string)
 
 
 # pylint: disable=unused-argument
@@ -125,12 +125,12 @@ def PrintDirHeader(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type PREFIX.
   """
-  text_util.ttyprint('{}:'.format(bucket_listing_ref.url_string))
+  text_util.print_to_fd('{}:'.format(bucket_listing_ref.url_string))
 
 
 def PrintNewLine():
   """Default function for printing new lines between directories."""
-  text_util.ttyprint()
+  text_util.print_to_fd()
 
 
 # pylint: disable=too-many-statements
@@ -162,44 +162,44 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     num_bytes = obj.size
     num_objs = 1
 
-  text_util.ttyprint('{}:'.format(url_str))
+  text_util.print_to_fd('{}:'.format(url_str))
   if obj.timeCreated:
-    text_util.ttyprint(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Creation time', obj.timeCreated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.updated:
-    text_util.ttyprint(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Update time', obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if (obj.timeStorageClassUpdated and
       obj.timeStorageClassUpdated != obj.timeCreated):
-    text_util.ttyprint(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Storage class update time',
         obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.storageClass:
-    text_util.ttyprint(MakeMetadataLine('Storage class', obj.storageClass))
+    text_util.print_to_fd(MakeMetadataLine('Storage class', obj.storageClass))
   if obj.temporaryHold:
-    text_util.ttyprint(MakeMetadataLine('Temporary Hold', 'Enabled'))
+    text_util.print_to_fd(MakeMetadataLine('Temporary Hold', 'Enabled'))
   if obj.eventBasedHold:
-    text_util.ttyprint(MakeMetadataLine('Event-Based Hold', 'Enabled'))
+    text_util.print_to_fd(MakeMetadataLine('Event-Based Hold', 'Enabled'))
   if obj.retentionExpirationTime:
-    text_util.ttyprint(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Retention Expiration',
         obj.retentionExpirationTime.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.kmsKeyName:
-    text_util.ttyprint(MakeMetadataLine('KMS key', obj.kmsKeyName))
+    text_util.print_to_fd(MakeMetadataLine('KMS key', obj.kmsKeyName))
   if obj.cacheControl:
-    text_util.ttyprint(MakeMetadataLine('Cache-Control', obj.cacheControl))
+    text_util.print_to_fd(MakeMetadataLine('Cache-Control', obj.cacheControl))
   if obj.contentDisposition:
-    text_util.ttyprint(MakeMetadataLine('Content-Disposition', obj.contentDisposition))
+    text_util.print_to_fd(MakeMetadataLine('Content-Disposition', obj.contentDisposition))
   if obj.contentEncoding:
-    text_util.ttyprint(MakeMetadataLine('Content-Encoding', obj.contentEncoding))
+    text_util.print_to_fd(MakeMetadataLine('Content-Encoding', obj.contentEncoding))
   if obj.contentLanguage:
-    text_util.ttyprint(MakeMetadataLine('Content-Language', obj.contentLanguage))
-  text_util.ttyprint(MakeMetadataLine('Content-Length', obj.size))
-  text_util.ttyprint(MakeMetadataLine('Content-Type', obj.contentType))
+    text_util.print_to_fd(MakeMetadataLine('Content-Language', obj.contentLanguage))
+  text_util.print_to_fd(MakeMetadataLine('Content-Length', obj.size))
+  text_util.print_to_fd(MakeMetadataLine('Content-Type', obj.contentType))
   if obj.componentCount:
-    text_util.ttyprint(MakeMetadataLine('Component-Count', obj.componentCount))
+    text_util.print_to_fd(MakeMetadataLine('Component-Count', obj.componentCount))
   if obj.timeDeleted:
-    text_util.ttyprint(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Archived time',
         obj.timeDeleted.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   marker_props = {}
@@ -211,38 +211,38 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
       else:
         marker_props[add_prop.key] = add_prop.value
     if non_marker_props:
-      text_util.ttyprint(MakeMetadataLine('Metadata', ''))
+      text_util.print_to_fd(MakeMetadataLine('Metadata', ''))
       for ap in non_marker_props:
         ap_key = '{}'.format(ap.key)
         ap_value = '{}'.format(ap.value)
         meta_data_line = MakeMetadataLine(ap_key, ap_value, indent=2)
-        text_util.ttyprint(meta_data_line)
+        text_util.print_to_fd(meta_data_line)
   if obj.customerEncryption:
     if not obj.crc32c:
-      text_util.ttyprint(MakeMetadataLine('Hash (crc32c)', 'encrypted'))
+      text_util.print_to_fd(MakeMetadataLine('Hash (crc32c)', 'encrypted'))
     if not obj.md5Hash:
-      text_util.ttyprint(MakeMetadataLine('Hash (md5)', 'encrypted'))
-    text_util.ttyprint(MakeMetadataLine(
+      text_util.print_to_fd(MakeMetadataLine('Hash (md5)', 'encrypted'))
+    text_util.print_to_fd(MakeMetadataLine(
         'Encryption algorithm', obj.customerEncryption.encryptionAlgorithm))
-    text_util.ttyprint(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Encryption key SHA256', obj.customerEncryption.keySha256))
   if obj.crc32c:
-    text_util.ttyprint(MakeMetadataLine('Hash (crc32c)', obj.crc32c))
+    text_util.print_to_fd(MakeMetadataLine('Hash (crc32c)', obj.crc32c))
   if obj.md5Hash:
-    text_util.ttyprint(MakeMetadataLine('Hash (md5)', obj.md5Hash))
-  text_util.ttyprint(MakeMetadataLine('ETag', obj.etag.strip('"\'')))
+    text_util.print_to_fd(MakeMetadataLine('Hash (md5)', obj.md5Hash))
+  text_util.print_to_fd(MakeMetadataLine('ETag', obj.etag.strip('"\'')))
   if obj.generation:
     generation_str = GenerationFromUrlAndString(storage_url, obj.generation)
-    text_util.ttyprint(MakeMetadataLine('Generation', generation_str))
+    text_util.print_to_fd(MakeMetadataLine('Generation', generation_str))
   if obj.metageneration:
-    text_util.ttyprint(MakeMetadataLine('Metageneration', obj.metageneration))
+    text_util.print_to_fd(MakeMetadataLine('Metageneration', obj.metageneration))
   if incl_acl:
     # JSON API won't return acls as part of the response unless we have
     # full control scope
     if obj.acl:
-      text_util.ttyprint(MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl)))
+      text_util.print_to_fd(MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl)))
     elif S3_ACL_MARKER_GUID in marker_props:
-      text_util.ttyprint(MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID]))
+      text_util.print_to_fd(MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID]))
     else:
       # Empty ACLs are possible with Bucket Policy Only and no longer imply
       # ACCESS DENIED anymore.
@@ -261,7 +261,7 @@ def PrintObject(bucket_listing_ref):
     (num_objects, num_bytes).
   """
   try:
-    text_util.ttyprint(bucket_listing_ref.url_string)
+    text_util.print_to_fd(bucket_listing_ref.url_string)
   except IOError as e:
     # Windows throws an IOError 0 here for object names containing Unicode
     # chars. Ignore it.

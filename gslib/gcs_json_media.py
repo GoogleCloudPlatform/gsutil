@@ -671,7 +671,7 @@ class HttpWithDownloadStream(httplib2.Http):
             if self.stream is None:
               raise apitools_exceptions.InvalidUserInputError(
                   'Cannot exercise HttpWithDownloadStream with no stream')
-            text_util.ttywrite(self.stream, new_data)
+            text_util.write_to_fd(self.stream, new_data)
             bytes_read += len(new_data)
           else:
             break

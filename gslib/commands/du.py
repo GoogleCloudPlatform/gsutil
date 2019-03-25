@@ -34,7 +34,7 @@ from gslib.utils import ls_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
-from gslib.utils.text_util import ttyprint
+from gslib.utils.text_util import print_to_fd
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils import text_util
 
@@ -180,18 +180,11 @@ class DuCommand(Command):
       num_objs = 1
 
     if not self.summary_only:
-<<<<<<< HEAD
       url_detail = '{size:<11}  {url}{ending}'.format(
           size=size_string,
           url=six.ensure_text(url_str),
           ending=six.ensure_text(self.line_ending))
-      ttyprint(url_detail, file=sys.stdout, end='')
-=======
-      sys.stdout.write('%(size)-11s  %(url)s%(ending)s' % {
-          'size': size_string,
-          'url': url_str.encode(UTF8),
-          'ending': self.line_ending})
->>>>>>> origin/master
+      print_to_fd(url_detail, file=sys.stdout, end='')
 
     return (num_objs, num_bytes)
 
