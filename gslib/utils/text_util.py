@@ -301,8 +301,8 @@ def print_to_fd(*objects, **kwargs):
     return expected_keywords.values()
 
   
-  def _get_normalized_strings(*objects):
-    """Ensure a list of string-like objects all have proper encoding"""
+  def _get_byte_strings(*objects):
+    """Gets a `bytes` string for each item in a list of printable objects."""
     byte_objects = []
     for item in objects:
       if not isinstance(item, (six.binary_type, six.text_type)):
@@ -321,7 +321,7 @@ def print_to_fd(*objects, **kwargs):
   sep, end, file = _get_args(**kwargs)
   sep = six.ensure_binary(sep)
   end = six.ensure_binary(end)
-  data = _get_normalized_strings(*objects)
+  data = _get_byte_strings(*objects)
   data = sep.join(data)
   data += end
   write_to_fd(file, data)
