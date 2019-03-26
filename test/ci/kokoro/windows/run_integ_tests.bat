@@ -12,7 +12,7 @@ tree /F
 echo ""
 
 set GsutilRepoDir=%1
-set PyExe=%2
+set "PyExePath=C:\\python%PYMAJOR%%PYMINOR%\\python.exe"
 
-PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%run_integration_tests.ps1%' '%GsutilRepoDir%' '%PyExe%'";
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%run_integration_tests.ps1%' '%GsutilRepoDir%' '%PyExePath%'";
 
