@@ -494,7 +494,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 
   Parallel composite uploads can be disabled by setting the
   "parallel_composite_upload_threshold" variable in the .boto config file to 0.
-"""
+""" % (PARALLEL_UPLOAD_TEMP_NAMESPACE)
 
 
 _CHANGING_TEMP_DIRECTORIES_TEXT = """
