@@ -56,7 +56,6 @@ requires = [
 ]
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
-BOTO_DIR = os.path.join(CURDIR, 'third_party', 'vendored', 'boto')
 
 with open(os.path.join(CURDIR, 'VERSION'), 'r') as f:
   VERSION = f.read().strip()
@@ -77,31 +76,6 @@ def PlaceNeededFiles(self, target_dir):
   # Copy the gsutil root CHECKSUM file into gslib module.
   with open(os.path.join(target_dir, 'CHECKSUM'), 'w') as fp:
     fp.write(CHECKSUM)
-
-  # Copy the Boto test module required by gsutil unit tests.
-  tests_dir = os.path.join(target_dir, 'tests')
-  self.mkpath(tests_dir)
-  mock_storage_dst = os.path.join(tests_dir, 'mock_storage_service.py')
-  mock_storage_src1 = os.path.join(
-      BOTO_DIR, 'tests', 'integration', 's3', 'mock_storage_service.py')
-  mock_storage_src2 = os.path.join(
-      CURDIR, 'gslib', 'tests', 'mock_storage_service.py')
-  mock_storage_src = (
-      mock_storage_src1
-      if os.path.isfile(mock_storage_src1) else mock_storage_src2)
-  if not os.path.isfile(mock_storage_src):
-    raise Exception('Unable to find required boto test source file at %s or %s.'
-                    % (mock_storage_src1, mock_storage_src2))
-  with open(mock_storage_src, 'r') as fp:
-    mock_storage_contents = fp.read()
-  with open(mock_storage_dst, 'w') as fp:
-    fp.write('#\n'
-             '# This file was copied during gsutil package generation from\n'
-             '# the Boto test suite, originally located at:\n'
-             '#   tests/integration/s3/mock_storage_service.py\n'
-             '# DO NOT MODIFY\n'
-             '#\n\n')
-    fp.write(mock_storage_contents)
 
 
 class CustomBuildPy(build_py.build_py):

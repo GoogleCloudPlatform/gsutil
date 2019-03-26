@@ -342,7 +342,7 @@ _RESUMABLE_TRANSFERS_TEXT = """
   you ran to start the upload. Until the upload has completed successfully, it
   will not be visible at the destination object and will not replace any
   existing object the upload is intended to overwrite. However, see the section
-  on PARALLEL COMPOSITE UPLOADS, which may leave temporary component objects in
+  on parallel composite uploads, which may leave temporary component objects in
   place during the upload process.
 
   Similarly, gsutil automatically performs resumable downloads (using standard
@@ -449,14 +449,12 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 
     gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp bigfile gs://your-bucket
 
-  where bigfile is larger than 150 MiB. When you do this notice that the upload
-  progress indicator continuously updates for several different uploads at once
-  (corresponding to each of the sections of the file being uploaded in
-  parallel), until the parallel upload completes. If after trying this you want
-  to enable parallel composite uploads for all of your future uploads
-  (notwithstanding the caveats mentioned earlier), you can uncomment and set the
-  "parallel_composite_upload_threshold" config value in your .boto configuration
-  file to this value.
+  where bigfile is larger than 150 MiB. When you do this, notice that the upload
+  progress indicator continuously updates for the file, until all parts of the
+  upload complete. If after trying this you want to enable parallel composite
+  uploads for all of your future uploads (notwithstanding the caveats mentioned
+  earlier), you can uncomment and set the "parallel_composite_upload_threshold"
+  config value in your .boto configuration file to this value.
 
   Note that the crcmod problem only impacts downloads via Python applications
   (such as gsutil). If all users who need to download the data using gsutil or

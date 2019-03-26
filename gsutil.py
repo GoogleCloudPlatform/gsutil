@@ -62,7 +62,6 @@ VENDORED_DIR = os.path.join(THIRD_PARTY_DIR, 'vendored')
 # individual imports.
 MEASURING_TIME_ACTIVE = False
 
-
 # Filter out "module was already imported" warnings that get printed after we
 # add our bundled version of modules to the Python path.
 warnings.filterwarnings('ignore', category=UserWarning,
@@ -70,17 +69,16 @@ warnings.filterwarnings('ignore', category=UserWarning,
 warnings.filterwarnings('ignore', category=UserWarning,
                         message=r'.* oauth2client was already imported from')
 
-
 # List of third-party libraries. The first element of the tuple is the name of
 # the directory under third_party and the second element is the subdirectory
 # that needs to be added to sys.path.
 THIRD_PARTY_LIBS = [
     ('argcomplete', ''),  # For tab-completion (gcloud installs only).
-    ('mock', ''),  # mock and dependencies must be before boto.
+    ('mock', ''),
     ('funcsigs', ''),  # mock dependency
     ('google-reauth-python', ''),  # Package name: google_reauth
     ('pyu2f', ''),  # google_reauth dependency
-    ('oauth2client', ''),  # oauth2client and dependencies must be before boto.
+    ('oauth2client', ''),
     ('pyasn1', ''),  # oauth2client dependency
     ('pyasn1-modules', ''),  # oauth2client dependency
     ('rsa', ''),  # oauth2client dependency
@@ -95,35 +93,23 @@ THIRD_PARTY_LIBS = [
     ('socksipy-branch', ''),
 ]
 
-# These are special third party libraries that live in
-# `gsutil/third_party/vendored`. These libraries have modifications specifically
-# for gsutil to operate smoothly that may not yet be present in the latest
-# release of the package.
-VENDORED_THIRD_PARTY_LIBS = [
-    ('boto', '') # XML API and AWS interop dependency
-]
-
-
-def PrependThirdPartyLibToPath(path_component_groups, parent_path):
-  for libdir, subdir in path_component_groups:
-    if not os.path.isdir(os.path.join(parent_path, libdir)):
-      OutputAndExit(
-          'There is no %s library under the gsutil third-party directory (%s).\n'
-          'The gsutil command cannot work properly when installed this way.\n'
-          'Please re-install gsutil per the installation instructions.' % (
-              libdir, THIRD_PARTY_DIR))
-    sys.path.insert(0, os.path.join(parent_path, libdir, subdir))
-
-# Libraries in vendored will be preferred over their counterparts in third_party
-# by prepending them earlier in the system path.
-PrependThirdPartyLibToPath(THIRD_PARTY_LIBS, THIRD_PARTY_DIR)
-PrependThirdPartyLibToPath(VENDORED_THIRD_PARTY_LIBS, VENDORED_DIR)
-
 # The wrapper script adds all third_party libraries to the Python path, since
 # we don't assume any third party libraries are installed system-wide.
+#
+# Note that vendored libraries (e.g. Boto) are added to the Python path in
+# gslib/__init__.py, as they will always be present even when bypassing this
+# script and invoking gslib.__main__.py's main() method directly.
 THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
+for libdir, subdir in THIRD_PARTY_LIBS:
+  if not os.path.isdir(os.path.join(THIRD_PARTY_DIR, libdir)):
+    OutputAndExit(
+        'There is no %s library under the gsutil third-party directory (%s).\n'
+        'The gsutil command cannot work properly when installed this way.\n'
+        'Please re-install gsutil per the installation instructions.' % (
+            libdir, THIRD_PARTY_DIR))
+  sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
 
-CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', submodule_pyvers)
+CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', 'python2')
 CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
 try:
   # pylint: disable=g-import-not-at-top

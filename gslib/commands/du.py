@@ -149,9 +149,6 @@ class DuCommand(Command):
   def _PrintSummaryLine(self, num_bytes, name):
     size_string = (MakeHumanReadable(num_bytes)
                    if self.human_readable else six.text_type(num_bytes))
-    if six.PY2:
-      name = name.decode(UTF8)
-
     text_util.print_to_fd('{size:<11}  {name}'.format(
         size=size_string,
         name=six.ensure_text(name)), end=self.line_ending)
