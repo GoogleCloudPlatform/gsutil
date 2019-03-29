@@ -31,4 +31,3 @@ echo [OAuth2]
 echo client_id = 909320924072.apps.googleusercontent.com
 echo client_secret = p3RlpR10xMFh9ZXBS/ZNLYUu
 )>%OUTPUT_FILE%
-

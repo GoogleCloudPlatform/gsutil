@@ -25,11 +25,9 @@ echo ""
 tree /F
 echo ""
 
-
 set GsutilRepoDir=%1
 set "PyExePath=C:\python%PYMAJOR%%PYMINOR%\python.exe"
 
 cmd config_generator.bat "C:\src\keystore\74008+gsutil_kokoro_service_key" %API% "C:\src\.boto_%API%"
 
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%run_integration_tests.ps1%' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%'";
-
