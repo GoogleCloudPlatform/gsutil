@@ -77,7 +77,7 @@ class Bucket(_messages.Message):
       ACL is provided.
     encryption: Encryption configuration for a bucket.
     etag: HTTP 1.1 Entity tag for the bucket.
-    iamConfiguration: The bucket's IAM features configuration.
+    iamConfiguration: The bucket's IAM configuration.
     id: The ID of the bucket. For buckets, the id and name properties are the
       same.
     kind: The kind of item this is. For buckets, this is always
@@ -161,17 +161,17 @@ class Bucket(_messages.Message):
     defaultKmsKeyName = _messages.StringField(1)
 
   class IamConfigurationValue(_messages.Message):
-    r"""The bucket's IAM features configuration.
+    r"""The bucket's IAM configuration.
 
     Messages:
-      BucketPolicyOnlyValue: A BucketPolicyOnlyValue object.
+      BucketPolicyOnlyValue: The bucket's Bucket Policy Only configuration.
 
     Fields:
-      bucketPolicyOnly: A BucketPolicyOnlyValue attribute.
+      bucketPolicyOnly: The bucket's Bucket Policy Only configuration.
     """
 
     class BucketPolicyOnlyValue(_messages.Message):
-      r"""A BucketPolicyOnlyValue object.
+      r"""The bucket's Bucket Policy Only configuration.
 
       Fields:
         enabled: If set, access checks only use bucket-level IAM policies or

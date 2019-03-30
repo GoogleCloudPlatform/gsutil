@@ -491,23 +491,14 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
       << Code that handles failures >>
     fi
 
-  One important caveat is that files uploaded using parallel composite uploads
-  are subject to a maximum number of components limit. For example, if you
-  upload a large file that gets split into %d components, and try to compose it
-  with another object with %d components, the operation will fail because it
-  exceeds the %d component limit. If you wish to compose an object later and the
-  component limit is a concern, it is recommended that you disable parallel
-  composite uploads for that transfer.
-
-  Also note that an object uploaded using parallel composite uploads will have a
+  Note that an object uploaded using parallel composite uploads will have a
   CRC32C hash, but it will not have an MD5 hash (and because of that, users who
   download the object must have crcmod installed, as noted earlier). For details
   see "gsutil help crc32c".
 
   Parallel composite uploads can be disabled by setting the
   "parallel_composite_upload_threshold" variable in the .boto config file to 0.
-""" % (PARALLEL_UPLOAD_TEMP_NAMESPACE, 10, MAX_COMPONENT_COUNT - 9,
-       MAX_COMPONENT_COUNT)
+""" % (PARALLEL_UPLOAD_TEMP_NAMESPACE)
 
 
 _CHANGING_TEMP_DIRECTORIES_TEXT = """

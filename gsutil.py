@@ -56,7 +56,6 @@ if not GSUTIL_DIR:
 # The wrapper script adds all third_party libraries to the Python path, since
 # we don't assume any third party libraries are installed system-wide.
 THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
-VENDORED_DIR = os.path.join(THIRD_PARTY_DIR, 'vendored')
 
 # Flag for whether or not an import wrapper is used to measure time taken for
 # individual imports.
@@ -86,7 +85,7 @@ THIRD_PARTY_LIBS = [
     ('gcs-oauth2-boto-plugin', ''),
     ('fasteners', ''), # oauth2client and apitools dependency
     ('monotonic', ''), # fasteners dependency
-    ('httplib2', submodule_pyvers),
+    ('httplib2', 'python2'),
     ('python-gflags', ''),
     ('retry-decorator', ''),
     ('six', ''), # Python 2 / 3 compatibility dependency

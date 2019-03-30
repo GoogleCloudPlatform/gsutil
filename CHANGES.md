@@ -1,3 +1,19 @@
+Release 4.38 (release date: 2019-03-25)
+=======================================
+Bug Fixes
+------------------
+- Fixed issue where multiprocessing check would raise an exception if
+  /etc/os-release was not in the expected format.
+
+Other Changes
+------------------
+- Improved error message for trying to retrieve default object ACLs on a bucket
+  with Bucket Policy Only enabled.
+- When running "gsutil -D rsync ..." and encountering an error listing local
+  files, gsutil will now print a stack trace as debug-level output.
+- Several documentation updates and clarifications.
+
+
 Release 4.37 (release date: 2019-02-26)
 =======================================
 Bug Fixes

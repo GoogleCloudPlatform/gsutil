@@ -72,14 +72,14 @@ _CH_SYNOPSIS = """
       -d ("user"|"serviceAccount"|"domain"|"group"):id
       -d ("allUsers"|"allAuthenticatedUsers")
 
-Note: The ``iam ch`` command does not support changing IAM policies with
-bindings that contain conditions. As such, ``iam ch`` cannot be used to add
-conditions to a policy or to change the policy of a resource that already
-contains conditions. See additional details below.
+  Note: The ``iam ch`` command does not support changing IAM policies with
+  bindings that contain conditions. As such, ``iam ch`` cannot be used to add
+  conditions to a policy or to change the policy of a resource that already
+  contains conditions. See additional details below.
 
-Note: The ``gsutil iam`` command disallows using project convenience groups
-(projectOwner, projectEditor, projectViewer) as the first segment of a binding
-because these groups go against the principle of least privilege.
+  Note: The ``gsutil iam`` command disallows using project convenience groups
+  (projectOwner, projectEditor, projectViewer) as the first segment of a binding
+  because these groups go against the principle of least privilege.
 
 """
 
@@ -150,7 +150,7 @@ _CH_DESCRIPTION = """
   The gsutil -m option may be set to handle object-level operations more
   efficiently.
 
-  Note: The ``iam ch`` command may NOT be used to the change IAM policy of a
+  Note: The ``iam ch`` command may NOT be used to change the IAM policy of a
   resource that contains conditions in its policy bindings. Attempts to do so
   will result in an error. To change the IAM policy of such a resource, you can
   perform a read-modify-write operation by using ``gsutil iam get`` to save the
@@ -645,7 +645,7 @@ class IamCommand(Command):
       policy_it = itertools.repeat(protojson.encode_message(policy))
       self.Apply(
           _SetIamWrapper,
-          zip(
+          itertools.izip(
               policy_it, name_expansion_iterator),
           _SetIamExceptionHandler,
           fail_on_error=not self.continue_on_error,
