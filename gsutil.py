@@ -56,6 +56,7 @@ if not GSUTIL_DIR:
 # The wrapper script adds all third_party libraries to the Python path, since
 # we don't assume any third party libraries are installed system-wide.
 THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
+VENDORED_DIR = os.path.join(THIRD_PARTY_DIR, 'vendored')
 
 # Flag for whether or not an import wrapper is used to measure time taken for
 # individual imports.
@@ -85,7 +86,7 @@ THIRD_PARTY_LIBS = [
     ('gcs-oauth2-boto-plugin', ''),
     ('fasteners', ''), # oauth2client and apitools dependency
     ('monotonic', ''), # fasteners dependency
-    ('httplib2', 'python2'),
+    ('httplib2', submodule_pyvers),
     ('python-gflags', ''),
     ('retry-decorator', ''),
     ('six', ''), # Python 2 / 3 compatibility dependency
@@ -108,7 +109,7 @@ for libdir, subdir in THIRD_PARTY_LIBS:
             libdir, THIRD_PARTY_DIR))
   sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
 
-CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', 'python2')
+CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', submodule_pyvers)
 CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
 try:
   # pylint: disable=g-import-not-at-top
