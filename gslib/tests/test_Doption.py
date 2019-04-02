@@ -96,24 +96,18 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
       self.assertIn("('proxy_pass', 'REDACTED')", stderr)
 
     if self.test_api == ApiSelector.XML:
+      self.assertIn('header: Cache-Control: ', stderr)
+      self.assertIn('header: ETag: "781e5e245d69b566979b86e28d23f2c7"', stderr)
+      self.assertIn('header: Last-Modified', stderr)
+      self.assertIn('header: x-goog-generation: ', stderr)
+      self.assertIn('header: x-goog-metageneration: 1', stderr)
       if six.PY2:
         self.assertRegex(
             stderr, '.*HEAD /%s/%s.*Content-Length: 0.*User-Agent: .*gsutil/%s' %
             (key_uri.bucket_name, key_uri.object_name, gslib.VERSION))
-        self.assertIn('header: Cache-Control: private, max-age=0',
-                      stderr)
-        self.assertIn('header: Last-Modified: ', stderr)
-        self.assertIn('header: ETag: "781e5e245d69b566979b86e28d23f2c7"', stderr)
-        self.assertIn('header: x-goog-generation: ', stderr)
-        self.assertIn('header: x-goog-metageneration: 1', stderr)
         self.assertIn('header: x-goog-hash: crc32c=KAwGng==', stderr)
         self.assertIn('header: x-goog-hash: md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
       else:
-        self.assertIn('header: Cache-Control: ', stderr)
-        self.assertIn('header: Last-Modified', stderr)
-        self.assertIn('header: ETag:', stderr)
-        self.assertIn('header: x-goog-generation', stderr)
-        self.assertIn('header: x-goog-metageneration', stderr)
         self.assertIn('header: x-goog-hash', stderr)
     elif self.test_api == ApiSelector.JSON:
       self.assertRegex(
