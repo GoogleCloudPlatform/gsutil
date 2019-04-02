@@ -108,16 +108,15 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
             stderr, '.*HEAD /%s/%s.*Content-Length: 0.*User-Agent: .*gsutil/%s' %
             (key_uri.bucket_name, key_uri.object_name, gslib.VERSION))
     elif self.test_api == ApiSelector.JSON:
+      self.assertIn(('header: Cache-Control: no-cache, no-store, max-age=0, '
+               'must-revalidate'), stderr)
       self.assertRegex(
           stderr, '.*GET.*b/%s/o/%s.*user-agent:.*gsutil/%s.Python/%s' %
           (key_uri.bucket_name, key_uri.object_name, gslib.VERSION,
            platform.python_version()))
       if six.PY2:
-        self.assertIn(('header: Cache-Control: no-cache, no-store, max-age=0, '
-                       'must-revalidate'), stderr)
         self.assertIn("md5Hash: u'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
       else:
-        self.assertIn('header: Cache-Control:', stderr)
         self.assertIn("md5Hash: 'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
 
     if gslib.IS_PACKAGE_INSTALL:
