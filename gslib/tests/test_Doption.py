@@ -102,11 +102,11 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
       self.assertIn('header: x-goog-generation: ', stderr)
       self.assertIn('header: x-goog-metageneration: 1', stderr)
       self.assertIn('header: x-goog-hash: crc32c=KAwGng==', stderr)
+      self.assertIn('header: x-goog-hash: md5=eB5eJF1ptWaXm4bijSPyxw==', stderr) # TODO(b/129722855): Why does MD5 differ in PY2/PY3?
       if six.PY2:
         self.assertRegex(
             stderr, '.*HEAD /%s/%s.*Content-Length: 0.*User-Agent: .*gsutil/%s' %
             (key_uri.bucket_name, key_uri.object_name, gslib.VERSION))
-        self.assertIn('header: x-goog-hash: md5=eB5eJF1ptWaXm4bijSPyxw==', stderr) # TODO(b/129722855): Why does MD5 differ in PY2/PY3?
     elif self.test_api == ApiSelector.JSON:
       self.assertRegex(
           stderr, '.*GET.*b/%s/o/%s.*user-agent:.*gsutil/%s.Python/%s' %
