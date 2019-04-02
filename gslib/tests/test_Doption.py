@@ -85,20 +85,15 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     self.assertIn('You are running gsutil with debug output enabled.', stderr)
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assertIn('config:', stderr)
+    self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
+    self.assertIn('header: Expires: ', stderr)
+    self.assertIn('header: Date: ', stderr)
+    self.assertIn('header: Content-Type: application/octet-stream', stderr)
+    self.assertIn('header: Content-Length: 10', stderr)
     if six.PY2:
       self.assertIn("('proxy_pass', u'REDACTED')", stderr)
-      self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
-      self.assertIn('header: Expires: ', stderr)
-      self.assertIn('header: Date: ', stderr)
-      self.assertIn('header: Content-Type: application/octet-stream', stderr)
-      self.assertIn('header: Content-Length: 10', stderr)
     else:
       self.assertIn("('proxy_pass', 'REDACTED')", stderr)
-      self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
-      self.assertIn('Expires header: ', stderr)
-      self.assertIn('Date header: ', stderr)
-      self.assertIn('Content-Type header: ', stderr)
-      self.assertIn('Content-Length header: ', stderr)
 
     if self.test_api == ApiSelector.XML:
       if six.PY2:
@@ -114,12 +109,12 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
         self.assertIn('header: x-goog-hash: crc32c=KAwGng==', stderr)
         self.assertIn('header: x-goog-hash: md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
       else:
-        self.assertIn('Cache-Control header: ', stderr)
-        self.assertIn('Last-Modified header: ', stderr)
-        self.assertIn('ETag header:', stderr)
-        self.assertIn('x-goog-generation header:', stderr)
-        self.assertIn('x-goog-metageneration header:', stderr)
-        self.assertIn('x-goog-hash header:', stderr)
+        self.assertIn('header: Cache-Control: ', stderr)
+        self.assertIn('header: Last-Modified', stderr)
+        self.assertIn('header: ETag:', stderr)
+        self.assertIn('header: x-goog-generation', stderr)
+        self.assertIn('header: x-goog-metageneration', stderr)
+        self.assertIn('header: x-goog-hash', stderr)
     elif self.test_api == ApiSelector.JSON:
       self.assertRegex(
           stderr, '.*GET.*b/%s/o/%s.*user-agent:.*gsutil/%s.Python/%s' %
@@ -130,7 +125,7 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
                        'must-revalidate'), stderr)
         self.assertIn("md5Hash: u'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
       else:
-        self.assertIn('Cache-Control header: ', stderr)
+        self.assertIn('header: Cache-Control:', stderr)
         self.assertIn("md5Hash: 'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
 
     if gslib.IS_PACKAGE_INSTALL:
