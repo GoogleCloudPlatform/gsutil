@@ -645,7 +645,7 @@ class IamCommand(Command):
       policy_it = itertools.repeat(protojson.encode_message(policy))
       self.Apply(
           _SetIamWrapper,
-          itertools.izip(
+          zip(
               policy_it, name_expansion_iterator),
           _SetIamExceptionHandler,
           fail_on_error=not self.continue_on_error,
