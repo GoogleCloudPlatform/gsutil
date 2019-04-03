@@ -29,6 +29,7 @@ import random
 import six
 import string
 from six.moves import urllib
+from six.moves import range
 
 from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper
@@ -361,24 +362,20 @@ def RemoveCRLFFromString(input_str):
   return re.sub(r'[\r\n]', '', input_str)
 
 
-def get_random_ascii_chars(size, seed=None):
-  """Generates random ASCII characters up to a given size.
+def get_random_ascii_chars(size, seed=0):
+  """Generates binary string representation of a list of ASCII characters.
 
   Args:
     size: Integer quantity of characters to generate.
     seed: A seed may be specified for deterministic behavior.
-          None is used as the default value.
+          Int 0 is used as the default value.
 
   Returns:
-    ASCII encoded bytestring of length equal to size argument.
-    Please note Python 2 strings are bytes by default, while
-    Python 3 string are Unicode by default.
+    Binary encoded string representation of a list of characters of length
+    equal to size argument.
   """
   random.seed(seed)
-  charset = string.printable
-
-  contents = ''.join([random.choice(charset) for _ in range(size)]
-                      ).encode('ascii')
-
+  contents = str([random.choice(string.ascii_letters) for _ in range(size)])
+  contents = six.ensure_binary(contents)
   random.seed()  # Reset the seed for any other tests.
   return contents
