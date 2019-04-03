@@ -363,7 +363,7 @@ def RemoveCRLFFromString(input_str):
 
 
 def get_random_ascii_chars(size, seed=0):
-  """Generates string representation of a list of ASCII characters.
+  """Generates binary string representation of a list of ASCII characters.
 
   Args:
     size: Integer quantity of characters to generate.
@@ -375,7 +375,6 @@ def get_random_ascii_chars(size, seed=0):
     equal to size argument.
   """
   random.seed(seed)
-  charset = string.ascii_letters
   contents = str([random.choice(string.ascii_letters) for _ in range(size)])
   contents = six.ensure_binary(contents)
   random.seed()  # Reset the seed for any other tests.
