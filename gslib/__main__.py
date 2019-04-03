@@ -246,8 +246,7 @@ def main():
   global test_exception_traces
 
   boto_util.MonkeyPatchBoto()
-
-  boto_util.MonkeyPatchBoto()
+  system_util.MonkeyPatchHttp()
 
   # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
   # API. However, we still store gsutil configuration data in the .boto

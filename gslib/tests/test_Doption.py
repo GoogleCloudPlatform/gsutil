@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import platform
+import re
 
 import six
 import gslib
@@ -34,6 +35,44 @@ from gslib.utils.unit_util import ONE_KIB
 @SkipForS3('-D output is implementation-specific.')
 class TestDOption(testcase.GsUtilIntegrationTestCase):
   """Integration tests for gsutil -D option."""
+
+  def assert_header_in_output(self, name, value, output):
+    """Asserts that httplib2's debug logger printed out a specified header.
+
+    This method is fairly primitive and uses assertIn statements, and thus is
+    case-sensitive. Values should be normalized (e.g. to lowercase) if
+    capitalization of the expected characters may vary.
+
+    Args:
+      name: (str) The header name, e.g. "Content-Length".
+      value: (Union[str, None]) The header value, e.g. "4096". If no value is
+          expected for the header or the value is unknown, this argument should
+          be `None`.
+      output: (str) The string in which to search for the specified header.
+    """
+    expected = 'header: %s:' % name
+    if value:
+      # Only append a space and then the header value if a value was expected.
+      expected += ' %s' % value
+    if expected in output:
+      return
+
+    # Try the other format - when sending requests via the XML API, headers are
+    # printed in a list of 2-tuples (by Boto), so we test for that output style
+    # as well.  The above style is generally preferred, but Python's http client
+    # doesn't print all values in scenarios where a header is sent multiple
+    # times with different values, e.g. in this case:
+    #   x-goog-hash: md5=blah2
+    #   x-goog-hash: crc32c=blah1
+    # the debug logger would just print the last one to occur (the crc32c hash).
+    alt_expected = "('%s'" % name
+    if value:
+      # Only check for the second part of the tuple if a value was expected.
+      alt_expected += ", '%s')" % value
+    if not alt_expected in output:
+      self.fail('Neither of these two header formats were found in the output:'
+                '\n1) %s\n2) %s\nOutput string: %s' %
+                (expected, alt_expected, output))
 
   def test_minus_D_multipart_upload(self):
     """Tests that debug option does not output upload media body."""
@@ -82,42 +121,56 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([('Boto', 'proxy_pass', 'secret')]):
       (stdout, stderr) = self.RunGsUtil(
           ['-D', 'cat', suri(key_uri)], return_stdout=True, return_stderr=True)
+    # Check for log messages we output.
     self.assertIn('You are running gsutil with debug output enabled.', stderr)
-    self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assertIn('config:', stderr)
-    self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
-    self.assertIn('header: Expires: ', stderr)
-    self.assertIn('header: Date: ', stderr)
-    self.assertIn('header: Content-Type: application/octet-stream', stderr)
-    self.assertIn('header: Content-Length: 10', stderr)
     if six.PY2:
       self.assertIn("('proxy_pass', u'REDACTED')", stderr)
     else:
       self.assertIn("('proxy_pass', 'REDACTED')", stderr)
+    # Check for log messages from httplib2 / http_client.
+    self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
+    self.assert_header_in_output('Expires', None, stderr)
+    self.assert_header_in_output('Date', None, stderr)
+    self.assert_header_in_output(
+        'Content-Type', 'application/octet-stream', stderr)
+    self.assert_header_in_output('Content-Length', '10', stderr)
 
     if self.test_api == ApiSelector.XML:
-      self.assertIn('header: Cache-Control: ', stderr)
-      self.assertIn('header: ETag: "781e5e245d69b566979b86e28d23f2c7"', stderr)
-      self.assertIn('header: Last-Modified', stderr)
-      self.assertIn('header: x-goog-generation: ', stderr)
-      self.assertIn('header: x-goog-metageneration: 1', stderr)
-      self.assertIn('header: x-goog-hash: crc32c=KAwGng==', stderr)
-      self.assertIn('md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
-      if six.PY2:
-        self.assertRegex(
-            stderr, '.*HEAD /%s/%s.*Content-Length: 0.*User-Agent: .*gsutil/%s' %
-            (key_uri.bucket_name, key_uri.object_name, gslib.VERSION))
+      self.assert_header_in_output('Cache-Control', None, stderr)
+      self.assert_header_in_output(
+          'ETag', '"781e5e245d69b566979b86e28d23f2c7"', stderr)
+      self.assert_header_in_output('Last-Modified', None, stderr)
+      self.assert_header_in_output('x-goog-generation', None, stderr)
+      self.assert_header_in_output('x-goog-metageneration', '1', stderr)
+      self.assert_header_in_output('x-goog-hash', 'crc32c=KAwGng==', stderr)
+      self.assert_header_in_output(
+          'x-goog-hash', 'md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
+      # Check request fields show correct segments.
+      regex_str = r'''send:\s+(b')?HEAD /%s/%s HTTP/[^\\]*\\r\\n(.*)''' % (
+          key_uri.bucket_name, key_uri.object_name)
+      regex = re.compile(regex_str)
+      match = regex.search(stderr)
+      if not match:
+        self.fail('Did not find this regex in stderr:\nRegex: %s\nStderr: %s'
+                  % (regex_str, stderr))
+      request_fields_str = match.group(2)
+      self.assertIn('Content-Length: 0', request_fields_str)
+      self.assertRegex(request_fields_str,
+                       'User-Agent: .*gsutil/%s' % gslib.VERSION)
     elif self.test_api == ApiSelector.JSON:
-      self.assertIn(('header: Cache-Control: no-cache, no-store, max-age=0, '
-               'must-revalidate'), stderr)
-      self.assertRegex(
-          stderr, '.*GET.*b/%s/o/%s.*user-agent:.*gsutil/%s.Python/%s' %
-          (key_uri.bucket_name, key_uri.object_name, gslib.VERSION,
-           platform.python_version()))
       if six.PY2:
         self.assertIn("md5Hash: u'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
       else:
         self.assertIn("md5Hash: 'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
+      self.assert_header_in_output(
+          'Cache-Control',
+          'no-cache, no-store, max-age=0, must-revalidate',
+          stderr)
+      self.assertRegex(
+          stderr, '.*GET.*b/%s/o/%s.*user-agent:.*gsutil/%s.Python/%s' %
+          (key_uri.bucket_name, key_uri.object_name, gslib.VERSION,
+           platform.python_version()))
 
     if gslib.IS_PACKAGE_INSTALL:
       self.assertIn('PACKAGED_GSUTIL_INSTALLS_DO_NOT_HAVE_CHECKSUMS', stdout)
