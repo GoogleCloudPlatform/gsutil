@@ -27,6 +27,7 @@ from __future__ import unicode_literals
 import errno
 import locale
 import os
+import platform
 import struct
 import sys
 
@@ -246,6 +247,36 @@ def IsRunningInCiEnvironment():
 def IsRunningInteractively():
   """Returns True if currently running interactively on a TTY."""
   return sys.stdout.isatty() and sys.stderr.isatty() and sys.stdin.isatty()
+
+
+def MonkeyPatchHttp():
+  if platform.python_version().startswith('3.6.5'):
+    _MonkeyPatchHttpForPython_3_6_5()
+
+
+def _MonkeyPatchHttpForPython_3_6_5():
+  # We generally have to do all sorts of gross things when applying runtime
+  # patches (dynamic imports, invalid names to resolve symbols in copy/pasted
+  # methods, invalid spacing from copy/pasted methods, etc.), so we just disable
+  # pylint warnings for this whole method.
+  # pylint: disable=all
+
+  # This fixes https://bugs.python.org/issue33365. A fix was applied in
+  # https://github.com/python/cpython/commit/936f03e7fafc28fd6fdfba11d162c776b89c0167
+  # but to apply that at runtime would mean patching the entire begin() method.
+  # Rather, we just override begin() to call its old self, followed by printing
+  # the HTTP headers afterward. This prevents us from overriding more behavior
+  # than we have to.
+  import http
+  old_begin = http.client.HTTPResponse.begin
+
+  def PatchedBegin(self):
+    old_begin(self)
+    if self.debuglevel > 0:
+      for hdr in self.headers:
+        print("header:", hdr + ":", self.headers.get(hdr))
+
+  http.client.HTTPResponse.begin = PatchedBegin
 
 
 def StdinIterator():
