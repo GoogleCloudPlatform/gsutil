@@ -12,3 +12,4 @@ gsutil_*.zip
 .idea/*
 .vscode/*
 venv*/*
+.DS_Store
