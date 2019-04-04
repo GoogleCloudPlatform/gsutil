@@ -275,8 +275,8 @@ def _MonkeyPatchHttpForPython_3x():
   def PatchedBegin(self):
     old_begin(self)
     if self.debuglevel > 0:
-      for hdr in self.headers:
-        print("header:", hdr + ":", self.headers.get(hdr))
+      for hdr, val in self.headers.items():
+        print("header:", hdr + ":", val)
 
   http.client.HTTPResponse.begin = PatchedBegin
 
