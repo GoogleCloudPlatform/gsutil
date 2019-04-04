@@ -251,7 +251,8 @@ def IsRunningInteractively():
 
 def MonkeyPatchHttp():
   py_ver = [int(part) for part in platform.python_version().split('.')]
-  if (py_ver[0] == 3 and 4 <= py_ver[1] <= 6):
+  if (py_ver[0] == 3 and
+      4 <= py_ver[1] < 6 or (py_ver[1] == 6 and py_ver[2] < 8)):
     _MonkeyPatchHttpForPython_3x()
 
 
