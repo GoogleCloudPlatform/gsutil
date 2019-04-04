@@ -250,11 +250,12 @@ def IsRunningInteractively():
 
 
 def MonkeyPatchHttp():
-  if platform.python_version().startswith('3.6.5'):
-    _MonkeyPatchHttpForPython_3_6_5()
+  py_ver = [int(part) for part in platform.python_version().split('.')]
+  if (py_ver[0] == 3 and 4 <= py_ver[1] <= 6):
+    _MonkeyPatchHttpForPython_3x()
 
 
-def _MonkeyPatchHttpForPython_3_6_5():
+def _MonkeyPatchHttpForPython_3x():
   # We generally have to do all sorts of gross things when applying runtime
   # patches (dynamic imports, invalid names to resolve symbols in copy/pasted
   # methods, invalid spacing from copy/pasted methods, etc.), so we just disable
