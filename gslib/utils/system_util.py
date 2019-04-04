@@ -27,7 +27,6 @@ from __future__ import unicode_literals
 import errno
 import locale
 import os
-import platform
 import struct
 import sys
 
@@ -250,11 +249,13 @@ def IsRunningInteractively():
 
 
 def MonkeyPatchHttp():
-  if platform.python_version().startswith('3.6.5'):
-    _MonkeyPatchHttpForPython_3_6_5()
+  ver = sys.version_info
+  # Checking for and applying monkeypatch to python versions 3.0 - 3.6.6
+  if (ver.major == 3 and (ver.minor < 6 or (ver.minor == 6 and ver.micro < 7))):
+    _MonkeyPatchHttpForPython_3x()
 
 
-def _MonkeyPatchHttpForPython_3_6_5():
+def _MonkeyPatchHttpForPython_3x():
   # We generally have to do all sorts of gross things when applying runtime
   # patches (dynamic imports, invalid names to resolve symbols in copy/pasted
   # methods, invalid spacing from copy/pasted methods, etc.), so we just disable
@@ -273,8 +274,8 @@ def _MonkeyPatchHttpForPython_3_6_5():
   def PatchedBegin(self):
     old_begin(self)
     if self.debuglevel > 0:
-      for hdr in self.headers:
-        print("header:", hdr + ":", self.headers.get(hdr))
+      for hdr, val in self.headers.items():
+        print("header:", hdr + ":", val)
 
   http.client.HTTPResponse.begin = PatchedBegin
 
