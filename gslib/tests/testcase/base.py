@@ -205,6 +205,8 @@ class GsUtilTestCase(unittest.TestCase):
       fpath = os.path.join(tmpdir, *file_name)
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
+    if isinstance(fpath, six.binary_type):
+        fpath = fpath.decode('utf-8')
 
     with open(fpath, 'wb') as f:
       contents = (contents if contents is not None
