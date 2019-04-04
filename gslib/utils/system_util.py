@@ -249,15 +249,9 @@ def IsRunningInteractively():
 
 
 def MonkeyPatchHttp():
-  # Getting python version array in the following format: [major, minor, micro]
-  py_ver = [
-      sys.version_info.major,
-      sys.version_info.minor,
-      sys.version_info.micro
-  ]
+  ver = sys.version_info
   # Checking for and applying monkeypatch to python versions 3.4 - 3.6.7
-  if (py_ver[0] == 3 and
-      4 <= py_ver[1] < 6 or (py_ver[1] == 6 and py_ver[2] < 8)):
+  if (ver.major == 3 and (ver.minor < 6 or (ver.minor == 6 and ver.micro < 8))):
     _MonkeyPatchHttpForPython_3x()
 
 
