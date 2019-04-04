@@ -147,7 +147,7 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
       self.assert_header_in_output(
           'x-goog-hash', 'md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
       # Check request fields show correct segments.
-      regex_str = r'''send:\s+(b')?HEAD /%s/%s HTTP/[^\\]*\\r\\n(.*)''' % (
+      regex_str = r'''send:\s+([b|u]')?HEAD /%s/%s HTTP/[^\\]*\\r\\n(.*)''' % (
           key_uri.bucket_name, key_uri.object_name)
       regex = re.compile(regex_str)
       match = regex.search(stderr)
