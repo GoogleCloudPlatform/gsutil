@@ -486,7 +486,7 @@ class RetentionCommand(Command):
     """Get Retention Policy for a single bucket."""
     bucket_url, bucket_metadata = self.GetSingleBucketUrlFromArg(
         self.args[0], bucket_fields=['retentionPolicy'])
-    print RetentionPolicyToString(bucket_metadata.retentionPolicy, bucket_url)
+    print(RetentionPolicyToString(bucket_metadata.retentionPolicy, bucket_url))
     return 0
 
   def _LockRetention(self):

@@ -15,6 +15,9 @@
 """Class that runs a named gsutil command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import difflib
 import logging
@@ -24,6 +27,8 @@ import sys
 import textwrap
 import time
 
+import six
+from six.moves import input
 import boto
 from boto.storage_uri import BucketStorageUri
 import gslib
@@ -53,8 +58,10 @@ from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailable
 from gslib.utils.text_util import CompareVersions
 from gslib.utils.text_util import InsistAsciiHeader
 from gslib.utils.text_util import InsistAsciiHeaderValue
+from gslib.utils.text_util import print_to_fd
 from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.update_util import LookUpGsutilVersion
+from gslib.tests.util import HAS_NON_DEFAULT_GS_HOST
 
 
 def HandleHeaderCoding(headers):
@@ -80,7 +87,7 @@ def HandleHeaderCoding(headers):
   for key in headers:
     InsistAsciiHeader(key)
     if IsCustomMetadataHeader(key):
-      if not isinstance(headers[key], unicode):
+      if not isinstance(headers[key], six.text_type):
         try:
           headers[key] = headers[key].decode(UTF8)
         except UnicodeDecodeError:
@@ -109,7 +116,7 @@ def HandleArgCoding(args):
   # correctly interpret them, we decode them as utf-8.
   for i in range(len(args)):
     arg = args[i]
-    if not isinstance(arg, unicode):
+    if not isinstance(arg, six.text_type):
       try:
         args[i] = arg.decode(UTF8)
       except UnicodeDecodeError:
@@ -120,6 +127,15 @@ def HandleArgCoding(args):
             'representation. For more details (including how to convert to a '
             'gsutil-compatible encoding) see `gsutil help encoding`.' %
             repr(arg))))
+
+
+def _StringToSysArgType(unicode_str):
+  """Converts a string literal (unicode) to the same type as sys.argv[0]."""
+  # TODO(PY3-ONLY): If we remove the PY2 code branch, this method becomes
+  # a no-op, so we can just remove the whole method when we move to PY3.
+  if six.PY2:
+    return unicode_str.encode(UTF8)
+  return unicode_str
 
 
 class CommandRunner(object):
@@ -308,7 +324,7 @@ class CommandRunner(object):
         self.MaybeCheckForAndOfferSoftwareUpdate(command_name, debug)):
       command_name = 'update'
       command_changed_to_update = True
-      args = ['-n']
+      args = [_StringToSysArgType('-n')]
 
       # Check for opt-in analytics.
       if system_util.IsRunningInteractively() and collect_analytics:
@@ -331,15 +347,18 @@ class CommandRunner(object):
         # name for that command.
         translated_command_name = (
             OLD_ALIAS_MAP.get(close_matches[0], close_matches)[0])
-        print >> sys.stderr, 'Did you mean this?'
-        print >> sys.stderr, '\t%s' % translated_command_name
+        print('Did you mean this?', file=sys.stderr)
+        print('\t%s' % translated_command_name, file=sys.stderr)
       elif command_name == 'update' and gslib.IS_PACKAGE_INSTALL:
         sys.stderr.write(
             'Update command is not supported for package installs; '
             'please instead update using your package manager.')
 
       raise CommandException('Invalid command "%s".' % command_name)
-    if '--help' in args:
+    # Call str() on this string because the type of objects in `args` differ
+    # on Python 2 vs 3 (bytes vs unicode), and we want to compare using the
+    # same as whatever is in `args`.
+    if _StringToSysArgType('--help') in args:
       new_args = [command_name]
       original_command_class = self.command_map[command_name]
       subcommands = original_command_class.help_spec.subcommand_help_text.keys()
@@ -379,9 +398,9 @@ class CommandRunner(object):
       # If the command changed to update, the user's original command was
       # not executed.
       return_code = 1
-      print '\n'.join(textwrap.wrap(
+      print('\n'.join(textwrap.wrap(
           'Update was successful. Exiting with code 1 as the original command '
-          'issued prior to the update was not executed and should be re-run.'))
+          'issued prior to the update was not executed and should be re-run.')))
     return return_code
 
   def MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
@@ -416,13 +435,10 @@ class CommandRunner(object):
     # - user is using a Cloud SDK install (which should only be updated via
     #   gcloud components update)
     logger = logging.getLogger()
-    gs_host = boto.config.get('Credentials', 'gs_host', None)
-    gs_host_is_not_default = (
-        gs_host != boto.gs.connection.GSConnection.DefaultHost)
     if (not system_util.IsRunningInteractively()
         or command_name in ('config', 'update', 'ver', 'version')
         or not logger.isEnabledFor(logging.INFO)
-        or gs_host_is_not_default
+        or HAS_NON_DEFAULT_GS_HOST
         or system_util.InvokedViaCloudSdk()):
       return False
 
@@ -464,26 +480,26 @@ class CommandRunner(object):
         f.write(str(cur_ts))
       (g, m) = CompareVersions(cur_ver, gslib.VERSION)
       if m:
-        print '\n'.join(textwrap.wrap(
+        print_to_fd('\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). NOTE: This is a major new version, so it is '
             'strongly recommended that you review the release note details at '
             '%s before updating to this version, especially if you use gsutil '
-            'in scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL)))
+            'in scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
-        print
-        answer = raw_input('Would you like to update [y/N]? ')
+        print_to_fd('\n')
+        answer = input('Would you like to update [y/N]? ')
         return answer and answer.lower()[0] == 'y'
       elif g:
-        print '\n'.join(textwrap.wrap(
+        print_to_fd('\n'.join(textwrap.wrap(
             'A newer version of gsutil (%s) is available than the version you '
             'are running (%s). A detailed log of gsutil release changes is '
             'available at %s if you would like to read them before updating.'
-            % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL)))
+            % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
-        print
-        answer = raw_input('Would you like to update [Y/n]? ')
+        print_to_fd('\n')
+        answer = input('Would you like to update [Y/n]? ')
         return not answer or answer.lower()[0] != 'n'
     return False

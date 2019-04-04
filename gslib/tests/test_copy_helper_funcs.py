@@ -14,12 +14,16 @@
 # limitations under the License.
 """Unit tests for parallel upload functions in copy_helper."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import datetime
 import logging
 import os
 
 from apitools.base.py import exceptions as apitools_exceptions
-import mock
 
 from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
@@ -48,6 +52,10 @@ from gslib.utils.copy_helper import FilterExistingComponents
 from gslib.utils.copy_helper import GZIP_ALL_FILES
 from gslib.utils.copy_helper import PerformParallelUploadFileToObjectArgs
 from gslib.utils.copy_helper import WarnIfMvEarlyDeletionChargeApplies
+
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 _CalculateB64EncodedMd5FromContents = (
     hashing_helper.CalculateB64EncodedMd5FromContents)
@@ -101,7 +109,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     """Tests upload with a variety of component states."""
     mock_api = MockCloudApi()
     bucket_name = self.MakeTempName('bucket')
-    tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
+    tracker_file = self.CreateTempFile(file_name='foo', contents=b'asdf')
     tracker_file_lock = parallelism_framework_util.CreateLock()
 
     # dst_obj_metadata used for passing content-type.
@@ -109,19 +117,19 @@ class TestCpFuncs(GsUtilUnitTestCase):
 
     # Already uploaded, contents still match, component still used.
     fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
-                                                   contents='1')
+                                                   contents=b'1')
     fpath_uploaded_correctly_url = StorageUrlFromString(
         str(fpath_uploaded_correctly))
     object_uploaded_correctly_url = StorageUrlFromString('%s://%s/%s' % (
         self.default_provider, bucket_name,
         fpath_uploaded_correctly))
-    with open(fpath_uploaded_correctly) as f_in:
+    with open(fpath_uploaded_correctly, 'rb') as f_in:
       fpath_uploaded_correctly_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
                                  name=fpath_uploaded_correctly,
                                  md5Hash=fpath_uploaded_correctly_md5),
-        contents='1')
+        contents=b'1')
 
     args_uploaded_correctly = PerformParallelUploadFileToObjectArgs(
         fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly_url,
@@ -129,7 +137,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
         tracker_file_lock, None, False)
 
     # Not yet uploaded, but needed.
-    fpath_not_uploaded = self.CreateTempFile(file_name='foo2', contents='2')
+    fpath_not_uploaded = self.CreateTempFile(file_name='foo2', contents=b'2')
     fpath_not_uploaded_url = StorageUrlFromString(str(fpath_not_uploaded))
     object_not_uploaded_url = StorageUrlFromString('%s://%s/%s' % (
         self.default_provider, bucket_name, fpath_not_uploaded))
@@ -141,17 +149,17 @@ class TestCpFuncs(GsUtilUnitTestCase):
     # Already uploaded, but contents no longer match. Even though the contents
     # differ, we don't delete this since the bucket is not versioned and it
     # will be overwritten anyway.
-    fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
+    fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents=b'4')
     fpath_wrong_contents_url = StorageUrlFromString(str(fpath_wrong_contents))
     object_wrong_contents_url = StorageUrlFromString('%s://%s/%s' % (
         self.default_provider, bucket_name, fpath_wrong_contents))
-    with open(self.CreateTempFile(contents='_')) as f_in:
+    with open(self.CreateTempFile(contents=b'_'), 'rb') as f_in:
       fpath_wrong_contents_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
                                  name=fpath_wrong_contents,
                                  md5Hash=fpath_wrong_contents_md5),
-        contents='1')
+        contents=b'1')
 
     args_wrong_contents = PerformParallelUploadFileToObjectArgs(
         fpath_wrong_contents, 0, 1, fpath_wrong_contents_url,
@@ -159,7 +167,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
         tracker_file_lock, None, False)
 
     # Exists in tracker file, but component object no longer exists.
-    fpath_remote_deleted = self.CreateTempFile(file_name='foo5', contents='5')
+    fpath_remote_deleted = self.CreateTempFile(file_name='foo5', contents=b'5')
     fpath_remote_deleted_url = StorageUrlFromString(
         str(fpath_remote_deleted))
     args_remote_deleted = PerformParallelUploadFileToObjectArgs(
@@ -167,12 +175,12 @@ class TestCpFuncs(GsUtilUnitTestCase):
         empty_object, tracker_file, tracker_file_lock, None, False)
 
     # Exists in tracker file and already uploaded, but no longer needed.
-    fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents='6')
-    with open(fpath_no_longer_used) as f_in:
+    fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents=b'6')
+    with open(fpath_no_longer_used, 'rb') as f_in:
       file_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
-                                 name='foo6', md5Hash=file_md5), contents='6')
+                                 name='foo6', md5Hash=file_md5), contents=b'6')
 
     dst_args = {fpath_uploaded_correctly: args_uploaded_correctly,
                 fpath_not_uploaded: args_not_uploaded,
@@ -212,21 +220,21 @@ class TestCpFuncs(GsUtilUnitTestCase):
     # dst_obj_metadata used for passing content-type.
     empty_object = apitools_messages.Object()
 
-    tracker_file = self.CreateTempFile(file_name='foo', contents='asdf')
+    tracker_file = self.CreateTempFile(file_name='foo', contents=b'asdf')
     tracker_file_lock = parallelism_framework_util.CreateLock()
 
     # Already uploaded, contents still match, component still used.
     fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
-                                                   contents='1')
+                                                   contents=b'1')
     fpath_uploaded_correctly_url = StorageUrlFromString(
         str(fpath_uploaded_correctly))
-    with open(fpath_uploaded_correctly) as f_in:
+    with open(fpath_uploaded_correctly, 'rb') as f_in:
       fpath_uploaded_correctly_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     object_uploaded_correctly = mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
                                  name=fpath_uploaded_correctly,
                                  md5Hash=fpath_uploaded_correctly_md5),
-        contents='1')
+        contents=b'1')
     object_uploaded_correctly_url = StorageUrlFromString('%s://%s/%s#%s' % (
         self.default_provider, bucket_name,
         fpath_uploaded_correctly, object_uploaded_correctly.generation))
@@ -242,7 +250,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
         apitools_messages.Object(bucket=bucket_name,
                                  name=fpath_duplicate,
                                  md5Hash=fpath_uploaded_correctly_md5),
-        contents='1')
+        contents=b'1')
     duplicate_uploaded_correctly_url = StorageUrlFromString('%s://%s/%s#%s' % (
         self.default_provider, bucket_name,
         fpath_uploaded_correctly, duplicate_uploaded_correctly.generation))
@@ -253,15 +261,15 @@ class TestCpFuncs(GsUtilUnitTestCase):
         tracker_file_lock, None, False)
 
     # Already uploaded, but contents no longer match.
-    fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents='4')
+    fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents=b'4')
     fpath_wrong_contents_url = StorageUrlFromString(str(fpath_wrong_contents))
-    with open(self.CreateTempFile(contents='_')) as f_in:
+    with open(self.CreateTempFile(contents=b'_'), 'rb') as f_in:
       fpath_wrong_contents_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     object_wrong_contents = mock_api.MockCreateObjectWithMetadata(
         apitools_messages.Object(bucket=bucket_name,
                                  name=fpath_wrong_contents,
                                  md5Hash=fpath_wrong_contents_md5),
-        contents='_')
+        contents=b'_')
     wrong_contents_url = StorageUrlFromString('%s://%s/%s#%s' % (
         self.default_provider, bucket_name,
         fpath_wrong_contents, object_wrong_contents.generation))
@@ -350,7 +358,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     if system_util.IS_WINDOWS:
       return unittest.skip('use_magicfile features not available on Windows')
 
-    surprise_html = '<html><body>And you thought I was just text!</body></html>'
+    surprise_html = b'<html><body>And you thought I was just text!</body></html>'
     temp_dir_path = self.CreateTempDir()
     txt_file_path = self.CreateTempFile(
         tmpdir=temp_dir_path, contents=surprise_html,
@@ -369,7 +377,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'True')]):
       _SetContentTypeFromFile(src_url_stub, dst_obj_metadata_mock)
     self.assertEqual(
-        'text/html; charset=us-ascii', dst_obj_metadata_mock.contentType)
+        b'text/html; charset=us-ascii', dst_obj_metadata_mock.contentType)
 
     dst_obj_metadata_mock = mock.MagicMock(contentType=None)
     # The mimetypes module should guess based on the real file's extension.

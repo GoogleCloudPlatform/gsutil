@@ -15,6 +15,9 @@
 """Implementation of Unix-like mv command for cloud storage providers."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from gslib.command import Command
 from gslib.command_argument import CommandArgument

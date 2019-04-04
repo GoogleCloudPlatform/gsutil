@@ -30,10 +30,14 @@ service) are available via the gsutil test command.
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import gzip
 import os
-import StringIO
+
+import six
 
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
@@ -140,7 +144,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     tmpdir = self.CreateTempDir()
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
-    src_file = self.CreateTempFile(tmpdir=tmpdir, file_name='obj', contents='')
+    src_file = self.CreateTempFile(tmpdir=tmpdir, file_name='obj', contents=b'')
     dst_bucket_uri = self.CreateBucket()
     # Make an object under subdir so next copy will treat subdir as a subdir.
     self.RunCommand('cp', [src_file, suri(dst_bucket_uri, 'subdir/a')])
@@ -157,7 +161,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     """Ensure wildcarded recursive cp in bucket subdirs behaves like Unix."""
     src_bucket_uri = self.CreateBucket()
     dst_bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(file_name='foo', contents='bar')
+    fpath = self.CreateTempFile(file_name='foo', contents=b'bar')
     self.RunCommand('cp', [fpath, suri(src_bucket_uri, 'Test/sub-test/foo')])
     self.RunCommand('cp', [fpath, suri(src_bucket_uri, 'Test2/sub-test/foo')])
     self.RunCommand('cp', [fpath, suri(src_bucket_uri, 'Test3/sub-test/foo')])
@@ -354,8 +358,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     # successfully.
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
-    fpath1 = self.CreateTempFile(tmpdir=subdir, contents='foo')
-    self.CreateTempFile(tmpdir=tmpdir2, contents='foo')
+    fpath1 = self.CreateTempFile(tmpdir=subdir, contents=b'foo')
+    self.CreateTempFile(tmpdir=tmpdir2, contents=b'foo')
     os.mkdir(os.path.join(tmpdir, 'symlinkdir'))
     # Create a symlink to a directory to ensure we warn when encountering it.
     os.symlink(tmpdir2, os.path.join(subdir, 'symlinkdir'))
@@ -433,7 +437,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
 
   def testCopyingCompressedFileToBucket(self):
     """Tests copying one file with compression to a bucket."""
-    src_file = self.CreateTempFile(contents='plaintext', file_name='f2.txt')
+    src_file = self.CreateTempFile(contents=b'plaintext', file_name='f2.txt')
     dst_bucket_uri = self.CreateBucket()
     self.RunCommand('cp', ['-z', 'txt', src_file, suri(dst_bucket_uri)],)
     actual = list(self._test_wildcard_iterator(
@@ -446,9 +450,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('cat', [suri(dst_bucket_uri, 'f2.txt')],
                              return_stdout=True)
 
-    f = gzip.GzipFile(fileobj=StringIO.StringIO(stdout), mode='rb')
+    f = gzip.GzipFile(fileobj=six.BytesIO(stdout), mode='rb')
     try:
-      self.assertEqual(f.read(), 'plaintext')
+      self.assertEqual(f.read(), b'plaintext')
     finally:
       f.close()
 
@@ -572,7 +576,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', [src_dir, dst_dir])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
 
   def testNonRecursiveFileAndSameNameSubdir(self):
@@ -595,7 +599,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', ['gs://', suri(src_bucket_uri)])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('provider-only', e.reason)
 
   def testAttemptCopyingOverlappingSrcDstFile(self):
@@ -604,7 +608,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', [src_file, src_file])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('are the same file - abort', e.reason)
 
   def testAttemptCopyingToMultiMatchWildcard(self):
@@ -614,7 +618,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.RunCommand('cp', [suri(src_bucket_uri, 'obj0'),
                              suri(src_bucket_uri, '*')])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertNotEqual(e.reason.find('must match exactly 1 URL'), -1)
 
   def testAttemptCopyingMultiObjsToFile(self):
@@ -624,7 +628,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', ['-R', suri(src_bucket_uri, '*'), dst_file])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('must name a directory, bucket, or', e.reason)
 
   def testAttemptCopyingWithFileDirConflict(self):
@@ -638,7 +642,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', ['-R', suri(bucket_uri), dst_dir])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertNotEqual('exists where a directory needs to be created',
                           e.reason)
 
@@ -651,7 +655,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('cp', [suri(src_uri), tmpdir + '/'])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertNotEqual('where the file needs to be created', e.reason)
 
   def testWildcardMoveWithinBucket(self):
@@ -674,7 +678,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     src_bucket_uri = self.CreateBucket(test_objects=['obj_with_suffix'])
     try:
       self.RunCommand('ls', [suri(src_bucket_uri, 'obj')])
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('matched no objects', e.reason)
 
   def testLsBucketNonRecursive(self):
@@ -683,13 +687,13 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                                                      'd1/d2/foo3'])
     output = self.RunCommand('ls', [suri(src_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(src_bucket_uri, 'foo1'),
-                    suri(src_bucket_uri, 'd1', ':'),
-                    suri(src_bucket_uri, 'd1', 'd2') + src_bucket_uri.delim,
-                    suri(src_bucket_uri, 'd0', ':'),
-                    suri(src_bucket_uri, 'd0', 'foo2')])
-    expected.add('')  # Blank line between subdir listings.
-    actual = set(output.split('\n'))
+    expected = set([suri(src_bucket_uri, 'foo1').encode('utf-8'),
+                    suri(src_bucket_uri, 'd1', ':').encode('utf-8'),
+                    (suri(src_bucket_uri, 'd1', 'd2') + src_bucket_uri.delim).encode('utf-8'),
+                    suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
+                    suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')])
+    expected.add(b'')  # Blank line between subdir listings.
+    actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
 
   def testLsBucketRecursive(self):
@@ -698,14 +702,14 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                                                      'd1/d2/foo3'])
     output = self.RunCommand('ls', ['-R', suri(src_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(src_bucket_uri, 'foo1'),
-                    suri(src_bucket_uri, 'd1', ':'),
-                    suri(src_bucket_uri, 'd1', 'd2', ':'),
-                    suri(src_bucket_uri, 'd1', 'd2', 'foo3'),
-                    suri(src_bucket_uri, 'd0', ':'),
-                    suri(src_bucket_uri, 'd0', 'foo2')])
-    expected.add('')  # Blank line between subdir listings.
-    actual = set(output.split('\n'))
+    expected = set([suri(src_bucket_uri, 'foo1').encode('utf-8'),
+                    suri(src_bucket_uri, 'd1', ':').encode('utf-8'),
+                    suri(src_bucket_uri, 'd1', 'd2', ':').encode('utf-8'),
+                    suri(src_bucket_uri, 'd1', 'd2', 'foo3').encode('utf-8'),
+                    suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
+                    suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')])
+    expected.add(b'')  # Blank line between subdir listings.
+    actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
 
   def testLsBucketRecursiveWithLeadingSlashObjectName(self):
@@ -713,9 +717,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     dst_bucket_uri = self.CreateBucket(test_objects=['f0'])
     output = self.RunCommand('ls', ['-R', suri(dst_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(dst_bucket_uri, 'f0')])
-    expected.add('')  # Blank line between subdir listings.
-    actual = set(output.split('\n'))
+    expected = set([suri(dst_bucket_uri, 'f0').encode('utf-8')])
+    expected.add(b'')  # Blank line between subdir listings.
+    actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
 
   def testLsBucketSubdirNonRecursive(self):
@@ -725,10 +729,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     output = self.RunCommand('ls', [suri(src_bucket_uri, 'src_subdir')],
                              return_stdout=True)
     expected = set([
-        suri(src_bucket_uri, 'src_subdir', 'foo'),
-        suri(src_bucket_uri, 'src_subdir', 'nested') + src_bucket_uri.delim])
-    expected.add('')  # Blank line between subdir listings.
-    actual = set(output.split('\n'))
+        suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'),
+        (suri(src_bucket_uri, 'src_subdir', 'nested') + src_bucket_uri.delim).encode('utf-8')])
+    expected.add(b'')  # Blank line between subdir listings.
+    actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
 
   def testLsBucketSubdirRecursive(self):
@@ -740,12 +744,12 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
           'ls', ['-R', suri(src_bucket_uri, 'src_subdir') + final_char],
           return_stdout=True)
       expected = set([
-          suri(src_bucket_uri, 'src_subdir', ':'),
-          suri(src_bucket_uri, 'src_subdir', 'foo'),
-          suri(src_bucket_uri, 'src_subdir', 'nested', ':'),
-          suri(src_bucket_uri, 'src_subdir', 'nested', 'foo2')])
-      expected.add('')  # Blank line between subdir listings.
-      actual = set(output.split('\n'))
+          suri(src_bucket_uri, 'src_subdir', ':').encode('utf-8'),
+          suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'),
+          suri(src_bucket_uri, 'src_subdir', 'nested', ':').encode('utf-8'),
+          suri(src_bucket_uri, 'src_subdir', 'nested', 'foo2').encode('utf-8')])
+      expected.add(b'')  # Blank line between subdir listings.
+      actual = set([line.strip() for line in output.split(b'\n')])
       self.assertEqual(expected, actual)
 
   def testSetAclOnBucketRuns(self):
@@ -782,7 +786,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('defacl', ['set', 'private', suri(src_bucket_uri, '*')])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('URL must name a bucket', e.reason)
 
   # @SequentialAndParallelTransfer
@@ -906,7 +910,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.RunCommand(
           'cp', [suri(src_bucket_uri, 'src_subdir'), dst_dir])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
 
   def testCopyingBucketSubDirToBucketSubDir(self):
@@ -1105,7 +1109,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.RunCommand(
           'mv', [suri(src_bucket_uri, 'dir*'), suri(dst_bucket_uri, 'dir')])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn('mv command disallows naming', e.reason)
 
   def testMovingBucketSubDirToNonExistentBucketSubDir(self):
@@ -1158,29 +1162,28 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         self.RunCommand('ls', [suri(bucket_uris[i])])
         # Ensure exception is raised.
         self.assertTrue(False)
-      except NotFoundException, e:
+      except NotFoundException as e:
         self.assertEqual(e.status, 404)
 
   def testUnicodeArgs(self):
     """Tests that you can list an object with unicode characters."""
-    object_name = u'フォ'
+    object_name = 'フォ'
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name=object_name,
-                      contents='foo')
-    object_name_bytes = object_name.encode(constants.UTF8)
-    stdout = self.RunCommand('ls', [suri(bucket_uri, object_name_bytes)],
+                      contents=b'foo')
+    stdout = self.RunCommand('ls', [suri(bucket_uri, object_name)],
                              return_stdout=True)
-    self.assertIn(object_name_bytes, stdout)
+    self.assertIn(object_name.encode('utf-8'), stdout)
 
   def testRecursiveListTrailingSlash(self):
     bucket_uri = self.CreateBucket()
     obj_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='/', contents='foo')
+        bucket_uri=bucket_uri, object_name='/', contents=b'foo')
     stdout = self.RunCommand('ls', ['-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
     # removed.
-    self.assertEqual(stdout.splitlines(), [suri(obj_uri) + '/:',
-                                           suri(obj_uri) + '/'])
+    self.assertEqual(stdout.splitlines(), [(suri(obj_uri) + '/:').encode('utf-8'),
+                                           (suri(obj_uri) + '/').encode('utf-8')])
 
   def FinalObjNameComponent(self, uri):
     """For gs://bucket/abc/def/ghi returns ghi."""
@@ -1220,7 +1223,7 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
     """Test that the cat command basically runs."""
     src_uri = self.CreateObject(contents='foo')
     stdout = self.RunCommand('cat', [suri(src_uri)], return_stdout=True)
-    self.assertEqual(stdout, 'foo')
+    self.assertEqual(stdout, b'foo')
 
   def testGetLoggingCommandRuns(self):
     """Test that the 'logging get' command basically runs."""
@@ -1234,7 +1237,7 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
       with SetDummyProjectForUnitTest():
         self.RunCommand('mb', [suri(dst_bucket_uri)])
       self.fail('Did not get expected StorageCreateError')
-    except ServiceException, e:
+    except ServiceException as e:
       self.assertEqual(e.status, 409)
 
   def testRemoveObjsCommand(self):
@@ -1243,7 +1246,7 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
     try:
       self.RunCommand('rm', [suri(dst_bucket_uri, 'non_existent')])
       self.fail('Did not get expected CommandException')
-    except CommandException, e:
+    except CommandException as e:
       self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
 
   # Now that gsutil ver computes a checksum it adds 1-3 seconds to test run

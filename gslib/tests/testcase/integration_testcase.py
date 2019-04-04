@@ -15,17 +15,25 @@
 """Contains gsutil base integration test case class."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from contextlib import contextmanager
-import cStringIO
+from six.moves import cStringIO
 import datetime
 import locale
 import logging
 import os
+import random
+import string
 import subprocess
 import sys
 import tempfile
 import time
+
+import six
+from six.moves import range
 
 import boto
 from boto import config
@@ -45,6 +53,7 @@ from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase import base
 import gslib.tests.util as util
+from gslib.tests.util import InvokedFromParFile
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigForTest
@@ -154,7 +163,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri = self.bucket_uris[-1]
       try:
         bucket_list = self._ListBucket(bucket_uri)
-      except StorageResponseError, e:
+      except StorageResponseError as e:
         # This can happen for tests of rm -r command, which for bucket-only
         # URIs delete the bucket at the end.
         if e.status == 404:
@@ -171,7 +180,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                                  version_id=k.version_id)
             else:
               k.delete()
-          except StorageResponseError, e:
+          except StorageResponseError as e:
+            # This could happen if objects that have already been deleted are
+            # still showing up in the listing due to eventual consistency. In
+            # that case, we continue on until we've tried to deleted every
+            # object in the listing before raising the error on which to retry.
             if e.status == 404:
               # This could happen if objects that have already been deleted are
               # still showing up in the listing due to eventual consistency. In
@@ -262,6 +275,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     else:
       self.xml_api.PatchObjectMetadata(bucket_name, object_name, obj_metadata,
                                        provider=provider)
+
 
   def SetPOSIXMetadata(self, provider, bucket_name, object_name, atime=None,
                        mtime=None, uid=None, gid=None, mode=None):
@@ -368,7 +382,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
       stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
     self.assertIn(
-        Base64Sha256FromBase64EncryptionKey(encryption_key), stdout,
+        Base64Sha256FromBase64EncryptionKey(encryption_key).decode('ascii'),
+        stdout,
         'Object %s did not use expected encryption key with hash %s. '
         'Actual object: %s'%
         (object_uri_str, Base64Sha256FromBase64EncryptionKey(encryption_key),
@@ -524,7 +539,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                           retention_policy=retention_policy,
                                           bucket_policy_only=bucket_policy_only)
       bucket_uri = boto.storage_uri(
-          'gs://%s' % json_bucket.name.encode(UTF8).lower(),
+          'gs://%s' % json_bucket.name.lower(),
           suppress_consec_slashes=False)
       return bucket_uri
 
@@ -535,8 +550,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     if provider == 'gs':
       # Apply API version and project ID headers if necessary.
-      headers = {'x-goog-api-version': self.api_version}
-      headers[GOOG_PROJ_ID_HDR] = PopulateProjectId()
+      headers = {'x-goog-api-version': self.api_version,
+                 GOOG_PROJ_ID_HDR: PopulateProjectId()}
     else:
       headers = {}
 
@@ -549,7 +564,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         bucket_uri.create_bucket(storage_class=storage_class,
                                  location=location or '',
                                  headers=headers)
-      except StorageResponseError, e:
+      except StorageResponseError as e:
         # If the service returns a transient error or a connection breaks,
         # it's possible the request succeeded. If that happens, the service
         # will return 409s for all future calls even though our intent
@@ -572,7 +587,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,
                         object_name=self.MakeTempName('obj'),
-                        contents='test %d' % i)
+                        contents='test {:d}'.format(i).encode('ascii'))
     return bucket_uri
 
   def CreateVersionedBucket(self, bucket_name=None, test_objects=0):
@@ -638,7 +653,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       A StorageUri for the created object.
     """
     bucket_uri = bucket_uri or self.CreateBucket()
-
+    # checking for valid types - None or unicode/binary text
+    if contents is not None:
+      if not isinstance(contents, (six.binary_type, six.text_type)):
+        raise TypeError(
+          'contents must be either none or bytes, not {}'.format(type(contents)))
+      contents = six.ensure_binary(contents)
     if (contents and
         bucket_uri.scheme == 'gs' and
         (prefer_json_api or encryption_key or kms_key_name)):
@@ -673,7 +693,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           key_uri.set_contents_from_string(
               contents, headers={
                   'x-goog-if-generation-match': str(gs_idempotent_generation)})
-        except StorageResponseError, e:
+        except StorageResponseError as e:
           if e.status == 412:
             pass
           else:
@@ -742,7 +762,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     for i in range(test_objects):
       self.CreateObjectJson(bucket_name=bucket_name,
                             object_name=self.MakeTempName('obj'),
-                            contents='test %d' % i)
+                            contents='test {:d}'.format(i).encode('ascii'))
     return bucket
 
   def CreateObjectJson(self, contents, bucket_name=None, object_name=None,
@@ -793,7 +813,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     encryption_keywrapper = CryptoKeyWrapperFromKey(encryption_key)
     try:
       return self.json_api.UploadObject(
-          cStringIO.StringIO(contents),
+          six.BytesIO(contents),
           object_metadata, provider='gs',
           encryption_tuple=encryption_keywrapper,
           preconditions=preconditions)
@@ -853,35 +873,58 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       If only one return_* value was specified, that value is returned directly
       rather than being returned within a 1-tuple.
     """
-    cmd = ([gslib.GSUTIL_PATH] + ['--testexceptiontraces'] +
-           ['-o', 'GSUtil:default_project_id=' + PopulateProjectId()] +
-           cmd)
-    if IS_WINDOWS:
-      cmd = [sys.executable] + cmd
+    cmd = [
+        gslib.GSUTIL_PATH,
+        '--testexceptiontraces',
+        '-o',
+        'GSUtil:default_project_id=' + PopulateProjectId()
+    ] + cmd
+    if stdin is not None:
+      if six.PY3:
+        if isinstance(stdin, bytes):
+          stdin = six.ensure_binary(stdin)
+        else:
+          stdin = stdin.encode('utf-8')
+      else:
+        stdin = stdin.encode('utf-8')
+    # checking to see if test was invoked from a par file (bundled archive)
+    # if not, add python executable path to ensure correct version of python
+    # is used for testing
+    cmd = [str(sys.executable)] + cmd if not InvokedFromParFile() else cmd
     env = os.environ.copy()
     if env_vars:
       env.update(env_vars)
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         stdin=subprocess.PIPE, env=env)
-    (stdout, stderr) = p.communicate(stdin)
+    # Ensuring correct text types
+    envstr = dict()
+    for k, v in six.iteritems(env):
+      envstr[six.ensure_str(k)] = six.ensure_str(v)
+    cmd = [six.ensure_str(part) for part in cmd]
+    # executing command
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, stdin=subprocess.PIPE, env=envstr)
+    c_out = p.communicate(stdin)
+    try:
+      c_out = [six.ensure_text(output) for output in c_out]
+    except UnicodeDecodeError:
+      c_out = [six.ensure_text(output, locale.getpreferredencoding(False))
+               for output in c_out]
+    stdout = c_out[0].replace(os.linesep, '\n')
+    stderr = c_out[1].replace(os.linesep, '\n')
     status = p.returncode
 
     if expected_status is not None:
+      cmd = map(six.ensure_text, cmd)
       self.assertEqual(
-          status, expected_status,
-          msg='Expected status %d, got %d.\nCommand:\n%s\n\nstderr:\n%s' % (
-              expected_status, status, ' '.join(cmd), stderr))
+        int(status), int(expected_status),
+        msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
+          expected_status, status, ' '.join(cmd), stderr))
 
     toreturn = []
     if return_status:
       toreturn.append(status)
     if return_stdout:
-      if IS_WINDOWS:
-        stdout = stdout.replace('\r\n', '\n')
       toreturn.append(stdout)
     if return_stderr:
-      if IS_WINDOWS:
-        stderr = stderr.replace('\r\n', '\n')
       toreturn.append(stderr)
 
     if len(toreturn) == 1:

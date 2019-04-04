@@ -42,29 +42,39 @@ TODO: gsutil-beta: Add a similar comment to the boto code.
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import errno
-import httplib
 import random
 import re
 import socket
 import time
-import urlparse
+
+import six
+from six.moves import urllib
+from six.moves import http_client
 from boto import UserAgent
 from boto.connection import AWSAuthConnection
 from boto.exception import ResumableTransferDisposition
 from boto.exception import ResumableUploadException
+
 from gslib.exception import InvalidUrlError
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNumRetries
 from gslib.utils.constants import XML_PROGRESS_CALLBACKS
 
 
+if six.PY3:
+  long = int
+
+
 class BotoResumableUpload(object):
   """Upload helper class for resumable uploads via boto."""
 
   BUFFER_SIZE = 8192
-  RETRYABLE_EXCEPTIONS = (httplib.HTTPException, IOError, socket.error,
+  RETRYABLE_EXCEPTIONS = (http_client.HTTPException, IOError, socket.error,
                           socket.gaierror)
 
   # (start, end) response indicating service has nothing (upload protocol uses
@@ -108,7 +118,7 @@ class BotoResumableUpload(object):
 
     Raises InvalidUrlError if URL is syntactically invalid.
     """
-    parse_result = urlparse.urlparse(url)
+    parse_result = urllib.parse.urlparse(url)
     if (parse_result.scheme.lower() not in ['http', 'https'] or
         not parse_result.netloc):
       raise InvalidUrlError('Invalid upload URL (%s)' % url)
@@ -140,10 +150,10 @@ class BotoResumableUpload(object):
     """
     # Send an empty PUT so that service replies with this resumable
     # transfer's state.
-    put_headers = {}
-    put_headers['Content-Range'] = (
-        self._BuildContentRangeHeader('*', file_length))
-    put_headers['Content-Length'] = '0'
+    put_headers = {
+        'Content-Range': (self._BuildContentRangeHeader('*', file_length)),
+        'Content-Length': '0'
+    }
     return AWSAuthConnection.make_request(
         conn, 'PUT', path=self.upload_url_path, auth_path=self.upload_url_path,
         headers=put_headers, host=self.upload_url_host)
@@ -333,7 +343,11 @@ class BotoResumableUpload(object):
     # in debug stream.
     http_conn.set_debuglevel(0)
     while buf:
-      http_conn.send(buf)
+      buf_bytes = buf
+      if six.PY3:
+        if isinstance(buf, str):
+          buf_bytes = buf.encode('utf-8')
+      http_conn.send(buf_bytes)
       total_bytes_uploaded += len(buf)
       if cb:
         i += 1
@@ -401,7 +415,7 @@ class BotoResumableUpload(object):
         self.service_has_bytes = service_start
         if conn.debug >= 1:
           self.logger.debug('Resuming transfer.')
-      except ResumableUploadException, e:
+      except ResumableUploadException as e:
         if conn.debug >= 1:
           self.logger.debug('Unable to resume transfer (%s).', e.message)
         self._StartNewResumableUpload(key, headers)
@@ -565,7 +579,7 @@ class BotoResumableUpload(object):
         if debug >= 1:
           self.logger.debug('Resumable upload complete.')
         return
-      except self.RETRYABLE_EXCEPTIONS, e:
+      except self.RETRYABLE_EXCEPTIONS as e:
         if debug >= 1:
           self.logger.debug('Caught exception (%s)', e.__repr__())
         if isinstance(e, IOError) and e.errno == errno.EPIPE:
@@ -575,7 +589,7 @@ class BotoResumableUpload(object):
           # the upload (which will cause a new connection to be
           # opened the next time an HTTP request is sent).
           key.bucket.connection.connection.close()
-      except ResumableUploadException, e:
+      except ResumableUploadException as e:
         self.HandleResumableUploadException(e, debug)
 
       self.TrackProgressLessIterations(service_had_bytes_before_attempt,

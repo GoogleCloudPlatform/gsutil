@@ -16,8 +16,10 @@
 """Main module for Google Cloud Storage command line tool."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
-import ConfigParser
 import datetime
 import errno
 import getopt
@@ -29,6 +31,10 @@ import socket
 import sys
 import textwrap
 import traceback
+
+import six
+from six.moves import configparser
+from six.moves import range
 
 # Load the gsutil version number and append it to boto.UserAgent so the value is
 # set before anything instantiates boto. This has to run after THIRD_PARTY_DIR
@@ -71,6 +77,8 @@ from gslib.exception import ControlCException
 import apitools.base.py.exceptions as apitools_exceptions
 from gslib.utils import boto_util
 from gslib.utils import constants
+from gslib.utils import system_util
+from gslib.utils import text_util
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import InitializeSignalHandling
 from gslib.sig_handling import RegisterSignalHandler
@@ -160,7 +168,7 @@ def _OutputAndExit(message, exception=None):
   else:
     err = '%s\n' % message
   try:
-    sys.stderr.write(err.encode(constants.UTF8))
+    text_util.print_to_fd(err, end='', file=sys.stderr)
   except UnicodeDecodeError:
     # Can happen when outputting invalid Unicode filenames.
     sys.stderr.write(err)
@@ -237,10 +245,8 @@ def main():
   global debug_level
   global test_exception_traces
 
-  if not (2, 7) <= sys.version_info[:3] < (3,):
-    raise CommandException('gsutil requires python 2.7.')
-
   boto_util.MonkeyPatchBoto()
+  system_util.MonkeyPatchHttp()
 
   # In gsutil 4.0 and beyond, we don't use the boto library for the JSON
   # API. However, we still store gsutil configuration data in the .boto
@@ -354,7 +360,7 @@ def main():
           config_items.extend(boto.config.items(config_section))
         except ConfigParser.NoSectionError:
           pass
-      for i in xrange(len(config_items)):
+      for i in range(len(config_items)):
         config_item_key = config_items[i][0]
         if config_item_key in CONFIG_KEYS_TO_REDACT:
           config_items[i] = (config_item_key, 'REDACTED')
@@ -455,6 +461,7 @@ def _CheckAndWarnForProxyDifferences():
 
 def _HandleUnknownFailure(e):
   # Called if we fall through all known/handled exceptions.
+  raise
   _OutputAndExit(message='Failure: %s.' % e, exception=e)
 
 
@@ -607,7 +614,18 @@ def _RunNamedCommandAndHandleExceptions(
   except boto.auth_handler.NotReadyToAuthenticate:
     _OutputAndExit(message='NotReadyToAuthenticate', exception=e)
   except OSError as e:
-    _OutputAndExit(message='OSError: %s.' % e.strerror, exception=e)
+    # In Python 3, IOError (next except) is an alias for OSError
+    # Sooo... we need the same logic here
+    if (e.errno == errno.EPIPE
+        or (system_util.IS_WINDOWS and e.errno == errno.EINVAL)
+        and not system_util.IsRunningInteractively()):
+      # If we get a pipe error, this just means that the pipe to stdout or
+      # stderr is broken. This can happen if the user pipes gsutil to a command
+      # that doesn't use the entire output stream. Instead of raising an error,
+      # just swallow it up and exit cleanly.
+      sys.exit(0)
+    else:
+      _OutputAndExit(message='OSError: %s.' % e.strerror, exception=e)
   except IOError as e:
     if (e.errno == errno.EPIPE
         or (system_util.IS_WINDOWS and e.errno == errno.EINVAL)

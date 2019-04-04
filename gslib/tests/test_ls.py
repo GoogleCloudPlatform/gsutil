@@ -15,6 +15,10 @@
 """Tests for ls command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from datetime import datetime
 import posixpath
 import re
@@ -60,7 +64,10 @@ from gslib.utils.constants import UTF8
 from gslib.utils.ls_helper import PrintFullInfoAboutObject
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_WINDOWS
-import mock
+
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 KMS_XML_SKIP_MSG = ('gsutil does not support KMS operations for S3 buckets, '
                     'or listing KMS keys with the XML API.')
@@ -285,7 +292,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_with_one_object(self):
     bucket_uri = self.CreateBucket()
-    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
@@ -295,7 +302,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_one_object_with_l(self):
     """Tests listing one object with -l."""
-    obj_uri = self.CreateObject(contents='foo')
+    obj_uri = self.CreateObject(contents=b'foo')
     stdout = self.RunGsUtil(['ls', '-l', suri(obj_uri)], return_stdout=True)
     output_items = stdout.split()
     self.assertTrue(output_items[0].isdigit())
@@ -305,7 +312,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_one_object_with_L(self):
     """Tests listing one object with -L."""
-    obj_uri = self.CreateObject(contents='foo')
+    obj_uri = self.CreateObject(contents=b'foo')
     # Ensure that creation and update don't take place in the same second.
     time.sleep(2)
     # Check that the creation time, rather than the updated time, is displayed.
@@ -400,7 +407,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_etag(self):
     """Tests that listing an object with an etag."""
     bucket_uri = self.CreateBucket()
-    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo')
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     # TODO: When testcase setup can use JSON, match against the exact JSON
     # etag.
     etag = obj_uri.get_key().etag.strip('"\'')
@@ -441,7 +448,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri],
                             return_stdout=True)
     # No labels are present by default.
-    self.assertRegexpMatches(stdout, r'Labels:\s+None')
+    self.assertRegex(stdout, r'Labels:\s+None')
 
     # Add a label and check that it shows up.
     self.RunGsUtil(['label', 'ch', '-l', 'labelkey:labelvalue', bucket_suri])
@@ -449,7 +456,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     label_regex = re.compile(
         r'Labels:\s+\{\s+"labelkey":\s+"labelvalue"\s+\}', re.MULTILINE)
-    self.assertRegexpMatches(stdout, label_regex)
+    self.assertRegex(stdout, label_regex)
 
   @SkipForS3('S3 bucket configuration values are not supported via ls.')
   def test_location(self):
@@ -556,7 +563,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_list_sizes(self):
     """Tests various size listing options."""
     bucket_uri = self.CreateBucket()
-    self.CreateObject(bucket_uri=bucket_uri, contents='x' * 2048)
+    self.CreateObject(bucket_uri=bucket_uri, contents=b'x' * 2048)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -612,14 +619,13 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # stdout/stderr-replacement code. That UniStream class replacement really
     # needs to be added to the site-packages on Windows python.
     object_name = u'Аудиоархив'
-    object_name_bytes = object_name.encode(UTF8)
     bucket_uri = self.CreateVersionedBucket()
-    key_uri = self.CreateObject(bucket_uri=bucket_uri, contents='foo',
+    key_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo',
                                 object_name=object_name)
     self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
     stdout = self.RunGsUtil(['ls', '-ael', suri(key_uri)],
                             return_stdout=True)
-    self.assertIn(object_name_bytes, stdout)
+    self.assertIn(object_name, stdout)
     if self.default_provider == 'gs':
       self.assertIn(str(key_uri.generation), stdout)
       self.assertIn(
@@ -636,7 +642,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_list_acl(self):
     """Tests that long listing includes an ACL."""
-    key_uri = self.CreateObject(contents='foo')
+    key_uri = self.CreateObject(contents=b'foo')
     stdout = self.RunGsUtil(['ls', '-L', suri(key_uri)], return_stdout=True)
     self.assertIn('ACL:', stdout)
     self.assertNotIn('ACCESS DENIED', stdout)
@@ -644,7 +650,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_list_gzip_content_length(self):
     """Tests listing a gzipped object."""
     file_size = 10000
-    file_contents = 'x' * file_size
+    file_contents = b'x' * file_size
     fpath = self.CreateTempFile(contents=file_contents, file_name='foo.txt')
     key_uri = self.CreateObject()
     self.RunGsUtil(['cp', '-z', 'txt', suri(fpath), suri(key_uri)])
@@ -653,9 +659,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       stdout = self.RunGsUtil(['ls', '-L', suri(key_uri)], return_stdout=True)
-      self.assertRegexpMatches(stdout, r'Content-Encoding:\s+gzip')
+      self.assertRegex(stdout, r'Content-Encoding:\s+gzip')
       find_content_length_re = r'Content-Length:\s+(?P<num>\d)'
-      self.assertRegexpMatches(stdout, find_content_length_re)
+      self.assertRegex(stdout, find_content_length_re)
       m = re.search(find_content_length_re, stdout)
       content_length = int(m.group('num'))
       self.assertGreater(content_length, 0)
@@ -680,7 +686,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_recursive_list_trailing_slash(self):
     """Tests listing an object with a trailing slash."""
     bucket_uri = self.CreateBucket()
-    self.CreateObject(bucket_uri=bucket_uri, object_name='/', contents='foo')
+    self.CreateObject(bucket_uri=bucket_uri, object_name='/', contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 1)
     stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
@@ -690,7 +696,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_recursive_list_trailing_two_slash(self):
     """Tests listing an object with two trailing slashes."""
     bucket_uri = self.CreateBucket()
-    self.CreateObject(bucket_uri=bucket_uri, object_name='//', contents='foo')
+    self.CreateObject(bucket_uri=bucket_uri, object_name='//', contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 1)
     stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
@@ -703,9 +709,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     wildcard_folder_object = 'wildcard*/'
     object_matching_folder = 'wildcard10/foo'
     self.CreateObject(bucket_uri=bucket_uri, object_name=wildcard_folder_object,
-                      contents='foo')
+                      contents=b'foo')
     self.CreateObject(bucket_uri=bucket_uri, object_name=object_matching_folder,
-                      contents='foo')
+                      contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 2)
     stderr = self.RunGsUtil(['ls', suri(bucket_uri, 'wildcard*')],
                             return_stderr=True, expected_status=1)
@@ -726,7 +732,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Bucket is not publicly readable by default.
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri,
-                                   object_name='permitted', contents='foo')
+                                   object_name='permitted', contents=b'foo')
     # Set this object to be publicly readable.
     self.RunGsUtil(['acl', 'set', 'public-read', suri(object_uri)])
     # Drop credentials.
@@ -754,7 +760,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                                 return_stdout=True)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)
       _ListExpectDecrypted()
 
     # Listing object without a key should return encrypted hashes.
@@ -766,7 +772,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertNotIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
       self.assertNotIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
       self.assertIn('encrypted', stdout)
-      self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64, stdout)
+      self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)
     _ListExpectEncrypted()
 
     # Listing object with a non-matching key should return encrypted hashes.
@@ -811,17 +817,17 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                                 return_stdout=True)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)
         self.assertNotIn(TEST_ENCRYPTION_CONTENT2_MD5, stdout)
         self.assertNotIn(TEST_ENCRYPTION_CONTENT2_CRC32C, stdout)
         self.assertIn('encrypted', stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY2_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY2_SHA256_B64.decode('ascii'), stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT3_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT3_CRC32C, stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY3_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY3_SHA256_B64.decode('ascii'), stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT4_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT4_CRC32C, stdout)
-        self.assertIn(TEST_ENCRYPTION_KEY4_SHA256_B64, stdout)
+        self.assertIn(TEST_ENCRYPTION_KEY4_SHA256_B64.decode('ascii'), stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT5_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT5_CRC32C, stdout)
 
@@ -852,12 +858,12 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
     # Default KMS key is not set by default.
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Default KMS key:\s+None')
+    self.assertRegex(stdout, r'Default KMS key:\s+None')
 
     # Default KMS key's name should be listed after being set on the bucket.
     key_fqn = self.set_default_kms_key_on_bucket(bucket_uri)
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Default KMS key:\s+%s' % key_fqn)
+    self.assertRegex(stdout, r'Default KMS key:\s+%s' % key_fqn)
 
   @SkipForXML(KMS_XML_SKIP_MSG)
   @SkipForS3(KMS_XML_SKIP_MSG)
@@ -866,12 +872,12 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     key_fqn = self.set_default_kms_key_on_bucket(bucket_uri)
     # Copy an object into our bucket and encrypt using the key from above.
     obj_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo', contents='foo',
+        bucket_uri=bucket_uri, object_name='foo', contents=b'foo',
         kms_key_name=key_fqn)
 
     stdout = self.RunGsUtil(['ls', '-L', suri(obj_uri)], return_stdout=True)
 
-    self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % key_fqn)
+    self.assertRegex(stdout, r'KMS key:\s+%s' % key_fqn)
 
   @SkipForXML(BUCKET_LOCK_SKIP_MSG)
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
@@ -879,11 +885,11 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucketWithRetentionPolicy(
         retention_period_in_seconds=1)
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Retention Policy\:\t*Present')
+    self.assertRegex(stdout, r'Retention Policy\:\t*Present')
     # Clearing Retention Policy on the bucket.
     self.RunGsUtil(['retention', 'clear', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertNotRegexpMatches(stdout, r'Retention Policy:')
+    self.assertNotRegex(stdout, r'Retention Policy:')
 
   @SkipForXML(BUCKET_LOCK_SKIP_MSG)
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
@@ -891,32 +897,32 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(['retention', 'event-default', 'set', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Default Event-Based Hold:\t* *True')
+    self.assertRegex(stdout, r'Default Event-Based Hold:\t* *True')
     # Clearing the default Event-Based Hold on the bucket.
     self.RunGsUtil(['retention', 'event-default', 'release', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertNotRegexpMatches(stdout, r'Default Event-Based Hold')
+    self.assertNotRegex(stdout, r'Default Event-Based Hold')
 
   @SkipForXML(BUCKET_LOCK_SKIP_MSG)
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_list_temporary_hold(self):
-    object_uri = self.CreateObject(contents='content')
+    object_uri = self.CreateObject(contents=b'content')
     self.RunGsUtil(['retention', 'temp', 'set', suri(object_uri)])
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Temporary Hold')
+    self.assertRegex(stdout, r'Temporary Hold')
     # Clearing the Temporary Hold on the object.
     self.RunGsUtil(['retention', 'temp', 'release', suri(object_uri)])
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
-    self.assertNotRegexpMatches(stdout, r'Temporary Hold')
+    self.assertNotRegex(stdout, r'Temporary Hold')
 
   @SkipForXML(BUCKET_LOCK_SKIP_MSG)
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_list_event_based_hold(self):
-    object_uri = self.CreateObject(contents='content')
+    object_uri = self.CreateObject(contents=b'content')
     self.RunGsUtil(['retention', 'event', 'set', suri(object_uri)])
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Event-Based Hold')
+    self.assertRegex(stdout, r'Event-Based Hold')
     # Clearing the Event-Based Hold on the object.
     self.RunGsUtil(['retention', 'event', 'release', suri(object_uri)])
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
-    self.assertNotRegexpMatches(stdout, r'Event-Based Hold')
+    self.assertNotRegex(stdout, r'Event-Based Hold')

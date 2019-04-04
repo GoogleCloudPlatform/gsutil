@@ -15,9 +15,14 @@
 """Implementation of Unix-like du command for cloud storage providers."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
+import locale
 import sys
 
+import six
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
@@ -29,7 +34,10 @@ from gslib.utils import ls_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
+from gslib.utils.text_util import print_to_fd
 from gslib.utils.unit_util import MakeHumanReadable
+from gslib.utils import text_util
+
 
 _SYNOPSIS = """
   gsutil du url...
@@ -140,9 +148,10 @@ class DuCommand(Command):
 
   def _PrintSummaryLine(self, num_bytes, name):
     size_string = (MakeHumanReadable(num_bytes)
-                   if self.human_readable else str(num_bytes))
-    sys.stdout.write('%(size)-11s  %(name)s%(ending)s' % {
-        'size': size_string, 'name': name, 'ending': self.line_ending})
+                   if self.human_readable else six.text_type(num_bytes))
+    text_util.print_to_fd('{size:<11}  {name}'.format(
+        size=size_string,
+        name=six.ensure_text(name)), end=self.line_ending)
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
     """Print listing info for given bucket_listing_ref.
@@ -171,10 +180,11 @@ class DuCommand(Command):
       num_objs = 1
 
     if not self.summary_only:
-      sys.stdout.write('%(size)-11s  %(url)s%(ending)s' % {
-          'size': size_string,
-          'url': url_str.encode(UTF8),
-          'ending': self.line_ending})
+      url_detail = '{size:<11}  {url}{ending}'.format(
+          size=size_string,
+          url=six.ensure_text(url_str),
+          ending=six.ensure_text(self.line_ending))
+      print_to_fd(url_detail, file=sys.stdout, end='')
 
     return (num_objs, num_bytes)
 
@@ -203,14 +213,12 @@ class DuCommand(Command):
         elif o == '-X':
           if a == '-':
             f = sys.stdin
+            f_close = False
           else:
-            f = open(a, 'r')
-          try:
-            for line in f:
-              line = line.strip().decode(UTF8)
-              if line:
-                self.exclude_patterns.append(line)
-          finally:
+            f = open(a, 'r') if six.PY2 else open(a, 'r', encoding=UTF8)
+            f_close = True
+          self.exclude_patterns = [six.ensure_text(line.strip()) for line in f]
+          if f_close:
             f.close()
 
     if not self.args:

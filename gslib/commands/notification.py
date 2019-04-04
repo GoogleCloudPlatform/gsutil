@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import getopt
 import re
@@ -466,7 +468,7 @@ class NotificationCommand(Command):
       channel = self.gsutil_api.WatchBucket(
           bucket_url.bucket_name, watch_url, identifier, token=client_token,
           provider=bucket_url.scheme)
-    except AccessDeniedException, e:
+    except AccessDeniedException as e:
       self.logger.warn(NOTIFICATION_AUTHORIZATION_FAILED_MESSAGE.format(
           watch_error=str(e), watch_url=watch_url))
       raise

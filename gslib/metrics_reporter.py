@@ -13,6 +13,11 @@
 # limitations under the License.
 """Script for reporting metrics."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import logging
 import os
 import pickle
@@ -40,7 +45,7 @@ except:  # pylint: disable=bare-except
   try:
     import errno
     # Fall back to httplib (no proxy) if we can't import libraries normally.
-    import httplib
+    from six.moves import http_client
 
     def GetNewHttp():
       """Returns an httplib-based metrics reporter."""
@@ -54,7 +59,7 @@ except:  # pylint: disable=bare-except
         def request(self, endpoint, method=None, body=None,
                     headers=None):
           # Strip 'https://'
-          https_con = httplib.HTTPSConnection(endpoint[8:].split('/')[0])
+          https_con = http_client.HTTPSConnection(endpoint[8:].split('/')[0])
           https_con.request(method, endpoint, body=body,
                             headers=headers)
           response = https_con.getresponse()
@@ -67,7 +72,7 @@ except:  # pylint: disable=bare-except
     def ConfigureCertsFile():
       pass
 
-    def CreateDirIfNeeded(dir_path, mode=0777):
+    def CreateDirIfNeeded(dir_path, mode=0o777):
       """See the same-named method in gslib.utils.system_util."""
       if not os.path.exists(dir_path):
         try:

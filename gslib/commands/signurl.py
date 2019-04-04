@@ -18,6 +18,9 @@ see: https://cloud.google.com/storage/docs/access-control#Signed-URLs)
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import base64
 import calendar
@@ -27,8 +30,10 @@ import getpass
 import hashlib
 import json
 import re
-import urllib
+import sys
 
+import six
+from six.moves import urllib
 from apitools.base.py.exceptions import HttpError
 from apitools.base.py.http_wrapper import MakeRequest
 from apitools.base.py.http_wrapper import Request
@@ -250,17 +255,17 @@ def _GenSignedUrl(key, client_id, method, duration,
   canonical_scope = '{date}/{region}/storage/goog4_request'.format(
       date=canonical_day, region=region)
 
-  signed_query_params = {}
-  signed_query_params['x-goog-algorithm'] = _SIGNING_ALGO
-  signed_query_params['x-goog-credential'] = client_id + '/' + canonical_scope
-  signed_query_params['x-goog-date'] = canonical_time
-  signed_query_params['x-goog-signedheaders'] = ';'.join(
-      sorted(signed_headers.keys()))
-  signed_query_params['x-goog-expires'] = '%d' % duration.total_seconds()
+  signed_query_params = {
+    'x-goog-algorithm': _SIGNING_ALGO,
+    'x-goog-credential': client_id + '/' + canonical_scope,
+    'x-goog-date': canonical_time,
+    'x-goog-signedheaders': ';'.join(sorted(signed_headers.keys())),
+    'x-goog-expires': '%d' % duration.total_seconds()
+  }
 
   canonical_resource = '/{}'.format(gcs_path)
   canonical_query_string = '&'.join(
-      ['{}={}'.format(param, urllib.quote_plus(signed_query_params[param]))
+      ['{}={}'.format(param, urllib.parse.quote_plus(signed_query_params[param]))
        for param in sorted(signed_query_params.keys())])
   canonical_headers = '\n'.join(
       ['{}:{}'.format(header.lower(), signed_headers[header])
@@ -272,10 +277,13 @@ def _GenSignedUrl(key, client_id, method, duration,
       query_string=canonical_query_string, headers=canonical_headers,
       signed_headers=canonical_signed_headers, hashed_payload=_UNSIGNED_PAYLOAD)
 
+  if six.PY3:
+    canonical_request = canonical_request.encode()
+
   canonical_request_hasher = hashlib.sha256()
   canonical_request_hasher.update(canonical_request)
   hashed_canonical_request = base64.b16encode(
-      canonical_request_hasher.digest()).lower()
+      canonical_request_hasher.digest()).lower().decode()
 
   string_to_sign = _STRING_TO_SIGN_FORMAT.format(
       signing_algo=_SIGNING_ALGO, request_time=canonical_time,
@@ -287,7 +295,20 @@ def _GenSignedUrl(key, client_id, method, duration,
     logger.debug('String to sign (ignore opening/closing brackets): [[[%s]]]'
                  % string_to_sign)
 
-  signature = base64.b16encode(sign(key, string_to_sign, 'RSA-SHA256')).lower()
+  if six.PY2:
+    digest = b'RSA-SHA256'
+  else:
+    # Your IDE may complain about this due to a bad docstring in pyOpenSsl:
+    # https://github.com/pyca/pyopenssl/issues/741
+    digest = 'RSA-SHA256'
+
+  # If string looks like u'...', strip off the u' '
+  # See: https://github.com/GoogleCloudPlatform/gsutil/pull/619/files/19fe4b93543d1423f10792c96de2edc4a5a06db9#r256283790
+  if string_to_sign[:2] == "'u" and string_to_sign[-1:] == "'":
+    string_to_sign = string_to_sign[2:-1]
+
+  signature = base64.b16encode(
+      sign(key, string_to_sign, digest)).lower().decode()
 
   final_url = _SIGNED_URL_FORMAT.format(
       host=gs_host, path=gcs_path, sig=signature,
@@ -328,7 +349,9 @@ def _ReadJSONKeystore(ks_contents, passwd=None):
     ValueError: If unable to parse ks_contents or keystore is missing
                 required fields.
   """
-  ks = json.loads(ks_contents)
+  # ensuring that json.loads receives unicode in Python 3 and bytes in Python 2
+  # Previous to Python 3.6, there was no automatic conversion and str was req.
+  ks = json.loads(six.ensure_str(ks_contents))
 
   if 'client_email' not in ks or 'private_key' not in ks:
     raise ValueError('JSON keystore doesn\'t contain required fields')
@@ -382,6 +405,9 @@ class UrlSignCommand(Command):
     region = _AUTO_DETECT_REGION
 
     for o, v in self.sub_opts:
+      # TODO(PY3-ONLY): Delete this if block.
+      if six.PY2:
+        v = v.decode(sys.stdin.encoding or UTF8)
       if o == '-d':
         if delta is not None:
           delta += _DurationToTimeDelta(v)
@@ -481,7 +507,7 @@ class UrlSignCommand(Command):
         raise CommandException('Unable to parse private key from {0}'.format(
             self.args[0]))
 
-    print 'URL\tHTTP Method\tExpiration\tSigned URL'
+    print('URL\tHTTP Method\tExpiration\tSigned URL')
     for url in storage_urls:
       if url.scheme != 'gs':
         raise CommandException('Can only create signed urls from gs:// urls')
@@ -499,7 +525,7 @@ class UrlSignCommand(Command):
         # Need to url encode the object name as Google Cloud Storage does when
         # computing the string to sign when checking the signature.
         gcs_path = '{0}/{1}'.format(url.bucket_name,
-                                    urllib.quote(url.object_name.encode(UTF8)))
+                                    urllib.parse.quote(url.object_name.encode(UTF8)))
 
       if region == _AUTO_DETECT_REGION:
         if url.bucket_name in region_cache:
@@ -508,7 +534,7 @@ class UrlSignCommand(Command):
           try:
             _, bucket = self.GetSingleBucketUrlFromArg(
                 'gs://{}'.format(url.bucket_name), bucket_fields=['location'])
-          except Exception, e:
+          except Exception as e:
             raise CommandException(
                 '{}: Failed to auto-detect location for bucket \'{}\'. Please '
                 'ensure you have storage.buckets.get permission on the bucket '
@@ -526,10 +552,19 @@ class UrlSignCommand(Command):
       expiration = calendar.timegm((datetime.utcnow() + delta).utctimetuple())
       expiration_dt = datetime.fromtimestamp(expiration)
 
-      print '{0}\t{1}\t{2}\t{3}'.format(url.url_string.encode(UTF8), method,
-                                        (expiration_dt
-                                         .strftime('%Y-%m-%d %H:%M:%S')),
-                                        final_url.encode(UTF8))
+      time_str = expiration_dt.strftime('%Y-%m-%d %H:%M:%S')
+      # TODO(PY3-ONLY): Delete this if block.
+      if six.PY2:
+        time_str = time_str.decode(UTF8)
+
+      url_info_str = '{0}\t{1}\t{2}\t{3}'.format(
+          url.url_string, method, time_str, final_url)
+
+      # TODO(PY3-ONLY): Delete this if block.
+      if six.PY2:
+        url_info_str = url_info_str.encode(UTF8)
+
+      print(url_info_str)
 
       response_code = self._ProbeObjectAccessWithClient(
           key, client_email, gcs_path, self.logger, bucket_region)

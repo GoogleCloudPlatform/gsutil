@@ -22,6 +22,9 @@ helpers belong in individual subclasses.
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import codecs
 from collections import namedtuple
@@ -975,9 +978,9 @@ class Command(HelpProvider):
           gsutil_api.PatchObjectMetadata(url.bucket_name, url.object_name,
                                          object_metadata, provider=url.scheme,
                                          generation=url.generation)
-    except ArgumentException, e:
+    except ArgumentException as e:
       raise
-    except ServiceException, e:
+    except ServiceException as e:
       if self.continue_on_error:
         self.everything_set_okay = False
         self.logger.error(e)
@@ -1061,8 +1064,8 @@ class Command(HelpProvider):
       try:
         acl = self.gsutil_api.XmlPassThroughGetAcl(
             url, def_obj_acl=self.def_acl, provider=url.scheme)
-        print acl.to_xml()
-      except AccessDeniedException, _:
+        print(acl.to_xml())
+      except AccessDeniedException as _:
         self._WarnServiceAccounts()
         raise
     else:
@@ -1086,7 +1089,8 @@ class Command(HelpProvider):
         # if the user has 403 access denied or 400 invalid argument.
         if not acl:
           self._ListAccessControlsAcl(url)
-      print AclTranslation.JsonFromMessage(acl)
+
+      print(AclTranslation.JsonFromMessage(acl))
 
   def _ListAccessControlsAcl(self, storage_url):
     """Returns either bucket or object access controls for a storage url.
@@ -1484,17 +1488,17 @@ class Command(HelpProvider):
 
       # Try to get the next argument, handling any exceptions that arise.
       try:
-        args = args_iterator.next()
-      except StopIteration, e:
+        args = next(args_iterator)
+      except StopIteration as e:
         break
-      except Exception, e:  # pylint: disable=broad-except
+      except Exception as e:  # pylint: disable=broad-except
         _IncrementFailureCount()
         if fail_on_error:
           raise
         else:
           try:
             exception_handler(self, e)
-          except Exception, _:  # pylint: disable=broad-except
+          except Exception as _:  # pylint: disable=broad-except
             self.logger.debug(
                 'Caught exception while handling exception for %s:\n%s',
                 func, traceback.format_exc())
@@ -1945,10 +1949,10 @@ class ProducerThread(threading.Thread):
       self.args_iterator = iter(self.args_iterator)
       while True:
         try:
-          args = self.args_iterator.next()
-        except StopIteration, e:
+          args = next(self.args_iterator)
+        except StopIteration as e:
           break
-        except Exception, e:  # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
           _IncrementFailureCount()
           if self.fail_on_error:
             self.iterator_exception = e
@@ -1956,7 +1960,7 @@ class ProducerThread(threading.Thread):
           else:
             try:
               self.exception_handler(self.cls, e)
-            except Exception, _:  # pylint: disable=broad-except
+            except Exception as _:  # pylint: disable=broad-except
               self.cls.logger.debug(
                   'Caught exception while handling exception for %s:\n%s',
                   self.func, traceback.format_exc())
@@ -2010,7 +2014,7 @@ class ProducerThread(threading.Thread):
                           self.arg_checker, self.fail_on_error)
           if last_task:
             self.task_queue.put(last_task)
-    except Exception, e:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
       # This will also catch any exception raised due to an error in the
       # iterator when fail_on_error is set, so check that we failed for some
       # other reason before claiming that we had an unknown exception.
@@ -2180,14 +2184,14 @@ class WorkerThread(threading.Thread):
       if task.should_return_results:
         global_return_values_map.Increment(caller_id, [results],
                                            default_value=[])
-    except Exception, e:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
       _IncrementFailureCount()
       if task.fail_on_error:
         raise  # Only happens for single thread and process case.
       else:
         try:
           task.exception_handler(cls, e)
-        except Exception, _:  # pylint: disable=broad-except
+        except Exception as _:  # pylint: disable=broad-except
           # Don't allow callers to raise exceptions here and kill the worker
           # threads.
           cls.logger.debug(
@@ -2396,4 +2400,3 @@ def ResetFailureCount():
   """Resets the failure_count variable to 0 - useful if error is expected."""
   global failure_count
   failure_count.Reset()
-
