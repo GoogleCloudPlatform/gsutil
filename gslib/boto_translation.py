@@ -735,7 +735,8 @@ class BotoTranslation(CloudApi):
                            canned_acl=None, progress_callback=None,
                            headers=None):
     dst_uri.set_contents_from_file(upload_stream, md5=md5, policy=canned_acl,
-                                   cb=progress_callback, headers=headers)
+                                   cb=progress_callback, headers=headers,
+                                   rewind=True)
 
   def _PerformStreamingUpload(self, dst_uri, upload_stream, canned_acl=None,
                               progress_callback=None, headers=None):
