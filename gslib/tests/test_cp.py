@@ -609,7 +609,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             stdin='bar', return_stderr=True)
     self.assertIn('Copying from <STDIN>', stderr)
     key_uri = bucket_uri.clone_replace_name('foo')
-    self.assertEqual(key_uri.get_contents_as_string(), b'bar\n')
+    self.assertEqual(key_uri.get_contents_as_string(), b'bar')
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
