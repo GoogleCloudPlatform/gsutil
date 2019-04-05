@@ -820,10 +820,10 @@ def _EncodeUrl(url_string):
   Returns:
     encoded URL.
   """
+  url = urllib.parse.unquote_plus(url_string)
   if six.PY2:
-    return urllib.parse.quote_plus(url_string.encode(constants.UTF8))
-  else:
-    return urllib.parse.quote_plus(url_string)
+    url = url.encode(constants.UTF8)
+  return url
 
 
 def _DecodeUrl(enc_url_string):
@@ -835,11 +835,10 @@ def _DecodeUrl(enc_url_string):
   Returns:
     decoded URL.
   """
+  url = urllib.parse.unquote_plus(enc_url_string)
   if six.PY2:
-    return urllib.parse.unquote_plus(enc_url_string).decode(constants.UTF8)
-  else:
-    return urllib.parse.unquote_plus(enc_url_string)
-
+    url = url.decode(constants.UTF8)
+  return url
 
 # pylint: disable=bare-except
 def _BatchSort(in_iter, out_file):
