@@ -171,6 +171,9 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
     """Tests unaligned writes to the download stream from GetObjectMedia."""
     with open(self.test_data_file, 'rb') as stream:
       chunk = stream.read(TRANSFER_BUFFER_SIZE)
+    # Though it may seem equivalent, the `:1` is actually necessary, without
+    # it in python 3, `one_byte` would be int(77) and with it, `one_byte` is
+    # the expected value of b'M' (using case where start of chunk is b'MJoTM...')
     one_byte = chunk[0:1]
     chunk_minus_one_byte = chunk[1:TRANSFER_BUFFER_SIZE]
     half_chunk = chunk[0:TRANSFER_BUFFER_SIZE//2]
