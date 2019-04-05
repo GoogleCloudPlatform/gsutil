@@ -881,9 +881,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     ] + cmd
     if stdin is not None:
       if six.PY3:
-        if isinstance(stdin, bytes):
-          stdin = six.ensure_binary(stdin)
-        else:
+        if not isinstance(stdin, bytes):
           stdin = stdin.encode('utf-8')
       else:
         stdin = stdin.encode('utf-8')
