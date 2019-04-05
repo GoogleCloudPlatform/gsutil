@@ -343,19 +343,32 @@ class BotoResumableUpload(object):
     # in debug stream.
     http_conn.set_debuglevel(0)
     while buf:
-      buf_bytes = buf
-      if six.PY3:
-        if isinstance(buf, str):
+      # Some code is duplicated here, but separating the PY2 and PY3 paths makes
+      # this easier to remove PY2 blocks when we move to PY3 only.
+      if six.PY2:
+        http_conn.send(buf)
+        total_bytes_uploaded += len(buf)
+      else:
+        if isinstance(buf, bytes):
+          http_conn.send(buf)
+          total_bytes_uploaded += len(buf)
+        else:
+          # Probably a unicode/str object, try encoding.
           buf_bytes = buf.encode('utf-8')
-      http_conn.send(buf_bytes)
-      total_bytes_uploaded += len(buf)
+          http_conn.send(buf_bytes)
+          total_bytes_uploaded += len(buf_bytes)
+
       if cb:
         i += 1
         if i == cb_count or cb_count == -1:
           cb(total_bytes_uploaded, file_length)
           i = 0
+
       buf = fp.read(self.BUFFER_SIZE)
+
+    # Restore http connection debug level.
     http_conn.set_debuglevel(conn.debug)
+
     if cb:
       cb(total_bytes_uploaded, file_length)
     if total_bytes_uploaded != file_length:
@@ -366,10 +379,8 @@ class BotoResumableUpload(object):
           'File changed during upload: EOF at %d bytes of %d byte file.' %
           (total_bytes_uploaded, file_length),
           ResumableTransferDisposition.ABORT)
-    resp = http_conn.getresponse()
-    # Restore http connection debug level.
-    http_conn.set_debuglevel(conn.debug)
 
+    resp = http_conn.getresponse()
     if resp.status == 200:
       # Success.
       return (resp.getheader('etag'),
