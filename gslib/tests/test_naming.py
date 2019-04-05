@@ -30,8 +30,8 @@ service) are available via the gsutil test command.
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import gzip
@@ -50,7 +50,7 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetDummyProjectForUnitTest
 from gslib.tests.util import unittest
-from gslib.utils import constants
+from gslib.utils.constants import UTF8
 from gslib.utils import copy_helper
 from gslib.utils import system_util
 
@@ -687,11 +687,12 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                                                      'd1/d2/foo3'])
     output = self.RunCommand('ls', [suri(src_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(src_bucket_uri, 'foo1').encode('utf-8'),
-                    suri(src_bucket_uri, 'd1', ':').encode('utf-8'),
-                    (suri(src_bucket_uri, 'd1', 'd2') + src_bucket_uri.delim).encode('utf-8'),
-                    suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
-                    suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')])
+    expected = set(uri.encode(UTF8) for uri in [
+        suri(src_bucket_uri, 'foo1'),
+        suri(src_bucket_uri, 'd1', ':'),
+        suri(src_bucket_uri, 'd1', 'd2') + src_bucket_uri.delim,
+        suri(src_bucket_uri, 'd0', ':'),
+        suri(src_bucket_uri, 'd0', 'foo2')])
     expected.add(b'')  # Blank line between subdir listings.
     actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
@@ -702,12 +703,13 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                                                      'd1/d2/foo3'])
     output = self.RunCommand('ls', ['-R', suri(src_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(src_bucket_uri, 'foo1').encode('utf-8'),
-                    suri(src_bucket_uri, 'd1', ':').encode('utf-8'),
-                    suri(src_bucket_uri, 'd1', 'd2', ':').encode('utf-8'),
-                    suri(src_bucket_uri, 'd1', 'd2', 'foo3').encode('utf-8'),
-                    suri(src_bucket_uri, 'd0', ':').encode('utf-8'),
-                    suri(src_bucket_uri, 'd0', 'foo2').encode('utf-8')])
+    expected = set(uri.encode(UTF8) for uri in [
+        suri(src_bucket_uri, 'foo1'),
+        suri(src_bucket_uri, 'd1', ':'),
+        suri(src_bucket_uri, 'd1', 'd2', ':'),
+        suri(src_bucket_uri, 'd1', 'd2', 'foo3'),
+        suri(src_bucket_uri, 'd0', ':'),
+        suri(src_bucket_uri, 'd0', 'foo2')])
     expected.add(b'')  # Blank line between subdir listings.
     actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)

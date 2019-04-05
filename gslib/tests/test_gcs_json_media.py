@@ -35,6 +35,10 @@ from six import add_move, MovedModule
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
+
+# Assigning string representations of the appropriate package, used for
+# '@mock.patch` methods that take a string in the following format:
+# "package.module.ClassName"
 if six.PY2:
   https_connection = 'httplib.HTTPSConnection'
 else:

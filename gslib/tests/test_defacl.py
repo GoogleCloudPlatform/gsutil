@@ -38,9 +38,6 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
   _defacl_get_prefix = ['defacl', 'get']
   _defacl_set_prefix = ['defacl', 'set']
 
-  def setUp(self):
-    super(TestDefacl, self).setUp()
-
   def _MakeScopeRegex(self, role, entity_type, email_address):
     template_regex = (r'\{.*"entity":\s*"%s-%s".*"role":\s*"%s".*\}' %
                       (entity_type, email_address, role))

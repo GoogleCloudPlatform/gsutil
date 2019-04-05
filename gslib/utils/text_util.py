@@ -197,15 +197,51 @@ def GetPrintableExceptionString(exc):
 
 
 def InsistAscii(string, message):
+  """Ensures that the string passed in consists of only ASCII values.
+
+  Args:
+    string: Union[str, unicode, bytes] Text that will be checked for
+        ASCII values.
+    message: Union[str, unicode, bytes] Error message, passed into the
+        exception, in the event that the check on `string` fails.
+
+  Returns:
+    None
+
+  Raises:
+    CommandException
+  """
   if not all(ord(c) < 128 for c in string):
     raise CommandException(message)
 
 
 def InsistAsciiHeader(header):
+  """Checks for ASCII-only characters in `header`.
+
+    Also constructs an error message using `header` if the check fails.
+
+    Args:
+      header: Union[str, binary, unicode] Text being checked for ASCII values.
+
+    Returns:
+      None
+    """
   InsistAscii(header, 'Invalid non-ASCII header (%s).' % header)
 
 
 def InsistAsciiHeaderValue(header, value):
+  """Checks for ASCII-only characters in `value`.
+
+  Also constructs an error message using `header` and `value` if the check
+  fails.
+
+  Args:
+    header: Header name, only used in error message in case of an exception.
+    value: Union[str, binary, unicode] Text being checked for ASCII values.
+
+  Returns:
+    None
+  """
   InsistAscii(
       value,
       'Invalid non-ASCII value (%s) was provided for header %s.\nOnly ASCII '
@@ -214,26 +250,19 @@ def InsistAsciiHeaderValue(header, value):
 
 
 def InsistOnOrOff(value, message):
-  if value != 'on' and value != 'off':
-    raise CommandException(message)
+  """Ensures that the value passed in consists of only "on" or "off"
 
+  Args:
+    value: (unicode) Unicode string that will be checked for correct text.
+    message: Union[str, unicode, bytes] Error message passed into the exception
+        in the event that the check on value fails.
 
-def InsistOnOrOff(value, message):
-  if value != 'on' and value != 'off':
-    raise CommandException(message)
+  Returns:
+    None
 
-
-def InsistOnOrOff(value, message):
-  if value != 'on' and value != 'off':
-    raise CommandException(message)
-
-
-def InsistOnOrOff(value, message):
-  if value != 'on' and value != 'off':
-    raise CommandException(message)
-
-
-def InsistOnOrOff(value, message):
+  Raises:
+    CommandException
+  """
   if value != 'on' and value != 'off':
     raise CommandException(message)
 

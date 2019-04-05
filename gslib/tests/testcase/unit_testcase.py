@@ -181,6 +181,10 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     Returns:
       One or a tuple of requested return values, depending on whether
       return_stdout, return_stderr, and/or return_log_handler were specified.
+      Return Types:
+        stdout - binary
+        stderr - str (binary in Py2, text in Py3)
+        log_handler - MockLoggingHandler
     """
     args = args or []
 

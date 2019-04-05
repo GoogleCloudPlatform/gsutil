@@ -330,17 +330,17 @@ class LsCommand(Command):
     location_constraint = bucket.location
     storage_class = bucket.storageClass
     fields = {
-      'bucket': bucket_blr.url_string,
-      'storage_class': storage_class,
-      'location_constraint': location_constraint,
-      'acl': AclTranslation.JsonFromMessage(bucket.acl),
-      'default_acl': AclTranslation.JsonFromMessage(bucket.defaultObjectAcl),
-      'versioning': bucket.versioning and bucket.versioning.enabled,
-      'website_config': 'Present' if bucket.website else 'None',
-      'logging_config': 'Present' if bucket.logging else 'None',
-      'cors_config': 'Present' if bucket.cors else 'None',
-      'lifecycle_config': 'Present' if bucket.lifecycle else 'None',
-      'requester_pays': bucket.billing and bucket.billing.requesterPays
+        'bucket': bucket_blr.url_string,
+        'storage_class': storage_class,
+        'location_constraint': location_constraint,
+        'acl': AclTranslation.JsonFromMessage(bucket.acl),
+        'default_acl': AclTranslation.JsonFromMessage(bucket.defaultObjectAcl),
+        'versioning': bucket.versioning and bucket.versioning.enabled,
+        'website_config': 'Present' if bucket.website else 'None',
+        'logging_config': 'Present' if bucket.logging else 'None',
+        'cors_config': 'Present' if bucket.cors else 'None',
+        'lifecycle_config': 'Present' if bucket.lifecycle else 'None',
+        'requester_pays': bucket.billing and bucket.billing.requesterPays
     }
     if bucket.retentionPolicy:
       fields['retention_policy'] = 'Present'

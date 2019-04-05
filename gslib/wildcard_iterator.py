@@ -54,12 +54,12 @@ if six.PY3:
 FLAT_LIST_REGEX = re.compile(r'(?P<before>.*?)\*\*(?P<after>.*)')
 
 _UNICODE_EXCEPTION_TEXT = (
-  'Invalid Unicode path encountered (%s). gsutil cannot proceed '
-  'with such files present. Please remove or rename this file and '
-  'try again. NOTE: the path printed above replaces the '
-  'problematic characters with a hex-encoded printable '
-  'representation. For more details (including how to convert to a '
-  'gsutil-compatible encoding) see `gsutil help encoding`.')
+    'Invalid Unicode path encountered (%s). gsutil cannot proceed '
+    'with such files present. Please remove or rename this file and '
+    'try again. NOTE: the path printed above replaces the '
+    'problematic characters with a hex-encoded printable '
+    'representation. For more details (including how to convert to a '
+    'gsutil-compatible encoding) see `gsutil help encoding`.')
 
 
 class WildcardIterator(object):
