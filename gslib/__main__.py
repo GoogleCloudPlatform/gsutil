@@ -36,6 +36,8 @@ import six
 from six.moves import configparser
 from six.moves import range
 
+from gslib.utils.version_check import check_python_version_support
+
 # Load the gsutil version number and append it to boto.UserAgent so the value is
 # set before anything instantiates boto. This has to run after THIRD_PARTY_DIR
 # is modified (done in gsutil.py) but before any calls are made that would cause
@@ -244,6 +246,11 @@ def main():
 
   global debug_level
   global test_exception_traces
+
+  supported, err = check_python_version_support()
+  if not supported:
+    raise CommandException(err)
+    sys.exit(1)
 
   boto_util.MonkeyPatchBoto()
   system_util.MonkeyPatchHttp()
