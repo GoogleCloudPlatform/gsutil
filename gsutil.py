@@ -29,10 +29,10 @@ import warnings
 
 if not ((2, 6) <= sys.version_info[:3] < (3,)
         or (3, 4) <= sys.version_info[:3]):
-    sys.exit('gsutil requires python 2.7 or 3.4+.')
+    sys.exit('gsutil requires python 2.7 or 3.5+.')
 
 # setup a string to load the correct httplib2
-if sys.version_info[0] == 2:
+if sys.version_info.major == 2:
     submodule_pyvers = 'python2'
 else:
     submodule_pyvers = 'python3'
