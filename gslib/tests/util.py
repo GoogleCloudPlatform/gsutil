@@ -570,8 +570,7 @@ def GetTestNames():
 def is_file(obj):
   if six.PY2:
     return isinstance(obj, file)
-  else:
-    return isinstance(obj, io.IOBase)
+  return isinstance(obj, io.IOBase)
 
 
 def MakeBucketNameValid(name):
