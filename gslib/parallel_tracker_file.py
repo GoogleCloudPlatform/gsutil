@@ -78,9 +78,6 @@ def ReadParallelUploadTrackerFile(tracker_file_name, logger):
     tracker_data = tracker_file.read()
     tracker_json = json.loads(tracker_data)
     enc_key_sha256 = tracker_json[_CompositeUploadTrackerEntry.ENC_SHA256]
-    if six.PY3:
-      if enc_key_sha256:
-        enc_key_sha256.encode('ascii')
     prefix = tracker_json[_CompositeUploadTrackerEntry.PREFIX]
     for component in tracker_json[
         _CompositeUploadTrackerEntry.COMPONENTS_LIST]:
