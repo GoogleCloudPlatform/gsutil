@@ -207,53 +207,22 @@ def TailSet(start_point, listing):
   return set(l[len(start_point):] for l in listing.strip().split('\n'))
 
 
-def _HasS3Credentials():
-  return (boto.config.get('Credentials', 'aws_access_key_id', None) and
+HAS_S3_CREDS = (boto.config.get('Credentials', 'aws_access_key_id', None) and
           boto.config.get('Credentials', 'aws_secret_access_key', None))
 
-HAS_S3_CREDS = _HasS3Credentials()
+_GS_HOST = boto.config.get('Credentials', 'gs_host', None)
+_DEFAULT_HOST = six.ensure_str(boto.gs.connection.GSConnection.DefaultHost)
 
+if _GS_HOST is not None:
+  HAS_NON_DEFAULT_GS_HOST = _DEFAULT_HOST == six.ensure_str(_GS_HOST)
+else:
+  HAS_NON_DEFAULT_GS_HOST = False
 
-def _HasGSHost():
-  return boto.config.get('Credentials', 'gs_host', None) is not None
+HAS_GS_HOST = _GS_HOST is not None
 
+HAS_GS_PORT = boto.config.get('Credentials', 'gs_port', None) is not None
 
-def string_compare(a, b, encoding='utf-8'):
-  """Function to compare two strings, regardless of their encoding.
-
-  Added as a helper for Python 2 to 3 conversion, since there are some
-  instances where we will want to compare u'string' to b'string'.
-  Credit for this function goes to StackOverflow:
-  https://stackoverflow.com/a/37869996
-
-  Args:
-      a: String to be compared, either bytes or unicode.
-      b: String to be compared, either bytes or unicode.
-
-  Returns:
-      Boolean, representing if strings a and b are equal.
-  """
-  if isinstance(a, bytes):
-    a = a.decode(encoding)
-  if isinstance(b, bytes):
-    b = b.decode(encoding)
-  return a == b
-
-
-HAS_GS_HOST = _HasGSHost()
-HAS_NON_DEFAULT_GS_HOST = string_compare(boto.gs.connection.GSConnection.DefaultHost, boto.config.get('Credentials', 'gs_host', None))
-
-
-def _HasGSPort():
-  return boto.config.get('Credentials', 'gs_port', None) is not None
-
-HAS_GS_PORT = _HasGSPort()
-
-
-def _UsingJSONApi():
-  return boto.config.get('GSUtil', 'prefer_api', 'json').upper() != 'XML'
-
-USING_JSON_API = _UsingJSONApi()
+USING_JSON_API = boto.config.get('GSUtil', 'prefer_api', 'json').upper() != 'XML'
 
 
 def _ArgcompleteAvailable():
