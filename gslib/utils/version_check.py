@@ -22,7 +22,7 @@ from sys import version_info
 # Value: Int, min supported Python minor version
 # We currently support Python ==2.7 and >=3.5
 MIN_SUPPORTED_PYTHON_VERSION = {
-    2: 7
+    2: 7,
     3: 5
 }
 
