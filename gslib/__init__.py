@@ -32,9 +32,14 @@ import sys
 import tempfile
 
 import gslib.exception  # pylint: disable=g-import-not-at-top
-from gslib.utils import version_check
+from gslib.utils.version_check import check_python_version_support
 
-version_check.check_python_version_support()
+
+supported, err = check_python_version_support()
+if not supported:
+  raise CommandException(err)
+  exit(1)
+
 
 coverage_outfile = os.getenv('GSUTIL_COVERAGE_OUTPUT_FILE', None)
 if coverage_outfile:

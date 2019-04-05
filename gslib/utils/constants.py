@@ -39,12 +39,6 @@ from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
 
 
-# Key:   Int, Python major version
-# Value: Sorted tuple of ints, Python minor versions
-SUPPORTED_PYTHON_VERSIONS = {
-    2: (7,),
-    3: (5,6,7)
-}
 
 # Readable descriptions for httplib2 logging levels.
 DEBUGLEVEL_DUMP_REQUESTS = 3

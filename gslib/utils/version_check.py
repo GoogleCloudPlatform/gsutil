@@ -15,51 +15,50 @@
 """Utility functions to ensure the correct version of Python is used."""
 
 import sys
-from sys import version_info as SYS_VER
+from sys import version_info
 
-from gslib.utils import constants
+
+# Key:   Int, supported Python major version
+# Value: Int, min supported Python minor version
+# We currently support Python ==2.7 and >=3.5
+MIN_SUPPORTED_PYTHON_VERSION = {
+    2: 7
+    3: 5
+}
 
 
 def check_python_version_support():
-  """Exit if gsutil is being run in an incompatible version of Python.
+  """Return an exception if running in an unsupported version of Python.
 
   This function compares the running version of cPython and against the list
-  of supported python versions maintained in the constants file. If the running
-  version is less than any of the supported versions, exit.
+  of supported python version. If the running version is less than any of the
+  supported versions, return a Tuple of (False, Str(error message)) for the
+  caller to handle. Minor versions of Python greater than those listed in the
+  supported versions are allowed.
 
-  Versions of Python greater than those listed in the currently supported
-  versions are implicitly allowed.
+  Args:
+    None
+  Returns:
+    Tuple(Boolean, String)
+
+    A Tuple containing a Boolean and a String. The boolean represents if the
+    version is supported, and the String will either be empty, or contain an
+    error message.
   """
-  supported = constants.SUPPORTED_PYTHON_VERSIONS
 
-  def _get_supported_version_strings():
-    versions = []
-    for major, minor_tuple in supported.items():
-      for minor in minor_tuple:
-        versions.append('.'.join([str(major), str(minor)]))
-    return versions
+  major = sys.version_info.major
+  minor = sys.version_info.minor
 
-  def _get_error_string():
-    versions = '\n'.join(_get_supported_versions())
-    current_version_str = '.'.join([SYS_VER.major, SYS_VER.minor])
-    error = ('{sys_ver} is not a supported version of Python. gsutil must be'
-             'run by one of the following verions of Python or greater:\n'
-             '{versions}'
-             )
-    return error.format(sys_ver=current_version_str, versions=versions)
+  def _unsupported(err_str):
+    return (False, err_str)
 
-  def _exit_unsupported():
-    error = _get_error_string()
-    sys.stderr.write(error)
-    exit(1)
-
-
-  if SYS_VER.major not in supported:
-    exit_unsupported()
-  if SYS_VER.minor < supported[SYS_VER.major][0]:
-    exit_unsupported()
-  if SYS_VER.minor > supported[SYS_VER.major][-1]:
-    return True
-  if SYS_VER.minor in supported[SYS_VER.major]:
-    return True
-
+  if major not in MIN_SUPPORTED_PYTHON_VERSION:
+    _unsupported(
+        'Gsutil does not support running under Python{major}'.format(major=major))
+  if minor < MIN_SUPPORTED_PYTHON_VERSION[major]:
+    lowest_minor = MIN_SUPPORTED_MINOR_FOR_MAJOR_PY_VERSION[major]
+    _unsupported(
+        'For Python{major}, gsutil requires Python{major}.{lowest_minor}+, but '
+        'you are using Python{major}.{minor}'.format(
+            major=major, minor=minor, lowest_minor=lowest_minor))
+  return(True, '')
