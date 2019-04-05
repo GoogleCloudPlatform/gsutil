@@ -38,7 +38,7 @@ from gslib.utils.version_check import check_python_version_support
 supported, err = check_python_version_support()
 if not supported:
   raise CommandException(err)
-  exit(1)
+  sys.exit(1)
 
 
 coverage_outfile = os.getenv('GSUTIL_COVERAGE_OUTPUT_FILE', None)
