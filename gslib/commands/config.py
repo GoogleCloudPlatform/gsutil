@@ -198,6 +198,7 @@ _DETAILED_HELP_TEXT = ("""
       gs_access_key_id
       gs_host
       gs_json_host
+      gs_json_host_header
       gs_json_port
       gs_oauth2_refresh_token
       gs_port
@@ -1074,6 +1075,7 @@ class ConfigCommand(Command):
         config_file.write(
             '#%s_json_host = <alternate JSON API storage host address>\n'
             '#%s_json_port = <alternate JSON API storage host port>\n\n'
+            '#%s_json_host_header = <alternate JSON API storage host header>\n\n'
             % (host_key, host_key))
       config_file.write('\n')
 
