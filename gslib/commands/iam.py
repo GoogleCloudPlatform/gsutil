@@ -13,13 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Implementation of IAM policy management command for GCS."""
+
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import itertools
 import json
 import re
 import textwrap
 
+import six
+from six.moves import zip
 from apitools.base.protorpclite import protojson
 from apitools.base.protorpclite.messages import DecodeError
 from gslib.cloud_api import ArgumentException
@@ -332,8 +338,8 @@ class IamCommand(Command):
 
     storage_url = StorageUrlFromString(list(matches)[0].url_string)
     policy = self.GetIamHelper(storage_url, thread_state=thread_state)
-    print json.dumps(
-        json.loads(protojson.encode_message(policy)), sort_keys=True, indent=2)
+    print(json.dumps(
+        json.loads(protojson.encode_message(policy)), sort_keys=True, indent=2))
 
   def _SetIamHelperInternal(self, storage_url, policy, thread_state=None):
     """Sets IAM policy for a single, resolved bucket / object URL.
@@ -479,7 +485,7 @@ class IamCommand(Command):
         break
       if token == '-d':
         patch_bindings_tuples.append(
-            BindingStringToTuple(False, it.next()))
+            BindingStringToTuple(False, next(it)))
       else:
         patch_bindings_tuples.append(BindingStringToTuple(True, token))
     if not patch_bindings_tuples:
@@ -530,7 +536,7 @@ class IamCommand(Command):
           [SerializeBindingsTuple(t) for t in patch_bindings_tuples])
       self.Apply(
           _PatchIamWrapper,
-          itertools.izip(
+          zip(
               serialized_bindings_tuples_it, name_expansion_iterator),
           _PatchIamExceptionHandler,
           fail_on_error=not self.continue_on_error,
@@ -638,11 +644,8 @@ class IamCommand(Command):
 
       policy_it = itertools.repeat(protojson.encode_message(policy))
       self.Apply(
-          _SetIamWrapper,
-          itertools.izip(
-              policy_it, name_expansion_iterator),
-          _SetIamExceptionHandler,
-          fail_on_error=not self.continue_on_error,
+          _SetIamWrapper, zip(policy_it, name_expansion_iterator),
+          _SetIamExceptionHandler, fail_on_error=not self.continue_on_error,
           seek_ahead_iterator=seek_ahead_iterator)
 
       self.everything_set_okay &= not GetFailureCount() > 0

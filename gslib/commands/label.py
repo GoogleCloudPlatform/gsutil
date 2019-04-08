@@ -15,10 +15,15 @@
 """Implementation of label command for cloud storage providers."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import codecs
 import json
 import os
+
+import six
 
 from gslib import metrics
 from gslib.cloud_api import PreconditionException
@@ -219,7 +224,7 @@ class LabelCommand(Command):
           # Set all old keys' values to None; this will delete each key that
           # is not included in the new set of labels.
           merged_labels = dict(
-              (key, None) for key, _ in label_json.iteritems())
+              (key, None) for key, _ in six.iteritems(label_json))
           merged_labels.update(new_label_json)
           labels_message = LabelTranslation.DictToMessage(merged_labels)
         else:  # ApiSelector.XML
@@ -297,7 +302,7 @@ class LabelCommand(Command):
             metageneration = bucket_metadata.metageneration
             # Remove each change that would try to delete a nonexistent key.
             corrected_changes = dict(
-                (k, v) for k, v in self.label_changes.iteritems() if v)
+                (k, v) for k, v in six.iteritems(self.label_changes) if v)
         labels_message = LabelTranslation.DictToMessage(corrected_changes)
       else:  # ApiSelector.XML
         # Perform a read-modify-write cycle so that we can specify which
@@ -313,7 +318,7 @@ class LabelCommand(Command):
         # Modify label_json such that all specified labels are added
         # (overwriting old labels if necessary) and all specified deletions
         # are removed from label_json if already present.
-        for key, value in self.label_changes.iteritems():
+        for key, value in six.iteritems(self.label_changes):
           if not value and key in label_json:
             del label_json[key]
           else:
@@ -346,14 +351,14 @@ class LabelCommand(Command):
     (bucket_url, bucket_metadata) = self.GetSingleBucketUrlFromArg(
         bucket_arg, bucket_fields=['labels'])
     if bucket_url.scheme == 's3':
-      print(self.gsutil_api.XmlPassThroughGetTagging(
-          bucket_url, provider=bucket_url.scheme))
+      print((self.gsutil_api.XmlPassThroughGetTagging(
+          bucket_url, provider=bucket_url.scheme)))
     else:
       if bucket_metadata.labels:
-        print(LabelTranslation.JsonFromMessage(
-            bucket_metadata.labels, pretty_print=True))
+        print((LabelTranslation.JsonFromMessage(
+            bucket_metadata.labels, pretty_print=True)))
       else:
-        print('%s has no label configuration.' % bucket_url)
+        print(('%s has no label configuration.' % bucket_url))
 
   def RunCommand(self):
     """Command entry point for the label command."""

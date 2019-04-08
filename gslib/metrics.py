@@ -14,6 +14,11 @@
 # limitations under the License.
 """Static data and helper functions for collecting user data."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import atexit
 from collections import defaultdict
 from functools import wraps
@@ -28,9 +33,11 @@ import sys
 import tempfile
 import textwrap
 import time
-import urllib
 import uuid
 
+import six
+from six.moves import input
+from six.moves import urllib
 import boto
 
 from gslib import VERSION
@@ -396,9 +403,9 @@ class MetricsCollector(object):
     """
     params = [('ec', category), ('ea', action), ('el', label), ('ev', value),
               (_GA_LABEL_MAP['Timestamp'], _GetTimeInMillis())]
-    params.extend([(k, v) for k, v in custom_params.iteritems()
+    params.extend([(k, v) for k, v in six.iteritems(custom_params)
                    if v is not None])
-    params.extend([(k, v) for k, v in self.ga_params.iteritems()
+    params.extend([(k, v) for k, v in six.iteritems(self.ga_params)
                    if v is not None])
 
     # Log how long after the start of the program this event happened.
@@ -406,7 +413,7 @@ class MetricsCollector(object):
       execution_time = _GetTimeInMillis() - self.start_time
     params.append((_GA_LABEL_MAP['Execution Time'], execution_time))
 
-    data = urllib.urlencode(sorted(params))
+    data = urllib.parse.urlencode(sorted(params))
     self._metrics.append(Metric(endpoint=self.endpoint, method='POST',
                                 body=data, user_agent=self.user_agent))
 
@@ -525,7 +532,7 @@ class MetricsCollector(object):
       self._ProcessFileMessage(file_message=params['file_message'])
       return
 
-    for param_name, param in params.iteritems():
+    for param_name, param in six.iteritems(params):
       # These parameters start in 0 or False state and can be updated to a
       # non-zero value or True.
       if param_name in ('uses_fan', 'uses_slice', 'avg_throughput',
@@ -588,7 +595,7 @@ class MetricsCollector(object):
                               sum(self.retryable_errors.values())})
 
     # Collect the retryable errors.
-    for error_type, num_errors in self.retryable_errors.iteritems():
+    for error_type, num_errors in six.iteritems(self.retryable_errors):
       self.CollectGAMetric(category=_GA_ERRORRETRY_CATEGORY, action=error_type,
                            **{_GA_LABEL_MAP['Retryable Errors']: num_errors})
 
@@ -672,7 +679,7 @@ class MetricsCollector(object):
                                     self.perf_sum_params.has_file_dst}
     action = ','.join(
         sorted([transfer_type
-                for transfer_type, cond in transfer_types.iteritems() if cond]))
+                for transfer_type, cond in six.iteritems(transfer_types) if cond]))
 
     # Use the time spent on Apply rather than the total command execution time
     # for the execution time metric. This aligns more closely with throughput
@@ -713,6 +720,7 @@ class MetricsCollector(object):
       log_level = logging.WARN
 
     temp_metrics_file = tempfile.NamedTemporaryFile(delete=False)
+    temp_metrics_file_name = six.ensure_str(temp_metrics_file.name)
     with temp_metrics_file:
       pickle.dump(self._metrics, temp_metrics_file)
     logging.debug(self._metrics)
@@ -721,19 +729,26 @@ class MetricsCollector(object):
     if log_file_path is not None:
       # If the path is not None, we'll need to surround the path with quotes
       # so that the path is passed as a string to the metrics_reporter module.
-      log_file_path = '"%s"' % log_file_path
+      log_file_path = six.ensure_str('r"%s"' % log_file_path)
 
-    reporting_code = ('from gslib.metrics_reporter import ReportMetrics; '
-                      'ReportMetrics("{0}", {1}, log_file_path={2})').format(
-                          temp_metrics_file.name,
-                          log_level,
-                          log_file_path).encode('string-escape')
+    reporting_code = six.ensure_str(
+        'from gslib.metrics_reporter import ReportMetrics; '
+        'ReportMetrics(r"{0}", {1}, log_file_path={2})'.format(
+            temp_metrics_file_name,
+            log_level,
+            log_file_path))
     execution_args = [sys.executable, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
-
+    # Ensuring submodule (sm) environment keys and values are all str.
+    sm_env = dict()
+    for k, v in six.iteritems(exec_env):
+      sm_env[six.ensure_str(k)] = six.ensure_str(v)
     try:
-      p = subprocess.Popen(execution_args, env=exec_env)
+      # In order for Popen to work correctly with Windows/Py3 shell needs
+      # to be True.
+      p = subprocess.Popen(execution_args, env=sm_env, shell=(
+          six.PY3 and system_util.IS_WINDOWS))
       self.logger.debug('Metrics reporting process started...')
 
       if wait_for_report:
@@ -768,7 +783,7 @@ def CaptureAndLogException(func):
   def Wrapper(*args, **kwds):
     try:
       return func(*args, **kwds)
-    except Exception, e:  # pylint:disable=broad-except
+    except Exception as e:  # pylint:disable=broad-except
       logger = logging.getLogger('metrics')
       logger.debug('Exception captured in %s during metrics collection: %s',
                    func.__name__, e)
@@ -915,7 +930,7 @@ def CheckAndMaybePromptForAnalyticsEnabling():
   if (not os.path.exists(_UUID_FILE_PATH) and
       not disable_prompt and
       not system_util.InvokedViaCloudSdk()):
-    enable_analytics = raw_input('\n' + textwrap.fill(
+    enable_analytics = input('\n' + textwrap.fill(
         'gsutil developers rely on user feedback to make improvements to the '
         'tool. Would you like to send anonymous usage statistics to help '
         'improve gsutil? [y/N]') + ' ')

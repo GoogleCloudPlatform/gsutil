@@ -14,10 +14,17 @@
 # limitations under the License.
 """Helper functions for hashing functionality."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import base64
 import binascii
 from hashlib import md5
 import os
+
+import six
 
 from boto import config
 import crcmod
@@ -201,7 +208,10 @@ def CalculateHashesFromContents(fp, hash_dict, callback_processor=None):
     data = fp.read(DEFAULT_FILE_BUFFER_SIZE)
     if not data:
       break
-    for hash_alg in hash_dict.itervalues():
+    if six.PY3:
+      if isinstance(data, str):
+        data = data.encode('utf-8')
+    for hash_alg in six.itervalues(hash_dict):
       hash_alg.update(data)
     if callback_processor:
       callback_processor.Progress(len(data))
@@ -252,7 +262,7 @@ def CalculateMd5FromContents(fp):
 
 def Base64EncodeHash(digest_value):
   """Returns the base64-encoded version of the input hex digest value."""
-  return base64.encodestring(binascii.unhexlify(digest_value)).rstrip('\n')
+  return base64.encodestring(binascii.unhexlify(digest_value)).rstrip(b'\n').decode('utf-8')
 
 
 def Base64ToHexHash(base64_hash):
@@ -265,7 +275,8 @@ def Base64ToHexHash(base64_hash):
   Returns:
     Hex digest of the input argument.
   """
-  return binascii.hexlify(base64.decodestring(base64_hash.strip('\n"\'')))
+  return binascii.hexlify(
+    base64.decodestring(base64_hash.strip('\n"\'').encode('utf-8')))
 
 
 def _CalculateB64EncodedHashFromContents(fp, hash_alg):
@@ -410,6 +421,8 @@ class HashingFileUploadWrapper(object):
                              'digest.')
 
     data = self._orig_fp.read(size)
+    if isinstance(data, six.text_type):
+      data = data.encode('utf-8')
     self._digesters_previous_mark = self._digesters_current_mark
     for alg in self._digesters:
       self._digesters_previous[alg] = self._digesters[alg].copy()
@@ -499,6 +512,8 @@ class HashingFileUploadWrapper(object):
     bytes_this_round = min(bytes_remaining, TRANSFER_BUFFER_SIZE)
     while bytes_this_round:
       data = self._orig_fp.read(bytes_this_round)
+      if isinstance(data, six.text_type):
+        data = data.encode('utf-8')
       bytes_remaining -= bytes_this_round
       for alg in self._digesters:
         self._digesters[alg].update(data)

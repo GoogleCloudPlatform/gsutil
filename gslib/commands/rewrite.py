@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import sys
 import textwrap
@@ -45,6 +47,7 @@ from gslib.utils.encryption_helper import MAX_DECRYPTION_KEYS
 from gslib.utils.system_util import StdinIterator
 from gslib.utils.text_util import ConvertRecursiveToFlatWildcard
 from gslib.utils.text_util import NormalizeStorageClass
+from gslib.utils import text_util
 from gslib.utils.translation_helper import PreconditionsFromHeaders
 
 MAX_PROGRESS_INDICATOR_COLUMNS = 65
@@ -185,7 +188,6 @@ def _RewriteExceptionHandler(cls, e):
   if not cls.continue_on_error:
     cls.logger.error(str(e))
   cls.op_failure_count += 1
-
 
 def _RewriteFuncWrapper(cls, name_expansion_result, thread_state=None):
   cls.RewriteFunc(name_expansion_result, thread_state=thread_state)
@@ -393,6 +395,8 @@ class RewriteCommand(Command):
     if (src_metadata.customerEncryption and
         src_metadata.customerEncryption.keySha256):
       src_encryption_sha256 = src_metadata.customerEncryption.keySha256
+      # In python3, hashes are bytes, use ascii since it should be ascii
+      src_encryption_sha256 = src_encryption_sha256.encode('ascii')
 
     src_was_encrypted = (src_encryption_sha256 is not None or
                          src_encryption_kms_key is not None)
@@ -509,6 +513,7 @@ class RewriteCommand(Command):
     # the UIThread.
     sys.stderr.write(
         _ConstructAnnounceText(operation_name, transform_url.url_string))
+    sys.stderr.flush()
 
     # Message indicating beginning of operation.
     gsutil_api.status_queue.put(
@@ -563,4 +568,4 @@ def _ConstructAnnounceText(operation_name, url_string):
         -(MAX_PROGRESS_INDICATOR_COLUMNS - start_len - end_len - ellipsis_len):]
   base_announce_text = '%s%s:' % (justified_op_string, url_string)
   format_str = '{0:%ds}' % MAX_PROGRESS_INDICATOR_COLUMNS
-  return format_str.format(base_announce_text.encode(UTF8))
+  return format_str.format(base_announce_text)

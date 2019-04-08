@@ -14,10 +14,17 @@
 # limitations under the License.
 """Helper functions for composite upload tracker file functionality."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import namedtuple
 import errno
 import json
 import random
+
+import six
 
 import gslib
 from gslib.exception import CommandException
@@ -157,6 +164,11 @@ def ValidateParallelCompositeTrackerData(
     existing_components: existing_components, or empty list if the encryption
         key did not match.
   """
+  if six.PY3:
+    if isinstance(existing_enc_sha256, str):
+      existing_enc_sha256 = existing_enc_sha256.encode('utf-8')
+    if isinstance(current_enc_key_sha256, str):
+      current_enc_key_sha256 = current_enc_key_sha256.encode('utf-8')
   if existing_prefix and existing_enc_sha256 != current_enc_key_sha256:
     try:
       logger.warn('Upload tracker file (%s) does not match current encryption '
@@ -262,6 +274,10 @@ def WriteParallelUploadTrackerFile(tracker_file_name, prefix, components,
     components: A list of ObjectFromTracker objects that were uploaded.
     encryption_key_sha256: Encryption key SHA256 for use in this upload, if any.
   """
+  if six.PY3:
+    if isinstance(encryption_key_sha256, bytes):
+      encryption_key_sha256 = encryption_key_sha256.decode('ascii')
+
   tracker_components = []
   for component in components:
     tracker_components.append({

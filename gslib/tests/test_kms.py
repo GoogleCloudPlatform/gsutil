@@ -14,7 +14,13 @@
 # limitations under the License.
 """Integration tests for kms command."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from random import randint
+import unittest
 
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
@@ -78,7 +84,7 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(serviceaccount_cmd, return_stdout=True)
 
-    self.assertRegexpMatches(
+    self.assertRegex(
         stdout,
         r'[^@]+@gs-project-accounts\.iam\.gserviceaccount\.com')
 

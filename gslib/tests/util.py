@@ -14,18 +14,24 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from contextlib import contextmanager
-from cStringIO import StringIO
 import functools
 import os
 import pkgutil
 import posixpath
 import re
+import io
 import sys
 import tempfile
 import unittest
-import urlparse
+
+import six
+from six.moves import urllib
+from six.moves import cStringIO
 
 import boto
 import crcmod
@@ -47,10 +53,32 @@ if not IS_WINDOWS:
   import pwd
 
   def GetInvalidGid():
-    # Get a list of all groups on the system which are not necessarily sorted by
-    # GID, then sort them and take the last element and add one to the GID to
-    # get a GID that is guaranteed not to be on the current system.
-    return sorted([group.gr_gid for group in grp.getgrall()])[-1] + 1
+    # Get a list of all GIDs on the system for quick reference.
+    all_gid = sorted([group.gr_gid for group in grp.getgrall()])
+    # gid - Current GID being tested, 2k is close to a large empty span on most
+    # unix systems and a good starting point.
+    gid = 2000
+    # OverflowError should prevent loop from reaching 5b, but adding a number
+    # to the loop ensures that infinite loop does not occur
+    while gid < 5000000000:
+      if gid in all_gid:
+        # Shortcut check; if gid is in list then the group exists.
+        gid += 1
+        continue
+      try:
+        # Testing for expected behaviour while testing POSIX permissions.
+        # For more on grp see:
+        # https://docs.python.org/3.7/library/grp.html
+        grp.getgrgid(gid)
+        gid += 1
+      except KeyError:
+        # This is the target exception for invalid GID and the behaviour needed
+        # for testing.
+        return gid
+      except OverflowError:
+        # Limit reached without a usable GID found.
+        break
+    raise Exception("Unable to generate GID for ")
 
   def GetNonPrimaryGid():
     # Select a group for the current user that is not the user's primary group.
@@ -95,35 +123,35 @@ if not IS_WINDOWS:
 # 256-bit base64 encryption keys used for testing AES256 customer-supplied
 # encryption. These are public and open-source, so don't ever use them for
 # real data.
-TEST_ENCRYPTION_KEY1 = 'iMSM9eeXliDZHSBJZO71R98tfeW/+87VXTpk5chGd6Y='
+TEST_ENCRYPTION_KEY1 = b'iMSM9eeXliDZHSBJZO71R98tfeW/+87VXTpk5chGd6Y='
 TEST_ENCRYPTION_KEY1_SHA256_B64 = Base64Sha256FromBase64EncryptionKey(
     TEST_ENCRYPTION_KEY1)
 
-TEST_ENCRYPTION_KEY2 = '4TSaQ3S4U+5oxAbByA7HgIigD51zfzGed/c03Ts2TXc='
+TEST_ENCRYPTION_KEY2 = b'4TSaQ3S4U+5oxAbByA7HgIigD51zfzGed/c03Ts2TXc='
 TEST_ENCRYPTION_KEY2_SHA256_B64 = Base64Sha256FromBase64EncryptionKey(
     TEST_ENCRYPTION_KEY2)
 
-TEST_ENCRYPTION_KEY3 = 'HO4Q2X28N/6SmuAJ1v1CTuJjf5emQcXf7YriKzT1gj0='
+TEST_ENCRYPTION_KEY3 = b'HO4Q2X28N/6SmuAJ1v1CTuJjf5emQcXf7YriKzT1gj0='
 TEST_ENCRYPTION_KEY3_SHA256_B64 = Base64Sha256FromBase64EncryptionKey(
     TEST_ENCRYPTION_KEY3)
 
-TEST_ENCRYPTION_KEY4 = 'U6zIErjZCK/IpIeDS0pJrDayqlZurY8M9dvPJU0SXI8='
+TEST_ENCRYPTION_KEY4 = b'U6zIErjZCK/IpIeDS0pJrDayqlZurY8M9dvPJU0SXI8='
 TEST_ENCRYPTION_KEY4_SHA256_B64 = Base64Sha256FromBase64EncryptionKey(
     TEST_ENCRYPTION_KEY4)
 
-TEST_ENCRYPTION_CONTENT1 = 'bar'
+TEST_ENCRYPTION_CONTENT1 = b'bar'
 TEST_ENCRYPTION_CONTENT1_MD5 = 'N7UdGUp1E+RbVvZSTy1R8g=='
 TEST_ENCRYPTION_CONTENT1_CRC32C = 'CrcTMQ=='
-TEST_ENCRYPTION_CONTENT2 = 'bar2'
+TEST_ENCRYPTION_CONTENT2 = b'bar2'
 TEST_ENCRYPTION_CONTENT2_MD5 = 'Ik4lOfUiA+szcorNIotEMg=='
 TEST_ENCRYPTION_CONTENT2_CRC32C = 'QScXtg=='
-TEST_ENCRYPTION_CONTENT3 = 'bar3'
+TEST_ENCRYPTION_CONTENT3 = b'bar3'
 TEST_ENCRYPTION_CONTENT3_MD5 = '9iW6smjfu9hm0A//VQTQfw=='
 TEST_ENCRYPTION_CONTENT3_CRC32C = 's0yUtQ=='
-TEST_ENCRYPTION_CONTENT4 = 'bar4'
+TEST_ENCRYPTION_CONTENT4 = b'bar4'
 TEST_ENCRYPTION_CONTENT4_MD5 = 'kPCx6uZiUOU7W6E+cDCZFg=='
 TEST_ENCRYPTION_CONTENT4_CRC32C = 'Z4bwXg=='
-TEST_ENCRYPTION_CONTENT5 = 'bar5'
+TEST_ENCRYPTION_CONTENT5 = b'bar5'
 TEST_ENCRYPTION_CONTENT5_MD5 = '758XbXQOVkp8fTKMm83NXA=='
 TEST_ENCRYPTION_CONTENT5_CRC32C = 'le1zXQ=='
 
@@ -179,32 +207,22 @@ def TailSet(start_point, listing):
   return set(l[len(start_point):] for l in listing.strip().split('\n'))
 
 
-def _HasS3Credentials():
-  return (boto.config.get('Credentials', 'aws_access_key_id', None) and
+HAS_S3_CREDS = (boto.config.get('Credentials', 'aws_access_key_id', None) and
           boto.config.get('Credentials', 'aws_secret_access_key', None))
 
-HAS_S3_CREDS = _HasS3Credentials()
+_GS_HOST = boto.config.get('Credentials', 'gs_host', None)
+_DEFAULT_HOST = six.ensure_str(boto.gs.connection.GSConnection.DefaultHost)
 
+if _GS_HOST is not None:
+  HAS_NON_DEFAULT_GS_HOST = _DEFAULT_HOST == six.ensure_str(_GS_HOST)
+else:
+  HAS_NON_DEFAULT_GS_HOST = False
 
-def _HasGSHost():
-  return boto.config.get('Credentials', 'gs_host', None) is not None
+HAS_GS_HOST = _GS_HOST is not None
 
-HAS_GS_HOST = _HasGSHost()
-HAS_NON_DEFAULT_GS_HOST = (
-    boto.gs.connection.GSConnection.DefaultHost != boto.config.get(
-        'Credentials', 'gs_host', None))
+HAS_GS_PORT = boto.config.get('Credentials', 'gs_port', None) is not None
 
-
-def _HasGSPort():
-  return boto.config.get('Credentials', 'gs_port', None) is not None
-
-HAS_GS_PORT = _HasGSPort()
-
-
-def _UsingJSONApi():
-  return boto.config.get('GSUtil', 'prefer_api', 'json').upper() != 'XML'
-
-USING_JSON_API = _UsingJSONApi()
+USING_JSON_API = boto.config.get('GSUtil', 'prefer_api', 'json').upper() != 'XML'
 
 
 def _ArgcompleteAvailable():
@@ -240,12 +258,12 @@ def _NormalizeURI(uri):
   # while on non-Windows platforms, it turns into:
   #     scheme='gs', netloc='foo', path='/bar'
   uri = uri.replace('gs://', 'file://')
-  parsed = list(urlparse.urlparse(uri))
+  parsed = list(urllib.parse.urlparse(uri))
   parsed[2] = posixpath.normpath(parsed[2])
   if parsed[2].startswith('//'):
     # The normpath function doesn't change '//foo' -> '/foo' by design.
     parsed[2] = parsed[2][1:]
-  unparsed = urlparse.urlunparse(parsed)
+  unparsed = urllib.parse.urlunparse(parsed)
   unparsed = unparsed.replace('file://', 'gs://')
   return unparsed
 
@@ -278,13 +296,15 @@ def ObjectToURI(obj, *suffixes):
   Returns:
     Storage URI string.
   """
-  if isinstance(obj, file):
-    return 'file://%s' % os.path.abspath(os.path.join(obj.name, *suffixes))
-  if isinstance(obj, basestring):
-    return 'file://%s' % os.path.join(obj, *suffixes)
-  uri = obj.uri
+  if is_file(obj):
+    return 'file://{}'.format(
+      os.path.abspath(os.path.join(obj.name, *suffixes)))
+  if isinstance(obj, six.string_types):
+    return 'file://{}'.format(os.path.join(obj, *suffixes))
+  uri = six.ensure_text(obj.uri)
   if suffixes:
-    uri = _NormalizeURI('/'.join([uri] + list(suffixes)))
+    suffixes_list = [six.ensure_text(suffix) for suffix in suffixes]
+    uri = _NormalizeURI('/'.join([uri] + suffixes_list))
 
   # Storage URIs shouldn't contain a trailing slash.
   if uri.endswith('/'):
@@ -420,9 +440,9 @@ def _SectionDictFromConfigList(boto_config_list):
 def _WriteSectionDictToFile(section_dict, tmp_filename):
   """Writes a section dict from _SectionDictFromConfigList to tmp_filename."""
   with open(tmp_filename, 'w') as tmp_file:
-    for section, key_value_pairs in section_dict.iteritems():
+    for section, key_value_pairs in six.iteritems(section_dict):
       tmp_file.write('[%s]\n' % section)
-      for key, value in key_value_pairs.iteritems():
+      for key, value in six.iteritems(key_value_pairs):
         tmp_file.write('%s = %s\n' % (key, value))
 
 
@@ -459,7 +479,11 @@ def SetBotoConfigForTest(boto_config_list, use_existing_config=True):
     os.close(tmp_fd)
     if use_existing_config:
       for boto_config in boto_config_list:
-        _SetBotoConfig(boto_config[0], boto_config[1], boto_config[2],
+        boto_value = boto_config[2]
+        if six.PY3:
+          if isinstance(boto_value, bytes):
+            boto_value = boto_value.decode('utf-8')
+        _SetBotoConfig(boto_config[0], boto_config[1], boto_value,
                        revert_configs)
       with open(tmp_filename, 'w') as tmp_file:
         boto.config.write(tmp_file)
@@ -483,7 +507,7 @@ def SetEnvironmentForTest(env_variable_dict):
   """Sets OS environment variables for a single test."""
 
   def _ApplyDictToEnvironment(dict_to_apply):
-    for k, v in dict_to_apply.iteritems():
+    for k, v in six.iteritems(dict_to_apply):
       old_values[k] = os.environ.get(k)
       if v is not None:
         os.environ[k] = v
@@ -543,19 +567,29 @@ def GetTestNames():
       names.append(m.group('name'))
   return names
 
+def is_file(obj):
+  if six.PY2:
+    return isinstance(obj, file)
+  return isinstance(obj, io.IOBase)
+
 
 def MakeBucketNameValid(name):
   """Returns a copy of the given name with any invalid characters replaced.
 
   Args:
-    name (str): The bucket name to transform into a valid name.
+    name Union[str, unicode, bytes]: The bucket name to transform into a valid name.
 
   Returns:
-    (str) The version of the bucket name containing only valid characters.
+    Union[str, unicode, bytes] The version of the bucket name containing only
+      valid characters.
   """
   # Neither underscores nor uppercase letters are valid characters for a
   # bucket name. Replace those with hyphens and lowercase characters.
-  return name.replace('_', '-').lower()
+  if isinstance(name, (six.text_type, six.binary_type)):
+    return name.replace('_', '-').lower()
+  else:
+    raise TypeError('Unable to format name. Incorrect Type: {0}'.format(
+        type(name)))
 
 
 @contextmanager
@@ -584,6 +618,13 @@ def WorkingDirectory(new_working_directory):
   finally:
     if new_working_directory and prev_working_directory:
       os.chdir(prev_working_directory)
+
+
+def InvokedFromParFile():
+  loader = globals().get('__loader__', None)
+  if not loader:
+    return False
+  return 'zipimport' in loader.__class__.__module__
 
 
 # Custom test callbacks must be pickleable, and therefore at global scope.
@@ -661,7 +702,7 @@ class CaptureStdout(list):
 
   def __enter__(self):
     self._stdout = sys.stdout
-    sys.stdout = self._stringio = StringIO()
+    sys.stdout = self._stringio = cStringIO()
     return self
 
   def __exit__(self, *args):

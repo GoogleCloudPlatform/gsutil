@@ -15,6 +15,9 @@
 """Implementation of gsutil version command."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from hashlib import md5
 import os
@@ -22,6 +25,7 @@ import platform
 import re
 import sys
 
+import six
 import boto
 import crcmod
 import gslib
@@ -29,6 +33,7 @@ from gslib.command import Command
 from gslib.utils import system_util
 from gslib.utils.boto_util import GetFriendlyConfigFilePaths
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import UTF8
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
 
 
@@ -158,11 +163,18 @@ class VersionCommand(Command):
     # Sort to ensure consistent checksum build, no matter how os.walk
     # orders the list.
     for filepath in sorted(files_to_checksum):
-      f = open(filepath, 'r')
-      content = f.read()
-      content = re.sub(r'(\r\n|\r|\n)', '\n', content)
-      m.update(content)
-      f.close()
+      if six.PY2:
+        f = open(filepath, 'rb')
+        content = f.read()
+        content = re.sub(r'(\r\n|\r|\n)', b'\n', content)
+        m.update(content)
+        f.close()
+      else:
+        f = open(filepath, 'r', encoding=UTF8)
+        content = f.read()
+        content = re.sub(r'(\r\n|\r|\n)', '\n', content)
+        m.update(content.encode(UTF8))
+        f.close()
     return m.hexdigest()
 
 

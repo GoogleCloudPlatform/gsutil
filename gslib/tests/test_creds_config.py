@@ -14,6 +14,11 @@
 # limitations under the License.
 """Tests for various combinations of configured credentials."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from gslib.cred_types import CredTypes
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.exception import CommandException
@@ -42,7 +47,7 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
       try:
         GcsJsonApi(None, self.logger, DiscardMessagesQueue())
         self.fail('Succeeded with multiple types of configured creds.')
-      except CommandException, e:
+      except CommandException as e:
         msg = str(e)
         self.assertIn('types of configured credentials', msg)
         self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, msg)
