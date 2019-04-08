@@ -33,6 +33,7 @@ import pickle
 import random
 import re
 import shutil
+import six
 import stat
 import subprocess
 import tempfile
@@ -3554,7 +3555,7 @@ class Manifest(object):
     """
     try:
       if os.path.exists(self.manifest_path):
-        with open(self.manifest_path, 'rb') as f:
+        with open(self.manifest_path, 'r') as f:
           first_row = True
           reader = csv.reader(f)
           for row in reader:
@@ -3631,16 +3632,16 @@ class Manifest(object):
     """Writes a manifest entry to the manifest file for the url argument."""
     row_item = self.items[url]
     data = [
-        str(row_item['source_uri'].encode(UTF8)),
-        str(row_item['destination_uri'].encode(UTF8)),
+        six.ensure_str(row_item['source_uri'].encode(UTF8)),
+        six.ensure_str(row_item['destination_uri'].encode(UTF8)),
         '%sZ' % row_item['start_time'].isoformat(),
         '%sZ' % row_item['end_time'].isoformat(),
         row_item['md5'] if 'md5' in row_item else '',
         row_item['upload_id'] if 'upload_id' in row_item else '',
-        str(row_item['size']) if 'size' in row_item else '',
-        str(row_item['bytes']) if 'bytes' in row_item else '',
-        row_item['result'],
-        row_item['description'].encode(UTF8)]
+        six.ensure_str(str(row_item['size'])) if 'size' in row_item else '',
+        six.ensure_str(str(row_item['bytes'])) if 'bytes' in row_item else '',
+        six.ensure_str(row_item['result'].encode(UTF8)),
+        six.ensure_str(row_item['description'].encode(UTF8))]
 
     # Aquire a lock to prevent multiple threads writing to the same file at
     # the same time. This would cause a garbled mess in the manifest file.
