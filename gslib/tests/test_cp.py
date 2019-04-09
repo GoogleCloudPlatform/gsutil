@@ -1543,8 +1543,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     open(logpath, 'w').close()
     self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi])
 
-    with io.open(logpath, 'r', encoding=UTF8) as f:
+    with open(logpath, 'r') as f:
       lines = f.readlines()
+    if six.PY2:
+      lines = [unicode(line, UTF8) for line in lines]
 
     self.assertEqual(len(lines), 2)
 
