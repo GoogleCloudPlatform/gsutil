@@ -197,6 +197,7 @@ _DETAILED_HELP_TEXT = ("""
       aws_secret_access_key
       gs_access_key_id
       gs_host
+      gs_host_header
       gs_json_host
       gs_json_host_header
       gs_json_port
@@ -207,6 +208,7 @@ _DETAILED_HELP_TEXT = ("""
       gs_service_key_file
       gs_service_key_file_password
       s3_host
+      s3_host_header
       s3_port
 
     [Boto]
