@@ -34,7 +34,7 @@ import re
 import string
 import sys
 import threading
-import ast
+import io
 
 import six
 from six.moves import http_client
@@ -1542,12 +1542,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Ensure the file is empty.
     open(logpath, 'w').close()
     self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi])
-    with open(logpath, 'r') as f:
+
+    with io.open(logpath, 'r', encoding=UTF8) as f:
       lines = f.readlines()
-    if six.PY3:
-      lines = [six.ensure_str(line.encode(UTF8)) for line in lines]
-    else:  # PY2
-      lines = [unicode(line, UTF8) for line in lines]
+
     self.assertEqual(len(lines), 2)
 
     expected_headers = ['Source', 'Destination', 'Start', 'End', 'Md5',
@@ -1558,7 +1556,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     for header in results:
       if isinstance(header, (six.string_types, six.text_type)):
-        header = six.ensure_str(header.encode(UTF8))
+        header = six.ensure_str(header)
 
     results = dict(zip(expected_headers, results))
 
