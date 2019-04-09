@@ -1070,6 +1070,9 @@ class ConfigCommand(Command):
           '# Setting a non-default gs_host only works if prefer_api=xml.\n'
           '#%s_host = <alternate storage host address>\n'
           '#%s_port = <alternate storage host port>\n'
+          '# In some cases, (e.g. VPC requests) the "host" HTTP header should\n'
+          '# be different than the host used in the request URL.
+          '#%s_host_header = <alternate storage host header>\n'
           % (host_key, host_key))
       if host_key == 'gs':
         config_file.write(
