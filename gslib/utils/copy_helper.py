@@ -3694,7 +3694,7 @@ class Manifest(object):
         row_item['result'],
         row_item['description']]
 
-    data = [six.ensure_str(header) for header in data]
+    data = [six.ensure_str(value) for value in data]
 
     # Aquire a lock to prevent multiple threads writing to the same file at
     # the same time. This would cause a garbled mess in the manifest file.
