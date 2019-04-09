@@ -64,11 +64,11 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
   """
   url_was_unicode = isinstance(url_str, unicode)
   if isinstance(url_str, unicode):
-    url_str = url_str.encode('utf-8')
+    url_str = url_str.encode(UTF8)
   if isinstance(param_name, unicode):
-    param_name = param_name.encode('utf-8')
+    param_name = param_name.encode(UTF8)
   if isinstance(param_value, unicode):
-    param_value = param_value.encode('utf-8')
+    param_value = param_value.encode(UTF8)
   scheme, netloc, path, query_str, fragment = urlparse.urlsplit(url_str)
 
   query_params = urlparse.parse_qsl(query_str, keep_blank_values=True)
@@ -77,7 +77,7 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
 
   new_url = urlparse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
   if url_was_unicode:
-    new_url = new_url.decode('utf-8')
+    new_url = new_url.decode(UTF8)
   return new_url
 
 
