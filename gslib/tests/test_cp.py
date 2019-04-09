@@ -1562,9 +1562,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     results = dict(zip(expected_headers, results))
 
-    self.assertEqual(results['Source'][:7], 'file://')  # source
+    self.assertEqual(results['Source'][:7], 'file://')
     self.assertEqual(results['Destination'][:5], '%s://' %
-                     self.default_provider)      # destination
+                     self.default_provider)
 
     date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
     start_date = datetime.datetime.strptime(results['Start'], date_format)
