@@ -1545,37 +1545,20 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with open(logpath, 'r') as f:
       lines = f.readlines()
     if six.PY3:
-      # What the hell is this?
-      # Well, it is a hack. So far as I can tell, CreateTempFile has no need
-      # for text file output except for here (where it is used to create a
-      # logfile), and the other place this 'code' appears in the manifest
-      # download test. So rather than mangle that code to support this one
-      # special case, I did this. The purpose is to get rid of strings that
-      # contain the string representation of bytes. Not all do, but even one
-      # is enough.
-      decode_lines = []
-      for line in lines:
-        if line.startswith("b'"):
-          some_strs = line.split(',')
-          line_parts = []
-          for some_str in some_strs:
-            if some_str.startswith("b'"):
-              line_parts.append(ast.literal_eval(some_str).decode('utf-8'))
-            else:
-              line_parts.append(some_str)
-          decode_lines.append(','.join(line_parts))
-        else:
-          decode_lines.append(line)
-      lines = decode_lines
+      lines = [six.ensure_str(line.encode(UTF8)) for line in lines]
     else:  # PY2
-      lines = [unicode(line, 'utf-8') for line in lines]
+      lines = [unicode(line, UTF8) for line in lines]
     self.assertEqual(len(lines), 2)
 
+    # TODO(b/130189227): Refactor into dictionary results = {header: result}
     expected_headers = ['Source', 'Destination', 'Start', 'End', 'Md5',
                         'UploadId', 'Source Size', 'Bytes Transferred',
                         'Result', 'Description']
     self.assertEqual(expected_headers, lines[0].strip().split(','))
     results = lines[1].strip().split(',')
+    for header in results:
+      if isinstance(header, (six.string_types, six.text_type)):
+        header = six.ensure_str(header.encode(UTF8))
     self.assertEqual(results[0][:7], 'file://')  # source
     self.assertEqual(results[1][:5], '%s://' %
                      self.default_provider)      # destination
