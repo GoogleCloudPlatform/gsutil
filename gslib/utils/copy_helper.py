@@ -3681,16 +3681,17 @@ class Manifest(object):
     """Writes a manifest entry to the manifest file for the url argument."""
     row_item = self.items[url]
     data = [
-        six.ensure_str(row_item['source_uri'].encode(UTF8)),
-        six.ensure_str(row_item['destination_uri'].encode(UTF8)),
+        row_item['source_uri'],
+        row_item['destination_uri'],
         '%sZ' % row_item['start_time'].isoformat(),
         '%sZ' % row_item['end_time'].isoformat(),
         row_item['md5'] if 'md5' in row_item else '',
         row_item['upload_id'] if 'upload_id' in row_item else '',
-        six.ensure_str(str(row_item['size'])) if 'size' in row_item else '',
-        six.ensure_str(str(row_item['bytes'])) if 'bytes' in row_item else '',
-        six.ensure_str(row_item['result'].encode(UTF8)),
-        six.ensure_str(row_item['description'].encode(UTF8))]
+        row_item['size'] if 'size' in row_item else '',
+        row_item['bytes'] if 'bytes' in row_item else '',
+        row_item['result'],
+        row_item['description']]
+    data = [six.ensure_str(str(item).encode(UTF8)) for item in data]
 
     # Aquire a lock to prevent multiple threads writing to the same file at
     # the same time. This would cause a garbled mess in the manifest file.
