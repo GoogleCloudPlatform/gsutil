@@ -15,6 +15,9 @@
 """Implementation of versioning configuration command for buckets."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from gslib import metrics
 from gslib.command import Command
@@ -155,9 +158,9 @@ class VersioningCommand(Command):
       for blr in bucket_iter:
         some_matched = True
         if blr.root_object.versioning and blr.root_object.versioning.enabled:
-          print '%s: Enabled' % blr.url_string.rstrip('/')
+          print('%s: Enabled' % blr.url_string.rstrip('/'))
         else:
-          print '%s: Suspended' % blr.url_string.rstrip('/')
+          print('%s: Suspended' % blr.url_string.rstrip('/'))
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 

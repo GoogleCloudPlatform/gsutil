@@ -15,6 +15,9 @@
 """Impl. of default bucket storage class command for Google Cloud Storage."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from gslib import metrics
 from gslib.command import Command
@@ -155,8 +158,8 @@ class DefStorageClassCommand(Command):
           url_str, bucket_fields=['storageClass'])
       for blr in bucket_iter:
         some_matched = True
-        print '%s: %s' % (blr.url_string.rstrip('/'),
-                          blr.root_object.storageClass)
+        print('%s: %s' % (blr.url_string.rstrip('/'),
+                          blr.root_object.storageClass))
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 

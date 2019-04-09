@@ -15,6 +15,9 @@
 """Helper file for POSIX methods."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from calendar import timegm
 import getpass
@@ -22,6 +25,8 @@ import logging
 import os
 import re
 import time
+
+import six
 
 from gslib.exception import CommandException
 from gslib.tz_utc import UTC
@@ -34,6 +39,9 @@ from gslib.utils.unit_util import SECONDS_PER_DAY
 if not IS_WINDOWS:
   import grp
   import pwd
+
+if six.PY3:
+  long = int
 
 # Metadata attribute names for POSIX attributes.
 ATIME_ATTR = 'goog-reserved-file-atime'
@@ -189,7 +197,7 @@ def DeserializeIDAttribute(obj_metadata, attr, url_str, posix_attrs):
   found, val = GetValueFromObjectCustomMetadata(obj_metadata, attr, NA_ID)
   try:
     val = int(val)
-    if found and id <= NA_ID:
+    if found and val <= NA_ID:
       WarnNegativeAttribute(attr_name, url_str)
       val = NA_ID
   except ValueError:
@@ -303,7 +311,7 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
     return True, ''
 
   uid_present = uid > NA_ID
-  gid_present = gid > NA_ID
+  gid_present = int(gid) > NA_ID
   mode_present = mode > NA_MODE
   # No need to perform validation if Posix attrs are not being preserved.
   if not (uid_present or gid_present or mode_present):
@@ -359,7 +367,7 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
             '' if valid
             else 'Insufficient access with uid/gid/mode for %s, uid: %d, '
             'mode: %s' % (url_str, uid, oct(mode)[-3:]))
-  elif gid in USER_GROUPS:
+  elif int(gid) in USER_GROUPS:
     valid = bool(mode & G_R)
     return (valid,
             '' if valid

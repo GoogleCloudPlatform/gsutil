@@ -13,8 +13,15 @@
 # limitations under the License.
 """Helper class for streaming resumable uploads."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import collections
 import os
+
+import six
 
 from gslib.exception import CommandException
 from gslib.utils.boto_util import GetJsonResumableChunkSize
@@ -147,6 +154,11 @@ class ResumableStreamingJsonUploadWrapper(object):
             self._buffer.appendleft(oldest_data[-refill_amount:])
             self._buffer_start -= refill_amount
     else:
+      if six.PY3:
+        if buffered_data:
+          buffered_data = [
+            bd.encode('utf-8') if isinstance(bd, str) else bd
+            for bd in buffered_data]
       data = b''.join(buffered_data) if buffered_data else b''
 
     return data

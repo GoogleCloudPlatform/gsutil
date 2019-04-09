@@ -16,8 +16,13 @@
 """Implementation of Unix-like cat command for cloud storage providers."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import re
+
+import six
 
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
@@ -25,6 +30,11 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.utils import cat_helper
 from gslib.utils import constants
+
+
+if six.PY3:
+  long = int
+
 
 _SYNOPSIS = """
   gsutil cat [-h] url...

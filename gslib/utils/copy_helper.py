@@ -16,6 +16,9 @@
 """Helper functions for copy functionality."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import base64
 from collections import namedtuple
@@ -40,6 +43,10 @@ import tempfile
 import textwrap
 import time
 import traceback
+
+import six
+from six.moves import xrange
+from six.moves import range
 
 from apitools.base.protorpclite import protojson
 
@@ -97,6 +104,7 @@ from gslib.tracker_file import SERIALIZATION_UPLOAD_TRACKER_ENTRY
 from gslib.tracker_file import TrackerFileType
 from gslib.tracker_file import WriteDownloadComponentTrackerFile
 from gslib.utils import parallelism_framework_util
+from gslib.utils import text_util
 from gslib.utils.boto_util import GetJsonResumableChunkSize
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNumRetries
@@ -148,6 +156,11 @@ from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.unit_util import TEN_MIB
 from gslib.wildcard_iterator import CreateWildcardIterator
 
+
+if six.PY3:
+  long = int
+
+
 # pylint: disable=g-import-not-at-top
 if IS_WINDOWS:
   import msvcrt
@@ -178,7 +191,7 @@ _RENAME_ON_HASH_MISMATCH = False
 _RENAME_ON_HASH_MISMATCH_SUFFIX = '_corrupt'
 
 PARALLEL_UPLOAD_TEMP_NAMESPACE = (
-    u'/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
+    '/gsutil/tmp/parallel_composite_uploads/for_details_see/gsutil_help_cp/')
 
 PARALLEL_UPLOAD_STATIC_SALT = u"""
 PARALLEL_UPLOAD_SALT_TO_PREVENT_COLLISIONS.
@@ -703,11 +716,12 @@ def ConstructDstUrl(src_url, exp_src_url, src_url_names_container,
 
 
 def _CreateDigestsFromDigesters(digesters):
+  b64enc = base64.encodestring if six.PY2 else base64.encodebytes
   digests = {}
   if digesters:
     for alg in digesters:
-      digests[alg] = base64.encodestring(
-          digesters[alg].digest()).rstrip('\n')
+      digests[alg] = b64enc(
+          digesters[alg].digest()).rstrip(b'\n').decode('ascii')
   return digests
 
 
@@ -738,7 +752,7 @@ def _CreateDigestsFromLocalFile(status_queue, algs, file_name, src_url,
                 status_queue, src_url=src_url,
                 operation_name='Hashing').call))
   digests = {}
-  for alg_name, digest in hash_dict.iteritems():
+  for alg_name, digest in six.iteritems(hash_dict):
     digests[alg_name] = Base64EncodeHash(digest.hexdigest())
   return digests
 
@@ -757,23 +771,30 @@ def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
   Raises:
     CommandException: if cloud digests don't match local digests.
   """
+  # See hack comment in _CheckHashes.
   checked_one = False
   download_hashes = {}
   upload_hashes = {}
   if src_obj_metadata.md5Hash:
-    download_hashes['md5'] = src_obj_metadata.md5Hash
+    src_md5hash = six.ensure_binary(src_obj_metadata.md5Hash)
+    download_hashes['md5'] = src_md5hash
   if src_obj_metadata.crc32c:
-    download_hashes['crc32c'] = src_obj_metadata.crc32c
+    src_crc32c_hash = six.ensure_binary(src_obj_metadata.crc32c)
+    download_hashes['crc32c'] = src_crc32c_hash
   if dst_obj_metadata.md5Hash:
-    upload_hashes['md5'] = dst_obj_metadata.md5Hash
+    dst_md5hash = six.ensure_binary(dst_obj_metadata.md5Hash)
+    upload_hashes['md5'] = dst_md5hash
   if dst_obj_metadata.crc32c:
-    upload_hashes['crc32c'] = dst_obj_metadata.crc32c
+    dst_crc32c_hash = six.ensure_binary(dst_obj_metadata.crc32c)
+    upload_hashes['crc32c'] = dst_crc32c_hash
 
-  for alg, upload_b64_digest in upload_hashes.iteritems():
+  for alg, upload_b64_digest in six.iteritems(upload_hashes):
     if alg not in download_hashes:
       continue
 
     download_b64_digest = download_hashes[alg]
+    if six.PY3 and isinstance(download_b64_digest, str):
+      download_b64_digest = download_b64_digest.encode('ascii')
     logger.debug(
         'Comparing source vs destination %s-checksum for %s. (%s/%s)', alg,
         dst_url, download_b64_digest, upload_b64_digest)
@@ -808,25 +829,35 @@ def _CheckHashes(logger, obj_url, obj_metadata, file_name, digests,
   Raises:
     CommandException: if cloud digests don't match local digests.
   """
+  # Hack below.
+  # I cannot track down all of the code paths that get here, so I finally
+  # gave up and opted to convert all of the hashes to str. I know that they
+  # *should* be bytes, but the path of least resistance led to str.
+  # Not a nice thing, but for now it makes tests pass...
+  # Update: Since the _CheckCloudHashes function above needs to be changed
+  # as well, I am going to make the executive decision that hashes are
+  # bytes - here as well. It's what the hash and base64 PY3 libs return,
+  # and should be the native format for these things.
   local_hashes = digests
   cloud_hashes = {}
   if obj_metadata.md5Hash:
-    cloud_hashes['md5'] = obj_metadata.md5Hash.rstrip('\n')
+    md5_b64_digest = six.ensure_binary(obj_metadata.md5Hash)
+    cloud_hashes['md5'] = md5_b64_digest.rstrip(b'\n')
   if obj_metadata.crc32c:
-    cloud_hashes['crc32c'] = obj_metadata.crc32c.rstrip('\n')
+    crc32c_b64_hash = six.ensure_binary(obj_metadata.crc32c)
+    cloud_hashes['crc32c'] = crc32c_b64_hash.rstrip(b'\n')
 
   checked_one = False
   for alg in local_hashes:
     if alg not in cloud_hashes:
       continue
 
-    local_b64_digest = local_hashes[alg]
+    local_b64_digest = six.ensure_binary(local_hashes[alg])
     cloud_b64_digest = cloud_hashes[alg]
     logger.debug(
         'Comparing local vs cloud %s-checksum for %s. (%s/%s)', alg, file_name,
         local_b64_digest, cloud_b64_digest)
     if local_b64_digest != cloud_b64_digest:
-
       raise HashMismatchException(
           '%s signature computed for local file (%s) doesn\'t match '
           'cloud-supplied digest (%s). %s (%s) will be deleted.' % (
@@ -946,7 +977,7 @@ def _PartitionFile(fp, file_size, src_url, content_type, canned_acl,
     # we don't run into problems with name length. Using a deterministic
     # naming scheme for the temporary components allows users to take
     # advantage of resumable uploads for each component.
-    encoded_name = (PARALLEL_UPLOAD_STATIC_SALT + fp.name).encode(UTF8)
+    encoded_name = six.ensure_binary(PARALLEL_UPLOAD_STATIC_SALT + fp.name)
     content_md5 = md5()
     content_md5.update(encoded_name)
     digest = content_md5.hexdigest()
@@ -1036,6 +1067,9 @@ def _DoParallelCompositeUpload(fp, src_url, dst_url, dst_obj_metadata,
       existing_components, encryption_key_sha256, dst_bucket_url, command_obj,
       logger, _DeleteTempComponentObjectFn, _RmExceptionHandler)
 
+  encryption_key_sha256 = (
+    encryption_key_sha256.decode('ascii')
+    if encryption_key_sha256 is not None else None)
   random_prefix = (existing_prefix if existing_prefix is not None else
                    GenerateComponentObjectPrefix(
                        encryption_key_sha256=encryption_key_sha256))
@@ -1621,7 +1655,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
       gsutil_api.GetApiSelector(provider=dst_url.scheme))
 
   encryption_keywrapper = GetEncryptionKeyWrapper(config)
-  encryption_key_sha256 = (encryption_keywrapper.crypto_key_sha256
+  encryption_key_sha256 = (encryption_keywrapper.crypto_key_sha256.decode('ascii')
                            if encryption_keywrapper else None)
 
   def _UploadTrackerCallback(serialization_data):
@@ -1687,7 +1721,7 @@ def _UploadFileToObjectResumable(src_url, src_obj_filestream,
           tracker_callback=_UploadTrackerCallback,
           progress_callback=progress_callback, gzip_encoded=gzip_encoded)
       retryable = False
-    except ResumableUploadStartOverException, e:
+    except ResumableUploadStartOverException as e:
       logger.info('Caught ResumableUploadStartOverException for upload of %s.'
                   % src_url.url_string)
       # This can happen, for example, if the server sends a 410 response code.
@@ -1803,7 +1837,7 @@ def _ApplyZippedUploadCompression(
     compressed file size.
   """
   # TODO: Compress using a streaming model as opposed to all at once here.
-  if src_obj_size >= MIN_SIZE_COMPUTE_LOGGING:
+  if src_obj_size is not None and src_obj_size >= MIN_SIZE_COMPUTE_LOGGING:
     logger.info('Compressing %s (to tmp)...', src_url)
   (gzip_fh, gzip_path) = tempfile.mkstemp()
   gzip_fp = None
@@ -1977,8 +2011,9 @@ def _UploadFileToObject(
       logger, allow_splitting, upload_url, dst_url, src_obj_size,
       gsutil_api, canned_acl=global_copy_helper_opts.canned_acl,
       kms_keyname=dst_obj_metadata.kmsKeyName)
-  non_resumable_upload = (upload_size < ResumableThreshold() or
-                          src_url.IsStream() or src_url.IsFifo())
+  non_resumable_upload = (
+    (0 if upload_size is None else upload_size) < ResumableThreshold() or
+    src_url.IsStream() or src_url.IsFifo())
 
   if ((src_url.IsStream() or src_url.IsFifo()) and
       gsutil_api.GetApiSelector(provider=dst_url.scheme) == ApiSelector.JSON):
@@ -2090,7 +2125,7 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
     # -m cp.
     try:
       os.makedirs(dir_name)
-    except OSError, e:
+    except OSError as e:
       if e.errno != errno.EEXIST:
         raise
 
@@ -2332,7 +2367,7 @@ class SlicedDownloadFileWrapper(object):
     assert (self._start_byte <= current_file_pos and
             current_file_pos + len(data) <= self._end_byte + 1)
 
-    self._orig_fp.write(data)
+    text_util.write_to_fd(self._orig_fp, data)
     current_file_pos = self._orig_fp.tell()
 
     threshold = TRACKERFILE_UPDATE_THRESHOLD
@@ -2602,7 +2637,7 @@ def _DownloadObjectToFileResumable(src_url, src_obj_metadata, dst_url,
         data = fp.read(bytes_to_read)
         bytes_digested += bytes_to_read
         for alg_name in digesters:
-          digesters[alg_name].update(data)
+          digesters[alg_name].update(six.ensure_binary(data))
         hash_callback.Progress(len(data))
 
     elif not is_sliced:
@@ -2892,7 +2927,7 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
     _CheckHashes(logger, src_url, src_obj_metadata, final_file_name,
                  local_hashes)
     DeleteDownloadTrackerFiles(dst_url, api_selector)
-  except HashMismatchException, e:
+  except HashMismatchException as e:
     # If an non-gzipped object gets sent with gzip content encoding, the hash
     # we calculate will match the gzipped bytes, not the original object. Thus,
     # we'll need to calculate and check it after unzipping.
@@ -2934,7 +2969,7 @@ def _ValidateAndCompleteDownload(logger, src_url, src_obj_metadata, dst_url,
         while data:
           f_out.write(data)
           data = gzip_fp.read(GZIP_CHUNK_SIZE)
-    except IOError, e:
+    except IOError as e:
       # In the XML case where we don't know if the file was gzipped, raise
       # the original hash exception if we find that it wasn't.
       if 'Not a gzipped file' in str(e) and hash_invalid_exception:
@@ -3244,7 +3279,7 @@ def WarnIfMvEarlyDeletionChargeApplies(src_url, src_obj_metadata, logger):
             'charge, because the original object is less than %s '
             'days old according to the local system time.',
             object_storage_class,
-            src_url.url_string, early_deletion_cutoff_seconds / SECONDS_PER_DAY)
+            src_url.url_string, early_deletion_cutoff_seconds // SECONDS_PER_DAY)
 
 
 def MaybeSkipUnsupportedObject(src_url, src_obj_metadata):
@@ -3382,8 +3417,8 @@ def PerformCopy(
   else:  # src_url.IsFileUrl()
     try:
       src_obj_filestream = GetStreamFromFileUrl(src_url)
-    except Exception, e:  # pylint: disable=broad-except
-      message = 'Error opening file "%s": %s.' % (src_url, e.message)
+    except Exception as e:  # pylint: disable=broad-except
+      message = 'Error opening file "%s": %s.' % (src_url, str(e))
       if command_obj.continue_on_error:
         command_obj.op_failure_count += 1
         logger.error(message)
@@ -3587,18 +3622,32 @@ class Manifest(object):
       if ((not os.path.exists(self.manifest_path))
           or (os.stat(self.manifest_path).st_size == 0)):
         # Add headers to the new file.
-        with open(self.manifest_path, 'wb', 1) as f:
-          writer = csv.writer(f)
-          writer.writerow(['Source',
-                           'Destination',
-                           'Start',
-                           'End',
-                           'Md5',
-                           'UploadId',
-                           'Source Size',
-                           'Bytes Transferred',
-                           'Result',
-                           'Description'])
+        if six.PY3:
+          with open(self.manifest_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Source',
+                             'Destination',
+                             'Start',
+                             'End',
+                             'Md5',
+                             'UploadId',
+                             'Source Size',
+                             'Bytes Transferred',
+                             'Result',
+                             'Description'])
+        else:
+          with open(self.manifest_path, 'wb', 1) as f:
+            writer = csv.writer(f)
+            writer.writerow(['Source',
+                             'Destination',
+                             'Start',
+                             'End',
+                             'Md5',
+                             'UploadId',
+                             'Source Size',
+                             'Bytes Transferred',
+                             'Result',
+                             'Description'])
     except IOError:
       raise CommandException('Could not create manifest file.')
 
@@ -3646,9 +3695,13 @@ class Manifest(object):
     # Aquire a lock to prevent multiple threads writing to the same file at
     # the same time. This would cause a garbled mess in the manifest file.
     with self.lock:
-      with open(self.manifest_path, 'a', 1) as f:  # 1 == line buffered
-        writer = csv.writer(f)
-        writer.writerow(data)
+      if IS_WINDOWS and six.PY3:
+        f = open(self.manifest_path, 'a', 1, newline='')
+      else:
+        f = open(self.manifest_path, 'a', 1)  # 1 == line buffered
+      writer = csv.writer(f)
+      writer.writerow(data)
+      f.close()
 
   def _RemoveItemFromManifest(self, url):
     # Remove the item from the dictionary since we're done with it and

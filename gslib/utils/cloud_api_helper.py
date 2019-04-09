@@ -15,9 +15,14 @@
 """Helper functions for Cloud API implementations."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import json
 import re
+
+import six
 
 from gslib.cloud_api import ArgumentException
 from gslib.utils.text_util import AddQueryParamToUrl
@@ -66,6 +71,10 @@ def GetDownloadSerializationData(
   url = src_obj_metadata.mediaLink
   if user_project:
     url = AddQueryParamToUrl(url, 'userProject', user_project)
+
+  if six.PY3:
+    if isinstance(url, bytes):
+      url = url.decode('ascii')
 
   serialization_dict = {
       'auto_transfer': 'False',

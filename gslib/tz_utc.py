@@ -14,6 +14,11 @@
 # limitations under the License.
 """Provides a tzinfo subclass to represent the UTC timezone."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from datetime import timedelta
 from datetime import tzinfo
 

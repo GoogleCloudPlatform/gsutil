@@ -15,6 +15,9 @@
 """Base test case class for unit and integration tests."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from functools import wraps
 import os.path
@@ -23,8 +26,8 @@ import re
 import shutil
 import tempfile
 
+import six
 import boto
-from six import string_types
 
 import gslib.tests.util as util
 from gslib.tests.util import unittest
@@ -57,6 +60,9 @@ class GsUtilTestCase(unittest.TestCase):
   """Base test case class for unit and integration tests."""
 
   def setUp(self):
+    if six.PY2:
+      self.assertRegex = self.assertRegexpMatches
+      self.assertNotRegex = self.assertNotRegexpMatches
     if util.RUN_S3_TESTS:
       self.test_api = 'XML'
       self.default_provider = 's3'
@@ -76,8 +82,6 @@ class GsUtilTestCase(unittest.TestCase):
     self.assertEqual(text.count('\n'), numlines)
 
   def GetTestMethodName(self):
-    if isinstance(self._testMethodName, unicode):
-      return self._testMethodName.encode(UTF8)
     return self._testMethodName
 
   def MakeRandomTestString(self):
@@ -98,9 +102,10 @@ class GsUtilTestCase(unittest.TestCase):
       providers (e.g. replacing "_" with "-", converting uppercase letters to
       lowercase, etc.).
     """
-    name = '%sgsutil-test-%s-%s' % (prefix, self.GetTestMethodName(), kind)
+    name = '{prefix}gsutil-test-{method}-{kind}'.format(
+      prefix=prefix, method=self.GetTestMethodName(), kind=kind)
     name = name[:MAX_BUCKET_LENGTH-9]
-    name = '%s-%s' % (name, self.MakeRandomTestString())
+    name = '{name}-{rand}'.format(name=name, rand=self.MakeRandomTestString())
     # As of March 2018, S3 no longer accepts underscores or uppercase letters in
     # bucket names.
     if kind == 'bucket':
@@ -133,8 +138,9 @@ class GsUtilTestCase(unittest.TestCase):
     for i, name in enumerate(test_files):
       contents_file = contents
       if contents_file is None:
-        contents_file = 'test %d' % i
-      self.CreateTempFile(tmpdir=tmpdir, file_name=name, contents=contents_file)
+        contents_file = ('test %d' % i).encode('ascii')
+      self.CreateTempFile(tmpdir=tmpdir, file_name=name,
+                          contents=contents_file)
     return tmpdir
 
   def CreateTempFifo(self, tmpdir=None, file_name=None):
@@ -153,7 +159,7 @@ class GsUtilTestCase(unittest.TestCase):
     """
     tmpdir = tmpdir or self.CreateTempDir()
     file_name = file_name or self.MakeTempName('fifo')
-    if isinstance(file_name, basestring):
+    if isinstance(file_name, six.string_types):
       fpath = os.path.join(tmpdir, file_name)
     else:
       fpath = os.path.join(tmpdir, *file_name)
@@ -172,7 +178,8 @@ class GsUtilTestCase(unittest.TestCase):
       tmpdir: The temporary directory to place the file in. If not specified, a
               new temporary directory is created.
       contents: The contents to write to the file. If not specified, a test
-                string is constructed and written to the file.
+                string is constructed and written to the file. Since the file
+                is opened 'wb', the contents must be bytes.
       file_name: The name to use for the file. If not specified, a temporary
                  test file name is constructed. This can also be a tuple, where
                  ('dir', 'foo') means to create a file named 'foo' inside a
@@ -188,25 +195,33 @@ class GsUtilTestCase(unittest.TestCase):
     Returns:
       The path to the new temporary file.
     """
-    tmpdir = tmpdir or self.CreateTempDir()
-    file_name = file_name or self.MakeTempName('file')
-    if isinstance(file_name, basestring):
-      fpath = os.path.join(tmpdir, file_name)
+
+    tmpdir = six.ensure_str(tmpdir or self.CreateTempDir())
+    file_name = file_name or self.MakeTempName(str('file'))
+    if isinstance(file_name, (six.text_type, six.binary_type)):
+      fpath = os.path.join(tmpdir, six.ensure_str(file_name))
     else:
+      file_name = map(six.ensure_str, file_name)
       fpath = os.path.join(tmpdir, *file_name)
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
+    if isinstance(fpath, six.binary_type):
+        fpath = fpath.decode('utf-8')
 
     with open(fpath, 'wb') as f:
       contents = (contents if contents is not None
-                  else self.MakeTempName('contents'))
+                  else self.MakeTempName(str('contents')))
+      if isinstance(contents, bytearray):
+        contents = bytes(contents)
+      else:
+        contents = six.ensure_binary(contents)
       f.write(contents)
     if mtime is not None:
       # Set the atime and mtime to be the same.
       os.utime(fpath, (mtime, mtime))
-    if uid != NA_ID or gid != NA_ID:
-      os.chown(fpath, uid, gid)
-    if mode != NA_MODE:
+    if uid != NA_ID or int(gid) != NA_ID:
+      os.chown(fpath, uid, int(gid))
+    if int(mode) != NA_MODE:
       os.chmod(fpath, int(mode, 8))
     return fpath
 
@@ -223,7 +238,7 @@ class GsUtilTestCase(unittest.TestCase):
           pattern. If pattern is a regex that was compiled with existing flags,
           these, flags will be added via a bitwise-or.
     """
-    if isinstance(pattern, string_types):
+    if isinstance(pattern, six.string_types):
       pattern = re.compile(pattern, flags=flags)
     else:  # It's most likely an already-compiled pattern.
       pattern = re.compile(pattern.pattern, flags=pattern.flags | flags)

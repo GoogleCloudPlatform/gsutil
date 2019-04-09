@@ -19,6 +19,10 @@
 # and credential storage.  As such, it doesn't require most of the
 # gcs_oauth2_boto_plugin logic.
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import base64
 import json
@@ -323,7 +327,7 @@ def _GetGceCreds():
         service_account_name=config.get(
             'GoogleCompute', 'service_account', 'default'),
         cache_filename=GetGceCredentialCacheFilename())
-  except apitools_exceptions.ResourceUnavailableError, e:
+  except apitools_exceptions.ResourceUnavailableError as e:
     if 'service account' in str(e) and 'does not exist' in str(e):
       return None
     raise

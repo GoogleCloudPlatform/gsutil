@@ -15,13 +15,17 @@
 """Unit and integration tests for gsutil command_runner module."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import logging
 import os
 import time
 
+import six
+from six.moves import input
 import boto
-import mock
 
 import gslib
 from gslib import command_runner
@@ -45,6 +49,10 @@ from gslib.utils import system_util
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.text_util import InsistAscii
 from gslib.utils.unit_util import SECONDS_PER_DAY
+
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 SKIP_BECAUSE_RETRIES_ARE_SLOW = (
     'gs_host is set to non-default value; trying to fetch gsutil version '
@@ -173,7 +181,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     get_timestamp_file_patcher.start()
 
     # Mock out the gsutil version checker.
-    base_version = unicode(gslib.VERSION)
+    base_version = six.text_type(gslib.VERSION)
     while not base_version.isnumeric():
       if not base_version:
         raise CommandException(
@@ -182,8 +190,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     self.old_look_up_gsutil_version = command_runner.LookUpGsutilVersion
     command_runner.LookUpGsutilVersion = lambda u, v: float(base_version) + 1
 
-    # Mock out raw_input to trigger yes prompt.
-    command_runner.raw_input = lambda p: 'y'
+    # Mock out input to trigger yes prompt.
+    command_runner.input = lambda p: 'y'
 
     # Mock out TTY check to pretend we're on a TTY even if we're not.
     self.running_interactively = True
@@ -206,7 +214,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     super(TestCommandRunnerUnitTests, self).tearDown()
 
     command_runner.LookUpGsutilVersion = self.old_look_up_gsutil_version
-    command_runner.raw_input = raw_input
+    command_runner.input = input
 
     gslib.GetGsutilVersionModifiedTime = self.previous_version_mod_time
 
@@ -300,7 +308,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
         ('GSUtil', 'software_update_check_period', '1')]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
-      command_runner.raw_input = lambda p: 'n'
+      command_runner.input = lambda p: 'n'
       self.assertEqual(
           False,
           self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
@@ -344,7 +352,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     try:
       runner.ConfigureCommandArgumentParsers(parser)
     except RuntimeError as e:
-      self.assertIn('Unknown completer', e.message)
+      self.assertIn('Unknown completer', str(e))
 
   @unittest.skipUnless(ARGCOMPLETE_AVAILABLE,
                        'Tab completion requires argcomplete')
@@ -421,7 +429,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     args = ['ls', '-p', 'abc:def', 'gs://bucket']
     HandleArgCoding(args)
     for a in args:
-      self.assertIs(type(a), unicode)
+      self.assertTrue(isinstance(a, six.text_type))
 
   def test_valid_header_coding(self):
     headers = {
@@ -431,7 +439,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     HandleHeaderCoding(headers)
     # Custom metadata header values should be decoded to unicode; others should
     # not be decoded, but should contain only ASCII characters.
-    self.assertIs(type(headers['x-goog-meta-foo']), unicode)
+    self.assertTrue(isinstance(headers['x-goog-meta-foo'], six.text_type))
     InsistAscii(
         headers['content-type'],
         'Value of non-custom-metadata header contained non-ASCII characters')
@@ -459,13 +467,13 @@ class TestCommandRunnerIntegrationTests(
     self.addCleanup(get_timestamp_file_patcher.stop)
     get_timestamp_file_patcher.start()
 
-    # Mock out raw_input to trigger yes prompt.
-    command_runner.raw_input = lambda p: 'y'
+    # Mock out input to trigger yes prompt.
+    command_runner.input = lambda p: 'y'
 
   def tearDown(self):
     """Tears down the command runner mock objects."""
     super(TestCommandRunnerIntegrationTests, self).tearDown()
-    command_runner.raw_input = raw_input
+    command_runner.input = input
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_lookup_version_without_credentials(self):
