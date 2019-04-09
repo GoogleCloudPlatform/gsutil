@@ -201,7 +201,9 @@ _DETAILED_HELP_TEXT = ("""
       aws_secret_access_key
       gs_access_key_id
       gs_host
+      gs_host_header
       gs_json_host
+      gs_json_host_header
       gs_json_port
       gs_oauth2_refresh_token
       gs_port
@@ -210,6 +212,7 @@ _DETAILED_HELP_TEXT = ("""
       gs_service_key_file
       gs_service_key_file_password
       s3_host
+      s3_host_header
       s3_port
 
     [Boto]
@@ -1073,11 +1076,15 @@ class ConfigCommand(Command):
           '# Setting a non-default gs_host only works if prefer_api=xml.\n'
           '#%s_host = <alternate storage host address>\n'
           '#%s_port = <alternate storage host port>\n'
+          '# In some cases, (e.g. VPC requests) the "host" HTTP header should\n'
+          '# be different than the host used in the request URL.\n'
+          '#%s_host_header = <alternate storage host header>\n'
           % (host_key, host_key))
       if host_key == 'gs':
         config_file.write(
             '#%s_json_host = <alternate JSON API storage host address>\n'
             '#%s_json_port = <alternate JSON API storage host port>\n\n'
+            '#%s_json_host_header = <alternate JSON API storage host header>\n\n'
             % (host_key, host_key))
       config_file.write('\n')
 

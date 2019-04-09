@@ -982,7 +982,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # Also, maintain any custom host/port/API configuration, since we'll need
     # to contact the same host when operating in a development environment.
     for creds_config_key in (
-        'gs_host', 'gs_json_host', 'gs_post', 'gs_json_port'):
+        'gs_host', 'gs_json_host', 'gs_json_host_header', 'gs_post', 'gs_json_port'):
       boto_config_for_test.append(
           ('Credentials', creds_config_key,
            boto.config.get('Credentials', creds_config_key, None)))
