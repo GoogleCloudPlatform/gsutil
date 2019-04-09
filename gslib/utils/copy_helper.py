@@ -3590,6 +3590,8 @@ class Manifest(object):
     """
     try:
       if os.path.exists(self.manifest_path):
+        # Note: we can't use io.open here or CSV reader will become upset
+        # https://stackoverflow.com/a/18449496
         with open(self.manifest_path, 'r') as f:
           first_row = True
           reader = csv.reader(f)
@@ -3687,11 +3689,12 @@ class Manifest(object):
         '%sZ' % row_item['end_time'].isoformat(),
         row_item['md5'] if 'md5' in row_item else '',
         row_item['upload_id'] if 'upload_id' in row_item else '',
-        row_item['size'] if 'size' in row_item else '',
-        row_item['bytes'] if 'bytes' in row_item else '',
+        str(row_item['size']) if 'size' in row_item else '',
+        str(row_item['bytes']) if 'bytes' in row_item else '',
         row_item['result'],
         row_item['description']]
-    data = [six.ensure_str(str(item).encode(UTF8)) for item in data]
+
+    data = [six.ensure_str(value) for value in data]
 
     # Aquire a lock to prevent multiple threads writing to the same file at
     # the same time. This would cause a garbled mess in the manifest file.

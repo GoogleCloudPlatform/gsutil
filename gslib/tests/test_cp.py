@@ -34,7 +34,7 @@ import re
 import string
 import sys
 import threading
-import ast
+import io
 
 import six
 from six.moves import http_client
@@ -1542,33 +1542,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Ensure the file is empty.
     open(logpath, 'w').close()
     self.RunGsUtil(['cp', '-L', logpath, fpath, dsturi])
+
     with open(logpath, 'r') as f:
       lines = f.readlines()
-    if six.PY3:
-      # What the hell is this?
-      # Well, it is a hack. So far as I can tell, CreateTempFile has no need
-      # for text file output except for here (where it is used to create a
-      # logfile), and the other place this 'code' appears in the manifest
-      # download test. So rather than mangle that code to support this one
-      # special case, I did this. The purpose is to get rid of strings that
-      # contain the string representation of bytes. Not all do, but even one
-      # is enough.
-      decode_lines = []
-      for line in lines:
-        if line.startswith("b'"):
-          some_strs = line.split(',')
-          line_parts = []
-          for some_str in some_strs:
-            if some_str.startswith("b'"):
-              line_parts.append(ast.literal_eval(some_str).decode('utf-8'))
-            else:
-              line_parts.append(some_str)
-          decode_lines.append(','.join(line_parts))
-        else:
-          decode_lines.append(line)
-      lines = decode_lines
-    else:  # PY2
-      lines = [unicode(line, 'utf-8') for line in lines]
+    if six.PY2:
+      lines = [unicode(line, UTF8) for line in lines]
+
     self.assertEqual(len(lines), 2)
 
     expected_headers = ['Source', 'Destination', 'Start', 'End', 'Md5',
@@ -1576,22 +1555,33 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                         'Result', 'Description']
     self.assertEqual(expected_headers, lines[0].strip().split(','))
     results = lines[1].strip().split(',')
-    self.assertEqual(results[0][:7], 'file://')  # source
-    self.assertEqual(results[1][:5], '%s://' %
-                     self.default_provider)      # destination
+
+    for header in results:
+      if isinstance(header, (six.string_types, six.text_type)):
+        header = six.ensure_str(header)
+
+    results = dict(zip(expected_headers, results))
+
+    self.assertEqual(results['Source'][:7], 'file://')
+    self.assertEqual(results['Destination'][:5], '%s://' %
+                     self.default_provider)
+
     date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-    start_date = datetime.datetime.strptime(results[2], date_format)
-    end_date = datetime.datetime.strptime(results[3], date_format)
+    start_date = datetime.datetime.strptime(results['Start'], date_format)
+    end_date = datetime.datetime.strptime(results['End'], date_format)
     self.assertEqual(end_date > start_date, True)
+
     if self.RunGsUtil == testcase.GsUtilIntegrationTestCase.RunGsUtil:
       # Check that we didn't do automatic parallel uploads - compose doesn't
       # calculate the MD5 hash. Since RunGsUtil is overriden in
       # TestCpParallelUploads to force parallel uploads, we can check which
       # method was used.
-      self.assertEqual(results[4], 'rL0Y20zC+Fzt72VPzMSk2A==')  # md5
-    self.assertEqual(int(results[6]), 3)  # Source Size
-    self.assertEqual(int(results[7]), 3)  # Bytes Transferred
-    self.assertEqual(results[8], 'OK')  # Result
+      self.assertEqual(results['Md5'], 'rL0Y20zC+Fzt72VPzMSk2A==')
+
+    self.assertEqual(int(results['Source Size']), 3)
+    self.assertEqual(int(results['Bytes Transferred']), 3)
+    self.assertEqual(results['Result'], 'OK')
+
 
   @SequentialAndParallelTransfer
   def test_cp_manifest_download(self):
