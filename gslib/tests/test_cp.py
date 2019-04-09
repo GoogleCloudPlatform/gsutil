@@ -1550,31 +1550,38 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       lines = [unicode(line, UTF8) for line in lines]
     self.assertEqual(len(lines), 2)
 
-    # TODO(b/130189227): Refactor into dictionary results = {header: result}
     expected_headers = ['Source', 'Destination', 'Start', 'End', 'Md5',
                         'UploadId', 'Source Size', 'Bytes Transferred',
                         'Result', 'Description']
     self.assertEqual(expected_headers, lines[0].strip().split(','))
     results = lines[1].strip().split(',')
+
     for header in results:
       if isinstance(header, (six.string_types, six.text_type)):
         header = six.ensure_str(header.encode(UTF8))
-    self.assertEqual(results[0][:7], 'file://')  # source
-    self.assertEqual(results[1][:5], '%s://' %
+
+    results = dict(zip(expected_headers, results))
+
+    self.assertEqual(results['Source'][:7], 'file://')  # source
+    self.assertEqual(results['Destination'][:5], '%s://' %
                      self.default_provider)      # destination
+
     date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-    start_date = datetime.datetime.strptime(results[2], date_format)
-    end_date = datetime.datetime.strptime(results[3], date_format)
+    start_date = datetime.datetime.strptime(results['Start'], date_format)
+    end_date = datetime.datetime.strptime(results['End'], date_format)
     self.assertEqual(end_date > start_date, True)
+
     if self.RunGsUtil == testcase.GsUtilIntegrationTestCase.RunGsUtil:
       # Check that we didn't do automatic parallel uploads - compose doesn't
       # calculate the MD5 hash. Since RunGsUtil is overriden in
       # TestCpParallelUploads to force parallel uploads, we can check which
       # method was used.
-      self.assertEqual(results[4], 'rL0Y20zC+Fzt72VPzMSk2A==')  # md5
-    self.assertEqual(int(results[6]), 3)  # Source Size
-    self.assertEqual(int(results[7]), 3)  # Bytes Transferred
-    self.assertEqual(results[8], 'OK')  # Result
+      self.assertEqual(results['Md5'], 'rL0Y20zC+Fzt72VPzMSk2A==')
+
+    self.assertEqual(int(results['Source Size']), 3)
+    self.assertEqual(int(results['Bytes Transferred']), 3)
+    self.assertEqual(results['Result'], 'OK')
+
 
   @SequentialAndParallelTransfer
   def test_cp_manifest_download(self):
