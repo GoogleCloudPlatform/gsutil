@@ -223,7 +223,13 @@ class GcsJsonApi(CloudApi):
 
     self.global_params = apitools_messages.StandardQueryParameters(
         trace='token:%s' % trace_token) if trace_token else None
+
     additional_http_headers = {}
+
+    gs_json_host_header = config.get('Credentials', 'gs_json_host_header', None)
+    if gs_json_host_header and gs_json_host:
+      additional_http_headers['Host'] = gs_json_host_header
+
     self._AddPerfTraceTokenToHeaders(additional_http_headers)
 
     log_request = (debug >= 3)

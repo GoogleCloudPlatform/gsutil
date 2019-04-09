@@ -45,7 +45,6 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   _custom_endpoint_flags = [
       '-o', 'Credentials:gs_host=' + _gs_ip,
       '-o', 'Credentials:gs_host_header=' + _gs_host,
-      # TODO: gsutil-beta: Add host header support for JSON
       '-o', 'Boto:https_validate_certificates=False']
 
   def _should_run_with_custom_endpoints(self):
