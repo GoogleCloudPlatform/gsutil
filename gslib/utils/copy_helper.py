@@ -3684,14 +3684,14 @@ class Manifest(object):
     data = [
         six.ensure_str(row_item['source_uri']),
         six.ensure_str(row_item['destination_uri']),
-        '%sZ' % row_item['start_time'].isoformat(),
-        '%sZ' % row_item['end_time'].isoformat(),
-        row_item['md5'] if 'md5' in row_item else '',
-        row_item['upload_id'] if 'upload_id' in row_item else '',
+        six.ensure_str('%sZ' % row_item['start_time'].isoformat()),
+        six.ensure_str('%sZ' % row_item['end_time'].isoformat()),
+        six.ensure_str(row_item['md5']) if 'md5' in row_item else '',
+        six.ensure_str(row_item['upload_id']) if 'upload_id' in row_item else '',
         six.ensure_str(str(row_item['size'])) if 'size' in row_item else '',
         six.ensure_str(str(row_item['bytes'])) if 'bytes' in row_item else '',
-        row_item['result'],
-        row_item['description']]
+        six.ensure_str(row_item['result']),
+        six.ensure_str(row_item['description'])]
 
     # Aquire a lock to prevent multiple threads writing to the same file at
     # the same time. This would cause a garbled mess in the manifest file.
