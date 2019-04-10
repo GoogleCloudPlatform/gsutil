@@ -804,9 +804,18 @@ def _BuildTmpOutputLine(blr):
     md5 = blr.root_object.md5Hash or _NA
   else:
     raise CommandException('Got unexpected URL type (%s)' % url.scheme)
-  return '%s %d %d %d %d %d %d %d %s %s\n' % (_EncodeUrl(url.url_string), size,
-                                              time_created, atime, mtime, mode,
-                                              uid, gid, crc32c, md5)
+  attrs = [_EncodeUrl(url.url_string), # binary str in py2 / unicode str py 3
+          size, # int
+          time_created, # int
+          atime, # long
+          mtime, # long
+          mode, # int
+          uid, # int
+          gid, # int
+          crc32c, # unicode
+          md5] # unicode
+  attrs = [six.ensure_text(str(i)) for i in attrs]
+  return ' '.join(attrs) + '\n'
 
 
 def _EncodeUrl(url_string):
