@@ -16,9 +16,13 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import fnmatch
+import sys
 
+import six
 from gslib.cloud_api import EncryptionException
 from gslib.exception import CommandException
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
@@ -29,6 +33,7 @@ from gslib.utils.constants import S3_MARKER_GUIDS
 from gslib.utils.constants import UTF8
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.translation_helper import AclTranslation
+from gslib.utils import text_util
 from gslib.wildcard_iterator import StorageUrlFromString
 
 
@@ -78,7 +83,7 @@ def MakeMetadataLine(label, value, indent=1):
   Returns:
     A string with a vertically aligned label and value.
   """
-  return '%s%s' % (((' ' * indent * 4) + label + ':').ljust(28), value)
+  return '{}{}'.format(((' ' * indent * 4) + label + ':').ljust(28), value)
 
 
 def PrintBucketHeader(bucket_listing_ref):  # pylint: disable=unused-argument
@@ -98,7 +103,7 @@ def PrintDir(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type BUCKET or PREFIX.
   """
-  print(bucket_listing_ref.url_string.encode(UTF8))
+  text_util.print_to_fd(bucket_listing_ref.url_string)
 
 
 # pylint: disable=unused-argument
@@ -120,13 +125,12 @@ def PrintDirHeader(bucket_listing_ref):
   Args:
     bucket_listing_ref: BucketListingRef of type PREFIX.
   """
-  print('%s:' % bucket_listing_ref.url_string.encode(UTF8))
-
+  text_util.print_to_fd('{}:'.format(bucket_listing_ref.url_string))
 
 
 def PrintNewLine():
   """Default function for printing new lines between directories."""
-  print()
+  text_util.print_to_fd()
 
 
 # pylint: disable=too-many-statements
@@ -158,44 +162,44 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     num_bytes = obj.size
     num_objs = 1
 
-  print('%s:' % url_str.encode(UTF8))
+  text_util.print_to_fd('{}:'.format(url_str))
   if obj.timeCreated:
-    print(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Creation time', obj.timeCreated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.updated:
-    print(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Update time', obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if (obj.timeStorageClassUpdated and
       obj.timeStorageClassUpdated != obj.timeCreated):
-    print(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Storage class update time',
         obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.storageClass:
-    print(MakeMetadataLine('Storage class', obj.storageClass))
+    text_util.print_to_fd(MakeMetadataLine('Storage class', obj.storageClass))
   if obj.temporaryHold:
-    print(MakeMetadataLine('Temporary Hold', 'Enabled'))
+    text_util.print_to_fd(MakeMetadataLine('Temporary Hold', 'Enabled'))
   if obj.eventBasedHold:
-    print(MakeMetadataLine('Event-Based Hold', 'Enabled'))
+    text_util.print_to_fd(MakeMetadataLine('Event-Based Hold', 'Enabled'))
   if obj.retentionExpirationTime:
-    print(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Retention Expiration',
         obj.retentionExpirationTime.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.kmsKeyName:
-    print(MakeMetadataLine('KMS key', obj.kmsKeyName))
+    text_util.print_to_fd(MakeMetadataLine('KMS key', obj.kmsKeyName))
   if obj.cacheControl:
-    print(MakeMetadataLine('Cache-Control', obj.cacheControl))
+    text_util.print_to_fd(MakeMetadataLine('Cache-Control', obj.cacheControl))
   if obj.contentDisposition:
-    print(MakeMetadataLine('Content-Disposition', obj.contentDisposition))
+    text_util.print_to_fd(MakeMetadataLine('Content-Disposition', obj.contentDisposition))
   if obj.contentEncoding:
-    print(MakeMetadataLine('Content-Encoding', obj.contentEncoding))
+    text_util.print_to_fd(MakeMetadataLine('Content-Encoding', obj.contentEncoding))
   if obj.contentLanguage:
-    print(MakeMetadataLine('Content-Language', obj.contentLanguage))
-  print(MakeMetadataLine('Content-Length', obj.size))
-  print(MakeMetadataLine('Content-Type', obj.contentType))
+    text_util.print_to_fd(MakeMetadataLine('Content-Language', obj.contentLanguage))
+  text_util.print_to_fd(MakeMetadataLine('Content-Length', obj.size))
+  text_util.print_to_fd(MakeMetadataLine('Content-Type', obj.contentType))
   if obj.componentCount:
-    print(MakeMetadataLine('Component-Count', obj.componentCount))
+    text_util.print_to_fd(MakeMetadataLine('Component-Count', obj.componentCount))
   if obj.timeDeleted:
-    print(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Archived time',
         obj.timeDeleted.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   marker_props = {}
@@ -207,41 +211,43 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
       else:
         marker_props[add_prop.key] = add_prop.value
     if non_marker_props:
-      print(MakeMetadataLine('Metadata', ''))
+      text_util.print_to_fd(MakeMetadataLine('Metadata', ''))
       for ap in non_marker_props:
-        print(MakeMetadataLine(
-            ('%s' % ap.key).encode(UTF8), ('%s' % ap.value).encode(UTF8),
-            indent=2))
+        ap_key = '{}'.format(ap.key)
+        ap_value = '{}'.format(ap.value)
+        meta_data_line = MakeMetadataLine(ap_key, ap_value, indent=2)
+        text_util.print_to_fd(meta_data_line)
   if obj.customerEncryption:
     if not obj.crc32c:
-      print(MakeMetadataLine('Hash (crc32c)', 'encrypted'))
+      text_util.print_to_fd(MakeMetadataLine('Hash (crc32c)', 'encrypted'))
     if not obj.md5Hash:
-      print(MakeMetadataLine('Hash (md5)', 'encrypted'))
-    print(MakeMetadataLine(
+      text_util.print_to_fd(MakeMetadataLine('Hash (md5)', 'encrypted'))
+    text_util.print_to_fd(MakeMetadataLine(
         'Encryption algorithm', obj.customerEncryption.encryptionAlgorithm))
-    print(MakeMetadataLine(
+    text_util.print_to_fd(MakeMetadataLine(
         'Encryption key SHA256', obj.customerEncryption.keySha256))
   if obj.crc32c:
-    print(MakeMetadataLine('Hash (crc32c)', obj.crc32c))
+    text_util.print_to_fd(MakeMetadataLine('Hash (crc32c)', obj.crc32c))
   if obj.md5Hash:
-    print(MakeMetadataLine('Hash (md5)', obj.md5Hash))
-  print(MakeMetadataLine('ETag', obj.etag.strip('"\'')))
+    text_util.print_to_fd(MakeMetadataLine('Hash (md5)', obj.md5Hash))
+  text_util.print_to_fd(MakeMetadataLine('ETag', obj.etag.strip('"\'')))
   if obj.generation:
     generation_str = GenerationFromUrlAndString(storage_url, obj.generation)
-    print(MakeMetadataLine('Generation', generation_str))
+    text_util.print_to_fd(MakeMetadataLine('Generation', generation_str))
   if obj.metageneration:
-    print(MakeMetadataLine('Metageneration', obj.metageneration))
+    text_util.print_to_fd(MakeMetadataLine('Metageneration', obj.metageneration))
   if incl_acl:
     # JSON API won't return acls as part of the response unless we have
     # full control scope
     if obj.acl:
-      print(MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl)))
+      text_util.print_to_fd(MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl)))
     elif S3_ACL_MARKER_GUID in marker_props:
-      print(MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID]))
+      text_util.print_to_fd(MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID]))
     else:
       # Empty ACLs are possible with Bucket Policy Only and no longer imply
       # ACCESS DENIED anymore.
-      print(MakeMetadataLine('ACL', '[]'))
+      text_util.print_to_fd(MakeMetadataLine('ACL', '[]'))
+
   return (num_objs, num_bytes)
 
 
@@ -255,7 +261,7 @@ def PrintObject(bucket_listing_ref):
     (num_objects, num_bytes).
   """
   try:
-    print(bucket_listing_ref.url_string.encode(UTF8))
+    text_util.print_to_fd(bucket_listing_ref.url_string)
   except IOError as e:
     # Windows throws an IOError 0 here for object names containing Unicode
     # chars. Ignore it.
@@ -454,8 +460,8 @@ class LsHelper(object):
       True if reference matches a pattern and should be excluded.
     """
     if self.exclude_patterns:
-      tomatch = blr.url_string
+      tomatch = six.ensure_str(blr.url_string)
       for pattern in self.exclude_patterns:
-        if fnmatch.fnmatch(tomatch, pattern):
+        if fnmatch.fnmatch(tomatch, six.ensure_str(pattern)):
           return True
     return False

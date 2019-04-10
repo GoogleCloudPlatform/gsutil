@@ -15,8 +15,10 @@
 
 """Base classes for gsutil UI controller, UIThread and MainThreadUIQueue."""
 
-
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 from collections import deque
 import sys
@@ -164,7 +166,7 @@ class StatusMessageManager(object):
     self.refresh_message_time = (self.custom_time if self.custom_time
                                  else time.time())
     self.start_time = self.refresh_message_time
-	# Time at last spinner update.
+    # Time at last spinner update.
     self.refresh_spinner_time = self.refresh_message_time
 
     # Measured in objects/second or bytes/second, depending on the superclass.
@@ -1121,5 +1123,5 @@ class UIThread(threading.Thread):
         if status_message == _ZERO_TASKS_TO_DO_ARGUMENT:
           # Item from MainThread to indicate we are done.
           break
-    except Exception, e:  # pylint:disable=broad-except
+    except Exception as e:  # pylint:disable=broad-except
       self.stream.write('Exception in UIThread: %s\n' % e)

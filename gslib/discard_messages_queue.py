@@ -14,6 +14,11 @@
 # limitations under the License.
 """Provides a message queue that discards all messages."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 
 class DiscardMessagesQueue(object):
   """Emulates a Cloud API status queue but drops all messages.

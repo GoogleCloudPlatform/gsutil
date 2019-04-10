@@ -14,7 +14,14 @@
 # limitations under the License.
 """Integration tests for rsync command."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import os
+
+import six
 
 import crcmod
 from gslib.project_id import PopulateProjectId
@@ -55,6 +62,9 @@ if not IS_WINDOWS:
   from gslib.tests.util import PRIMARY_GID
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
+
+if six.PY3:
+  long = int
 
 NO_CHANGES = 'Building synchronization state...\nStarting synchronization...\n'
 if not UsingCrcmodExtension(crcmod):
@@ -112,7 +122,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     """Tests various invalid argument cases."""
     bucket_uri = self.CreateBucket()
     obj1 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
-                             contents='obj1')
+                             contents=b'obj1')
     tmpdir = self.CreateTempDir()
     # rsync object to bucket.
     self.RunGsUtil(['rsync', suri(obj1), suri(bucket_uri)], expected_status=1)
@@ -143,20 +153,20 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
-                      contents='obj1', mtime='xyz')
+                      contents=b'obj1', mtime='xyz')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj2',
-                      contents='obj2', mtime=123)
+                      contents=b'obj2', mtime=123)
     # This creates an object that has an mtime sometime on 41091-11-25 UTC. It
     # is used to verify that a warning is thrown for objects set at least a day
     # in the future. If this test is not updated before that date, this test
     # will fail because of the hardcoded timestamp.
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj3',
-                      contents='obj3', mtime=1234567891011L)
+                      contents=b'obj3', mtime=long(1234567891011))
     # Create objects with a negative mtime.
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj4',
-                      contents='obj4', mtime=-100)
+                      contents=b'obj4', mtime=-100)
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj5',
-                      contents='obj5', mtime=-1)
+                      contents=b'obj5', mtime=-1)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -185,22 +195,22 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     dst_bucket = self.CreateBucket()
     # Create source objects.
     self.CreateObject(bucket_uri=src_bucket, object_name='obj1',
-                      contents='obj1', mode='444')
+                      contents=b'obj1', mode='444')
     self.CreateObject(bucket_uri=src_bucket, object_name='obj2',
-                      contents='obj2', gid=PRIMARY_GID)
+                      contents=b'obj2', gid=PRIMARY_GID)
     self.CreateObject(bucket_uri=src_bucket, object_name='obj3',
-                      contents='obj3', gid=NON_PRIMARY_GID())
+                      contents=b'obj3', gid=NON_PRIMARY_GID())
     self.CreateObject(bucket_uri=src_bucket, object_name='obj4',
-                      contents='obj3', uid=INVALID_UID(), gid=INVALID_GID(),
+                      contents=b'obj3', uid=INVALID_UID(), gid=INVALID_GID(),
                       mode='222')
     self.CreateObject(bucket_uri=src_bucket, object_name='obj5',
-                      contents='obj5', uid=USER_ID, gid=PRIMARY_GID,
+                      contents=b'obj5', uid=USER_ID, gid=PRIMARY_GID,
                       mode=str(DEFAULT_MODE))
     # Create destination objects.
     # obj5 at the source and destination have the same content so we will only
     # patch the destination metadata instead of copying the entire object.
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj5',
-                      contents='obj5')
+                      contents=b'obj5')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -263,13 +273,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     src_bucket = self.CreateBucket()
     dst_bucket = self.CreateBucket()
     self.CreateObject(bucket_uri=src_bucket, object_name='obj1',
-                      contents='obj1', mtime=0)
+                      contents=b'obj1', mtime=0)
     self.CreateObject(bucket_uri=src_bucket, object_name='subdir/obj2',
-                      contents='subdir/obj2', mtime=1)
+                      contents=b'subdir/obj2', mtime=1)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     self.CreateObject(bucket_uri=dst_bucket, object_name='subdir/obj2',
-                      contents='subdir/obj2')
+                      contents=b'subdir/obj2')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -300,9 +310,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     src_bucket = self.CreateBucket()
     dst_bucket = self.CreateBucket()
     obj1 = self.CreateObject(bucket_uri=src_bucket, object_name='obj1',
-                             contents='obj1', mtime=0)
+                             contents=b'obj1', mtime=0)
     obj2 = self.CreateObject(bucket_uri=src_bucket, object_name='subdir/obj2',
-                             contents='subdir/obj2', mtime=1)
+                             contents=b'subdir/obj2', mtime=1)
     # Verify objects' mtime in the buckets
     self._VerifyObjectMtime(obj1.bucket_name, obj1.object_name, '0')
     self._VerifyObjectMtime(obj2.bucket_name, obj2.object_name, '1')
@@ -334,25 +344,25 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     src_bucket = self.CreateBucket()
     dst_bucket = self.CreateBucket()
     self.CreateObject(bucket_uri=src_bucket, object_name='obj1',
-                      contents='OBJ1')
+                      contents=b'OBJ1')
     self.CreateObject(bucket_uri=src_bucket, object_name='subdir/obj2',
-                      contents='subdir/obj2')
+                      contents=b'subdir/obj2')
     self.CreateObject(bucket_uri=src_bucket, object_name='.obj3',
-                      contents='.obj3')
+                      contents=b'.obj3')
     self.CreateObject(bucket_uri=src_bucket, object_name='subdir/obj4',
-                      contents='subdir/obj4')
+                      contents=b'subdir/obj4')
     self.CreateObject(bucket_uri=src_bucket, object_name='obj6',
-                      contents='OBJ6', mtime=100)
+                      contents=b'OBJ6', mtime=100)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj1',
-                      contents='obj1', mtime=10)
+                      contents=b'obj1', mtime=10)
     self.CreateObject(bucket_uri=dst_bucket, object_name='subdir/obj2',
-                      contents='subdir/obj2', mtime=10)
+                      contents=b'subdir/obj2', mtime=10)
     self.CreateObject(bucket_uri=dst_bucket, object_name='.obj3',
-                      contents='.OBJ3', mtime=1000000000000L)
+                      contents=b'.OBJ3', mtime=long(1000000000000))
     self.CreateObject(bucket_uri=dst_bucket, object_name='subdir/obj5',
-                      contents='subdir/obj5', mtime=10)
+                      contents=b'subdir/obj5', mtime=10)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj6',
-                      contents='obj6', mtime=100)
+                      contents=b'obj6', mtime=100)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -434,22 +444,22 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='.obj2',
-                      contents='.obj2', mtime=10)
+                      contents=b'.obj2', mtime=10)
     self.CreateObject(bucket_uri=bucket1_uri, object_name='subdir/obj3',
-                      contents='subdir/obj3')
+                      contents=b'subdir/obj3')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj6',
-                      contents='obj6_', mtime=100)
+                      contents=b'obj6_', mtime=100)
     # .obj2 will be replaced and have mtime of 10
     self.CreateObject(bucket_uri=bucket2_uri, object_name='.obj2',
-                      contents='.OBJ2')
+                      contents=b'.OBJ2')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj4',
-                      contents='obj4')
+                      contents=b'obj4')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='subdir/obj5',
-                      contents='subdir/obj5')
+                      contents=b'subdir/obj5')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj6',
-                      contents='obj6', mtime=100)
+                      contents=b'obj6', mtime=100)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -490,9 +500,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Now add, overwrite, and remove some objects in each bucket and test
     # rsync -r.
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj6',
-                      contents='obj6')
+                      contents=b'obj6')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj7',
-                      contents='obj7')
+                      contents=b'obj7')
     self.RunGsUtil(['rm', suri(bucket1_uri, 'obj1')])
     self.RunGsUtil(['rm', suri(bucket2_uri, '.obj2')])
 
@@ -531,17 +541,17 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='.obj2',
-                      contents='.obj2')
+                      contents=b'.obj2')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='subdir/obj3',
-                      contents='subdir/obj3')
+                      contents=b'subdir/obj3')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='.obj2',
-                      contents='.OBJ2')
+                      contents=b'.OBJ2')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj4',
-                      contents='obj4')
+                      contents=b'obj4')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='subdir/obj5',
-                      contents='subdir/obj5')
+                      contents=b'subdir/obj5')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -575,9 +585,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Now add and remove some objects in each bucket and test rsync -r.
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj6',
-                      contents='obj6')
+                      contents=b'obj6')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj7',
-                      contents='obj7')
+                      contents=b'obj7')
     self.RunGsUtil(['rm', suri(bucket1_uri, 'obj1')])
     self.RunGsUtil(['rm', suri(bucket2_uri, '.obj2')])
 
@@ -622,33 +632,33 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj1',
-                        contents='obj1', mtime=10)
+                        contents=b'obj1', mtime=10)
     self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2',
-                        contents='.obj2', mtime=10)
+                        contents=b'.obj2', mtime=10)
     self.CreateTempFile(tmpdir=subdir, file_name='obj3',
-                        contents='subdir/obj3', mtime=10)
+                        contents=b'subdir/obj3', mtime=10)
     self.CreateTempFile(tmpdir=subdir, file_name='obj5',
-                        contents='subdir/obj5', mtime=15)
+                        contents=b'subdir/obj5', mtime=15)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj6',
-                        contents='obj6', mtime=100)
+                        contents=b'obj6', mtime=100)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj7',
-                        contents='obj7_', mtime=100)
+                        contents=b'obj7_', mtime=100)
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
-                      contents='OBJ1')
+                      contents=b'OBJ1')
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                      contents='.obj2')
+                      contents=b'.obj2')
     self._SetObjectCustomMetadataAttribute(self.default_provider,
                                            bucket_uri.bucket_name, '.obj2',
                                            'test', 'test')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj4',
-                      contents='obj4')
+                      contents=b'obj4')
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj5',
-                      contents='subdir/obj5', mtime=10)
+                      contents=b'subdir/obj5', mtime=10)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj6',
-                      contents='OBJ6', mtime=100)
+                      contents=b'OBJ6', mtime=100)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
-                      contents='obj7', mtime=100)
+                      contents=b'obj7', mtime=100)
 
     cumulative_stderr = set()
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -735,18 +745,18 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       subdir = os.path.join(tmpdir, 'subdir')
       os.mkdir(subdir)
       self.CreateTempFile(tmpdir=tmpdir, file_name='obj1',
-                          contents='obj1')
+                          contents=b'obj1')
       self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2',
-                          contents='.obj2')
+                          contents=b'.obj2')
       self.CreateTempFile(tmpdir=subdir, file_name='obj3',
-                          contents='subdir/obj3')
+                          contents=b'subdir/obj3')
       bucket_uri = self.CreateBucket()
       self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                        contents='.OBJ2')
+                        contents=b'.OBJ2')
       self.CreateObject(bucket_uri=bucket_uri, object_name='obj4',
-                        contents='obj4')
+                        contents=b'obj4')
       self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj5',
-                        contents='subdir/obj5')
+                        contents=b'subdir/obj5')
       # Need to make sure the bucket listing is caught-up, otherwise the
       # first rsync may not see .obj2 and overwrite it.
       self.AssertNObjectsInBucket(bucket_uri, 3)
@@ -797,15 +807,15 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
     bucket_uri = self.CreateBucket()
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.obj2')
-    self.CreateTempFile(tmpdir=subdir, file_name='obj3', contents='subdir/obj3')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.obj2')
+    self.CreateTempFile(tmpdir=subdir, file_name='obj3', contents=b'subdir/obj3')
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                      contents='.OBJ2')
+                      contents=b'.OBJ2')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj4',
-                      contents='obj4')
+                      contents=b'obj4')
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj5',
-                      contents='subdir/obj5')
+                      contents=b'subdir/obj5')
 
     # Need to make sure the bucket listing is caught-up, otherwise the
     # first rsync may not see .obj2 and overwrite it.
@@ -870,9 +880,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check4()
 
     # Now add and remove some objects in dir and bucket and test rsync -r.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj6', contents='obj6')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj6', contents=b'obj6')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
-                      contents='obj7')
+                      contents=b'obj7')
     os.unlink(os.path.join(tmpdir, 'obj1'))
     self.RunGsUtil(['rm', suri(bucket_uri, '.obj2')])
 
@@ -912,25 +922,25 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     subdir2 = os.path.join(tmpdir2, 'subdir2')
     os.mkdir(subdir1)
     os.mkdir(subdir2)
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj1', contents='obj1',
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj1', contents=b'obj1',
                         mtime=10)
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='.obj2', contents='.obj2',
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='.obj2', contents=b'.obj2',
                         mtime=10)
     self.CreateTempFile(tmpdir=subdir1, file_name='obj3',
-                        contents='subdir1/obj3', mtime=10)
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj6', contents='obj6',
+                        contents=b'subdir1/obj3', mtime=10)
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj6', contents=b'obj6',
                         mtime=100)
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj7', contents='obj7_',
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj7', contents=b'obj7_',
                         mtime=100)
-    self.CreateTempFile(tmpdir=tmpdir2, file_name='.obj2', contents='.OBJ2',
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='.obj2', contents=b'.OBJ2',
                         mtime=1000)
-    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj4', contents='obj4',
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj4', contents=b'obj4',
                         mtime=10)
     self.CreateTempFile(tmpdir=subdir2, file_name='obj5',
-                        contents='subdir2/obj5', mtime=10)
-    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj6', contents='OBJ6',
+                        contents=b'subdir2/obj5', mtime=10)
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj6', contents=b'OBJ6',
                         mtime=100)
-    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj7', contents='obj7',
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj7', contents=b'obj7',
                         mtime=100)
 
     self.RunGsUtil(['rsync', '-r', '-d', tmpdir1, tmpdir2])
@@ -985,9 +995,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Now add and remove some objects in both dirs and test rsync -r.
     os.unlink(os.path.join(tmpdir1, 'obj7'))
     os.unlink(os.path.join(tmpdir2, 'obj7'))
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj6', contents='obj6',
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj6', contents=b'obj6',
                         mtime=10)
-    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj7', contents='obj7',
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj7', contents=b'obj7',
                         mtime=100)
     os.unlink(os.path.join(tmpdir1, 'obj1'))
     os.unlink(os.path.join(tmpdir2, '.obj2'))
@@ -1021,14 +1031,14 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     subdir2 = os.path.join(tmpdir2, 'subdir2')
     os.mkdir(subdir1)
     os.mkdir(subdir2)
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj1', contents='obj1')
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='.obj2', contents='.obj2')
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj1', contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='.obj2', contents=b'.obj2')
     self.CreateTempFile(
-        tmpdir=subdir1, file_name='obj3', contents='subdir1/obj3')
-    self.CreateTempFile(tmpdir=tmpdir2, file_name='.obj2', contents='.OBJ2')
-    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj4', contents='obj4')
+        tmpdir=subdir1, file_name='obj3', contents=b'subdir1/obj3')
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='.obj2', contents=b'.OBJ2')
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj4', contents=b'obj4')
     self.CreateTempFile(
-        tmpdir=subdir2, file_name='obj5', contents='subdir2/obj5')
+        tmpdir=subdir2, file_name='obj5', contents=b'subdir2/obj5')
 
     self.RunGsUtil(['rsync', '-d', tmpdir1, tmpdir2])
     listing1 = TailSet(tmpdir1, self.FlatListDir(tmpdir1))
@@ -1081,8 +1091,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
     # Now add and remove some objects in both dirs and test rsync -r.
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj6', contents='obj6')
-    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj7', contents='obj7')
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj6', contents=b'obj6')
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj7', contents=b'obj7')
     os.unlink(os.path.join(tmpdir1, 'obj1'))
     os.unlink(os.path.join(tmpdir2, '.obj2'))
 
@@ -1109,9 +1119,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # dir after issuing an rsync -d command.
     tmpdir1 = self.CreateTempDir()
     tmpdir2 = self.CreateTempDir()
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj1', contents='obj1')
-    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj2', contents='obj2')
-    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj2', contents='obj2')
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj1', contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir1, file_name='obj2', contents=b'obj2')
+    self.CreateTempFile(tmpdir=tmpdir2, file_name='obj2', contents=b'obj2')
 
     self.RunGsUtil(['rsync', '-d', tmpdir1, tmpdir2])
     listing1 = TailSet(tmpdir1, self.FlatListDir(tmpdir1))
@@ -1136,9 +1146,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     tmpdir2 = self.CreateTempDir()
     for i in range(0, 1000):
       self.CreateTempFile(tmpdir=tmpdir1, file_name='d1-%s' % i,
-                          contents='x', mtime=(i+1))
+                          contents=b'x', mtime=(i+1))
       self.CreateTempFile(tmpdir=tmpdir2, file_name='d2-%s' % i,
-                          contents='y', mtime=i)
+                          contents=b'y', mtime=i)
 
     # We open a new temp file each time we reach rsync_buffer_lines of
     # listing output. On Windows, this will result in a 'too many open file
@@ -1168,7 +1178,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
                        'Test requires fast crcmod.')
   def test_bucket_to_dir_compressed_encoding(self):
-    temp_file = self.CreateTempFile(contents='foo', file_name='bar')
+    temp_file = self.CreateTempFile(contents=b'foo', file_name='bar')
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
     self.RunGsUtil(['cp', '-Z', temp_file, suri(bucket_uri)])
@@ -1176,7 +1186,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     # rsync should decompress the destination file.
     with open(os.path.join(tmpdir, 'bar'), 'rb') as fp:
-      self.assertEqual('foo', fp.read())
+      self.assertEqual(b'foo', fp.read())
     self.assertIn('bar has a compressed content-encoding', stderr)
 
   @SequentialAndParallelTransfer
@@ -1191,45 +1201,45 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
-                      contents='obj1', mtime=5)
+                      contents=b'obj1', mtime=5)
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                      contents='.obj2', mtime=5)
+                      contents=b'.obj2', mtime=5)
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj3',
-                      contents='subdir/obj3')
+                      contents=b'subdir/obj3')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj4',
-                      contents='OBJ4')
+                      contents=b'OBJ4')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj6',
-                      contents='obj6', mtime=50)
+                      contents=b'obj6', mtime=50)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
-                      contents='obj7', mtime=5)
+                      contents=b'obj7', mtime=5)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj8',
-                      contents='obj8', mtime=100)
+                      contents=b'obj8', mtime=100)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj9',
-                      contents='obj9', mtime=25)
+                      contents=b'obj9', mtime=25)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj10',
-                      contents='obj10')
+                      contents=b'obj10')
     time_created = ConvertDatetimeToPOSIX(self._GetMetadataAttribute(
         bucket_uri.bucket_name, 'obj10', 'timeCreated'))
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj11',
-                      contents='obj11_', mtime=75)
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.OBJ2',
+                      contents=b'obj11_', mtime=75)
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.OBJ2',
                         mtime=10)
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents='obj4',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents=b'obj4',
                         mtime=100)
-    self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents='subdir/obj5',
+    self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents=b'subdir/obj5',
                         mtime=10)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj6',
-                        contents='obj6', mtime=50)
+                        contents=b'obj6', mtime=50)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj7',
-                        contents='OBJ7', mtime=50)
+                        contents=b'OBJ7', mtime=50)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj8',
-                        contents='obj8', mtime=10)
+                        contents=b'obj8', mtime=10)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj9',
-                        contents='OBJ9', mtime=25)
+                        contents=b'OBJ9', mtime=25)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj10',
-                        contents='OBJ10', mtime=time_created)
+                        contents=b'OBJ10', mtime=time_created)
     self.CreateTempFile(tmpdir=tmpdir, file_name='obj11',
-                        contents='obj11', mtime=75)
+                        contents=b'obj11', mtime=75)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1320,50 +1330,66 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     tmpdir = self.CreateTempDir()
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
-    # Create an object with an invalid mode. Must also specify a UID.
+    # obj1 - Invalid Mode
     obj1 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
-                             contents='obj1', mode='222', uid=os.getuid())
+                             contents=b'obj1', mode='222', uid=os.getuid())
+    # obj2 - Invalid GID
     obj2 = self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                             contents='.obj2', gid=INVALID_GID(), mode='540')
+                             contents=b'.obj2', gid=INVALID_GID(), mode='540')
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj3',
-                      contents='subdir/obj3')
+                      contents=b'subdir/obj3')
+    # obj6 - Invalid GID
     obj6 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj6',
-                             contents='obj6', gid=INVALID_GID(), mode='440')
+                             contents=b'obj6', gid=INVALID_GID(), mode='440')
+    # obj7 - Invalid Mode
     obj7 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
-                             contents='obj7', gid=NON_PRIMARY_GID(), mode='333')
+                             contents=b'obj7', gid=NON_PRIMARY_GID(),
+                             mode='333')
+    # obj8 - Invalid UID
     obj8 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj8',
-                             contents='obj8', uid=INVALID_UID())
+                             contents=b'obj8', uid=INVALID_UID())
+    # obj9 - Invalid UID w/ mode 777
     obj9 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj9',
-                             contents='obj9', uid=INVALID_UID(), mode='777')
+                             contents=b'obj9', uid=INVALID_UID(), mode='777')
+    # obj10 - Invalid UID & GID
     obj10 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj10',
-                              contents='obj10', gid=INVALID_GID(),
+                              contents=b'obj10', gid=INVALID_GID(),
                               uid=INVALID_UID())
+    # obj11 - Invalid UID & GID with mode 554
     obj11 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj11',
-                              contents='obj11', gid=INVALID_GID(),
+                              contents=b'obj11', gid=INVALID_GID(),
                               uid=INVALID_UID(), mode='544')
+    # obj12 - Invalid UID & GID
     obj12 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj12',
-                              contents='obj12', uid=INVALID_UID(), gid=USER_ID)
+                              contents=b'obj12', uid=INVALID_UID(), gid=USER_ID)
+    # obj13 - Invalid UID, good GID, mode 644
     obj13 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj13',
-                              contents='obj13', uid=INVALID_UID(),
+                              contents=b'obj13', uid=INVALID_UID(),
                               gid=PRIMARY_GID, mode='644')
+    # obj14 - Good UID, Invalid GID, no mode specified
     obj14 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj14',
-                              contents='obj14', uid=USER_ID, gid=INVALID_GID())
+                              contents=b'obj14', uid=USER_ID, gid=INVALID_GID())
+    # obj15 - Good UID, Invalid GID, mode 655
     obj15 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj15',
-                              contents='obj15', uid=USER_ID, gid=INVALID_GID(),
+                              contents=b'obj15', uid=USER_ID, gid=INVALID_GID(),
                               mode='655')
+    # obj16 - Invalid Permissions - mode 244
     obj16 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj16',
-                              contents='obj16', uid=USER_ID, mode='244')
+                              contents=b'obj16', uid=USER_ID, mode='244')
+    # obj17 - Invalid Mode
     obj17 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj17',
-                              contents='obj17', uid=USER_ID, gid=PRIMARY_GID,
+                              contents=b'obj17', uid=USER_ID, gid=PRIMARY_GID,
                               mode='222')
+    # obj18 - Invalid GID, mode 333
     obj18 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj18',
-                              contents='obj18', uid=USER_ID,
+                              contents=b'obj18', uid=USER_ID,
                               gid=NON_PRIMARY_GID(), mode='333')
+    # obj19 - No UID/GID with mod 222
     obj19 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj19',
-                              contents='obj19', mode='222')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.OBJ2')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents='obj4')
-    self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents='subdir/obj5')
+                              contents=b'obj19', mode='222')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.OBJ2')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents=b'obj4')
+    self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents=b'subdir/obj5')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1437,34 +1463,34 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
-                      contents='obj1', mode='444')
+                      contents=b'obj1', mode='444')
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                      contents='.obj2', gid=PRIMARY_GID)
+                      contents=b'.obj2', gid=PRIMARY_GID)
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj3',
-                      contents='subdir/obj3', gid=NON_PRIMARY_GID())
+                      contents=b'subdir/obj3', gid=NON_PRIMARY_GID())
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj6',
-                      contents='obj6', gid=PRIMARY_GID, mode='555')
+                      contents=b'obj6', gid=PRIMARY_GID, mode='555')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
-                      contents='obj7', gid=NON_PRIMARY_GID(), mode='444')
+                      contents=b'obj7', gid=NON_PRIMARY_GID(), mode='444')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj8',
-                      contents='obj8', uid=USER_ID)
+                      contents=b'obj8', uid=USER_ID)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj9',
-                      contents='obj9', uid=USER_ID, mode='422')
+                      contents=b'obj9', uid=USER_ID, mode='422')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj10',
-                      contents='obj10', uid=USER_ID, gid=PRIMARY_GID)
+                      contents=b'obj10', uid=USER_ID, gid=PRIMARY_GID)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj11',
-                      contents='obj11', uid=USER_ID, gid=NON_PRIMARY_GID())
+                      contents=b'obj11', uid=USER_ID, gid=NON_PRIMARY_GID())
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj12',
-                      contents='obj12', uid=USER_ID, gid=PRIMARY_GID,
+                      contents=b'obj12', uid=USER_ID, gid=PRIMARY_GID,
                       mode='400')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj13',
-                      contents='obj13', uid=USER_ID, gid=NON_PRIMARY_GID(),
+                      contents=b'obj13', uid=USER_ID, gid=NON_PRIMARY_GID(),
                       mode='533')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj14',
-                      contents='obj14', uid=USER_ID, mode='444')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.OBJ2')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents='obj4')
-    self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents='subdir/obj5')
+                      contents=b'obj14', uid=USER_ID, mode='444')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.OBJ2')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents=b'obj4')
+    self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents=b'subdir/obj5')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1529,16 +1555,16 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     # Set the mtime for obj2 because obj2 in the cloud and obj2 on the local
     # file system have the potential to be created during the same second.
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                      contents='.obj2', mtime=0)
+                      contents=b'.obj2', mtime=0)
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj3',
-                      contents='subdir/obj3')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.OBJ2')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents='obj4')
-    self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents='subdir/obj5')
+                      contents=b'subdir/obj3')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.OBJ2')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents=b'obj4')
+    self.CreateTempFile(tmpdir=subdir, file_name='obj5', contents=b'subdir/obj5')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1600,8 +1626,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Now add and remove some objects in dir and bucket and test rsync -r.
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj6',
-                      contents='obj6')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj7', contents='obj7')
+                      contents=b'obj6')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj7', contents=b'obj7')
     self.RunGsUtil(['rm', suri(bucket_uri, 'obj1')])
     os.unlink(os.path.join(tmpdir, '.obj2'))
 
@@ -1649,8 +1675,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
-                      contents='obj1')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='Obj1', contents='obj1')
+                      contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='Obj1', contents=b'obj1')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1675,7 +1701,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     # Create a placeholder like what can be left over by web GUI tools.
     key_uri = bucket_uri.clone_replace_name('/')
     key_uri.set_contents_from_string('')
@@ -1717,9 +1743,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     os.mkdir(subdir)
     bucket_uri = self.CreateBucket()
     fpath1 = self.CreateTempFile(
-        tmpdir=tmpdir, file_name='obj1', contents='obj1')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.obj2')
-    self.CreateTempFile(tmpdir=subdir, file_name='obj3', contents='subdir/obj3')
+        tmpdir=tmpdir, file_name='obj1', contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.obj2')
+    self.CreateTempFile(tmpdir=subdir, file_name='obj3', contents=b'subdir/obj3')
     good_symlink_path = os.path.join(tmpdir, 'symlink1')
     os.symlink(fpath1, good_symlink_path)
     # Make a symlink that points to a non-existent path to test that -e also
@@ -1727,11 +1753,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bad_symlink_path = os.path.join(tmpdir, 'symlink2')
     os.symlink(os.path.join('/', 'non-existent'), bad_symlink_path)
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                      contents='.OBJ2')
+                      contents=b'.OBJ2')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj4',
-                      contents='obj4')
+                      contents=b'obj4')
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj5',
-                      contents='subdir/obj5')
+                      contents=b'subdir/obj5')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1784,16 +1810,16 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='.obj2',
-                      contents='.obj2')
+                      contents=b'.obj2')
     self.RunGsUtil(
         ['compose', suri(bucket1_uri, 'obj1'), suri(bucket1_uri, '.obj2'),
          suri(bucket1_uri, 'obj3')])
     self.CreateObject(bucket_uri=bucket2_uri, object_name='.obj2',
-                      contents='.OBJ2')
+                      contents=b'.OBJ2')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj4',
-                      contents='obj4')
+                      contents=b'obj4')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1822,9 +1848,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='.obj2',
-                      contents='.obj2')
+                      contents=b'.obj2')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1850,9 +1876,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket2_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='.obj2',
-                      contents='.obj2')
+                      contents=b'.obj2')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1880,7 +1906,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     # Set public-read (non-default) ACL so we can verify that rsync -p works.
     self.RunGsUtil(['acl', 'set', 'public-read', suri(bucket1_uri, 'obj1')])
 
@@ -1915,7 +1941,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
-                      contents='obj1')
+                      contents=b'obj1')
+    self.RunGsUtil(['acl', 'get', suri(bucket1_uri, 'obj1')])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1944,9 +1971,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
     bucket_url = self.CreateBucket()
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.obj2')
-    self.CreateTempFile(tmpdir=subdir, file_name='obj3', contents='subdir/obj3')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.obj2')
+    self.CreateTempFile(tmpdir=subdir, file_name='obj3', contents=b'subdir/obj3')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1975,8 +2002,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   def test_rsync_from_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
     tmpdir = self.CreateTempDir()
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.obj2')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.obj2')
     bucket_url_str = '%s://%s' % (
         self.default_provider, self.nonexistent_bucket_name)
     stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
@@ -1989,8 +2016,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
   def test_rsync_to_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
     tmpdir = self.CreateTempDir()
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.obj2')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.obj2')
     bucket_url_str = '%s://%s' % (
         self.default_provider, self.nonexistent_bucket_name)
     stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
@@ -2008,13 +2035,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # less than the next name in destination bucket when encoded, but not when
     # compared without encoding.
     self.CreateObject(bucket_uri=bucket1_uri, object_name='e/obj1',
-                      contents='obj1')
+                      contents=b'obj1')
     self.CreateObject(bucket_uri=bucket1_uri, object_name='e-1/.obj2',
-                      contents='.obj2')
+                      contents=b'.obj2')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='e/obj1',
-                      contents='OBJ1')
+                      contents=b'OBJ1')
     self.CreateObject(bucket_uri=bucket2_uri, object_name='e-1/.obj2',
-                      contents='.obj2')
+                      contents=b'.obj2')
     # Need to make sure the bucket listings are caught-up, otherwise the
     # rsync may not see all objects and fail to synchronize correctly.
     self.AssertNObjectsInBucket(bucket1_uri, 2)
@@ -2051,15 +2078,15 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Create dir and bucket with 1 overlapping and 2 extra objects in each.
     tmpdir = self.CreateTempDir()
     bucket_uri = self.CreateBucket()
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents='.obj2')
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents='obj3')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.obj2')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents=b'obj3')
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                      contents='.obj2')
+                      contents=b'.obj2')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj4',
-                      contents='obj4')
+                      contents=b'obj4')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj5',
-                      contents='obj5')
+                      contents=b'obj5')
 
     # Need to make sure the bucket listing is caught-up, otherwise the
     # first rsync may not see .obj2 and overwrite it.
@@ -2095,10 +2122,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Create dir with 3 objects, the middle of which is unreadable.
     tmpdir = self.CreateTempDir()
     bucket_uri = self.CreateBucket()
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1')
-    path = self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1')
+    path = self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents=b'obj2')
     os.chmod(path, 0)
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents='obj3')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents=b'obj3')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -2122,12 +2149,17 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     tmpdir = self.CreateTempDir()
     bucket_uri = self.CreateBucket()
-    # The Ì character is unicode 00CC, but OSX translates this to the second
-    # entry below.
-    self.CreateTempFile(tmpdir=tmpdir, file_name=u'morales_suenÌƒos.jpg')
-    # The Ì character is unicode 0049+0300; OSX uses this value in both cases.
-    self.CreateTempFile(tmpdir=tmpdir, file_name=u'morales_suenÌƒos.jpg')
-    self.CreateTempFile(tmpdir=tmpdir, file_name=u'fooꝾoo')
+    # macOS displays the "Ì" (I\xcc\x80) unicode character the same
+    # as "Ì" (\xc3\x8c) in both the first and second filenames. Despite being
+    # different characters, the second filename will not be created since the OS
+    # detects them as the same name.
+    file_list = [
+        'morales_suenÌƒos.jpg',    # 'morales_suenI\xcc\x80\xc6\x92os.jpg'
+        'morales_suenÌƒos.jpg',    # 'morales_suen\xc3\x8c\xc6\x92os.jpg'
+        'fooꝾoo',                  # 'foo\xea\x9d\xbeoo'
+    ]
+    for filename in file_list:
+      self.CreateTempFile(tmpdir=tmpdir, file_name=filename)
 
     expected_list_results = (
         frozenset(['/morales_suenÌƒos.jpg', '/fooꝾoo'])
@@ -2142,8 +2174,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_uri)])
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
-      self.assertEquals(listing1, expected_list_results)
-      self.assertEquals(listing2, expected_list_results)
+      self.assertEquals(set(listing1), expected_list_results)
+      self.assertEquals(set(listing2), expected_list_results)
     _Check()
 
   def test_dir_to_bucket_minus_u(self):
@@ -2153,41 +2185,41 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     ORIG_MTIME = 10
 
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj1',
-                      contents='obj1-1', mtime=ORIG_MTIME)
+                      contents=b'obj1-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj2',
-                      contents='obj2-1', mtime=ORIG_MTIME)
+                      contents=b'obj2-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj3',
-                      contents='obj3-1', mtime=ORIG_MTIME)
+                      contents=b'obj3-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj4',
-                      contents='obj4-1', mtime=ORIG_MTIME)
+                      contents=b'obj4-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj5',
-                      contents='obj5-1', mtime=ORIG_MTIME)
+                      contents=b'obj5-1', mtime=ORIG_MTIME)
     self.CreateObject(bucket_uri=dst_bucket, object_name='obj6',
-                      contents='obj6-1', mtime=ORIG_MTIME)
+                      contents=b'obj6-1', mtime=ORIG_MTIME)
 
     # Source files with older mtimes should NOT be copied:
     # Same size, different contents.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents='obj1-2',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1-2',
                         mtime=ORIG_MTIME - 1)
     # Same size, same contents.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents='obj2-1',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj2', contents=b'obj2-1',
                         mtime=ORIG_MTIME - 1)
     # Different size and contents.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents='obj3-newer',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj3', contents=b'obj3-newer',
                         mtime=ORIG_MTIME - 1)
 
     # Source files with equal mtimes should fall back to other checks:
     # Same size and mtime without specifying `-c` => should NOT be copied even
     # if the contents differ.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents='obj4-2',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj4', contents=b'obj4-2',
                         mtime=ORIG_MTIME)
     # Different file size => SHOULD be copied.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj5', contents='obj5-bigger',
-                        mtime=ORIG_MTIME)
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj5',
+                        contents=b'obj5-bigger', mtime=ORIG_MTIME)
 
     # Source files with newer mtimes should be copied:
     # Same size and contents => SHOULD still be copied.
-    self.CreateTempFile(tmpdir=tmpdir, file_name='obj6', contents='obj6-1',
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj6', contents=b'obj6-1',
                         mtime=ORIG_MTIME + 1)
 
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -2225,7 +2257,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     local_uris = []
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
-    contents = 'x' * 10000
+    contents = b'x' * 10000
     # Create local files.
     for file_name in file_names:
       local_uris.append(self.CreateTempFile(tmpdir, contents, file_name))
@@ -2255,7 +2287,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     local_uris_invalid = []
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
-    contents = 'x' * 10000
+    contents = b'x' * 10000
     # Create local files.
     for file_name in file_names_valid:
       local_uris_valid.append(self.CreateTempFile(tmpdir, contents, file_name))
@@ -2291,7 +2323,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     local_uris = []
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
-    contents = 'x' * 10000
+    contents = b'x' * 10000
     for file_name in file_names:
       local_uris.append(self.CreateTempFile(tmpdir, contents, file_name))
     # Upload the data.
@@ -2325,8 +2357,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     cloud_container_suri = suri(bucket_uri) + '/foo'
     obj_name = 'bar'
+    obj_contents = b'bar'
     tmp_dir = self.CreateTempDir()
-    self.CreateTempFile(tmpdir=tmp_dir, file_name=obj_name, contents=obj_name)
+    self.CreateTempFile(tmpdir=tmp_dir, file_name=obj_name,
+                        contents=obj_contents)
     key_fqn = self.authorize_project_to_use_testing_kms_key()
 
     # Rsync the object from our tmpdir to a GCS bucket, specifying a KMS key.
@@ -2338,12 +2372,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(
           ['ls', '-L', '%s/%s' % (cloud_container_suri, obj_name)],
           return_stdout=True)
-    self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % key_fqn)
+    self.assertRegex(stdout, r'KMS key:\s+%s' % key_fqn)
 
   @SkipForGS('Tests that gs-specific encryption settings are skipped for s3.')
   def test_kms_key_specified_will_not_prevent_non_kms_copy_to_s3(self):
     tmp_dir = self.CreateTempDir()
-    self.CreateTempFile(tmpdir=tmp_dir, contents='foo')
+    self.CreateTempFile(tmpdir=tmp_dir, contents=b'foo')
     bucket_uri = self.CreateBucket()
     dummy_key = ('projects/myproject/locations/global/keyRings/mykeyring/'
                  'cryptoKeys/mykey')

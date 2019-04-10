@@ -16,6 +16,9 @@
 """Unit tests for analytics data collection."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import logging
 import os
@@ -25,7 +28,9 @@ import socket
 import subprocess
 import sys
 import tempfile
+import pprint
 
+import six
 from apitools.base.py import exceptions as apitools_exceptions
 from apitools.base.py import http_wrapper
 from boto.storage_uri import BucketStorageUri
@@ -54,7 +59,9 @@ from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
 
-import mock
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 # A piece of the URL logged for all of the tests.
 GLOBAL_DIMENSIONS_URL_PARAMS = (
@@ -194,7 +201,11 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     with mock.patch.dict(os.environ, values={'CLOUDSDK_WRAPPER': ''}):
       with mock.patch('os.path.exists', return_value=True):
         # Mock the contents of the file.
-        with mock.patch('__builtin__.open') as mock_open:
+        if six.PY2:
+          builtin_open = '__builtin__.open'
+        else:
+          builtin_open = 'builtins.open'
+        with mock.patch(builtin_open) as mock_open:
           mock_open.return_value.__enter__ = lambda s: s
 
           # Set the file.read() method to return the disabled text.
@@ -448,8 +459,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     # UIThread and the MainThreadUIQueue.
     mock_queue = RetryableErrorsQueue()
     value_error_retry_args = http_wrapper.ExceptionRetryArgs(None, None,
-                                                             ValueError(), None,
-                                                             None, None)
+                                                             ValueError(),
+                                                             None, None, None)
     socket_error_retry_args = http_wrapper.ExceptionRetryArgs(None, None,
                                                               socket.error(),
                                                               None, None, None)
@@ -463,20 +474,26 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     metadata_retry_func(value_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 2)
     metadata_retry_func(socket_error_retry_args)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+    if six.PY2:
+      self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+    else:
+      self.assertEqual(self.collector.retryable_errors['OSError'], 1)
 
     # The media retry function raises an exception after logging because
     # the GcsJsonApi handles retryable errors for media transfers itself.
     _TryExceptAndPass(media_retry_func, value_error_retry_args)
     _TryExceptAndPass(media_retry_func, socket_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 3)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 2)
+    if six.PY2:
+      self.assertEqual(self.collector.retryable_errors['SocketError'], 2)
+    else:
+      self.assertEqual(self.collector.retryable_errors['OSError'], 2)
 
   def testExceptionCatchingDecorator(self):
     """Tests the exception catching decorator CaptureAndLogException."""
 
     # A wrapped function with an exception should not stop the process.
-    mock_exc_fn = mock.MagicMock(__name__='mock_exc_fn',
+    mock_exc_fn = mock.MagicMock(__name__=str('mock_exc_fn'),
                                  side_effect=Exception())
     wrapped_fn = metrics.CaptureAndLogException(mock_exc_fn)
     wrapped_fn()
@@ -488,7 +505,7 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
     self.assertEqual(1, mock_exc_fn.call_count)
 
-    mock_err_fn = mock.MagicMock(__name__='mock_err_fn',
+    mock_err_fn = mock.MagicMock(__name__=str('mock_err_fn'),
                                  side_effect=TypeError())
     wrapped_fn = metrics.CaptureAndLogException(mock_err_fn)
     wrapped_fn()
@@ -701,24 +718,32 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     CollectMetricAndSetLogLevel(logging.DEBUG, metrics_file.name)
     with open(metrics_file.name, 'rb') as metrics_log:
       log_text = metrics_log.read()
-    expected_response = (
-        'Metric(endpoint=\'https://example.com\', method=\'POST\', '
-        'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
-        'user_agent=\'user-agent-007\')'.format(GLOBAL_DIMENSIONS_URL_PARAMS,
-                                                metrics._GA_COMMANDS_CATEGORY,
-                                                VERSION))
+    if six.PY2:
+      expected_response = (
+          b'Metric(endpoint=u\'https://example.com\', method=u\'POST\', '
+          b'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
+          b'user_agent=u\'user-agent-007\')'.format(GLOBAL_DIMENSIONS_URL_PARAMS,
+                                                  metrics._GA_COMMANDS_CATEGORY,
+                                                  VERSION))
+    else:
+      expected_response = (
+          'Metric(endpoint=\'https://example.com\', method=\'POST\', '
+          'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
+          'user_agent=\'user-agent-007\')'.format(GLOBAL_DIMENSIONS_URL_PARAMS,
+                                                  metrics._GA_COMMANDS_CATEGORY,
+                                                  VERSION)).encode('utf_8')
     self.assertIn(expected_response, log_text)
-    self.assertIn('RESPONSE: 200', log_text)
+    self.assertIn(b'RESPONSE: 200', log_text)
 
     CollectMetricAndSetLogLevel(logging.INFO, metrics_file.name)
     with open(metrics_file.name, 'rb') as metrics_log:
       log_text = metrics_log.read()
-    self.assertEqual(log_text, '')
+    self.assertEqual(log_text, b'')
 
     CollectMetricAndSetLogLevel(logging.WARN, metrics_file.name)
     with open(metrics_file.name, 'rb') as metrics_log:
       log_text = metrics_log.read()
-    self.assertEqual(log_text, '')
+    self.assertEqual(log_text, b'')
 
   def testMetricsReportingWithFail(self):
     """Tests that metrics reporting error does not throw an exception."""
@@ -757,7 +782,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri,
-                                   object_name='foo', contents='bar')
+                                   object_name='foo', contents=b'bar')
     # Set the command name to rsync in order to collect PerformanceSummary info.
     self.collector.ga_params[metrics._GA_LABEL_MAP['Command Name']] = 'rsync'
     # Generate a JSON API instance to test with, because the RunGsUtil method
@@ -782,7 +807,11 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
                            side_effect=socket.error()):
       _TryExceptAndPass(gsutil_api.CopyObject, src_obj_metadata,
                         dst_obj_metadata)
-    self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+    if six.PY2:
+      self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
+    else:
+      # In PY3, socket.* errors are deprecated aliases for OSError
+      self.assertEqual(self.collector.retryable_errors['OSError'], 1)
 
     # Throw an error when removing a bucket.
     with mock.patch.object(
@@ -810,7 +839,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     # For the resumable upload exception, we need to ensure at least one
     # callback occurs.
     halt_size = START_CALLBACK_PER_BYTES * 2
-    fpath = self.CreateTempFile(contents='a' * halt_size)
+    fpath = self.CreateTempFile(contents=b'a' * halt_size)
 
     # Test that the retry function for data transfers catches and logs an error.
     test_callback_file = self.CreateTempFile(contents=pickle.dumps(
@@ -928,7 +957,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     tmpdir1 = self.CreateTempDir()
     tmpdir2 = self.CreateTempDir()
     file_size = ONE_MIB
-    self.CreateTempFile(tmpdir=tmpdir1, contents='a' * file_size)
+    self.CreateTempFile(tmpdir=tmpdir1, contents=b'a' * file_size)
 
     # Run an rsync file-to-file command with fan parallelism, without slice
     # parallelism.
@@ -964,8 +993,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
     file_size = 6
-    self.CreateTempFile(tmpdir=tmpdir, contents='a' * file_size)
-    self.CreateTempFile(tmpdir=tmpdir, contents='b' * file_size)
+    self.CreateTempFile(tmpdir=tmpdir, contents=b'a' * file_size)
+    self.CreateTempFile(tmpdir=tmpdir, contents=b'b' * file_size)
 
     process_count = 1 if IS_WINDOWS else 2
     # Run a parallel composite upload without fan parallelism.
@@ -1000,7 +1029,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     file_size = 6
     object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, contents='a' * file_size)
+        bucket_uri=bucket_uri, contents=b'a' * file_size)
 
     fpath = self.CreateTempFile()
     # Run a sliced object download with fan parallelism.
@@ -1037,7 +1066,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     bucket2_uri = self.CreateBucket()
     file_size = 6
     key_uri = self.CreateObject(
-        bucket_uri=bucket1_uri, contents='a' * file_size)
+        bucket_uri=bucket1_uri, contents=b'a' * file_size)
 
     # Run a daisy-chain cloud-to-cloud copy without parallelism.
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
@@ -1068,8 +1097,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     """Tests the collection of daisy-chain operations."""
     s3_bucket = self.CreateBucket(provider='s3')
     gs_bucket = self.CreateBucket(provider='gs')
-    unused_s3_key = self.CreateObject(bucket_uri=s3_bucket, contents='foo')
-    gs_key = self.CreateObject(bucket_uri=gs_bucket, contents='bar')
+    unused_s3_key = self.CreateObject(bucket_uri=s3_bucket, contents=b'foo')
+    gs_key = self.CreateObject(bucket_uri=gs_bucket, contents=b'bar')
 
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
         ['rsync', suri(s3_bucket), suri(gs_bucket)])

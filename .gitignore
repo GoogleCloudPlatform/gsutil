@@ -9,3 +9,7 @@ gsutil_*.zip
 .settings/*
 .coverage*
 .metadata/*
+.idea/*
+.vscode/*
+venv*/*
+.DS_Store

@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import logging
 import os
@@ -23,6 +25,7 @@ import re
 import textwrap
 
 import gslib
+from gslib.utils.system_util import IS_OSX
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 
@@ -72,8 +75,8 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
   # level directory.
   for filename in os.listdir(directory):
     if (filename.endswith('.pyc') or filename == '__pycache__'
-        or filename == '.travis.yml'):
-      # Ignore compiled code and travis config.
+        or filename == '.travis.yml' or (IS_OSX and filename == '.DS_Store')):
+      # Ignore compiled code and travis config and macOS's .DS_Store file.
       continue
     if filename not in manifest_lines:
       raise CommandException('\n'.join(textwrap.wrap(

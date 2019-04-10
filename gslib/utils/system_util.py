@@ -21,12 +21,16 @@ creating directories, fetching environment variables, etc.).
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import errno
 import locale
 import os
 import struct
 import sys
+
+import six
 
 from gslib.utils.constants import WINDOWS_1252
 
@@ -100,7 +104,7 @@ def CloudSdkVersion():
   return os.environ.get('CLOUDSDK_VERSION', '')
 
 
-def CreateDirIfNeeded(dir_path, mode=0777):
+def CreateDirIfNeeded(dir_path, mode=0o777):
   """Creates a directory, suppressing already-exists errors."""
   if not os.path.exists(dir_path):
     try:
@@ -244,8 +248,55 @@ def IsRunningInteractively():
   return sys.stdout.isatty() and sys.stderr.isatty() and sys.stdin.isatty()
 
 
+def MonkeyPatchHttp():
+  ver = sys.version_info
+  # Checking for and applying monkeypatch to python versions 3.0 - 3.6.6
+  if (ver.major == 3 and (ver.minor < 6 or (ver.minor == 6 and ver.micro < 7))):
+    _MonkeyPatchHttpForPython_3x()
+
+
+def _MonkeyPatchHttpForPython_3x():
+  # We generally have to do all sorts of gross things when applying runtime
+  # patches (dynamic imports, invalid names to resolve symbols in copy/pasted
+  # methods, invalid spacing from copy/pasted methods, etc.), so we just disable
+  # pylint warnings for this whole method.
+  # pylint: disable=all
+
+  # This fixes https://bugs.python.org/issue33365. A fix was applied in
+  # https://github.com/python/cpython/commit/936f03e7fafc28fd6fdfba11d162c776b89c0167
+  # but to apply that at runtime would mean patching the entire begin() method.
+  # Rather, we just override begin() to call its old self, followed by printing
+  # the HTTP headers afterward. This prevents us from overriding more behavior
+  # than we have to.
+  import http
+  old_begin = http.client.HTTPResponse.begin
+
+  def PatchedBegin(self):
+    old_begin(self)
+    if self.debuglevel > 0:
+      for hdr, val in self.headers.items():
+        print("header:", hdr + ":", val)
+
+  http.client.HTTPResponse.begin = PatchedBegin
+
+
 def StdinIterator():
   """A generator function that returns lines from stdin."""
   for line in sys.stdin:
     # Strip CRLF.
     yield line.rstrip()
+
+
+class StdinIteratorCls(six.Iterator):
+  """An iterator that returns lines from stdin.
+     This is needed because Python 3 balks at pickling the
+     generator version above.
+  """
+  def __iter__(self):
+    return self
+
+  def __next__(self):
+    line = sys.stdin.readline()
+    if not line:
+      raise StopIteration()
+    return line.rstrip()

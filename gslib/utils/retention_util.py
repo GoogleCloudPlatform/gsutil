@@ -15,6 +15,7 @@
 """Implementation of Retention Policy configuration command for buckets."""
 
 from __future__ import absolute_import
+from six.moves import input
 
 from decimal import Decimal
 import re
@@ -61,11 +62,11 @@ def _ConfirmWithUserPrompt(question, default_response):
     prompt = '%s [%s|%s]: ' % (question, 'y', 'N')
 
   while True:
-    response = raw_input(prompt).lower()
+    response = input(prompt).lower()
     if not response:
       return default_response
     if response not in ['y', 'yes', 'n', 'no']:
-      print '\tPlease respond with \'yes\'/\'y\' or \'no\'/\'n\'.'
+      print('\tPlease respond with \'yes\'/\'y\' or \'no\'/\'n\'.')
       continue
     if response == 'yes' or response == 'y':
       return True

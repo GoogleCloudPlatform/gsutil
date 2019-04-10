@@ -14,6 +14,11 @@
 # limitations under the License.
 """Wrapper for use in daisy-chained copies."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 from collections import deque
 from contextlib import contextmanager
 import os
@@ -144,7 +149,7 @@ class DaisyChainWrapper(object):
     self.download_started = threading.Event()
     self.stop_download = threading.Event()
     self.StartDownloadThread(progress_callback=self.progress_callback)
-    if self.download_started.wait(60) == False:
+    if not self.download_started.wait(60):
       raise Exception('Could not start download thread after 60 seconds.')
 
   def StartDownloadThread(self, start_byte=0, progress_callback=None):
@@ -193,7 +198,7 @@ class DaisyChainWrapper(object):
             provider=self.src_url.scheme, progress_callback=progress_callback,
             decryption_tuple=self.decryption_tuple)
       # We catch all exceptions here because we want to store them.
-      except Exception, e:  # pylint: disable=broad-except
+      except Exception as e:  # pylint: disable=broad-except
         # Save the exception so that it can be seen in the upload thread.
         with self.download_exception_lock:
           self.download_exception = e

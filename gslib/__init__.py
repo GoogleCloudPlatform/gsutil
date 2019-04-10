@@ -22,16 +22,24 @@
 """Package marker file."""
 
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import os
 import pkgutil
 import sys
 import tempfile
 
-if not (2, 7) <= sys.version_info[:3] < (3,):
-  sys.exit('gsutil requires python 2.7.')
-
 import gslib.exception  # pylint: disable=g-import-not-at-top
+from gslib.utils.version_check import check_python_version_support
+
+
+supported, err = check_python_version_support()
+if not supported:
+  raise CommandException(err)
+  sys.exit(1)
+
 
 coverage_outfile = os.getenv('GSUTIL_COVERAGE_OUTPUT_FILE', None)
 if coverage_outfile:

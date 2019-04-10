@@ -16,14 +16,26 @@
 
 """Wrapper module for running gslib.__main__.main() from the command line."""
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+
 import os
 import sys
 import warnings
 
 # TODO: gsutil-beta: Distribute a pylint rc file.
 
-if not (2, 6) <= sys.version_info[:3] < (3,):
-  sys.exit('gsutil requires python 2.6 or 2.7.')
+ver = sys.version_info
+if (ver.major == 2 and ver.minor < 7) or (ver.major == 3 and ver.minor < 5):
+    sys.exit('gsutil requires python 2.7 or 3.5+.')
+
+# setup a string to load the correct httplib2
+if sys.version_info.major == 2:
+    submodule_pyvers = 'python2'
+else:
+    submodule_pyvers = 'python3'
 
 
 def UsingCrcmodExtension(crcmod_module):
@@ -44,6 +56,7 @@ if not GSUTIL_DIR:
 # The wrapper script adds all third_party libraries to the Python path, since
 # we don't assume any third party libraries are installed system-wide.
 THIRD_PARTY_DIR = os.path.join(GSUTIL_DIR, 'third_party')
+VENDORED_DIR = os.path.join(THIRD_PARTY_DIR, 'vendored')
 
 # Flag for whether or not an import wrapper is used to measure time taken for
 # individual imports.
@@ -73,7 +86,7 @@ THIRD_PARTY_LIBS = [
     ('gcs-oauth2-boto-plugin', ''),
     ('fasteners', ''), # oauth2client and apitools dependency
     ('monotonic', ''), # fasteners dependency
-    ('httplib2', 'python2'),
+    ('httplib2', submodule_pyvers),
     ('python-gflags', ''),
     ('retry-decorator', ''),
     ('six', ''), # Python 2 / 3 compatibility dependency
@@ -96,7 +109,7 @@ for libdir, subdir in THIRD_PARTY_LIBS:
             libdir, THIRD_PARTY_DIR))
   sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
 
-CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', 'python2')
+CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', submodule_pyvers)
 CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
 try:
   # pylint: disable=g-import-not-at-top

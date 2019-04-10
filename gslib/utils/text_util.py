@@ -16,9 +16,20 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
+import os
+import sys
+import io
 import re
-import urlparse
+import locale
+import collections
+import random
+import six
+import string
+from six.moves import urllib
+from six.moves import range
 
 from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper
@@ -26,16 +37,21 @@ from gslib.utils.constants import UTF8
 from gslib.utils.constants import WINDOWS_1252
 from gslib.utils.system_util import IS_CP1252
 
+
+if six.PY3:
+  long = int
+
+
 STORAGE_CLASS_SHORTHAND_TO_FULL_NAME = {
-    # Values should remain uppercase, as required by non-gs providers.
-    'CL': 'COLDLINE',
-    'DRA': 'DURABLE_REDUCED_AVAILABILITY',
-    'NL': 'NEARLINE',
-    'S': 'STANDARD',
-    'STD': 'STANDARD'}
+  # Values should remain uppercase, as required by non-gs providers.
+  'CL': 'COLDLINE',
+  'DRA': 'DURABLE_REDUCED_AVAILABILITY',
+  'NL': 'NEARLINE',
+  'S': 'STANDARD',
+  'STD': 'STANDARD'}
 
 VERSION_MATCHER = LazyWrapper(
-    lambda: re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
+  lambda: re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
 
 
 def AddQueryParamToUrl(url_str, param_name, param_value):
@@ -62,22 +78,13 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
     (str or unicode) A string representing the modified url, of type `unicode`
     if the url_str argument was a `unicode`, otherwise a `str` encoded in UTF-8.
   """
-  url_was_unicode = isinstance(url_str, unicode)
-  if isinstance(url_str, unicode):
-    url_str = url_str.encode(UTF8)
-  if isinstance(param_name, unicode):
-    param_name = param_name.encode(UTF8)
-  if isinstance(param_value, unicode):
-    param_value = param_value.encode(UTF8)
-  scheme, netloc, path, query_str, fragment = urlparse.urlsplit(url_str)
+  scheme, netloc, path, query_str, fragment = urllib.parse.urlsplit(url_str)
 
-  query_params = urlparse.parse_qsl(query_str, keep_blank_values=True)
+  query_params = urllib.parse.parse_qsl(query_str, keep_blank_values=True)
   query_params.append((param_name, param_value))
   new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
 
-  new_url = urlparse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
-  if url_was_unicode:
-    new_url = new_url.decode(UTF8)
+  new_url = urllib.parse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
   return new_url
 
 
@@ -174,39 +181,88 @@ def FixWindowsEncodingIfNeeded(input_str):
   to Unicode.
 
   Args:
-    input_str: (str) The input string.
+    input_str: (str or bytes) The input string.
   Returns:
-    (str) The converted string (or the original, if conversion wasn't needed).
+    (unicode) The converted string or the original, if conversion wasn't needed.
   """
   if IS_CP1252:
-    return input_str.decode(WINDOWS_1252).encode(UTF8)
+    return six.ensure_text(input_str, WINDOWS_1252)
   else:
-    return input_str
+    return six.ensure_text(input_str, UTF8)
 
 
 def GetPrintableExceptionString(exc):
   """Returns a short Unicode string describing the exception."""
-  return unicode(exc).encode(UTF8) or unicode(exc.__class__)
+  return six.text_type(exc).encode(UTF8) or six.text_type(exc.__class__)
 
 
 def InsistAscii(string, message):
+  """Ensures that the string passed in consists of only ASCII values.
+
+  Args:
+    string: Union[str, unicode, bytes] Text that will be checked for
+        ASCII values.
+    message: Union[str, unicode, bytes] Error message, passed into the
+        exception, in the event that the check on `string` fails.
+
+  Returns:
+    None
+
+  Raises:
+    CommandException
+  """
   if not all(ord(c) < 128 for c in string):
     raise CommandException(message)
 
 
 def InsistAsciiHeader(header):
+  """Checks for ASCII-only characters in `header`.
+
+    Also constructs an error message using `header` if the check fails.
+
+    Args:
+      header: Union[str, binary, unicode] Text being checked for ASCII values.
+
+    Returns:
+      None
+    """
   InsistAscii(header, 'Invalid non-ASCII header (%s).' % header)
 
 
 def InsistAsciiHeaderValue(header, value):
+  """Checks for ASCII-only characters in `value`.
+
+  Also constructs an error message using `header` and `value` if the check
+  fails.
+
+  Args:
+    header: Header name, only used in error message in case of an exception.
+    value: Union[str, binary, unicode] Text being checked for ASCII values.
+
+  Returns:
+    None
+  """
   InsistAscii(
       value,
       'Invalid non-ASCII value (%s) was provided for header %s.\nOnly ASCII '
       'characters are allowed in headers other than x-goog-meta- and '
-      'x-amz-meta- headers' % (value, header))
+      'x-amz-meta- headers' % (repr(value), header))
 
 
 def InsistOnOrOff(value, message):
+  """Ensures that the value passed in consists of only "on" or "off"
+
+  Args:
+    value: (unicode) Unicode string that will be checked for correct text.
+    message: Union[str, unicode, bytes] Error message passed into the exception
+        in the event that the check on value fails.
+
+  Returns:
+    None
+
+  Raises:
+    CommandException
+  """
   if value != 'on' and value != 'off':
     raise CommandException(message)
 
@@ -245,9 +301,110 @@ def PrintableStr(input_val):
   Returns:
     (str) A UTF-8 encoded string, or None.
   """
-  return input_val.encode(UTF8) if input_val is not None else None
+  return input_val
+
+def print_to_fd(*objects, **kwargs):
+  """A Python 2/3 compatible analogue to the print function.
+
+  This function writes text to a file descriptor as the
+  builtin print function would, favoring unicode encoding.
+
+  Aguments and return values are the same as documented in
+  the Python 2 print function.
+  """
+  def _get_args(**kwargs):
+    """Validates keyword arguments that would be used in Print
+
+    Valid keyword arguments, mirroring print(), are 'sep',
+    'end', and 'file'. These must be of types string, string,
+    and file / file interface respectively.
+
+    Returns the above kwargs of the above types.
+    """
+    expected_keywords = collections.OrderedDict([
+      ('sep', ' '),
+      ('end', '\n'),
+      ('file', sys.stdout)])
+
+    for key, value in kwargs.items():
+      if key not in expected_keywords:
+        error_msg = (
+          '{} is not a valid keyword argument. '
+          'Please use one of: {}')
+        raise KeyError(
+          error_msg.format(
+            key,
+            ' '.join(expected_keywords.keys())))
+      else:
+        expected_keywords[key] = value
+
+    return expected_keywords.values()
+
+  
+  def _get_byte_strings(*objects):
+    """Gets a `bytes` string for each item in a list of printable objects."""
+    byte_objects = []
+    for item in objects:
+      if not isinstance(item, (six.binary_type, six.text_type)):
+        # If the item wasn't bytes or unicode, its __str__ method
+        # should return one of those types.
+        item = str(item)
+
+      if isinstance(item, six.binary_type):
+        byte_objects.append(item)
+      else:
+        # The item should be unicode. If it's not, ensure_binary()
+        # will throw a TypeError.
+        byte_objects.append(six.ensure_binary(item))
+    return byte_objects
+    
+  sep, end, file = _get_args(**kwargs)
+  sep = six.ensure_binary(sep)
+  end = six.ensure_binary(end)
+  data = _get_byte_strings(*objects)
+  data = sep.join(data)
+  data += end
+  write_to_fd(file, data)
+
+
+def write_to_fd(fd, data):
+  """Write given data to given file descriptor, doing any conversions needed"""
+  if six.PY2:
+    fd.write(data)
+    return
+  # PY3 logic:
+  if isinstance(data, bytes):
+    if (hasattr(fd, 'mode') and 'b' in fd.mode) or isinstance(fd, io.BytesIO):
+      fd.write(data)
+    elif hasattr(fd, 'buffer'):
+      fd.buffer.write(data)
+    else:
+      fd.write(six.ensure_text(data))
+  elif 'b' in fd.mode:
+    fd.write(six.ensure_binary(data))
+  else:
+    fd.write(data)
 
 
 def RemoveCRLFFromString(input_str):
   r"""Returns the input string with all \n and \r removed."""
   return re.sub(r'[\r\n]', '', input_str)
+
+
+def get_random_ascii_chars(size, seed=0):
+  """Generates binary string representation of a list of ASCII characters.
+
+  Args:
+    size: Integer quantity of characters to generate.
+    seed: A seed may be specified for deterministic behavior.
+          Int 0 is used as the default value.
+
+  Returns:
+    Binary encoded string representation of a list of characters of length
+    equal to size argument.
+  """
+  random.seed(seed)
+  contents = str([random.choice(string.ascii_letters) for _ in range(size)])
+  contents = six.ensure_binary(contents)
+  random.seed()  # Reset the seed for any other tests.
+  return contents

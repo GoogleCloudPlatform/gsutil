@@ -20,12 +20,15 @@ tied to some of Boto's core functionality) and oauth2client.
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 
 import os
 import pkgutil
 import tempfile
 import textwrap
 
+import six
 import boto
 from boto import config
 import boto.auth
@@ -45,6 +48,11 @@ from gslib.utils.unit_util import ONE_MIB
 
 import httplib2
 from oauth2client.client import HAS_CRYPTO
+
+
+if six.PY3:
+  long = int
+
 
 # Globals in this module are set according to values in the boto config.
 BOTO_IS_SECURE = config.get('Boto', 'is_secure', True)
@@ -204,11 +212,11 @@ def GetGcsJsonApiVersion():
 # in multiples of 256KiB). Overridable for testing.
 def GetJsonResumableChunkSize():
   chunk_size = config.getint('GSUtil', 'json_resumable_chunk_size',
-                             1024*1024*100L)
+                             long(1024*1024*100))
   if chunk_size == 0:
-    chunk_size = 1024*256L
-  elif chunk_size % 1024*256L != 0:
-    chunk_size += (1024*256L - (chunk_size % (1024*256L)))
+    chunk_size = long(1024*256)
+  elif chunk_size % long(1024*256) != 0:
+    chunk_size += (long(1024*256) - (chunk_size % (long(1024*256))))
   return chunk_size
 
 
@@ -301,7 +309,7 @@ def GetTabCompletionLogFilename():
 def GetTabCompletionCacheFilename():
   tab_completion_dir = os.path.join(GetGsutilStateDir(), 'tab-completion')
   # Limit read permissions on the directory to owner for privacy.
-  system_util.CreateDirIfNeeded(tab_completion_dir, mode=0700)
+  system_util.CreateDirIfNeeded(tab_completion_dir, mode=0o700)
   return os.path.join(tab_completion_dir, 'cache')
 
 
@@ -392,6 +400,66 @@ def MonkeyPatchBoto():
 
   boto.plugin.get_plugin = _PatchedGetPluginMethod
 
+  #########################################################################
+
+  # TODO(boto>2.49.0): Remove this.
+  # Fixes SSL issue where SNI was not being used for OpenSSL 1.1.1+
+  # https://github.com/boto/boto/pull/3843/files
+
+  # Import modules and resolve symbols used by our patch method.
+  import socket
+  import ssl
+  InvalidCertificateException = (
+      boto.https_connection.InvalidCertificateException)
+  ValidateCertificateHostname = (
+      boto.https_connection.ValidateCertificateHostname)
+
+  def _PatchedConnectMethod(self):
+    # The lines below were copied directly from the Boto file, so we don't lint
+    # or otherwise alter them.
+    if hasattr(self, "timeout"):
+        sock = socket.create_connection((self.host, self.port), self.timeout)
+    else:
+        sock = socket.create_connection((self.host, self.port))
+    msg = "wrapping ssl socket; "
+    if self.ca_certs:
+        msg += "CA certificate file=%s" % self.ca_certs
+    else:
+        msg += "using system provided SSL certs"
+    boto.log.debug(msg)
+    if hasattr(ssl, 'SSLContext') and getattr(ssl, 'HAS_SNI', False):
+        # Use SSLContext so we can specify server_hostname for SNI
+        # (Required for connections to storage.googleapis.com)
+        context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        context.verify_mode = ssl.CERT_REQUIRED
+        if self.ca_certs:
+            context.load_verify_locations(self.ca_certs)
+        if self.cert_file:
+            context.load_cert_chain(self.cert_file, self.key_file)
+        self.sock = context.wrap_socket(sock, server_hostname=self.host)
+        # Add attributes only set in SSLSocket constructor without context:
+        self.sock.keyfile = self.key_file
+        self.sock.certfile = self.cert_file
+        self.sock.cert_reqs = context.verify_mode
+        self.sock.ssl_version = ssl.PROTOCOL_SSLv23
+        self.sock.ca_certs = self.ca_certs
+        self.sock.ciphers = None
+    else:
+        self.sock = ssl.wrap_socket(sock, keyfile=self.key_file,
+                                    certfile=self.cert_file,
+                                    cert_reqs=ssl.CERT_REQUIRED,
+                                    ca_certs=self.ca_certs)
+    cert = self.sock.getpeercert()
+    hostname = self.host.split(':', 0)[0]
+    if not ValidateCertificateHostname(cert, hostname):
+        raise InvalidCertificateException(hostname,
+                                          cert,
+                                          'remote hostname "%s" does not match '
+                                          'certificate' % hostname)
+    # End `_PatchedConnectMethod` declaration.
+  boto.https_connection.CertValidatingHTTPSConnection.connect = (
+      _PatchedConnectMethod)
+
 
 def ProxyInfoFromEnvironmentVar(proxy_env_var):
   """Reads proxy info from the environment and converts to httplib2.ProxyInfo.
@@ -421,3 +489,61 @@ def UsingCrcmodExtension(crcmod):
   return (boto.config.get('GSUtil', 'test_assume_fast_crcmod', None) or
           (getattr(crcmod, 'crcmod', None) and
            getattr(crcmod.crcmod, '_usingExtension', None)))
+
+
+# TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
+def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
+  """Replaces boto.s3.key's should_retry() to handle KMS-encrypted objects."""
+  provider = self.bucket.connection.provider
+
+  if not chunked_transfer:
+      if response.status in [500, 503]:
+          # 500 & 503 can be plain retries.
+          return True
+
+      if response.getheader('location'):
+          # If there's a redirect, plain retry.
+          return True
+
+  if 200 <= response.status <= 299:
+      self.etag = response.getheader('etag')
+      md5 = self.md5
+      if isinstance(md5, bytes):
+          md5 = md5.decode('utf-8')
+
+      # If you use customer-provided encryption keys, the ETag value that
+      # Amazon S3 returns in the response will not be the MD5 of the
+      # object.
+      amz_server_side_encryption_customer_algorithm = response.getheader(
+          'x-amz-server-side-encryption-customer-algorithm', None)
+      # The same is applicable for KMS-encrypted objects in gs buckets.
+      goog_customer_managed_encryption = response.getheader(
+          'x-goog-encryption-kms-key-name', None)
+      if (amz_server_side_encryption_customer_algorithm is None and
+              goog_customer_managed_encryption is None):
+          if self.etag != '"%s"' % md5:
+              raise provider.storage_data_error(
+                  'ETag from S3 did not match computed MD5. '
+                  '%s vs. %s' % (self.etag, self.md5))
+
+      return True
+
+  if response.status == 400:
+      # The 400 must be trapped so the retry handler can check to
+      # see if it was a timeout.
+      # If ``RequestTimeout`` is present, we'll retry. Otherwise, bomb
+      # out.
+      body = response.read()
+      err = provider.storage_response_error(
+          response.status,
+          response.reason,
+          body
+      )
+
+      if err.error_code in ['RequestTimeout']:
+          raise boto.exception.PleaseRetryException(
+              "Saw %s, retrying" % err.error_code,
+              response=response
+          )
+
+  return False
