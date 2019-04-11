@@ -33,3 +33,15 @@ In our case, a VM spawns for each py*.cfg in each OS folder in our Kokoro CI dir
 -----
 
 Linux and Mac share the same bash script in `gsutil/test/ci/kokoro/run_integ_tests.sh`. Windows targets a `gsutil/test/ci/kokoro/windows/run_integ_tests.bat` which initializes environment variables and passes them to a powershell script which runs the tests in parallel. Kokoro insists on calling a `.bat` script specifically, hence the wrapper.
+
+### Test Results
+-----
+
+Current and past test runs and links to their results are listed in [Fusion](http://go/ops-fusion). You can either search for `cloud_storage_gsutil` or using one of the following go links for continuous and presubmit builds:
+
+- go/gsutil-kokoro-linux
+- go/gsutil-kokoro-linux-pr
+- go/gsutil-kokoro-mac
+- go/gsutil-kokoro-mac-pr
+
+Note that this is currently only available to internal Googlers. We do not currently have an interface for external contributers to view the Kokoro test results.
