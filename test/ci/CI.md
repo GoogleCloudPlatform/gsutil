@@ -7,7 +7,7 @@
 ### Overview
 -----
 
-Kokoro aims to be our primary CI system. For internal Googlers, its documentation is in the README.md at [go/gsutil-kokoro-piper](http://go/gsutil-kokoro-piper) and the design document for integrating with Kokoro is at [go/gsutil-test-matrix](http://go/gsutil-test-matrix).
+Kokoro aims to be our primary CI system. For internal Googlers, its documentation is at [go/gsutil-ci](http://go/gsutil-ci) and the design document for integrating with Kokoro is at [go/gsutil-test-matrix](http://go/gsutil-test-matrix).
 
 These tests launch every time a PR is submitted by a trusted author (Googler in the GoogleCloudPlatform org), or when a trusted author manually invokes tests on an external contributer's PR.
 
