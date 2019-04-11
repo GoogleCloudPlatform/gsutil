@@ -29,6 +29,7 @@ import six
 import gslib
 from gslib.exception import CommandException
 from gslib.tracker_file import RaiseUnwritableTrackerFileException
+from gslib.utils.constants import UTF8
 
 
 ObjectFromTracker = namedtuple('ObjectFromTracker',
@@ -166,9 +167,9 @@ def ValidateParallelCompositeTrackerData(
   """
   if six.PY3:
     if isinstance(existing_enc_sha256, str):
-      existing_enc_sha256 = existing_enc_sha256.encode('utf-8')
+      existing_enc_sha256 = existing_enc_sha256.encode(UTF8)
     if isinstance(current_enc_key_sha256, str):
-      current_enc_key_sha256 = current_enc_key_sha256.encode('utf-8')
+      current_enc_key_sha256 = current_enc_key_sha256.encode(UTF8)
   if existing_prefix and existing_enc_sha256 != current_enc_key_sha256:
     try:
       logger.warn('Upload tracker file (%s) does not match current encryption '

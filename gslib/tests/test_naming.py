@@ -719,7 +719,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     dst_bucket_uri = self.CreateBucket(test_objects=['f0'])
     output = self.RunCommand('ls', ['-R', suri(dst_bucket_uri, '*')],
                              return_stdout=True)
-    expected = set([suri(dst_bucket_uri, 'f0').encode('utf-8')])
+    expected = set([suri(dst_bucket_uri, 'f0').encode(UTF8)])
     expected.add(b'')  # Blank line between subdir listings.
     actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
@@ -731,8 +731,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     output = self.RunCommand('ls', [suri(src_bucket_uri, 'src_subdir')],
                              return_stdout=True)
     expected = set([
-        suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'),
-        (suri(src_bucket_uri, 'src_subdir', 'nested') + src_bucket_uri.delim).encode('utf-8')])
+        suri(src_bucket_uri, 'src_subdir', 'foo').encode(UTF8),
+        (suri(src_bucket_uri, 'src_subdir', 'nested') + src_bucket_uri.delim).encode(UTF8)])
     expected.add(b'')  # Blank line between subdir listings.
     actual = set([line.strip() for line in output.split(b'\n')])
     self.assertEqual(expected, actual)
@@ -746,10 +746,10 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
           'ls', ['-R', suri(src_bucket_uri, 'src_subdir') + final_char],
           return_stdout=True)
       expected = set([
-          suri(src_bucket_uri, 'src_subdir', ':').encode('utf-8'),
-          suri(src_bucket_uri, 'src_subdir', 'foo').encode('utf-8'),
-          suri(src_bucket_uri, 'src_subdir', 'nested', ':').encode('utf-8'),
-          suri(src_bucket_uri, 'src_subdir', 'nested', 'foo2').encode('utf-8')])
+          suri(src_bucket_uri, 'src_subdir', ':').encode(UTF8),
+          suri(src_bucket_uri, 'src_subdir', 'foo').encode(UTF8),
+          suri(src_bucket_uri, 'src_subdir', 'nested', ':').encode(UTF8),
+          suri(src_bucket_uri, 'src_subdir', 'nested', 'foo2').encode(UTF8)])
       expected.add(b'')  # Blank line between subdir listings.
       actual = set([line.strip() for line in output.split(b'\n')])
       self.assertEqual(expected, actual)
@@ -1175,7 +1175,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                       contents=b'foo')
     stdout = self.RunCommand('ls', [suri(bucket_uri, object_name)],
                              return_stdout=True)
-    self.assertIn(object_name.encode('utf-8'), stdout)
+    self.assertIn(object_name.encode(UTF8), stdout)
 
   def testRecursiveListTrailingSlash(self):
     bucket_uri = self.CreateBucket()
@@ -1184,8 +1184,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('ls', ['-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
     # removed.
-    self.assertEqual(stdout.splitlines(), [(suri(obj_uri) + '/:').encode('utf-8'),
-                                           (suri(obj_uri) + '/').encode('utf-8')])
+    self.assertEqual(stdout.splitlines(), [(suri(obj_uri) + '/:').encode(UTF8),
+                                           (suri(obj_uri) + '/').encode(UTF8)])
 
   def FinalObjNameComponent(self, uri):
     """For gs://bucket/abc/def/ghi returns ghi."""

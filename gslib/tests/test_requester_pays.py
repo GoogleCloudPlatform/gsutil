@@ -27,6 +27,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 from gslib.utils.retry_util import Retry
+from gslib.utils.constants import UTF8
 
 OBJECT_CONTENTS = b'innards'
 
@@ -69,7 +70,7 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
                             return_stdout=True)
     if regex:
       if isinstance(regex, bytes):
-        regex = regex.decode('utf-8')
+        regex = regex.decode(UTF8)
       self.assertRegexpMatchesWithFlags(stdout, regex, flags=re.IGNORECASE)
 
   def _run_non_requester_pays_test(self, command_list):

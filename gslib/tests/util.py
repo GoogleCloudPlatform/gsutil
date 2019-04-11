@@ -42,6 +42,7 @@ from gslib.cloud_api import ResumableUploadException
 from gslib.lazy_wrapper import LazyWrapper
 import gslib.tests as gslib_tests
 from gslib.utils.boto_util import UsingCrcmodExtension
+from gslib.utils.constants import UTF8
 from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.utils.posix_util import GetDefaultMode
 from gslib.utils.system_util import IS_WINDOWS
@@ -482,7 +483,7 @@ def SetBotoConfigForTest(boto_config_list, use_existing_config=True):
         boto_value = boto_config[2]
         if six.PY3:
           if isinstance(boto_value, bytes):
-            boto_value = boto_value.decode('utf-8')
+            boto_value = boto_value.decode(UTF8)
         _SetBotoConfig(boto_config[0], boto_config[1], boto_value,
                        revert_configs)
       with open(tmp_filename, 'w') as tmp_file:

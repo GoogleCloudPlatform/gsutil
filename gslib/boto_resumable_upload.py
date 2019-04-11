@@ -64,6 +64,7 @@ from gslib.exception import InvalidUrlError
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNumRetries
 from gslib.utils.constants import XML_PROGRESS_CALLBACKS
+from gslib.utils.constants import UTF8
 
 
 if six.PY3:
@@ -354,7 +355,7 @@ class BotoResumableUpload(object):
           total_bytes_uploaded += len(buf)
         else:
           # Probably a unicode/str object, try encoding.
-          buf_bytes = buf.encode('utf-8')
+          buf_bytes = buf.encode(UTF8)
           http_conn.send(buf_bytes)
           total_bytes_uploaded += len(buf_bytes)
 

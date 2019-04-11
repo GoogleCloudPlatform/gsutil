@@ -591,7 +591,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
             'Tracker file %s should have been deleted.' % tracker_file_name)
         read_contents = self.RunGsUtil(['cat', suri(bucket_uri, 'foo')],
                                        return_stdout=True)
-        self.assertEqual(read_contents.encode('utf-8'), file_contents)
+        self.assertEqual(read_contents.encode(UTF8), file_contents)
         if '-m' in gsutil_flags:
           CheckUiOutputWithMFlag(self, stderr, 1, total_size=len(file_contents))
         else:
@@ -798,7 +798,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     obj_uri = suri(self.CreateObject(contents=b'foo'))
     acl_string = self.RunGsUtil(get_acl_prefix + [obj_uri],
                                 return_stdout=True)
-    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
+    inpath = self.CreateTempFile(contents=acl_string.encode(UTF8))
     stderr = self.RunGsUtil(set_acl_prefix + ['public-read', obj_uri],
                             return_stderr=True)
     CheckUiOutputWithMFlag(self, stderr, 1, metadata=True)
@@ -823,7 +823,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     obj_uri = suri(self.CreateObject(contents=b'foo'))
     acl_string = self.RunGsUtil(get_acl_prefix + [obj_uri],
                                 return_stdout=True)
-    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
+    inpath = self.CreateTempFile(contents=acl_string.encode(UTF8))
     stderr = self.RunGsUtil(set_acl_prefix + ['public-read', obj_uri],
                             return_stderr=True)
     CheckUiOutputWithNoMFlag(self, stderr, 1, metadata=True)

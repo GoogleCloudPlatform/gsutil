@@ -23,6 +23,7 @@ import json
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.utils.constants import UTF8
 
 
 class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
@@ -61,8 +62,8 @@ class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
     """Tests that bucket config patching affects only the desired config."""
     bucket_uri = self.CreateBucket()
     lifecycle_path = self.CreateTempFile(
-        contents=self.lifecycle_doc.encode('utf-8'))
-    cors_path = self.CreateTempFile(contents=self.cors_doc.encode('utf-8'))
+        contents=self.lifecycle_doc.encode(UTF8))
+    cors_path = self.CreateTempFile(contents=self.cors_doc.encode(UTF8))
 
     self.RunGsUtil(self._set_cors_command + [cors_path, suri(bucket_uri)])
     cors_out = self.RunGsUtil(self._get_cors_command + [suri(bucket_uri)],

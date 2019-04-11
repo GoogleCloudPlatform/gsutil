@@ -38,6 +38,7 @@ from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.utils.constants import SSL_TIMEOUT_SEC
 from gslib.utils.constants import TRANSFER_BUFFER_SIZE
+from gslib.utils.constants import UTF8
 from gslib.utils import text_util
 import httplib2
 from httplib2 import parse_uri
@@ -145,7 +146,7 @@ class UploadCallbackConnectionClassFactory(object):
             if isinstance(item, bytes):
               items.append(item)
             else:
-              items.append(item.encode('utf-8'))
+              items.append(item.encode(UTF8))
         msg = b'\r\n'.join(items)
         num_metadata_bytes = len(msg)
         if outer_debug == DEBUGLEVEL_DUMP_REQUESTS and outer_logger:
@@ -258,7 +259,7 @@ class UploadCallbackConnectionClassFactory(object):
             if isinstance(partial_buffer, bytes):
               httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
             else:
-              httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer.encode('utf-8'))
+              httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer.encode(UTF8))
           sent_data_bytes = len(partial_buffer)
           if num_metadata_bytes:
             if num_metadata_bytes <= sent_data_bytes:

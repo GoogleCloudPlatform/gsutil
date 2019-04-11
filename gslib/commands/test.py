@@ -44,6 +44,7 @@ from gslib.tests.util import GetTestNames
 from gslib.tests.util import InvokedFromParFile
 from gslib.tests.util import unittest
 from gslib.utils.constants import NO_MAX
+from gslib.utils.constants import UTF8
 from gslib.utils.system_util import IS_WINDOWS
 
 # pylint: disable=g-import-not-at-top
@@ -442,7 +443,7 @@ class TestCommand(Command):
           new_stderr = result.stderr.split(b'\n')
           print('Results for failed test %s:' % result.name)
           for line in new_stderr:
-            print(line.decode('utf-8').strip())
+            print(line.decode(UTF8).strip())
 
     return (num_parallel_failures,
             (process_run_finish_time - parallel_start_time))

@@ -882,9 +882,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     if stdin is not None:
       if six.PY3:
         if not isinstance(stdin, bytes):
-          stdin = stdin.encode('utf-8')
+          stdin = stdin.encode(UTF8)
       else:
-        stdin = stdin.encode('utf-8')
+        stdin = stdin.encode(UTF8)
     # checking to see if test was invoked from a par file (bundled archive)
     # if not, add python executable path to ensure correct version of python
     # is used for testing

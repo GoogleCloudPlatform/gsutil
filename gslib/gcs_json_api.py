@@ -83,6 +83,7 @@ from gslib.utils.boto_util import JsonResumableChunkSizeDefined
 from gslib.utils.cloud_api_helper import ListToGetFields
 from gslib.utils.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.utils.constants import NUM_OBJECTS_PER_LIST_PAGE
+from gslib.utils.constants import UTF8
 from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.utils.encryption_helper import CryptoKeyType
 from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
@@ -869,7 +870,7 @@ class GcsJsonApi(CloudApi):
                                            bucket_name, object_name))
       if six.PY3:
         if not isinstance(decryption_key, bytes):
-          decryption_key = decryption_key.encode('utf-8')
+          decryption_key = decryption_key.encode(UTF8)
       return self._GetObjectMetadataHelper(
           bucket_name, object_name, generation=generation, fields=fields,
           decryption_tuple=CryptoKeyWrapperFromKey(decryption_key))

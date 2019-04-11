@@ -261,7 +261,7 @@ def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
     gid = attrs_dict.get(GID_ATTR)
     mode = attrs_dict.get(MODE_ATTR)
     cls.CreateObject(bucket_uri=bucket_uri, object_name=obj_name,
-                     contents=obj_name.encode('utf-8'),
+                     contents=obj_name.encode(UTF8),
                      uid=uid, gid=gid, mode=mode)
   for obj_name in six.iterkeys(test_params):
     # Move objects one at a time to avoid listing consistency.
@@ -1386,7 +1386,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     contents = b'content'
     fpath = self.CreateTempFile(contents=contents)
     stdout = self.RunGsUtil(['cp', fpath, '-'], return_stdout=True)
-    self.assertIn(contents, stdout.encode('utf-8'))
+    self.assertIn(contents, stdout.encode(UTF8))
 
   @SequentialAndParallelTransfer
   def test_cp_zero_byte_file(self):
@@ -1524,8 +1524,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                    'Unicode handling on Windows requires mods to site-packages')
   @SequentialAndParallelTransfer
   def test_cp_manifest_upload_unicode(self):
-    return self._ManifestUpload('foo-unicöde'.encode('utf-8'), 'bar-unicöde'.encode('utf-8'),
-                                'manifest-unicöde'.encode('utf-8'))
+    return self._ManifestUpload('foo-unicöde'.encode(UTF8), 'bar-unicöde'.encode(UTF8),
+                                'manifest-unicöde'.encode(UTF8))
 
   @SequentialAndParallelTransfer
   def test_cp_manifest_upload(self):
@@ -1603,7 +1603,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           line_parts = []
           for some_str in some_strs:
             if some_str.startswith("b'"):
-              line_parts.append(ast.literal_eval(some_str).decode('utf-8'))
+              line_parts.append(ast.literal_eval(some_str).decode(UTF8))
             else:
               line_parts.append(some_str)
           decode_lines.append(','.join(line_parts))

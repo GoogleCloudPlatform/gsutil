@@ -60,6 +60,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils import text_util
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import ResumableThreshold
+from gslib.utils.constants import UTF8
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.cloud_api_helper import GetDownloadSerializationData
 from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
@@ -524,7 +525,7 @@ class PerfDiagCommand(Command):
     (stdoutdata, _) = p.communicate()
     if six.PY3:
       if isinstance(stdoutdata, bytes):
-        stdoutdata = stdoutdata.decode('utf-8')
+        stdoutdata = stdoutdata.decode(UTF8)
     if raise_on_error and p.returncode:
       raise CommandException("Received non-zero return code (%d) from "
                              "subprocess '%s'." % (p.returncode, ' '.join(cmd)))

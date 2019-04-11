@@ -32,6 +32,7 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.utils import acl_helper
+from gslib.utils.constants import UTF8
 from gslib.utils.retry_util import Retry
 from gslib.utils.translation_helper import AclTranslation
 
@@ -104,7 +105,7 @@ class TestAcl(TestAclBase):
     obj_uri = suri(self.CreateObject(contents=b'foo'))
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                 return_stdout=True)
-    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
+    inpath = self.CreateTempFile(contents=acl_string.encode(UTF8))
     self.RunGsUtil(self._set_acl_prefix + ['public-read', obj_uri])
     acl_string2 = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                  return_stdout=True)
@@ -122,7 +123,7 @@ class TestAcl(TestAclBase):
                                 return_stdout=True)
     acl_string = re.sub(r'"role"', r'"role" \n', acl_string)
     acl_string = re.sub(r'"entity"', r'\n "entity"', acl_string)
-    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
+    inpath = self.CreateTempFile(contents=acl_string.encode(UTF8))
 
     self.RunGsUtil(self._set_acl_prefix + [inpath, obj_uri])
 
@@ -134,7 +135,7 @@ class TestAcl(TestAclBase):
     bucket_uri = suri(self.CreateBucket())
     acl_string = self.RunGsUtil(self._get_acl_prefix + [bucket_uri],
                                 return_stdout=True)
-    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
+    inpath = self.CreateTempFile(contents=acl_string.encode(UTF8))
     self.RunGsUtil(self._set_acl_prefix + ['public-read', bucket_uri])
     acl_string2 = self.RunGsUtil(self._get_acl_prefix + [bucket_uri],
                                  return_stdout=True)
@@ -179,7 +180,7 @@ class TestAcl(TestAclBase):
     _Check1()
 
     # Now change it back to the default via XML.
-    inpath = self.CreateTempFile(contents=acl_string.encode('utf-8'))
+    inpath = self.CreateTempFile(contents=acl_string.encode(UTF8))
     self.RunGsUtil(self._set_defacl_prefix + [inpath, suri(bucket_uri)])
 
     # Default object ACL may take some time to propagate.
@@ -509,7 +510,7 @@ class TestAcl(TestAclBase):
     # Get the object's current ACL for application via set.
     current_acl = self.RunGsUtil(['acl', 'get', suri(object_uri)],
                                  return_stdout=True)
-    current_acl_file = self.CreateTempFile(contents=current_acl.encode('utf-8'))
+    current_acl_file = self.CreateTempFile(contents=current_acl.encode(UTF8))
 
     with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
                                ('GSUtil', 'task_estimation_force', 'True')]):
@@ -684,14 +685,14 @@ class TestS3CompatibleAcl(TestAclBase):
 
     stdout = self.RunGsUtil(self._get_acl_prefix + [suri(obj_uri)],
                             return_stdout=True)
-    set_contents = self.CreateTempFile(contents=stdout.encode('utf-8'))
+    set_contents = self.CreateTempFile(contents=stdout.encode(UTF8))
     self.RunGsUtil(self._set_acl_prefix + [set_contents, suri(obj_uri)])
 
   def testAclBucketGetSet(self):
     bucket_uri = self.CreateBucket()
     stdout = self.RunGsUtil(self._get_acl_prefix + [suri(bucket_uri)],
                             return_stdout=True)
-    set_contents = self.CreateTempFile(contents=stdout.encode('utf-8'))
+    set_contents = self.CreateTempFile(contents=stdout.encode(UTF8))
     self.RunGsUtil(self._set_acl_prefix + [set_contents, suri(bucket_uri)])
 
 
