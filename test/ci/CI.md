@@ -9,7 +9,7 @@
 
 Kokoro aims to be our primary CI system. For internal Googlers, its documentation is in the README.md at [go/gsutil-kokoro-piper](http://go/gsutil-kokoro-piper) and the design document for integrating with Kokoro is at [go/gsutil-test-matrix](http://go/gsutil-test-matrix).
 
-Kokoro listens to our GitHub repository for changes, and when a PR is submitted or code is `git push`ed, Kokoro spins up VMs and runs integration tests on the new code.
+These tests launch every time a PR is submitted by a trusted author (Googler in the GoogleCloudPlatform org), or when a trusted author manually invokes tests on an external contributer's PR.
 
 The build configs found in this repository under the `gsutil/test/ci/kokoro` directory and the job configs found internally at [go/gsutil-kokoro-piper](http://go/gsutil-kokoro-piper) define how Kokoro will run our tests, with what scripts, and with which VMs.
 
@@ -20,7 +20,7 @@ We currently support Gsutil on Windows, Mac, and Linux, using Python versoins 2.
 
 Each of these 24 combinations of `(OS / Python version / API)` is run on a separate VM managed by Kokoro, all running in parallel.
 
-These tests launch each time a PR is submitted, code is `git push`ed.
+These tests launch every time a PR is submitted by a trusted author (Googler in the GoogleCloudPlatform org), or when a trusted author manually invokes tests on an external contributer's PR.
 
 ### Test Scripts
 -----
