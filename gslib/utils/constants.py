@@ -39,7 +39,6 @@ from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
 
 
-
 # Readable descriptions for httplib2 logging levels.
 DEBUGLEVEL_DUMP_REQUESTS = 3
 DEBUGLEVEL_DUMP_REQUESTS_AND_PAYLOADS = 4

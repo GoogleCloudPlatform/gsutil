@@ -40,6 +40,7 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
 from gslib.utils import system_util
 from gslib.utils.boto_util import CERTIFICATE_VALIDATION_ENABLED
+from gslib.utils.constants import UTF8
 from gslib.utils.update_util import DisallowUpdateIfDataInGsutilDir
 
 
@@ -168,7 +169,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     os.unlink(os.path.join(gsutil_dst, 'userdata.txt'))
     self.assertEqual(p.returncode, 1)
     # Additional check for Windows since it has \r\n and string may have just \n
-    os_ls = os.linesep.encode('utf-8')
+    os_ls = os.linesep.encode(UTF8)
     if os_ls in stderr:
       stderr = stderr.replace(os_ls, b' ')
     elif b'\n' in stderr:
@@ -194,7 +195,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     p.stderr.close()
     self.assertEqual(p.returncode, 0, msg=(
         'Non-zero return code (%d) from gsutil update. stderr = \n%s' %
-        (p.returncode, stderr.decode('utf-8'))))
+        (p.returncode, stderr.decode(UTF8))))
 
     # Verify that version file was updated.
     dst_version_file = os.path.join(tmpdir_dst, 'gsutil', 'VERSION')

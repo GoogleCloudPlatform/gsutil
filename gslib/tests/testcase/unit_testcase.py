@@ -40,6 +40,7 @@ from gslib.tests.testcase import base
 import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
+from gslib.utils.constants import UTF8
 
 
 class GsutilApiUnitTestClassMapFactory(object):
@@ -231,8 +232,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         except UnicodeDecodeError:
           sys.stdout.seek(0)
           sys.stderr.seek(0)
-          stdout = sys.stdout.buffer.read().decode('utf-8')
-          stderr = sys.stderr.buffer.read().decode('utf-8')
+          stdout = sys.stdout.buffer.read().decode(UTF8)
+          stderr = sys.stderr.buffer.read().decode(UTF8)
       logging.getLogger(command_name).removeHandler(mock_log_handler)
       mock_log_handler.close()
 
@@ -378,7 +379,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       test_objects = [self.MakeTempName('obj') for _ in range(test_objects)]
     for i, name in enumerate(test_objects):
       self.CreateObject(bucket_uri=bucket_uri, object_name=name,
-                        contents='test {}'.format(i).encode('utf-8'))
+                        contents='test {}'.format(i).encode(UTF8))
     return bucket_uri
 
   def CreateObject(self, bucket_uri=None, object_name=None, contents=None):

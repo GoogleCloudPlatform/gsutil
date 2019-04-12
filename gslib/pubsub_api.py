@@ -39,6 +39,7 @@ from gslib.utils.boto_util import GetCertsFile
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNewHttp
 from gslib.utils.boto_util import GetNumRetries
+from gslib.utils.constants import UTF8
 
 
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError)
@@ -165,7 +166,7 @@ class PubsubApi(object):
     if isinstance(http_error, apitools_exceptions.HttpError):
       if getattr(http_error, 'content', None):
         try:
-          json_obj = json.loads(http_error.content.decode('utf-8'))
+          json_obj = json.loads(http_error.content.decode(UTF8))
           if 'error' in json_obj and 'message' in json_obj['error']:
             return json_obj['error']['message']
         except Exception:  # pylint: disable=broad-except

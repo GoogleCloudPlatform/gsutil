@@ -35,6 +35,7 @@ from gslib.tracker_file import HashRewriteParameters
 from gslib.tracker_file import ReadRewriteTrackerFile
 from gslib.tracker_file import WriteRewriteTrackerFile
 from gslib.utils import parallelism_framework_util
+from gslib.utils.constants import UTF8
 
 
 class TestTrackerFile(GsUtilUnitTestCase):
@@ -84,7 +85,7 @@ class TestTrackerFile(GsUtilUnitTestCase):
     objects = ['obj1', '42', 'obj2', '314159']
     contents = '\n'.join([random_prefix] + objects) + '\n'
     fpath = self.CreateTempFile(
-      file_name='foo', contents=contents.encode('utf-8'))
+      file_name='foo', contents=contents.encode(UTF8))
     expected_objects = [ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
                         for i in range(0, len(objects) // 2)]
     (_, actual_prefix, actual_objects) = ReadParallelUploadTrackerFile(

@@ -43,6 +43,7 @@ from gslib.utils import system_util
 from gslib.utils.constants import DEFAULT_GCS_JSON_API_VERSION
 from gslib.utils.constants import DEFAULT_GSUTIL_STATE_DIR
 from gslib.utils.constants import SSL_TIMEOUT_SEC
+from gslib.utils.constants import UTF8
 from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import ONE_MIB
 
@@ -509,7 +510,7 @@ def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
       self.etag = response.getheader('etag')
       md5 = self.md5
       if isinstance(md5, bytes):
-          md5 = md5.decode('utf-8')
+          md5 = md5.decode(UTF8)
 
       # If you use customer-provided encryption keys, the ETag value that
       # Amazon S3 returns in the response will not be the MD5 of the

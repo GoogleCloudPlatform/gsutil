@@ -23,6 +23,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
+from gslib.utils.constants import UTF8
 from gslib.utils.retry_util import Retry
 
 
@@ -229,7 +230,7 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     """Tests file exclusion with the -X flag."""
     bucket_uri, obj_uris = self._create_nested_subdir()
     fpath = self.CreateTempFile(
-      contents='*sub2/five*\n*sub1材/four'.encode('utf-8'))
+      contents='*sub2/five*\n*sub1材/four'.encode(UTF8))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)

@@ -35,6 +35,7 @@ from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.utils.retry_util import Retry
+from gslib.utils.constants import UTF8
 
 KEY1 = 'key_one'
 KEY2 = 'key_two'
@@ -58,7 +59,7 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
   def setUp(self):
     super(TestLabelS3, self).setUp()
     self.xml_fpath = self.CreateTempFile(
-      contents=self._label_xml.encode('utf-8'))
+      contents=self._label_xml.encode(UTF8))
 
   def _LabelDictFromXmlString(self, xml_str):
     label_dict = {}
@@ -141,7 +142,7 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
   def setUp(self):
     super(TestLabelGS, self).setUp()
     self.json_fpath = self.CreateTempFile(
-      contents=json.dumps(self._label_dict).encode('utf-8'))
+      contents=json.dumps(self._label_dict).encode(UTF8))
 
   def testSetAndGetOnOneBucket(self):
     bucket_uri = self.CreateBucket()

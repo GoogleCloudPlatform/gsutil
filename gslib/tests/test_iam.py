@@ -31,6 +31,7 @@ from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils.constants import UTF8
 from gslib.utils.iam_helper import BindingsToDict
 from gslib.utils.iam_helper import BindingStringToTuple as bstt
 from gslib.utils.iam_helper import BindingsTuple
@@ -736,7 +737,7 @@ class TestIamSet(TestIamIntegration):
     self.bucket_iam_string = self.RunGsUtil(
         ['iam', 'get', self.bucket.uri], return_stdout=True)
     self.old_bucket_iam_path = self.CreateTempFile(
-        contents=self.bucket_iam_string.encode('utf-8'))
+        contents=self.bucket_iam_string.encode(UTF8))
 
     # Using the existing bucket's policy, make an altered policy that allows
     # allUsers to be "legacyBucketReader"s. Some tests will later apply this
@@ -746,7 +747,7 @@ class TestIamSet(TestIamIntegration):
         IAM_BUCKET_READ_ROLE,
         self.public_bucket_read_binding)
     self.new_bucket_iam_path = self.CreateTempFile(
-        contents=json.dumps(self.new_bucket_iam_policy).encode('utf-8'))
+        contents=json.dumps(self.new_bucket_iam_policy).encode(UTF8))
 
     # Using the existing bucket's policy, make an altered policy that contains
     # a binding with a condition in it. Some tests will later apply this policy.
@@ -762,7 +763,7 @@ class TestIamSet(TestIamIntegration):
     self.object_iam_string = self.RunGsUtil(
         ['iam', 'get', tmp_object.uri], return_stdout=True)
     self.old_object_iam_path = self.CreateTempFile(
-        contents=self.object_iam_string.encode('utf-8'))
+        contents=self.object_iam_string.encode(UTF8))
 
     # Using the existing object's policy, make an altered policy that allows
     # allUsers to be "legacyObjectReader"s. Some tests will later apply this
@@ -771,7 +772,7 @@ class TestIamSet(TestIamIntegration):
         json.loads(self.object_iam_string), IAM_OBJECT_READ_ROLE,
         self.public_object_read_binding)
     self.new_object_iam_path = self.CreateTempFile(
-        contents=json.dumps(self.new_object_iam_policy).encode('utf-8'))
+        contents=json.dumps(self.new_object_iam_policy).encode(UTF8))
 
   def test_seek_ahead_iam(self):
     """Ensures that the seek-ahead iterator is being used with iam commands."""

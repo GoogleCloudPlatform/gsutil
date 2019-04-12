@@ -26,6 +26,7 @@ from xml.dom.minidom import parseString
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.utils.constants import UTF8
 from gslib.utils.retry_util import Retry
 from gslib.utils.translation_helper import CorsTranslation
 
@@ -105,7 +106,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
 
   def test_set_empty_cors1(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.empty_doc1.encode('utf-8'))
+    fpath = self.CreateTempFile(contents=self.empty_doc1.encode(UTF8))
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
@@ -113,7 +114,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
 
   def test_set_empty_cors2(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.empty_doc2.encode('utf-8'))
+    fpath = self.CreateTempFile(contents=self.empty_doc2.encode(UTF8))
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
@@ -121,7 +122,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
 
   def test_non_null_cors(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.cors_doc.encode('utf-8'))
+    fpath = self.CreateTempFile(contents=self.cors_doc.encode(UTF8))
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
                             return_stdout=True)
@@ -129,14 +130,14 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
 
   def test_bad_cors_xml(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.xml_cors_doc.encode('utf-8'))
+    fpath = self.CreateTempFile(contents=self.xml_cors_doc.encode(UTF8))
     stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
                             expected_status=1, return_stderr=True)
     self.assertIn('XML CORS data provided', stderr)
 
   def test_bad_cors(self):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=self.cors_bad.encode('utf-8'))
+    fpath = self.CreateTempFile(contents=self.cors_bad.encode(UTF8))
     stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
                             expected_status=1, return_stderr=True)
     self.assertNotIn('XML CORS data provided', stderr)
@@ -144,7 +145,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
   def test_cors_doc_not_wrapped_in_json_list(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(
-      contents=self.cors_doc_not_nested_in_list.encode('utf-8'))
+      contents=self.cors_doc_not_nested_in_list.encode(UTF8))
     stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)],
                             expected_status=1, return_stderr=True)
     self.assertIn('should be formatted as a list', stderr)
@@ -212,7 +213,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
         'gs://%sgsutil-test-test-set-wildcard-non-null-cors-' % random_prefix))
     wildcard = '%s*' % common_prefix
 
-    fpath = self.CreateTempFile(contents=self.cors_doc.encode('utf-8'))
+    fpath = self.CreateTempFile(contents=self.cors_doc.encode(UTF8))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     expected = set(['Setting CORS on %s/...' % suri(bucket1_uri),
