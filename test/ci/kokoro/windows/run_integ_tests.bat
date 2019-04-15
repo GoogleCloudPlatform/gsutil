@@ -23,7 +23,6 @@ set GsutilRepoDir="T:\src\github\src\gsutil"
 set "PyExePath=C:\python%PYMAJOR%%PYMINOR%\python.exe"
 
 cmd config_generator.bat "C:\src\keystore\74008+gsutil_kokoro_service_key" %API% "T:\src\.boto"
-set BOTO_CONFIG="T:\src\.boto"
 
 cd %GsutilRepoDir%
 git submodule update --init --recursive
