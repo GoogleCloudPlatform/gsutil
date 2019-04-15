@@ -27,7 +27,7 @@ cmd config_generator.bat "C:\src\keystore\74008+gsutil_kokoro_service_key" %API%
 cd %GsutilRepoDir%
 git submodule update --init --recursive
 
-# Print config info prior to running tests
+rem Print config info prior to running tests
 %PyExePath% %GsutilRepoDir%\gsutil.py version -l
 
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%'"
