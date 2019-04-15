@@ -19,14 +19,14 @@ rem
 rem https://stackoverflow.com/questions/19335004/how-to-run-a-powershell-script-from-a-batch-file
 rem http://blog.danskingdom.com/allow-others-to-run-your-powershell-scripts-from-a-batch-file-they-will-love-you-for-it/
 
-rem debug lines, remove me later
-dir
-tree /F
-
 set GsutilRepoDir="T:\src\github\src\gsutil"
 set "PyExePath=C:\python%PYMAJOR%%PYMINOR%\python.exe"
 
-cmd config_generator.bat "C:\src\keystore\74008+gsutil_kokoro_service_key" %API% "C:\src\.boto_%API%"
+cmd config_generator.bat "C:\src\keystore\74008+gsutil_kokoro_service_key" %API% "T:\src\.boto"
+set BOTO_CONFIG="T:\src\.boto"
 
-powershell.exe -noexit -file "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integration_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%'";
+cd %GsutilRepoDir%
+git submodule update --init --recursive
+
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%'"
 
