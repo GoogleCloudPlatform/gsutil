@@ -22,7 +22,8 @@ rem http://blog.danskingdom.com/allow-others-to-run-your-powershell-scripts-from
 set GsutilRepoDir="T:\src\github\src\gsutil"
 set "PyExePath=C:\python%PYMAJOR%%PYMINOR%\python.exe"
 
-cmd config_generator.bat "C:\src\keystore\74008+gsutil_kokoro_service_key" %API% "T:\src\.boto"
+cmd config_generator.bat "C:\src\keystore\74008_gsutil_kokoro_service_key" %API% %BOTO_CONFIG%
+type %BOTO_CONFIG%
 
 cd %GsutilRepoDir%
 git submodule update --init --recursive
