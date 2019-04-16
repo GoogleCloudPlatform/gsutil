@@ -87,7 +87,6 @@ THIRD_PARTY_LIBS = [
     ('fasteners', ''), # oauth2client and apitools dependency
     ('monotonic', ''), # fasteners dependency
     ('httplib2', submodule_pyvers),
-    ('python-gflags', ''),
     ('retry-decorator', ''),
     ('six', ''), # Python 2 / 3 compatibility dependency
     ('socksipy-branch', ''),
