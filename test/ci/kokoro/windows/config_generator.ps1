@@ -21,7 +21,6 @@ $stream = [System.IO.StreamWriter] $OutFile
 $stream.WriteLine("[Credentials]")
 $stream.WriteLine("gs_service_key_file = $KeyFile")
 $stream.WriteLine("[GSUtil]")
-$stream.WriteLine("test_notification_url = https://bigstore-test-notify.appspot.com/notify")
 $stream.WriteLine("default_project_id = bigstore-gsutil-testing")
 $stream.WriteLine("prefer_api = $Api")
 $stream.WriteLine("[OAuth2]")
