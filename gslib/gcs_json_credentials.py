@@ -258,7 +258,7 @@ def _GetOauth2ServiceAccountCredentials():
   with open(private_key_filename, 'rb') as private_key_file:
     private_key = private_key_file.read()
 
-  private_key = six.ensure_text(private_key)
+  private_key = six.ensure_text(private_key).decode('utf-8')
 
   json_key_dict = None
   try:
