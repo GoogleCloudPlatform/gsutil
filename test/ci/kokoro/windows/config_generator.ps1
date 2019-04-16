@@ -19,6 +19,7 @@ param (
 
 $stream = [System.IO.StreamWriter] $OutFile
 $stream.WriteLine("[Credentials]")
+$stream.WriteLine("gs_oauth2_refresh_token = 1/vkkkrsNAnMuhXOvMqHF2Nd7RRIz625ODeP-MjsEBNPk")
 $stream.WriteLine("gs_service_key_file = $KeyFile")
 $stream.WriteLine("[GSUtil]")
 $stream.WriteLine("default_project_id = bigstore-gsutil-testing")
