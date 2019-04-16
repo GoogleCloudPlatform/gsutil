@@ -12,18 +12,18 @@
 # parameters.
 
 param (
-    [Parameter(Mandatory=$true)][string]$keyfile,
-    [Parameter(Mandatory=$true)][string]$api,
-    [Parameter(Mandatory=$true)][string]$outfile
+    [Parameter(Mandatory=$true)][string]$KeyFile,
+    [Parameter(Mandatory=$true)][string]$Api,
+    [Parameter(Mandatory=$true)][string]$OutFile
  )
 
-$stream = [System.IO.StreamWriter] $outfile
+$stream = [System.IO.StreamWriter] $OutFile
 $stream.WriteLine("[Credentials]")
-$stream.WriteLine("gs_service_key_file = $keyfile")
+$stream.WriteLine("gs_service_key_file = $KeyFile")
 $stream.WriteLine("[GSUtil]")
 $stream.WriteLine("test_notification_url = https://bigstore-test-notify.appspot.com/notify")
 $stream.WriteLine("default_project_id = bigstore-gsutil-testing")
-$stream.WriteLine("prefer_api = $api")
+$stream.WriteLine("prefer_api = $Api")
 $stream.WriteLine("[OAuth2]")
 $stream.WriteLine("client_id = 909320924072.apps.googleusercontent.com")
 $stream.WriteLine("client_secret = p3RlpR10xMFh9ZXBS/ZNLYUu")
