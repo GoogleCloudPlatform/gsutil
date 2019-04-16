@@ -28,6 +28,7 @@ import base64
 import json
 import logging
 import os
+import six
 import traceback
 
 # pylint: disable=g-bad-import-order
@@ -256,6 +257,8 @@ def _GetOauth2ServiceAccountCredentials():
   private_key = None
   with open(private_key_filename, 'rb') as private_key_file:
     private_key = private_key_file.read()
+
+  private_key = six.ensure_text(private_key)
 
   json_key_dict = None
   try:
