@@ -4,11 +4,9 @@ param (
     [Parameter(Mandatory=$true)][string]$outfile
  )
 
-$key = [IO.File]::ReadAllText($keyfile)
-
 $stream = [System.IO.StreamWriter] $outfile
 $stream.WriteLine("[Credentials]")
-$stream.WriteLine("gs_service_key_file = $key")
+$stream.WriteLine("gs_service_key_file = $keyfile")
 $stream.WriteLine("[GSUtil]")
 $stream.WriteLine("test_notification_url = https://bigstore-test-notify.appspot.com/notify")
 $stream.WriteLine("default_project_id = bigstore-gsutil-testing")
