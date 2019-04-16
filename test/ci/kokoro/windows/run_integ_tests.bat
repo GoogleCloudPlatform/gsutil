@@ -18,12 +18,14 @@ rem parameters.
 
 set GsutilRepoDir="T:\src\github\src\gsutil"
 set "PyExePath=C:\python%PYMAJOR%%PYMINOR%\python.exe"
+set "PipPath=C:\python%PYMAJOR%%PYMINOR%\pip.exe"
 
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\config_generator.ps1' -keyfile 'T:\src\keystore\74008_gsutil_kokoro_service_key' -api '%API%' -outfile '%BOTO_CONFIG%'"
 type %BOTO_CONFIG%
 
 cd %GsutilRepoDir%
 git submodule update --init --recursive
+%PipPath% install crcmod
 
 rem Print config info prior to running tests
 %PyExePath% %GsutilRepoDir%\gsutil.py version -l
