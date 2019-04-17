@@ -28,8 +28,4 @@ gs_service_key_file = $GSUTIL_KEY
 [GSUtil]
 default_project_id = bigstore-gsutil-testing
 prefer_api = $API
-
-[OAuth2]
-client_id = 909320924072.apps.googleusercontent.com
-client_secret = p3RlpR10xMFh9ZXBS/ZNLYUu
 EOM

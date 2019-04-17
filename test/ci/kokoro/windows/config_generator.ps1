@@ -23,8 +23,5 @@ $stream.WriteLine("gs_service_key_file = $KeyFile")
 $stream.WriteLine("[GSUtil]")
 $stream.WriteLine("default_project_id = bigstore-gsutil-testing")
 $stream.WriteLine("prefer_api = $Api")
-$stream.WriteLine("[OAuth2]")
-$stream.WriteLine("client_id = 909320924072.apps.googleusercontent.com")
-$stream.WriteLine("client_secret = p3RlpR10xMFh9ZXBS/ZNLYUu")
 $stream.close()
 
