@@ -21,19 +21,18 @@ set "PyExePath=C:\python%PYMAJOR%%PYMINOR%\python.exe"
 set "PipPath=C:\python%PYMAJOR%%PYMINOR%\Scripts\pip.exe"
 set "KeyPath=T:\src\keystore\74008_gsutil_kokoro_service_key"
 set "ConfigGenPath=%GsutilRepoDir%\test\ci\kokoro\windows\config_generator.ps1"
+set "TestRunnerPath=%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1"
 
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%ConfigGenPath%' -keyfile '%KeyPath%' -api '%API%' -outfile '%BOTO_CONFIG%'"
 type %BOTO_CONFIG%
 
-rem DEBUG: check key
-type %KeyPath%
+%PipPath% install crcmod
 
 cd %GsutilRepoDir%
 git submodule update --init --recursive
-%PipPath% install crcmod
 
 rem Print config info prior to running tests
 %PyExePath% %GsutilRepoDir%\gsutil.py version -l
 
-PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%'"
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%TestRunnerPath%' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%'"
 
