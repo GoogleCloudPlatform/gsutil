@@ -19,9 +19,14 @@ rem parameters.
 set GsutilRepoDir="T:\src\github\src\gsutil"
 set "PyExePath=C:\python%PYMAJOR%%PYMINOR%\python.exe"
 set "PipPath=C:\python%PYMAJOR%%PYMINOR%\Scripts\pip.exe"
+set "KeyPath=T:\src\keystore\74008_gsutil_kokoro_service_key"
+set "ConfigGenPath=%GsutilRepoDir%\test\ci\kokoro\windows\config_generator.ps1"
 
-PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\config_generator.ps1' -keyfile 'T:\src\keystore\74008_gsutil_kokoro_service_key' -api '%API%' -outfile '%BOTO_CONFIG%'"
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%ConfigGenPath%' -keyfile '%KeyPath%' -api '%API%' -outfile '%BOTO_CONFIG%'"
 type %BOTO_CONFIG%
+
+rem DEBUG: check key
+type %KeyPath%
 
 cd %GsutilRepoDir%
 git submodule update --init --recursive
