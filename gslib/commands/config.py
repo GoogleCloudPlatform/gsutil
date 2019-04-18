@@ -1090,13 +1090,13 @@ class ConfigCommand(Command):
           '# In some cases, (e.g. VPC requests) the "host" HTTP header should\n'
           '# be different than the host used in the request URL.\n'
           '#%s_host_header = <alternate storage host header>\n'
-          % (host_key, host_key))
+          % (host_key, host_key, host_key))
       if host_key == 'gs':
         config_file.write(
             '#%s_json_host = <alternate JSON API storage host address>\n'
             '#%s_json_port = <alternate JSON API storage host port>\n'
             '#%s_json_host_header = <alternate JSON API storage host header>\n\n'
-            % (host_key, host_key))
+            % (host_key, host_key, host_key))
       config_file.write('\n')
 
     # Write the config file Boto section.
