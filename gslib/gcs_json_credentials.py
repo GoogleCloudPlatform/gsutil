@@ -28,6 +28,7 @@ import base64
 import json
 import logging
 import os
+import io
 import traceback
 
 # pylint: disable=g-bad-import-order
@@ -43,6 +44,7 @@ from gslib.utils.boto_util import GetFriendlyConfigFilePaths
 from gslib.utils.boto_util import GetCredentialStoreFilename
 from gslib.utils.boto_util import GetGceCredentialCacheFilename
 from gslib.utils.boto_util import GetGcsJsonApiVersion
+from gslib.utils.constants import UTF8
 import oauth2client
 from oauth2client.client import HAS_CRYPTO
 from oauth2client.contrib import devshell
@@ -254,7 +256,7 @@ def _GetOauth2ServiceAccountCredentials():
   service_client_id = config.get('Credentials', 'gs_service_client_id', '')
   private_key_filename = config.get('Credentials', 'gs_service_key_file', '')
   private_key = None
-  with open(private_key_filename, 'rb') as private_key_file:
+  with io.open(private_key_filename, 'r', encoding=UTF8) as private_key_file:
     private_key = private_key_file.read()
 
   json_key_dict = None
