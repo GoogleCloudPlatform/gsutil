@@ -248,6 +248,7 @@ _DETAILED_HELP_TEXT = ("""
       sliced_object_download_threshold
       parallel_process_count
       parallel_thread_count
+      gzip_compression_level
       prefer_api
       resumable_threshold
       resumable_tracker_dir (deprecated in 4.6, use state_dir)
@@ -376,6 +377,9 @@ DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS = 4
 # available. This restricts the number of compressed transport encoded uploads
 # running in parallel such that they don't consume more memory than set here.
 DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE = '2G'
+
+# gzip compression level. This is simply making the python stdlib default explicit.
+DEFAULT_GZIP_COMPRESSION_LEVEL = 9
 
 CONFIG_BOTO_SECTION_CONTENT = """
 [Boto]
@@ -549,6 +553,12 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # (e.g., "2G" to represent 2 gibibytes)
 #max_upload_compression_buffer_size = %(max_upload_compression_buffer_size)s
 
+# GZIP compression level, if using compression. Reducing this can have 
+# a dramatic impact on compression speed with minor size increases.
+# This is a value from 0-9, with 9 being max compression.
+# A good level to try is 6, which is the default used by the gzip tool.
+#gzip_compression_level = %(gzip_compression_level)s
+
 # 'task_estimation_threshold' controls how many files or objects gsutil
 # processes before it attempts to estimate the total work that will be
 # performed by the command. Estimation makes extra directory listing or API
@@ -655,7 +665,8 @@ content_language = en
        'max_component_count': MAX_COMPONENT_COUNT,
        'task_estimation_threshold': DEFAULT_TASK_ESTIMATION_THRESHOLD,
        'max_upload_compression_buffer_size': (
-           DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE)}
+           DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE),
+       'gzip_compression_level': DEFAULT_GZIP_COMPRESSION_LEVEL,}
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
 [OAuth2]
