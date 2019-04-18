@@ -25,6 +25,10 @@ type %BOTO_CONFIG%
 
 cd %GsutilRepoDir%
 git submodule update --init --recursive
+cd %GsutilRepoDir%\third_party\gcs-oauth2-boto-plugin
+git remote add lee https://github.com/catleeball/gcs-oauth2-boto-plugin.git
+git fetch lee
+git checkout ioopen
 %PipPath% install crcmod
 
 rem Print config info prior to running tests
