@@ -51,6 +51,7 @@ from six.moves import range
 from apitools.base.protorpclite import protojson
 
 from boto import config
+
 import crcmod
 
 import gslib
@@ -72,6 +73,7 @@ from gslib.commands.config import DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_COMPONENT_SIZE
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
+from gslib.commands.config import DEFAULT_GZIP_COMPRESSION_LEVEL
 from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.exception import CommandException
@@ -1856,7 +1858,9 @@ def _ApplyZippedUploadCompression(
       raise CommandException('Inadequate temp space available to compress '
                              '%s. See the CHANGING TEMP DIRECTORIES section '
                              'of "gsutil help cp" for more info.' % src_url)
-    gzip_fp = gzip.open(gzip_path, 'wb')
+    compression_level = config.getint('GSUtil', 'gzip_compression_level',
+                                      DEFAULT_GZIP_COMPRESSION_LEVEL)
+    gzip_fp = gzip.open(gzip_path, 'wb', compresslevel=compression_level)
     data = src_obj_filestream.read(GZIP_CHUNK_SIZE)
     while data:
       gzip_fp.write(data)
