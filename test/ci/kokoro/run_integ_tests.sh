@@ -54,7 +54,7 @@ function install_python {
 function init_configs {
   # Create .boto config for gsutil
   # https://cloud.google.com/storage/docs/gsutil/commands/config
-  "$CFG_GENERATOR" "$GSUTIL_KEY" "$API" "$BOTO_CONFIG"
+  bash "$CFG_GENERATOR" "$GSUTIL_KEY" "$API" "$BOTO_CONFIG"
   cat "$BOTO_CONFIG"
 }
 
