@@ -59,9 +59,11 @@ _SET_DESCRIPTION = """
   bucket, unless an ACL for that object is separately specified during upload.
 
   Similar to the "acl set" command, the file-or-canned_acl_name names either a
-  canned ACL or the path to a file that contains ACL text. (See "gsutil
-  help acl" for examples of editing and setting ACLs via the
-  acl command.)
+  canned ACL or the path to a file that contains ACL text. See "gsutil help
+  acl" for examples of editing and setting ACLs via the acl command. See
+  `Predefined ACLs
+  <https://cloud.google.com/storage/docs/access-control/lists#predefined-acl>`_
+  for a list of canned ACLs.
 
   Setting a default object ACL on a bucket provides a convenient way to ensure
   newly uploaded objects have a specific ACL. If you don't set the bucket's
