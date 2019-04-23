@@ -1460,6 +1460,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     """Tests that rsync -P works properly with default file attributes."""
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
+    PRIMARY_GID = os.stat(tmpdir).st_gid
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
