@@ -25,6 +25,11 @@ type %BOTO_CONFIG%
 
 cd %GsutilRepoDir%
 git submodule update --init --recursive
+
+rem Workaround for b/131089489 where Kokoro's preinstalled Py 3.7.0 encounters errors
+if "%PYMAJOR%" == "3" if "%PYMINOR%" == "7" if "%API%" == "json" (
+    choco install python --no-progress --version 3.7.2 -my
+)
 %PipPath% install crcmod
 
 rem Print config info prior to running tests
