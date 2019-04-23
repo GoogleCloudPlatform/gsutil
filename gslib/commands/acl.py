@@ -77,7 +77,9 @@ _SET_DESCRIPTION = """
   recommended to use "acl ch", to avoid accidentally removing OWNER permissions.
   See the "acl ch" section for details.
 
-  See "gsutil help acls" for a list of all canned ACLs.
+  See `Predefined ACLs
+  <https://cloud.google.com/storage/docs/access-control/lists#predefined-acl>`_
+  for a list of canned ACLs.
 
   If you want to define more fine-grained control over your data, you can
   retrieve an ACL using the "acl get" command, save the output to a file, edit
@@ -196,7 +198,7 @@ _CH_DESCRIPTION = """
 
     gsutil acl ch -u foo@developer.gserviceaccount.com:W gs://example-bucket
 
-  Grant all users from the `Google Apps
+  Grant all users from the `G Suite
   <https://www.google.com/work/apps/business/>`_ domain my-domain.org READ
   access to the bucket gcs.my-domain.org:
 
