@@ -132,9 +132,18 @@ setup(
         'Topic :: System :: Filesystems',
         'Topic :: Utilities',
     ],
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, <4',
+    # Gsutil supports Python 2.7, 3.5+
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4',
     platforms='any',
-    packages=find_packages(exclude=['third_party']),
+    packages=find_packages(
+        exclude=[
+            # Packages under third_party are installed separately as
+            # dependencies (see the "requires" list above). Note that we do not
+            # exclude vendored dependencies (under gslib/vendored), as our
+            # vendored versions may differ slightly from the official versions.
+            'third_party',
+        ],
+    ),
     include_package_data=True,
     entry_points={
         'console_scripts': [
