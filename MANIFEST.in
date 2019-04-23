@@ -15,5 +15,4 @@ prune test
 prune gslib/vendored/boto/bin
 prune gslib/vendored/boto/docs
 prune gslib/vendored/boto/scripts
-prune gslib/vendored/boto/tests
 exclude gslib/commands/update.py
