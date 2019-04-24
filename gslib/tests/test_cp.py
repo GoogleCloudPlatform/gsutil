@@ -243,7 +243,7 @@ def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
     tmpdir: The local file path to cp to.
     is_cp: Whether or not the calling test suite is cp or mv.
   """
-  primary_gid = os.getgid()
+  primary_gid = os.stat(tmpdir).st_gid
   non_primary_gid = util.GetNonPrimaryGid()
   test_params = {'obj1': {GID_ATTR: primary_gid},
                  'obj2': {GID_ATTR: non_primary_gid},
