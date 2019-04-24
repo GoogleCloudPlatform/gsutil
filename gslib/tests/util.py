@@ -114,8 +114,6 @@ if not IS_WINDOWS:
   # check for specific errors should always re-fetch these GID-related values,
   # rather than reusing these LazyWrapper values.
   INVALID_GID = LazyWrapper(lambda: GetInvalidGid())
-  NON_PRIMARY_GID = LazyWrapper(lambda: GetNonPrimaryGid())
-  PRIMARY_GID = LazyWrapper(lambda: GetPrimaryGid())
   # Get a list of all groups on the system where the current username is listed
   # as a member of the group in the gr_mem group attribute. Make this a list of
   # all group IDs and cast as a set for more efficient lookup times.
