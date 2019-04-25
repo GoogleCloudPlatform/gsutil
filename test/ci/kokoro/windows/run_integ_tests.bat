@@ -25,7 +25,7 @@ type %BOTO_CONFIG%
 
 cd %GsutilRepoDir%
 git submodule update --init --recursive
-%PyExePath% -m %PipPath% install -U crcmod
+%PipPath% install crcmod --target "C:\python%PYMAJOR%%PYMINOR%\files\Lib\site-packages"
 
 rem Print config info prior to running tests
 %PyExePath% %GsutilRepoDir%\gsutil.py version -l
