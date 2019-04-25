@@ -25,7 +25,7 @@ type %BOTO_CONFIG%
 
 cd %GsutilRepoDir%
 git submodule update --init --recursive
-%PythonExePath% -m %PipPath% install -U pip
+%PyExePath% -m %PipPath% install -U pip
 %PipPath% install crcmod
 
 rem Print config info prior to running tests
