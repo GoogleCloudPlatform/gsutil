@@ -123,13 +123,12 @@ if six.PY3:
 # These POSIX-specific variables aren't defined for Windows.
 # pylint: disable=g-import-not-at-top
 if not IS_WINDOWS:
+  from gslib.tests import util
   from gslib.tests.util import DEFAULT_MODE
   from gslib.tests.util import GetInvalidGid
   from gslib.tests.util import GetNonPrimaryGid
   from gslib.tests.util import GetPrimaryGid
   from gslib.tests.util import INVALID_UID
-  from gslib.tests.util import NON_PRIMARY_GID
-  from gslib.tests.util import PRIMARY_GID
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
 
@@ -244,17 +243,19 @@ def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
     tmpdir: The local file path to cp to.
     is_cp: Whether or not the calling test suite is cp or mv.
   """
-  test_params = {'obj1': {GID_ATTR: PRIMARY_GID},
-                 'obj2': {GID_ATTR: NON_PRIMARY_GID()},
-                 'obj3': {GID_ATTR: PRIMARY_GID, MODE_ATTR: '440'},
-                 'obj4': {GID_ATTR: NON_PRIMARY_GID(), MODE_ATTR: '444'},
+  primary_gid = os.stat(tmpdir).st_gid
+  non_primary_gid = util.GetNonPrimaryGid()
+  test_params = {'obj1': {GID_ATTR: primary_gid},
+                 'obj2': {GID_ATTR: non_primary_gid},
+                 'obj3': {GID_ATTR: primary_gid, MODE_ATTR: '440'},
+                 'obj4': {GID_ATTR: non_primary_gid, MODE_ATTR: '444'},
                  'obj5': {UID_ATTR: USER_ID},
                  'obj6': {UID_ATTR: USER_ID, MODE_ATTR: '420'},
-                 'obj7': {UID_ATTR: USER_ID, GID_ATTR: PRIMARY_GID},
-                 'obj8': {UID_ATTR: USER_ID, GID_ATTR: NON_PRIMARY_GID()},
-                 'obj9': {UID_ATTR: USER_ID, GID_ATTR: PRIMARY_GID,
+                 'obj7': {UID_ATTR: USER_ID, GID_ATTR: primary_gid},
+                 'obj8': {UID_ATTR: USER_ID, GID_ATTR: non_primary_gid},
+                 'obj9': {UID_ATTR: USER_ID, GID_ATTR: primary_gid,
                           MODE_ATTR: '433'},
-                 'obj10': {UID_ATTR: USER_ID, GID_ATTR: NON_PRIMARY_GID(),
+                 'obj10': {UID_ATTR: USER_ID, GID_ATTR: non_primary_gid,
                            MODE_ATTR: '442'}}
   for obj_name, attrs_dict in six.iteritems(test_params):
     uid = attrs_dict.get(UID_ATTR)
@@ -271,44 +272,46 @@ def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
   cls.assertEquals(listing, set(['/obj1', '/obj2', '/obj3', '/obj4', '/obj5',
                                  '/obj6', '/obj7', '/obj8', '/obj9', '/obj10']))
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj1'),
-                                  gid=PRIMARY_GID, mode=DEFAULT_MODE)
+                                  gid=primary_gid, mode=DEFAULT_MODE)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj2'),
-                                  gid=NON_PRIMARY_GID(), mode=DEFAULT_MODE)
+                                  gid=non_primary_gid, mode=DEFAULT_MODE)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj3'),
-                                  gid=PRIMARY_GID, mode=0o440)
+                                  gid=primary_gid, mode=0o440)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj4'),
-                                  gid=NON_PRIMARY_GID(), mode=0o444)
+                                  gid=non_primary_gid, mode=0o444)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj5'),
-                                  uid=USER_ID, gid=PRIMARY_GID,
+                                  uid=USER_ID, gid=primary_gid,
                                   mode=DEFAULT_MODE)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj6'),
-                                  uid=USER_ID, gid=PRIMARY_GID, mode=0o420)
+                                  uid=USER_ID, gid=primary_gid, mode=0o420)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj7'),
-                                  uid=USER_ID, gid=PRIMARY_GID,
+                                  uid=USER_ID, gid=primary_gid,
                                   mode=DEFAULT_MODE)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj8'),
-                                  uid=USER_ID, gid=NON_PRIMARY_GID(),
+                                  uid=USER_ID, gid=non_primary_gid,
                                   mode=DEFAULT_MODE)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj9'),
-                                  uid=USER_ID, gid=PRIMARY_GID, mode=0o433)
+                                  uid=USER_ID, gid=primary_gid, mode=0o433)
   cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj10'),
-                                  uid=USER_ID, gid=NON_PRIMARY_GID(),
+                                  uid=USER_ID, gid=non_primary_gid,
                                   mode=0o442)
 
 
 def TestCpMvPOSIXLocalToBucketNoErrors(cls, bucket_uri, is_cp=True):
+  primary_gid = os.getgid()
+  non_primary_gid = util.GetNonPrimaryGid()
   """Helper function for testing local to bucket POSIX preservation."""
-  test_params = {'obj1': {GID_ATTR: PRIMARY_GID},
-                 'obj2': {GID_ATTR: NON_PRIMARY_GID()},
-                 'obj3': {GID_ATTR: PRIMARY_GID, MODE_ATTR: '440'},
-                 'obj4': {GID_ATTR: NON_PRIMARY_GID(), MODE_ATTR: '444'},
+  test_params = {'obj1': {GID_ATTR: primary_gid},
+                 'obj2': {GID_ATTR: non_primary_gid},
+                 'obj3': {GID_ATTR: primary_gid, MODE_ATTR: '440'},
+                 'obj4': {GID_ATTR: non_primary_gid, MODE_ATTR: '444'},
                  'obj5': {UID_ATTR: USER_ID},
                  'obj6': {UID_ATTR: USER_ID, MODE_ATTR: '420'},
-                 'obj7': {UID_ATTR: USER_ID, GID_ATTR: PRIMARY_GID},
-                 'obj8': {UID_ATTR: USER_ID, GID_ATTR: NON_PRIMARY_GID()},
-                 'obj9': {UID_ATTR: USER_ID, GID_ATTR: PRIMARY_GID,
+                 'obj7': {UID_ATTR: USER_ID, GID_ATTR: primary_gid},
+                 'obj8': {UID_ATTR: USER_ID, GID_ATTR: non_primary_gid},
+                 'obj9': {UID_ATTR: USER_ID, GID_ATTR: primary_gid,
                           MODE_ATTR: '433'},
-                 'obj10': {UID_ATTR: USER_ID, GID_ATTR: NON_PRIMARY_GID(),
+                 'obj10': {UID_ATTR: USER_ID, GID_ATTR: non_primary_gid,
                            MODE_ATTR: '442'}}
   for obj_name, attrs_dict in six.iteritems(test_params):
     uid = attrs_dict.get(UID_ATTR, NA_ID)

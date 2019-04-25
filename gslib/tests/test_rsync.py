@@ -55,11 +55,10 @@ from gslib.utils.system_util import IS_WINDOWS
 # These POSIX-specific variables aren't defined for Windows.
 # pylint: disable=g-import-not-at-top
 if not IS_WINDOWS:
+  from gslib.tests import util
   from gslib.tests.util import DEFAULT_MODE
   from gslib.tests.util import INVALID_GID
   from gslib.tests.util import INVALID_UID
-  from gslib.tests.util import NON_PRIMARY_GID
-  from gslib.tests.util import PRIMARY_GID
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
 
@@ -193,18 +192,20 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # verified.
     src_bucket = self.CreateBucket()
     dst_bucket = self.CreateBucket()
+    primary_gid = os.getgid()
+    non_primary_gid = util.GetNonPrimaryGid()
     # Create source objects.
     self.CreateObject(bucket_uri=src_bucket, object_name='obj1',
                       contents=b'obj1', mode='444')
     self.CreateObject(bucket_uri=src_bucket, object_name='obj2',
-                      contents=b'obj2', gid=PRIMARY_GID)
+                      contents=b'obj2', gid=primary_gid)
     self.CreateObject(bucket_uri=src_bucket, object_name='obj3',
-                      contents=b'obj3', gid=NON_PRIMARY_GID())
+                      contents=b'obj3', gid=non_primary_gid)
     self.CreateObject(bucket_uri=src_bucket, object_name='obj4',
                       contents=b'obj3', uid=INVALID_UID(), gid=INVALID_GID(),
                       mode='222')
     self.CreateObject(bucket_uri=src_bucket, object_name='obj5',
-                      contents=b'obj5', uid=USER_ID, gid=PRIMARY_GID,
+                      contents=b'obj5', uid=USER_ID, gid=primary_gid,
                       mode=str(DEFAULT_MODE))
     # Create destination objects.
     # obj5 at the source and destination have the same content so we will only
@@ -232,9 +233,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj1',
                                      MODE_ATTR, '444')
     self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj2',
-                                     GID_ATTR, str(PRIMARY_GID))
+                                     GID_ATTR, str(primary_gid))
     self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj3',
-                                     GID_ATTR, str(NON_PRIMARY_GID()))
+                                     GID_ATTR, str(non_primary_gid))
     # Verify all of the attributes for obj4. Even though these are all 'invalid'
     # values, the file was copied to the destination because bucket to bucket
     # with preserve POSIX enabled will blindly copy the object metadata.
@@ -248,7 +249,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
                                      UID_ATTR, str(USER_ID))
     self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
-                                     GID_ATTR, str(PRIMARY_GID))
+                                     GID_ATTR, str(primary_gid))
     self.VerifyObjectCustomAttribute(dst_bucket.bucket_name, 'obj5',
                                      MODE_ATTR, str(DEFAULT_MODE))
 
@@ -1328,6 +1329,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     """Tests that rsync -P works properly with files that would be orphaned."""
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
+    primary_gid = os.stat(tmpdir).st_gid
+    non_primary_gid = util.GetNonPrimaryGid()
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
     # obj1 - Invalid Mode
@@ -1343,7 +1346,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                              contents=b'obj6', gid=INVALID_GID(), mode='440')
     # obj7 - Invalid Mode
     obj7 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
-                             contents=b'obj7', gid=NON_PRIMARY_GID(),
+                             contents=b'obj7', gid=non_primary_gid,
                              mode='333')
     # obj8 - Invalid UID
     obj8 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj8',
@@ -1365,7 +1368,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # obj13 - Invalid UID, good GID, mode 644
     obj13 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj13',
                               contents=b'obj13', uid=INVALID_UID(),
-                              gid=PRIMARY_GID, mode='644')
+                              gid=primary_gid, mode='644')
     # obj14 - Good UID, Invalid GID, no mode specified
     obj14 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj14',
                               contents=b'obj14', uid=USER_ID, gid=INVALID_GID())
@@ -1378,12 +1381,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                               contents=b'obj16', uid=USER_ID, mode='244')
     # obj17 - Invalid Mode
     obj17 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj17',
-                              contents=b'obj17', uid=USER_ID, gid=PRIMARY_GID,
+                              contents=b'obj17', uid=USER_ID, gid=primary_gid,
                               mode='222')
     # obj18 - Invalid GID, mode 333
     obj18 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj18',
                               contents=b'obj18', uid=USER_ID,
-                              gid=NON_PRIMARY_GID(), mode='333')
+                              gid=non_primary_gid, mode='333')
     # obj19 - No UID/GID with mod 222
     obj19 = self.CreateObject(bucket_uri=bucket_uri, object_name='obj19',
                               contents=b'obj19', mode='222')
@@ -1460,31 +1463,33 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     """Tests that rsync -P works properly with default file attributes."""
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
+    primary_gid = os.stat(tmpdir).st_gid
+    non_primary_gid = util.GetNonPrimaryGid()
     subdir = os.path.join(tmpdir, 'subdir')
     os.mkdir(subdir)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj1',
                       contents=b'obj1', mode='444')
     self.CreateObject(bucket_uri=bucket_uri, object_name='.obj2',
-                      contents=b'.obj2', gid=PRIMARY_GID)
+                      contents=b'.obj2', gid=primary_gid)
     self.CreateObject(bucket_uri=bucket_uri, object_name='subdir/obj3',
-                      contents=b'subdir/obj3', gid=NON_PRIMARY_GID())
+                      contents=b'subdir/obj3', gid=non_primary_gid)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj6',
-                      contents=b'obj6', gid=PRIMARY_GID, mode='555')
+                      contents=b'obj6', gid=primary_gid, mode='555')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj7',
-                      contents=b'obj7', gid=NON_PRIMARY_GID(), mode='444')
+                      contents=b'obj7', gid=non_primary_gid, mode='444')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj8',
                       contents=b'obj8', uid=USER_ID)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj9',
                       contents=b'obj9', uid=USER_ID, mode='422')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj10',
-                      contents=b'obj10', uid=USER_ID, gid=PRIMARY_GID)
+                      contents=b'obj10', uid=USER_ID, gid=primary_gid)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj11',
-                      contents=b'obj11', uid=USER_ID, gid=NON_PRIMARY_GID())
+                      contents=b'obj11', uid=USER_ID, gid=non_primary_gid)
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj12',
-                      contents=b'obj12', uid=USER_ID, gid=PRIMARY_GID,
+                      contents=b'obj12', uid=USER_ID, gid=primary_gid,
                       mode='400')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj13',
-                      contents=b'obj13', uid=USER_ID, gid=NON_PRIMARY_GID(),
+                      contents=b'obj13', uid=USER_ID, gid=non_primary_gid,
                       mode='533')
     self.CreateObject(bucket_uri=bucket_uri, object_name='obj14',
                       contents=b'obj14', uid=USER_ID, mode='444')
@@ -1514,29 +1519,29 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj1'),
                                      uid=os.getuid(), mode=0o444)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, '.obj2'),
-                                     gid=PRIMARY_GID, uid=os.getuid(),
+                                     gid=primary_gid, uid=os.getuid(),
                                      mode=DEFAULT_MODE)
     self.VerifyLocalPOSIXPermissions(os.path.join(subdir, 'obj3'),
-                                     gid=NON_PRIMARY_GID(), mode=DEFAULT_MODE)
+                                     gid=non_primary_gid, mode=DEFAULT_MODE)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj6'),
-                                     gid=PRIMARY_GID, mode=0o555)
+                                     gid=primary_gid, mode=0o555)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj7'),
-                                     gid=NON_PRIMARY_GID(), mode=0o444)
+                                     gid=non_primary_gid, mode=0o444)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj8'),
-                                     gid=PRIMARY_GID, mode=DEFAULT_MODE)
+                                     gid=primary_gid, mode=DEFAULT_MODE)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj9'), uid=USER_ID,
                                      mode=0o422)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj10'),
-                                     uid=USER_ID, gid=PRIMARY_GID,
+                                     uid=USER_ID, gid=primary_gid,
                                      mode=DEFAULT_MODE)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj11'),
-                                     uid=USER_ID, gid=NON_PRIMARY_GID(),
+                                     uid=USER_ID, gid=non_primary_gid,
                                      mode=DEFAULT_MODE)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj12'),
-                                     uid=USER_ID, gid=PRIMARY_GID,
+                                     uid=USER_ID, gid=primary_gid,
                                      mode=0o400)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj13'),
-                                     uid=USER_ID, gid=NON_PRIMARY_GID(),
+                                     uid=USER_ID, gid=non_primary_gid,
                                      mode=0o533)
     self.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj14'),
                                      uid=USER_ID, mode=0o444)
