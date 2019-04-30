@@ -36,7 +36,7 @@ SERVICE_ACCOUNT = _LoadServiceAccount('test_hmac_service_account')
 ALT_SERVICE_ACCOUNT = _LoadServiceAccount('test_hmac_alt_service_account')
 LIST_SERVICE_ACCOUNT = _LoadServiceAccount('test_hmac_list_service_account')
 
-MAX_SA_HMAC_KEYS = 10
+MAX_SA_HMAC_KEYS = 5
 
 
 class KeyLimitError(Exception):
@@ -83,7 +83,13 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     self.assertRegexpMatches(output_string, r'\s+Time Last Updated:\s+.*')
 
   def CleanupHelper(self, access_id):
-    self.RunGsUtil(['hmac', 'update', '-s', 'INACTIVE', access_id])
+    # Set the key to inactive if it isn't already.
+    try:
+      self.RunGsUtil(['hmac', 'update', '-s', 'INACTIVE', access_id])
+    except AssertionError as e:
+      if 'Update must modify the credential' not in e.message:
+        raise
+
     self.RunGsUtil(['hmac', 'delete', access_id])
 
   @Retry(KeyLimitError, tries=5, timeout_secs=3)
@@ -128,10 +134,12 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
   def test_create(self):
     stdout = self.RunGsUtil(['hmac', 'create', SERVICE_ACCOUNT],
                             return_stdout=True)
-    self.assertRegexpMatches(stdout, r'Access ID:\s+\S+')
-    self.assertRegexpMatches(stdout, r'Secret:\s+\S+')
-    access_id = self.ExtractAccessId(stdout)
-    self.CleanupHelper(access_id)
+    try:
+      self.assertRegexpMatches(stdout, r'Access ID:\s+\S+')
+      self.assertRegexpMatches(stdout, r'Secret:\s+\S+')
+    finally:
+      access_id = self.ExtractAccessId(stdout)
+      self.CleanupHelper(access_id)
 
   def test_create_sa_not_found(self):
     stderr = self.RunGsUtil(['hmac', 'create', 'DNE@mail.com'],
@@ -160,9 +168,11 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True,
                             expected_status=1)
 
-    self.assertIn('400 Cannot delete keys in \'ACTIVE\' state.', stderr)
+    try:
+      self.assertIn('400 Cannot delete keys in \'ACTIVE\' state.', stderr)
+    finally:
+      self.CleanupHelper(access_id)
 
-    self.CleanupHelper(access_id)
 
   def test_delete_key_not_found(self):
     stderr = self.RunGsUtil(['hmac', 'delete', 'GOOG1234DNE'],
@@ -177,14 +187,15 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     access_id = self.CreateHelper(ALT_SERVICE_ACCOUNT)
     stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
 
-    self.AssertKeyMetadataMatches(
-        stdout,
-        access_id=access_id,
-        service_account=ALT_SERVICE_ACCOUNT,
-        project=PopulateProjectId(None),
-    )
-
-    self.CleanupHelper(access_id)
+    try:
+      self.AssertKeyMetadataMatches(
+          stdout,
+          access_id=access_id,
+          service_account=ALT_SERVICE_ACCOUNT,
+          project=PopulateProjectId(None),
+      )
+    finally:
+      self.CleanupHelper(access_id)
 
   def test_get_not_found(self):
     stderr = self.RunGsUtil(['hmac', 'get', 'GOOG1234DNE'],
@@ -273,14 +284,15 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(['hmac', 'list', '-l'], return_stdout=True)
 
-    self.assertIn('ACTIVE', stdout)
-    self.assertIn('INACTIVE', stdout)
-    self.assertIn(ALT_SERVICE_ACCOUNT, stdout)
-    self.assertIn(LIST_SERVICE_ACCOUNT, stdout)
-    for key_metadata in self.ParseListOutput(stdout):
-      self.AssertKeyMetadataMatches(key_metadata, state='.*')
-
-    self.CleanupHelper(alt_access_id)
+    try:
+      self.assertIn(' ACTIVE', stdout)
+      self.assertIn('INACTIVE', stdout)
+      self.assertIn(ALT_SERVICE_ACCOUNT, stdout)
+      self.assertIn(LIST_SERVICE_ACCOUNT, stdout)
+      for key_metadata in self.ParseListOutput(stdout):
+        self.AssertKeyMetadataMatches(key_metadata, state='.*')
+    finally:
+      self.CleanupHelper(alt_access_id)
 
   def test_list_service_account_not_found(self):
     service_account = 'service-account-DNE@gmail.com'
@@ -297,27 +309,30 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
     etag = self.ExtractEtag(stdout)
-    self.AssertKeyMetadataMatches(stdout, state='ACTIVE')
 
-    stdout = self.RunGsUtil(
-        ['hmac', 'update', '-s', 'INACTIVE', '-e', etag, access_id],
-        return_stdout=True)
-    self.AssertKeyMetadataMatches(stdout, state='INACTIVE')
-    stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
-    self.AssertKeyMetadataMatches(stdout, state='INACTIVE')
+    try:
+      self.AssertKeyMetadataMatches(stdout, state='ACTIVE')
 
-    stdout = self.RunGsUtil(['hmac', 'update', '-s', 'ACTIVE', access_id],
-                            return_stdout=True)
-    self.AssertKeyMetadataMatches(stdout, state='ACTIVE')
-    stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
-    self.AssertKeyMetadataMatches(stdout, state='ACTIVE')
+      stdout = self.RunGsUtil(
+          ['hmac', 'update', '-s', 'INACTIVE', '-e', etag, access_id],
+          return_stdout=True)
+      self.AssertKeyMetadataMatches(stdout, state='INACTIVE')
+      stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
+      self.AssertKeyMetadataMatches(stdout, state='INACTIVE')
 
-    stderr = self.RunGsUtil(
-        ['hmac', 'update', '-s', 'INACTIVE', '-e', 'badEtag', access_id],
-        return_stderr=True,
-        expected_status=1)
-    self.assertIn('Etag does not match expected value.', stderr)
-    self.CleanupHelper(access_id)
+      stdout = self.RunGsUtil(['hmac', 'update', '-s', 'ACTIVE', access_id],
+                              return_stdout=True)
+      self.AssertKeyMetadataMatches(stdout, state='ACTIVE')
+      stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
+      self.AssertKeyMetadataMatches(stdout, state='ACTIVE')
+
+      stderr = self.RunGsUtil(
+          ['hmac', 'update', '-s', 'INACTIVE', '-e', 'badEtag', access_id],
+          return_stderr=True,
+          expected_status=1)
+      self.assertIn('Etag does not match expected value.', stderr)
+    finally:
+      self.CleanupHelper(access_id)
 
 
 @SkipForS3('S3 does not have an equivalent API')
