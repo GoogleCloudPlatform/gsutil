@@ -178,8 +178,6 @@ def CheckBrokenUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
     metadata: Indicates whether this is a metadata operation.
   """
   description_string = _FindAppropriateDescriptionString(metadata)
-  # We must not have begun our UI with 0% of our data transferred.
-  test_case.assertIn('0% Done', content)
   # We must not have transferred 100% of our data.
   test_case.assertNotIn('100% Done', content)
   # 0 files should be completed.
