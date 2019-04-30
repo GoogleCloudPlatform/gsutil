@@ -34,6 +34,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import CaptureStdout
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1_CRC32C
@@ -150,7 +151,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   """Integration tests for ls command."""
 
   def test_blank_ls(self):
-    self.RunGsUtil(['ls'])
+    if not RUN_S3_TESTS:  # Blank `ls` command lists GS buckets.
+      self.RunGsUtil(['ls'])
 
   def test_empty_bucket(self):
     bucket_uri = self.CreateBucket()
