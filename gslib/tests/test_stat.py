@@ -141,9 +141,9 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
   def test_stat_bucket_wildcard(self):
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='foo', contents=b'z')
-    stat_string = suri(bucket_uri)[:-1] + '?/foo'
+    stat_string = suri(bucket_uri) + '/?oo'
     self.RunGsUtil(['stat', stat_string])
-    stat_string2 = suri(bucket_uri)[:-1] + '*/foo'
+    stat_string2 = suri(bucket_uri) + '/*foo'
     self.RunGsUtil(['stat', stat_string2])
 
   def test_stat_object_wildcard(self):

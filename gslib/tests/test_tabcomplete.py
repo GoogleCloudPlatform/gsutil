@@ -152,7 +152,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     bucket_name = bucket_base_name + '-suffix'
     self.CreateBucket(bucket_name)
 
-    bucket_request = '%s://%s' % (self.default_provider, bucket_base_name)
+    bucket_request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_bucket_result = '//%s ' % bucket_name
 
     local_file = 'a_local_file'
