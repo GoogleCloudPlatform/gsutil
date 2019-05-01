@@ -31,6 +31,7 @@ from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
+from gslib.utils.text_util import get_prefix
 from gslib.utils.boto_util import GetTabCompletionCacheFilename
 
 
@@ -47,7 +48,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     """Tests tab completion matching a single bucket."""
 
     bucket_name = self.MakeTempName('bucket')
-    self.CreateBucket(bucket_name)
+    self.CreateBucket(bucket_name, bucket_name_prefix=get_prefix())
 
     request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_result = '//%s/' % bucket_name
@@ -59,7 +60,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     """Tests bucket-only tab completion matching a single bucket."""
 
     bucket_name = self.MakeTempName('bucket')
-    self.CreateBucket(bucket_name)
+    self.CreateBucket(bucket_name, bucket_name_prefix=get_prefix())
 
     request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_result = '//%s ' % bucket_name
@@ -94,15 +95,14 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   def test_multiple_buckets(self):
     """Tests tab completion matching multiple buckets."""
 
-    bucket_base_name = self.MakeTempName('bucket')
-    bucket1_name = bucket_base_name + '-suffix1'
-    self.CreateBucket(bucket1_name)
-    bucket2_name = bucket_base_name + '-suffix2'
-    self.CreateBucket(bucket2_name)
+    base_name = self.MakeTempName('bucket')
+    prefix = get_prefix()
+    self.CreateBucket(base_name, bucket_name_prefix=prefix, bucket_name_suffix='1')
+    self.CreateBucket(base_name, bucket_name_prefix=prefix, bucket_name_suffix='2')
 
-    request = '%s://%s' % (self.default_provider, bucket_base_name)
-    expected_result1 = '//%s/' % bucket1_name
-    expected_result2 = '//%s/' % bucket2_name
+    request = '%s://%s' % (self.default_provider, ''.join([prefix, base_name]))
+    expected_result1 = '//%s/' % ''.join([prefix, base_name, '1'])
+    expected_result2 = '//%s/' % ''.join([prefix, base_name, '2'])
 
     self.RunGsUtilTabCompletion(['ls', request], expected_results=[
         expected_result1, expected_result2])
@@ -145,7 +145,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     """Tests tab completion for commands with subcommands."""
 
     bucket_name = self.MakeTempName('bucket')
-    self.CreateBucket(bucket_name)
+    self.CreateBucket(bucket_name, bucket_name_prefix=get_prefix())
 
     bucket_request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_bucket_result = '//%s ' % bucket_name

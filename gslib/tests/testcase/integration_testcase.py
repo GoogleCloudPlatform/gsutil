@@ -493,7 +493,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    provider=None,
                    prefer_json_api=False,
                    versioning_enabled=False,
-                   bucket_policy_only=False):
+                   bucket_policy_only=False,
+                   bucket_name_prefix='',
+                   bucket_name_suffix=''):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -511,6 +513,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           True.
       bucket_policy_only: If True, set the bucket's iamConfiguration's
           bucketPolicyOnly attribute to True.
+      name_prefix: Unicode string to be prepended to bucket_name
+      name_suffix: Unicode string to be appended to bucket_name
 
     Returns:
       StorageUri for the created bucket.
@@ -527,8 +531,18 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       location = boto.config.get(
           'GSUtil', 'test_cmd_regional_bucket_location', 'us-central1')
 
+    bucket_name_prefix = six.ensure_text(bucket_name_prefix)
+    bucket_name_suffix = six.ensure_text(bucket_name_suffix)
+
     if bucket_name:
+      bucket_name = ''.join([bucket_name_prefix,
+                             bucket_name,
+                             bucket_name_suffix])
       bucket_name = util.MakeBucketNameValid(bucket_name)
+    else:
+      bucket_name = self.MakeTempName(''.join([bucket_name_prefix,
+                                               'bucket',
+                                               bucket_name_suffix]))
 
     if prefer_json_api and provider == 'gs':
       json_bucket = self.CreateBucketJson(bucket_name=bucket_name,
@@ -542,8 +556,6 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           'gs://%s' % json_bucket.name.lower(),
           suppress_consec_slashes=False)
       return bucket_uri
-
-    bucket_name = bucket_name or self.MakeTempName('bucket')
 
     bucket_uri = boto.storage_uri('%s://%s' % (provider, bucket_name.lower()),
                                   suppress_consec_slashes=False)
