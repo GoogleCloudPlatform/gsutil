@@ -46,11 +46,10 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   def test_single_bucket(self):
     """Tests tab completion matching a single bucket."""
 
-    bucket_base_name = self.MakeTempName('bucket')
-    bucket_name = bucket_base_name + '-suffix'
+    bucket_name = self.MakeTempName('bucket')
     self.CreateBucket(bucket_name)
 
-    request = '%s://%s' % (self.default_provider, bucket_base_name)
+    request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_result = '//%s/' % bucket_name
 
     self.RunGsUtilTabCompletion(['ls', request],
@@ -59,11 +58,10 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   def test_bucket_only_single_bucket(self):
     """Tests bucket-only tab completion matching a single bucket."""
 
-    bucket_base_name = self.MakeTempName('bucket')
-    bucket_name = bucket_base_name + '-s'
+    bucket_name = self.MakeTempName('bucket')
     self.CreateBucket(bucket_name)
 
-    request = '%s://%s' % (self.default_provider, bucket_base_name)
+    request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_result = '//%s ' % bucket_name
 
     self.RunGsUtilTabCompletion(['rb', request],
@@ -72,12 +70,11 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   def test_bucket_only_no_objects(self):
     """Tests that bucket-only tab completion doesn't match objects."""
 
-    object_base_name = self.MakeTempName('obj')
-    object_name = object_base_name + '-suffix'
+    object_name = self.MakeTempName('obj')
     object_uri = self.CreateObject(object_name=object_name, contents=b'data')
 
     request = '%s://%s/%s' % (
-        self.default_provider, object_uri.bucket_name, object_base_name)
+        self.default_provider, object_uri.bucket_name, object_name[:-2])
 
     self.RunGsUtilTabCompletion(['rb', request], expected_results=[])
 
@@ -113,12 +110,11 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   def test_single_object(self):
     """Tests tab completion matching a single object."""
 
-    object_base_name = self.MakeTempName('obj')
-    object_name = object_base_name + '-suffix'
+    object_name = self.MakeTempName('obj')
     object_uri = self.CreateObject(object_name=object_name, contents=b'data')
 
     request = '%s://%s/%s' % (
-        self.default_provider, object_uri.bucket_name, object_base_name)
+        self.default_provider, object_uri.bucket_name, object_name[:-2])
     expected_result = '//%s/%s ' % (object_uri.bucket_name, object_name)
 
     self.RunGsUtilTabCompletion(['ls', request],
@@ -148,8 +144,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   def test_subcommands(self):
     """Tests tab completion for commands with subcommands."""
 
-    bucket_base_name = self.MakeTempName('bucket')
-    bucket_name = bucket_base_name + '-suffix'
+    bucket_name = self.MakeTempName('bucket')
     self.CreateBucket(bucket_name)
 
     bucket_request = '%s://%s' % (self.default_provider, bucket_name[:-2])
