@@ -46,9 +46,9 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   def test_single_bucket(self):
     """Tests tab completion matching a single bucket."""
 
-    bucket_name = self.MakeTempName('bucket')
-    # Workaround for XML API limitation, see PR 766 for details
-    self.CreateBucket(bucket_name, bucket_name_prefix='')
+    # Prefix is a workaround for XML API limitation, see PR 766 for details
+    bucket_name = self.MakeTempName('bucket', prefix='aaa-')
+    self.CreateBucket(bucket_name)
 
     request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_result = '//%s/' % bucket_name

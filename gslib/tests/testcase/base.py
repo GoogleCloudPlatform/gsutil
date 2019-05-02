@@ -93,7 +93,8 @@ class GsUtilTestCase(unittest.TestCase):
 
     Args:
       kind (str): A string indicating what kind of test name this is.
-      prefix (str): Prefix string to be used in the temporary name.
+      prefix (str): Prefix prepended to the temporary name.
+      suffix (str): Suffix string appended to end of temporary name.
 
     Returns:
       (str) The temporary name. If `kind` was "bucket", the temporary name may
@@ -102,12 +103,21 @@ class GsUtilTestCase(unittest.TestCase):
       providers (e.g. replacing "_" with "-", converting uppercase letters to
       lowercase, etc.).
     """
-    name = '{prefix}gsutil-test-{method}-{kind}{suffix}'.format(
-      prefix=prefix, method=self.GetTestMethodName(), kind=kind, suffix=suffix)
+    name = '{prefix}gsutil-test-{method}-{kind}'.format(
+      prefix=prefix, method=self.GetTestMethodName(), kind=kind)
     name = name[:MAX_BUCKET_LENGTH-9]
     name = '{name}-{rand}'.format(name=name, rand=self.MakeRandomTestString())
-    # As of March 2018, S3 no longer accepts underscores or uppercase letters in
-    # bucket names.
+    totalNameLen = len(name) + len(suffix)
+    if suffix:
+      if kind == 'bucket' and totalNameLen > MAX_BUCKET_LENGTH:
+        self.fail(
+          'Tried to create a psuedo-random bucket name with a specific '
+          'suffix, but the generated name was too long and there was not '
+          'enough room for the suffix. Please use shorter strings or perform '
+          'name randomization manually.\nRequested name: ' + name)
+      else:
+        name += suffix
+
     if kind == 'bucket':
       name = util.MakeBucketNameValid(name)
     return name
