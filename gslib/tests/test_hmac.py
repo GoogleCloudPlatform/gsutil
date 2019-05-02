@@ -87,7 +87,7 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     try:
       self.RunGsUtil(['hmac', 'update', '-s', 'INACTIVE', access_id])
     except AssertionError as e:
-      if 'Update must modify the credential' not in e.message:
+      if 'Update must modify the credential' not in str(e):
         raise
 
     self.RunGsUtil(['hmac', 'delete', access_id])
@@ -100,8 +100,8 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
       return self.RunGsUtil(['hmac', 'create', service_account],
                             return_stdout=True)
     except AssertionError as e:
-      if 'HMAC key limit reached' in e.message:
-        raise KeyLimitError(e.message)
+      if 'HMAC key limit reached' in str(e):
+        raise KeyLimitError(str(e))
       else:
         raise
 
