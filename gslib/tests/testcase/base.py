@@ -88,7 +88,7 @@ class GsUtilTestCase(unittest.TestCase):
     """Creates a random string of hex characters 8 characters long."""
     return '%08x' % random.randrange(256**4)
 
-  def MakeTempName(self, kind, prefix=''):
+  def MakeTempName(self, kind, prefix='', suffix=''):
     """Creates a temporary name that is most-likely unique.
 
     Args:
@@ -102,8 +102,8 @@ class GsUtilTestCase(unittest.TestCase):
       providers (e.g. replacing "_" with "-", converting uppercase letters to
       lowercase, etc.).
     """
-    name = '{prefix}gsutil-test-{method}-{kind}'.format(
-      prefix=prefix, method=self.GetTestMethodName(), kind=kind)
+    name = '{prefix}gsutil-test-{method}-{kind}{suffix}'.format(
+      prefix=prefix, method=self.GetTestMethodName(), kind=kind, suffix=suffix)
     name = name[:MAX_BUCKET_LENGTH-9]
     name = '{name}-{rand}'.format(name=name, rand=self.MakeRandomTestString())
     # As of March 2018, S3 no longer accepts underscores or uppercase letters in

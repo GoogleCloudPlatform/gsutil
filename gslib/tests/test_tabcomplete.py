@@ -31,7 +31,6 @@ from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
-from gslib.utils.text_util import get_prefix
 from gslib.utils.boto_util import GetTabCompletionCacheFilename
 
 
@@ -48,7 +47,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     """Tests tab completion matching a single bucket."""
 
     bucket_name = self.MakeTempName('bucket')
-    self.CreateBucket(bucket_name, bucket_name_prefix=get_prefix())
+    # Workaround for XML API limitation, see PR 766 for details
+    self.CreateBucket(bucket_name, bucket_name_prefix='')
 
     request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_result = '//%s/' % bucket_name
@@ -59,8 +59,9 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   def test_bucket_only_single_bucket(self):
     """Tests bucket-only tab completion matching a single bucket."""
 
-    bucket_name = self.MakeTempName('bucket')
-    self.CreateBucket(bucket_name, bucket_name_prefix=get_prefix())
+    bucket_name = self.MakeTempName('bucket', prefix='aaa-')
+    # Workaround for XML API limitation, see PR 766 for details
+    self.CreateBucket(bucket_name)
 
     request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_result = '//%s ' % bucket_name
@@ -96,7 +97,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     """Tests tab completion matching multiple buckets."""
 
     base_name = self.MakeTempName('bucket')
-    prefix = get_prefix()
+    # Workaround for XML API limitation, see PR 766 for details
+    prefix = 'aaa-'
     self.CreateBucket(base_name, bucket_name_prefix=prefix, bucket_name_suffix='1')
     self.CreateBucket(base_name, bucket_name_prefix=prefix, bucket_name_suffix='2')
 
@@ -144,8 +146,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   def test_subcommands(self):
     """Tests tab completion for commands with subcommands."""
 
-    bucket_name = self.MakeTempName('bucket')
-    self.CreateBucket(bucket_name, bucket_name_prefix=get_prefix())
+    bucket_name = self.MakeTempName('bucket', prefix='aaa-')
+    self.CreateBucket(bucket_name)
 
     bucket_request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_bucket_result = '//%s ' % bucket_name

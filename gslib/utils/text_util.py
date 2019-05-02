@@ -35,7 +35,6 @@ from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper
 from gslib.utils.constants import UTF8
 from gslib.utils.constants import WINDOWS_1252
-from gslib.tests.util import USING_JSON_API
 from gslib.utils.system_util import IS_CP1252
 
 
@@ -409,23 +408,3 @@ def get_random_ascii_chars(size, seed=0):
   contents = six.ensure_binary(contents)
   random.seed()  # Reset the seed for any other tests.
   return contents
-
-def get_prefix():
-  """Get a prefix string 'aaa-' for bucket names if using XML API
-
-  Since XML API doesn't support searching for bucket name prefixes, and since it
-  also only returns the first 1,000 buckets alphabetically, we sometimes see integration
-  tests flake when more than 1,000 buckets exist.
-
-  This creative workaround makes sure that buckets use in tab completion and wildcard tests
-  are hoisted to the top of the list of buckets. This workaround is primarily for our own CI
-  and tests may still flake if you have more than 1,000 buckets that would be ordered before
-  'aaa-' and are using the XML API.
-
-  Returns:
-    String literal 'aaa-' if currently using XML API.
-  """
-  if USING_JSON_API:
-    return ''
-  return 'aaa-'
-

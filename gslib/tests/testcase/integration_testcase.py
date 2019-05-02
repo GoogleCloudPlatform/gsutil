@@ -513,8 +513,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           True.
       bucket_policy_only: If True, set the bucket's iamConfiguration's
           bucketPolicyOnly attribute to True.
-      name_prefix: Unicode string to be prepended to bucket_name
-      name_suffix: Unicode string to be appended to bucket_name
+      bucket_name_prefix: Unicode string to be prepended to bucket_name
+      bucket_name_suffix: Unicode string to be appended to bucket_name
 
     Returns:
       StorageUri for the created bucket.
@@ -540,9 +540,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                              bucket_name_suffix])
       bucket_name = util.MakeBucketNameValid(bucket_name)
     else:
-      bucket_name = self.MakeTempName(''.join([bucket_name_prefix,
-                                               'bucket',
-                                               bucket_name_suffix]))
+      bucket_name = self.MakeTempName('bucket',
+                                      prefix=bucket_name_prefix,
+                                      suffix=bucket_name_suffix)
 
     if prefer_json_api and provider == 'gs':
       json_bucket = self.CreateBucketJson(bucket_name=bucket_name,

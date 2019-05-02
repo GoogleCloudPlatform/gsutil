@@ -42,7 +42,6 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import TEST_ENCRYPTION_KEY2_SHA256_B64
 from gslib.tests.util import unittest
 from gslib.utils.retry_util import Retry
-from gslib.utils.text_util import get_prefix
 
 
 class TestStat(testcase.GsUtilIntegrationTestCase):
@@ -140,7 +139,8 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     self.assertIn('%s:' % suri(bucket_uri, 'notmissing'), stdout)
 
   def test_stat_bucket_wildcard(self):
-    bucket_uri = self.CreateBucket(bucket_name_prefix=get_prefix())
+    # Prefix is a workaround for XML API limitation, see PR 766 for details
+    bucket_uri = self.CreateBucket(bucket_name_prefix='aaa-')
     self.CreateObject(bucket_uri=bucket_uri, object_name='foo', contents=b'z')
     stat_string = suri(bucket_uri)[:-1] + '?/foo'
     self.RunGsUtil(['stat', stat_string])
