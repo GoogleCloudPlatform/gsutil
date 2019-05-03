@@ -48,9 +48,9 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     ui_output_pattern = '[^\n\r]*objects][^\n\r]*[\n\r]'
     final_message_pattern = 'Operation completed over[^\n]*'
     ui_spinner_list = ['\\\r', '|\r', '/\r', '-\r']
-    ui_lines_list = (
-        re.findall(ui_output_pattern, stderr) +
-        re.findall(final_message_pattern, stderr) + ui_spinner_list)
+    ui_lines_list = (re.findall(ui_output_pattern, stderr) +
+                     re.findall(final_message_pattern, stderr) +
+                     ui_spinner_list)
     for ui_line in ui_lines_list:
       stderr = stderr.replace(ui_line, '')
     return stderr
@@ -91,11 +91,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     expected_stderr_lines = set(object_strings + bucket_strings)
 
     if not self.multiregional_buckets and self.default_provider == 'gs':
-      stderr = self.RunGsUtil(
-          command_and_args,
-          return_stderr=True,
-          expected_status=None,
-          stdin=stdin)
+      stderr = self.RunGsUtil(command_and_args,
+                              return_stderr=True,
+                              expected_status=None,
+                              stdin=stdin)
       num_objects = len(object_strings)
       # Asserting for operation completion
       if '-q' not in command_and_args:
@@ -115,11 +114,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       @Retry(AssertionError, tries=5, timeout_secs=1)
       def _RunRmCommandAndCheck():
         """Runs/retries the command updating+checking cumulative output."""
-        stderr = self.RunGsUtil(
-            command_and_args,
-            return_stderr=True,
-            expected_status=None,
-            stdin=stdin)
+        stderr = self.RunGsUtil(command_and_args,
+                                return_stderr=True,
+                                expected_status=None,
+                                stdin=stdin)
         stderr = self._CleanRmUiOutputBeforeChecking(stderr)
         update_lines = True
         # Retry 404's and 409's due to eventual listing consistency, but don't
@@ -169,8 +167,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
           ['-m', 'rm', '-a', suri(key_uri)], return_stderr=True)
       stderr_lines.update(set(stderr.splitlines()))
       stderr = '\n'.join(stderr_lines)
-      self.assertEqual(
-          stderr.count('Removing %s://' % self.default_provider), 2)
+      self.assertEqual(stderr.count('Removing %s://' % self.default_provider),
+                       2)
       self.assertIn('Removing %s#%s...' % (suri(key_uri), g1), stderr)
       self.assertIn('Removing %s#%s...' % (suri(key_uri), g2), stderr)
 
@@ -215,8 +213,9 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
 
   def test_remove_recursive_prefix(self):
     bucket_uri = self.CreateBucket()
-    obj_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='a/b/c', contents=b'foo')
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                object_name='a/b/c',
+                                contents=b'foo')
     if self.multiregional_buckets:
       self.AssertNObjectsInBucket(bucket_uri, 1)
 
@@ -307,8 +306,9 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
 
   def test_missing_first_force(self):
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='present', contents=b'foo')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                   object_name='present',
+                                   contents=b'foo')
     if self.multiregional_buckets:
       self.AssertNObjectsInBucket(bucket_uri, 1)
     self.RunGsUtil(
@@ -495,12 +495,15 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_rm_object_with_slash(self):
     """Tests removing a bucket that has an object with a slash in it."""
     bucket_uri = self.CreateVersionedBucket()
-    ouri1 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='/dirwithslash/foo', contents=b'z')
-    ouri2 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='dirnoslash/foo', contents=b'z')
-    ouri3 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='dirnoslash/foo2', contents=b'z')
+    ouri1 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='/dirwithslash/foo',
+                              contents=b'z')
+    ouri2 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='dirnoslash/foo',
+                              contents=b'z')
+    ouri3 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='dirnoslash/foo2',
+                              contents=b'z')
     if self.multiregional_buckets:
       self.AssertNObjectsInBucket(bucket_uri, 3, versioned=True)
 
@@ -515,28 +518,30 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_slasher_horror_film(self):
     """Tests removing a bucket with objects that are filled with slashes."""
     bucket_uri = self.CreateVersionedBucket()
-    ouri1 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='h/e/l//lo', contents=b'Halloween')
-    ouri2 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='/h/e/l/l/o',
-        contents=b'A Nightmare on Elm Street')
-    ouri3 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='//h//e/l//l/o',
-        contents=b'Friday the 13th')
-    ouri4 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='//h//e//l//l//o',
-        contents=b'I Know What You Did Last Summer')
-    ouri5 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='/', contents=b'Scream')
-    ouri6 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='//', contents=b'Child\'s Play')
-    ouri7 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='///', contents=b'The Prowler')
-    ouri8 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='////', contents=b'Black Christmas')
+    ouri1 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='h/e/l//lo',
+                              contents=b'Halloween')
+    ouri2 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='/h/e/l/l/o',
+                              contents=b'A Nightmare on Elm Street')
+    ouri3 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='//h//e/l//l/o',
+                              contents=b'Friday the 13th')
+    ouri4 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='//h//e//l//l//o',
+                              contents=b'I Know What You Did Last Summer')
+    ouri5 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='/',
+                              contents=b'Scream')
+    ouri6 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='//',
+                              contents=b'Child\'s Play')
+    ouri7 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='///',
+                              contents=b'The Prowler')
+    ouri8 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='////',
+                              contents=b'Black Christmas')
     ouri9 = self.CreateObject(
         bucket_uri=bucket_uri,
         object_name='everything/is/better/with/slashes///////',
@@ -580,15 +585,19 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_stdin_args(self):
     """Tests rm with the -I option."""
     buri1 = self.CreateVersionedBucket()
-    ouri1 = self.CreateObject(
-        bucket_uri=buri1, object_name='foo', contents=b'foocontents')
-    self.CreateObject(
-        bucket_uri=buri1, object_name='bar', contents=b'barcontents')
-    ouri3 = self.CreateObject(
-        bucket_uri=buri1, object_name='baz', contents=b'bazcontents')
+    ouri1 = self.CreateObject(bucket_uri=buri1,
+                              object_name='foo',
+                              contents=b'foocontents')
+    self.CreateObject(bucket_uri=buri1,
+                      object_name='bar',
+                      contents=b'barcontents')
+    ouri3 = self.CreateObject(bucket_uri=buri1,
+                              object_name='baz',
+                              contents=b'bazcontents')
     buri2 = self.CreateVersionedBucket()
-    ouri4 = self.CreateObject(
-        bucket_uri=buri2, object_name='moo', contents=b'moocontents')
+    ouri4 = self.CreateObject(bucket_uri=buri2,
+                              object_name='moo',
+                              contents=b'moocontents')
     if self.multiregional_buckets:
       self.AssertNObjectsInBucket(buri1, 3, versioned=True)
       self.AssertNObjectsInBucket(buri2, 1, versioned=True)

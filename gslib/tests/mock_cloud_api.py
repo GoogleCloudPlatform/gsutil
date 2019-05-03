@@ -76,8 +76,8 @@ class MockBucket(object):
 
   def CreateObject(self, object_name, contents=''):
     return self.CreateObjectWithMetadata(
-        MockObject(
-            apitools_messages.Object(name=object_name, contents=contents)))
+        MockObject(apitools_messages.Object(name=object_name,
+                                            contents=contents)))
 
   def CreateObjectWithMetadata(self, apitools_object, contents=''):
     """Creates an object in the bucket according to the input metadata.
@@ -136,15 +136,15 @@ class MockCloudApi(object):
   def MockCreateBucket(self, bucket_name):
     """Creates a simple bucket without exercising the API directly."""
     if bucket_name in self.buckets:
-      raise ServiceException(
-          'Bucket %s already exists.' % bucket_name, status=409)
+      raise ServiceException('Bucket %s already exists.' % bucket_name,
+                             status=409)
     self.buckets[bucket_name] = MockBucket(bucket_name)
 
   def MockCreateVersionedBucket(self, bucket_name):
     """Creates a simple bucket without exercising the API directly."""
     if bucket_name in self.buckets:
-      raise ServiceException(
-          'Bucket %s already exists.' % bucket_name, status=409)
+      raise ServiceException('Bucket %s already exists.' % bucket_name,
+                             status=409)
     self.buckets[bucket_name] = MockBucket(bucket_name, versioned=True)
 
   def MockCreateObject(self, bucket_name, object_name, contents=''):

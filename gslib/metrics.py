@@ -59,8 +59,8 @@ _GA_PERFSUM_CATEGORY = 'PerformanceSummary'
 # accurate.
 _GOOGLE_CORP_HOST_RE = re.compile(r'.*google\.com$')
 
-_UUID_FILE_PATH = os.path.expanduser(
-    os.path.join('~', '.gsutil/analytics-uuid'))
+_UUID_FILE_PATH = os.path.expanduser(os.path.join('~',
+                                                  '.gsutil/analytics-uuid'))
 # If this string is written to analytics-uuid, that means that the user said
 # 'no' to analytics, and it should thus be disabled.
 _DISABLED_TEXT = 'DISABLED'
@@ -158,8 +158,8 @@ class MetricsCollector(object):
     }
 
     # Used by Google Analytics to track user OS.
-    self.user_agent = '{system}/{release}'.format(
-        system=platform.system(), release=platform.release())
+    self.user_agent = '{system}/{release}'.format(system=platform.system(),
+                                                  release=platform.release())
 
     # A list of collected, unsent Metrics. This list is currently bounded by
     # the number of retryable error types, and should not grow too large so that
@@ -228,21 +228,19 @@ class MetricsCollector(object):
                                               'software_update_check_period'),
         ('GSUtil', 'tab_completion_timeout'), ('OAuth2',
                                                'oauth2_refresh_retries')):
-      GetAndValidateConfigValue(
-          section=section,
-          category=small_int_category,
-          validation_fn=lambda val: str(val).isdigit() and int(val) <
-          small_int_threshold)
+      GetAndValidateConfigValue(section=section,
+                                category=small_int_category,
+                                validation_fn=lambda val: str(val).isdigit() and
+                                int(val) < small_int_threshold)
 
     # Validate large integers.
     for section, large_int_category in (('GSUtil', 'resumable_threshold'),
                                         ('GSUtil', 'rsync_buffer_lines'),
                                         ('GSUtil',
                                          'task_estimation_threshold')):
-      GetAndValidateConfigValue(
-          section=section,
-          category=large_int_category,
-          validation_fn=lambda val: str(val).isdigit())
+      GetAndValidateConfigValue(section=section,
+                                category=large_int_category,
+                                validation_fn=lambda val: str(val).isdigit())
 
     # Validate data sizes.
     for section, data_size_category in (
@@ -274,10 +272,9 @@ class MetricsCollector(object):
         section='GSUtil',
         category='json_api_version',
         validation_fn=lambda val: val[0].lower() == 'v' and val[1:].isdigit())
-    GetAndValidateConfigValue(
-        section='GSUtil',
-        category='prefer_api',
-        validation_fn=lambda val: val in ('json', 'xml'))
+    GetAndValidateConfigValue(section='GSUtil',
+                              category='prefer_api',
+                              validation_fn=lambda val: val in ('json', 'xml'))
     GetAndValidateConfigValue(
         section='OAuth2',
         category='token_cache',
@@ -440,11 +437,10 @@ class MetricsCollector(object):
 
     data = urllib.parse.urlencode(sorted(params))
     self._metrics.append(
-        Metric(
-            endpoint=self.endpoint,
-            method='POST',
-            body=data,
-            user_agent=self.user_agent))
+        Metric(endpoint=self.endpoint,
+               method='POST',
+               body=data,
+               user_agent=self.user_agent))
 
   # TODO: Collect CPU usage (Linux-only), latency to first byte, and slowest
   # thread process.
@@ -600,9 +596,8 @@ class MetricsCollector(object):
     Args:
       file_message: The FileMessage to process.
     """
-    thread_info = (
-        self.perf_sum_params.thread_throughputs[(file_message.process_id,
-                                                 file_message.thread_id)])
+    thread_info = (self.perf_sum_params.thread_throughputs[(
+        file_message.process_id, file_message.thread_id)])
     if file_message.finished:
       # If this operation doesn't use parallelism, we manually update the
       # number of objects transferred rather than relying on
@@ -618,26 +613,24 @@ class MetricsCollector(object):
     # Collect the command metric, including the number of retryable errors.
     command_name = self.GetGAParam('Command Name')
     if command_name:
-      self.CollectGAMetric(
-          category=_GA_COMMANDS_CATEGORY,
-          action=command_name,
-          **{
-              _GA_LABEL_MAP['Retryable Errors']:
-                  sum(self.retryable_errors.values())
-          })
+      self.CollectGAMetric(category=_GA_COMMANDS_CATEGORY,
+                           action=command_name,
+                           **{
+                               _GA_LABEL_MAP['Retryable Errors']:
+                               sum(self.retryable_errors.values())
+                           })
 
     # Collect the retryable errors.
     for error_type, num_errors in six.iteritems(self.retryable_errors):
-      self.CollectGAMetric(
-          category=_GA_ERRORRETRY_CATEGORY,
-          action=error_type,
-          **{_GA_LABEL_MAP['Retryable Errors']: num_errors})
+      self.CollectGAMetric(category=_GA_ERRORRETRY_CATEGORY,
+                           action=error_type,
+                           **{_GA_LABEL_MAP['Retryable Errors']: num_errors})
 
     # Collect the fatal error, if any.
     fatal_error_type = self.GetGAParam('Fatal Error')
     if fatal_error_type:
-      self.CollectGAMetric(
-          category=_GA_ERRORFATAL_CATEGORY, action=fatal_error_type)
+      self.CollectGAMetric(category=_GA_ERRORFATAL_CATEGORY,
+                           action=fatal_error_type)
 
   def _CollectPerformanceSummaryMetric(self):
     """Aggregates PerformanceSummary info and adds the metric to the list."""
@@ -685,9 +678,8 @@ class MetricsCollector(object):
     custom_params[_GA_LABEL_MAP['Parallelism Strategy']] = strategy
 
     # Determine the percentage of time that threads spent idle.
-    total_time = (
-        self.perf_sum_params.thread_idle_time +
-        self.perf_sum_params.thread_execution_time)
+    total_time = (self.perf_sum_params.thread_idle_time +
+                  self.perf_sum_params.thread_execution_time)
     if total_time:
       custom_params[_GA_LABEL_MAP['Thread Idle Time Percent']] = (
           float(self.perf_sum_params.thread_idle_time) / float(total_time))
@@ -711,19 +703,18 @@ class MetricsCollector(object):
     # This maps a transfer type to whether the condition has been met for it.
     transfer_types = {
         'CloudToCloud':
-            self.perf_sum_params.has_cloud_src
-            and self.perf_sum_params.has_cloud_dst,
+        self.perf_sum_params.has_cloud_src and
+        self.perf_sum_params.has_cloud_dst,
         'CloudToFile':
-            self.perf_sum_params.has_cloud_src
-            and self.perf_sum_params.has_file_dst,
+        self.perf_sum_params.has_cloud_src and
+        self.perf_sum_params.has_file_dst,
         'DaisyChain':
-            self.perf_sum_params.is_daisy_chain,
+        self.perf_sum_params.is_daisy_chain,
         'FileToCloud':
-            self.perf_sum_params.has_file_src
-            and self.perf_sum_params.has_cloud_dst,
+        self.perf_sum_params.has_file_src and
+        self.perf_sum_params.has_cloud_dst,
         'FileToFile':
-            self.perf_sum_params.has_file_src
-            and self.perf_sum_params.has_file_dst
+        self.perf_sum_params.has_file_src and self.perf_sum_params.has_file_dst
     }
     action = ','.join(
         sorted([
@@ -741,11 +732,10 @@ class MetricsCollector(object):
     apply_execution_time = _GetTimeInMillis(
         self.perf_sum_params.total_elapsed_time)
 
-    self.CollectGAMetric(
-        category=_GA_PERFSUM_CATEGORY,
-        action=action,
-        execution_time=apply_execution_time,
-        **custom_params)
+    self.CollectGAMetric(category=_GA_PERFSUM_CATEGORY,
+                         action=action,
+                         execution_time=apply_execution_time,
+                         **custom_params)
 
   def ReportMetrics(self,
                     wait_for_report=False,
@@ -800,10 +790,9 @@ class MetricsCollector(object):
     try:
       # In order for Popen to work correctly with Windows/Py3 shell needs
       # to be True.
-      p = subprocess.Popen(
-          execution_args,
-          env=sm_env,
-          shell=(six.PY3 and system_util.IS_WINDOWS))
+      p = subprocess.Popen(execution_args,
+                           env=sm_env,
+                           shell=(six.PY3 and system_util.IS_WINDOWS))
       self.logger.debug('Metrics reporting process started...')
 
       if wait_for_report:

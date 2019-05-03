@@ -53,6 +53,7 @@ def check_python_version_support():
     return (
         False,
         'For Python{major}, gsutil requires Python{major}.{lowest_minor}+, but '
-        'you are using Python{major}.{minor}'.format(
-            major=major, minor=minor, lowest_minor=lowest_minor))
+        'you are using Python{major}.{minor}'.format(major=major,
+                                                     minor=minor,
+                                                     lowest_minor=lowest_minor))
   return (True, '')

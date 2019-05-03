@@ -9,7 +9,6 @@ from apitools.base.protorpclite import messages as _messages
 from apitools.base.py import encoding
 from apitools.base.py import extra_types
 
-
 package = 'cloudkms'
 
 
@@ -140,7 +139,8 @@ class CloudkmsProjectsLocationsKeyRingsCreateRequest(_messages.Message):
   parent = _messages.StringField(3, required=True)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysCreateRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysCreateRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysCreateRequest object.
 
   Fields:
@@ -155,7 +155,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysCreateRequest(_messages.Message
   parent = _messages.StringField(3, required=True)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsCreateRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsCreateRequest(
+    _messages.Message):
   """A
   CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsCreateRequest
   object.
@@ -171,7 +172,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsCreateRequest(
   parent = _messages.StringField(2, required=True)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsDestroyRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsDestroyRequest(
+    _messages.Message):
   """A
   CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsDestroyRequest
   object.
@@ -182,11 +184,13 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsDestroyRequest
     name: The resource name of the CryptoKeyVersion to destroy.
   """
 
-  destroyCryptoKeyVersionRequest = _messages.MessageField('DestroyCryptoKeyVersionRequest', 1)
+  destroyCryptoKeyVersionRequest = _messages.MessageField(
+      'DestroyCryptoKeyVersionRequest', 1)
   name = _messages.StringField(2, required=True)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsGetRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsGetRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsGetRequest
   object.
 
@@ -197,7 +201,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsGetRequest(_me
   name = _messages.StringField(1, required=True)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsListRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsListRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsListRequest
   object.
 
@@ -218,7 +223,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsListRequest(_m
   parent = _messages.StringField(3, required=True)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsPatchRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsPatchRequest(
+    _messages.Message):
   """A
   CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsPatchRequest
   object.
@@ -237,7 +243,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsPatchRequest(_
   updateMask = _messages.StringField(3)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsRestoreRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsRestoreRequest(
+    _messages.Message):
   """A
   CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsRestoreRequest
   object.
@@ -249,10 +256,12 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsRestoreRequest
   """
 
   name = _messages.StringField(1, required=True)
-  restoreCryptoKeyVersionRequest = _messages.MessageField('RestoreCryptoKeyVersionRequest', 2)
+  restoreCryptoKeyVersionRequest = _messages.MessageField(
+      'RestoreCryptoKeyVersionRequest', 2)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysDecryptRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysDecryptRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysDecryptRequest object.
 
   Fields:
@@ -266,7 +275,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysDecryptRequest(_messages.Messag
   name = _messages.StringField(2, required=True)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysEncryptRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysEncryptRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysEncryptRequest object.
 
   Fields:
@@ -281,7 +291,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysEncryptRequest(_messages.Messag
   name = _messages.StringField(2, required=True)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysGetIamPolicyRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysGetIamPolicyRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysGetIamPolicyRequest object.
 
   Fields:
@@ -322,7 +333,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysListRequest(_messages.Message):
   parent = _messages.StringField(3, required=True)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysPatchRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysPatchRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysPatchRequest object.
 
   Fields:
@@ -337,7 +349,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysPatchRequest(_messages.Message)
   updateMask = _messages.StringField(3)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysSetIamPolicyRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysSetIamPolicyRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysSetIamPolicyRequest object.
 
   Fields:
@@ -352,7 +365,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysSetIamPolicyRequest(_messages.M
   setIamPolicyRequest = _messages.MessageField('SetIamPolicyRequest', 2)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysTestIamPermissionsRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysTestIamPermissionsRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysTestIamPermissionsRequest
   object.
 
@@ -365,10 +379,12 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysTestIamPermissionsRequest(_mess
   """
 
   resource = _messages.StringField(1, required=True)
-  testIamPermissionsRequest = _messages.MessageField('TestIamPermissionsRequest', 2)
+  testIamPermissionsRequest = _messages.MessageField(
+      'TestIamPermissionsRequest', 2)
 
 
-class CloudkmsProjectsLocationsKeyRingsCryptoKeysUpdatePrimaryVersionRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsCryptoKeysUpdatePrimaryVersionRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsCryptoKeysUpdatePrimaryVersionRequest
   object.
 
@@ -380,7 +396,8 @@ class CloudkmsProjectsLocationsKeyRingsCryptoKeysUpdatePrimaryVersionRequest(_me
   """
 
   name = _messages.StringField(1, required=True)
-  updateCryptoKeyPrimaryVersionRequest = _messages.MessageField('UpdateCryptoKeyPrimaryVersionRequest', 2)
+  updateCryptoKeyPrimaryVersionRequest = _messages.MessageField(
+      'UpdateCryptoKeyPrimaryVersionRequest', 2)
 
 
 class CloudkmsProjectsLocationsKeyRingsGetIamPolicyRequest(_messages.Message):
@@ -439,7 +456,8 @@ class CloudkmsProjectsLocationsKeyRingsSetIamPolicyRequest(_messages.Message):
   setIamPolicyRequest = _messages.MessageField('SetIamPolicyRequest', 2)
 
 
-class CloudkmsProjectsLocationsKeyRingsTestIamPermissionsRequest(_messages.Message):
+class CloudkmsProjectsLocationsKeyRingsTestIamPermissionsRequest(
+    _messages.Message):
   """A CloudkmsProjectsLocationsKeyRingsTestIamPermissionsRequest object.
 
   Fields:
@@ -451,7 +469,8 @@ class CloudkmsProjectsLocationsKeyRingsTestIamPermissionsRequest(_messages.Messa
   """
 
   resource = _messages.StringField(1, required=True)
-  testIamPermissionsRequest = _messages.MessageField('TestIamPermissionsRequest', 2)
+  testIamPermissionsRequest = _messages.MessageField(
+      'TestIamPermissionsRequest', 2)
 
 
 class CloudkmsProjectsLocationsListRequest(_messages.Message):
@@ -537,7 +556,9 @@ class CryptoKey(_messages.Message):
       key = _messages.StringField(1)
       value = _messages.StringField(2)
 
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+    additionalProperties = _messages.MessageField('AdditionalProperty',
+                                                  1,
+                                                  repeated=True)
 
   createTime = _messages.StringField(1)
   labels = _messages.MessageField('LabelsValue', 2)
@@ -704,7 +725,9 @@ class ListCryptoKeyVersionsResponse(_messages.Message):
     totalSize: The total number of CryptoKeyVersions that matched the query.
   """
 
-  cryptoKeyVersions = _messages.MessageField('CryptoKeyVersion', 1, repeated=True)
+  cryptoKeyVersions = _messages.MessageField('CryptoKeyVersion',
+                                             1,
+                                             repeated=True)
   nextPageToken = _messages.StringField(2)
   totalSize = _messages.IntegerField(3, variant=_messages.Variant.INT32)
 
@@ -796,7 +819,9 @@ class Location(_messages.Message):
       key = _messages.StringField(1)
       value = _messages.StringField(2)
 
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+    additionalProperties = _messages.MessageField('AdditionalProperty',
+                                                  1,
+                                                  repeated=True)
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class MetadataValue(_messages.Message):
@@ -822,7 +847,9 @@ class Location(_messages.Message):
       key = _messages.StringField(1)
       value = _messages.MessageField('extra_types.JsonValue', 2)
 
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+    additionalProperties = _messages.MessageField('AdditionalProperty',
+                                                  1,
+                                                  repeated=True)
 
   labels = _messages.MessageField('LabelsValue', 1)
   locationId = _messages.StringField(2)
@@ -993,9 +1020,9 @@ class UpdateCryptoKeyPrimaryVersionRequest(_messages.Message):
   cryptoKeyVersionId = _messages.StringField(1)
 
 
-encoding.AddCustomJsonFieldMapping(
-    StandardQueryParameters, 'f__xgafv', '$.xgafv')
-encoding.AddCustomJsonEnumMapping(
-    StandardQueryParameters.FXgafvValueValuesEnum, '_1', '1')
-encoding.AddCustomJsonEnumMapping(
-    StandardQueryParameters.FXgafvValueValuesEnum, '_2', '2')
+encoding.AddCustomJsonFieldMapping(StandardQueryParameters, 'f__xgafv',
+                                   '$.xgafv')
+encoding.AddCustomJsonEnumMapping(StandardQueryParameters.FXgafvValueValuesEnum,
+                                  '_1', '1')
+encoding.AddCustomJsonEnumMapping(StandardQueryParameters.FXgafvValueValuesEnum,
+                                  '_2', '2')

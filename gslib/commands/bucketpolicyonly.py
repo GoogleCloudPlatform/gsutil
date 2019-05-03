@@ -97,7 +97,9 @@ class BucketPolicyOnlyCommand(Command):
       gs_api_support=[ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
-          'get': [CommandArgument.MakeNCloudURLsArgument(1),],
+          'get': [
+              CommandArgument.MakeNCloudURLsArgument(1),
+          ],
           'set': [
               CommandArgument('mode', choices=['on', 'off']),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
@@ -127,10 +129,9 @@ class BucketPolicyOnlyCommand(Command):
     self._ValidateBucketListingRefAndReturnBucketName(blr)
     bucket_url = blr.storage_url
 
-    bucket_metadata = self.gsutil_api.GetBucket(
-        bucket_url.bucket_name,
-        fields=['iamConfiguration'],
-        provider=bucket_url.scheme)
+    bucket_metadata = self.gsutil_api.GetBucket(bucket_url.bucket_name,
+                                                fields=['iamConfiguration'],
+                                                provider=bucket_url.scheme)
     iam_config = bucket_metadata.iamConfiguration
     bucket_policy_only = iam_config.bucketPolicyOnly
 
@@ -163,11 +164,10 @@ class BucketPolicyOnlyCommand(Command):
     print('%s Bucket Policy Only for %s...' %
           (setting_verb, str(bucket_url).rstrip('/')))
 
-    self.gsutil_api.PatchBucket(
-        bucket_url.bucket_name,
-        bucket_metadata,
-        fields=['iamConfiguration'],
-        provider=bucket_url.scheme)
+    self.gsutil_api.PatchBucket(bucket_url.bucket_name,
+                                bucket_metadata,
+                                fields=['iamConfiguration'],
+                                provider=bucket_url.scheme)
     return 0
 
   def _BucketPolicyOnly(self):

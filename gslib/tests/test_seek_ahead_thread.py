@@ -205,8 +205,9 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
 
     # Create 5 files with sizes 0, 1, 2, 3, 4.
     for i in range(num_files):
-      self.CreateTempFile(
-          tmpdir=tmpdir, file_name='obj%s' % str(i), contents=b'a' * i)
+      self.CreateTempFile(tmpdir=tmpdir,
+                          file_name='obj%s' % str(i),
+                          contents=b'a' * i)
       total_size += i
 
     # Recursively "copy" tmpdir.

@@ -82,12 +82,11 @@ class PubsubApi(object):
     log_request = (debug >= 3)
     log_response = (debug >= 3)
 
-    self.api_client = apitools_client.PubsubV1(
-        url=self.url_base,
-        http=self.http,
-        log_request=log_request,
-        log_response=log_response,
-        credentials=self.credentials)
+    self.api_client = apitools_client.PubsubV1(url=self.url_base,
+                                               http=self.http,
+                                               log_request=log_request,
+                                               log_response=log_response,
+                                               credentials=self.credentials)
 
     self.num_retries = GetNumRetries()
     self.api_client.num_retries = self.num_retries
@@ -211,12 +210,13 @@ class PubsubApi(object):
         # It is possible that the Project ID is incorrect.  Unfortunately the
         # JSON API does not give us much information about what part of the
         # request was bad.
-        return BadRequestException(
-            message or 'Bad Request', status=e.status_code)
+        return BadRequestException(message or 'Bad Request',
+                                   status=e.status_code)
       elif e.status_code == 401:
         if 'Login Required' in str(e):
-          return AccessDeniedException(
-              message or 'Access denied: login required.', status=e.status_code)
+          return AccessDeniedException(message or
+                                       'Access denied: login required.',
+                                       status=e.status_code)
         elif 'insufficient_scope' in str(e):
           # If the service includes insufficient scope error detail in the
           # response body, this check can be removed.
@@ -226,13 +226,13 @@ class PubsubApi(object):
               body=self._GetAcceptableScopesFromHttpError(e))
       elif e.status_code == 403:
         if 'The account for the specified project has been disabled' in str(e):
-          return AccessDeniedException(
-              message or 'Account disabled.', status=e.status_code)
+          return AccessDeniedException(message or 'Account disabled.',
+                                       status=e.status_code)
         elif 'Daily Limit for Unauthenticated Use Exceeded' in str(e):
-          return AccessDeniedException(
-              message or 'Access denied: quota exceeded. '
-              'Is your project ID valid?',
-              status=e.status_code)
+          return AccessDeniedException(message or
+                                       'Access denied: quota exceeded. '
+                                       'Is your project ID valid?',
+                                       status=e.status_code)
         elif 'User Rate Limit Exceeded' in str(e):
           return AccessDeniedException(
               'Rate limit exceeded. Please retry this '
@@ -253,14 +253,14 @@ class PubsubApi(object):
               status=e.status_code,
               body=self._GetAcceptableScopesFromHttpError(e))
         else:
-          return AccessDeniedException(
-              message or e.message, status=e.status_code)
+          return AccessDeniedException(message or e.message,
+                                       status=e.status_code)
       elif e.status_code == 404:
         return NotFoundException(message, status=e.status_code)
 
       elif e.status_code == 409 and topic_name:
-        return ServiceException(
-            'The topic %s already exists.' % topic_name, status=e.status_code)
+        return ServiceException('The topic %s already exists.' % topic_name,
+                                status=e.status_code)
       elif e.status_code == 412:
         return PreconditionException(message, status=e.status_code)
       return ServiceException(message, status=e.status_code)

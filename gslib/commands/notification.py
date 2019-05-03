@@ -67,10 +67,9 @@ _STOPCHANNEL_SYNOPSIS = """
   gsutil notification stopchannel channel_id resource_id
 """
 
-_SYNOPSIS = (
-    _CREATE_SYNOPSIS + _DELETE_SYNOPSIS.lstrip('\n') +
-    _LIST_SYNOPSIS.lstrip('\n') + _WATCHBUCKET_SYNOPSIS +
-    _STOPCHANNEL_SYNOPSIS.lstrip('\n') + '\n')
+_SYNOPSIS = (_CREATE_SYNOPSIS + _DELETE_SYNOPSIS.lstrip('\n') +
+             _LIST_SYNOPSIS.lstrip('\n') + _WATCHBUCKET_SYNOPSIS +
+             _STOPCHANNEL_SYNOPSIS.lstrip('\n') + '\n')
 
 _LIST_DESCRIPTION = """
 <B>LIST</B>
@@ -350,10 +349,10 @@ _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 _create_help_text = (CreateHelpText(_CREATE_SYNOPSIS, _CREATE_DESCRIPTION))
 _list_help_text = (CreateHelpText(_LIST_SYNOPSIS, _LIST_DESCRIPTION))
 _delete_help_text = (CreateHelpText(_DELETE_SYNOPSIS, _DELETE_DESCRIPTION))
-_watchbucket_help_text = (
-    CreateHelpText(_WATCHBUCKET_SYNOPSIS, _WATCHBUCKET_DESCRIPTION))
-_stopchannel_help_text = (
-    CreateHelpText(_STOPCHANNEL_SYNOPSIS, _STOPCHANNEL_DESCRIPTION))
+_watchbucket_help_text = (CreateHelpText(_WATCHBUCKET_SYNOPSIS,
+                                         _WATCHBUCKET_DESCRIPTION))
+_stopchannel_help_text = (CreateHelpText(_STOPCHANNEL_SYNOPSIS,
+                                         _STOPCHANNEL_DESCRIPTION))
 
 PAYLOAD_FORMAT_MAP = {'none': 'NONE', 'json': 'JSON_API_V1'}
 
@@ -453,16 +452,15 @@ class NotificationCommand(Command):
                      bucket_url, watch_url)
 
     try:
-      channel = self.gsutil_api.WatchBucket(
-          bucket_url.bucket_name,
-          watch_url,
-          identifier,
-          token=client_token,
-          provider=bucket_url.scheme)
+      channel = self.gsutil_api.WatchBucket(bucket_url.bucket_name,
+                                            watch_url,
+                                            identifier,
+                                            token=client_token,
+                                            provider=bucket_url.scheme)
     except AccessDeniedException as e:
       self.logger.warn(
-          NOTIFICATION_AUTHORIZATION_FAILED_MESSAGE.format(
-              watch_error=str(e), watch_url=watch_url))
+          NOTIFICATION_AUTHORIZATION_FAILED_MESSAGE.format(watch_error=str(e),
+                                                           watch_url=watch_url))
       raise
 
     channel_id = channel.id
@@ -496,8 +494,8 @@ class NotificationCommand(Command):
     if not bucket_url.IsBucket():
       raise CommandException('URL must name a bucket for the %s command.' %
                              self.command_name)
-    channels = self.gsutil_api.ListChannels(
-        bucket_url.bucket_name, provider='gs').items
+    channels = self.gsutil_api.ListChannels(bucket_url.bucket_name,
+                                            provider='gs').items
     self.logger.info(
         'Bucket %s has the following active Object Change Notifications:',
         bucket_url.bucket_name)
@@ -564,8 +562,9 @@ class NotificationCommand(Command):
     self.logger.debug('Creating notification for bucket %s', bucket_url)
 
     # Find the project this bucket belongs to
-    bucket_metadata = self.gsutil_api.GetBucket(
-        bucket_name, fields=['projectNumber'], provider=bucket_url.scheme)
+    bucket_metadata = self.gsutil_api.GetBucket(bucket_name,
+                                                fields=['projectNumber'],
+                                                provider=bucket_url.scheme)
     bucket_project_number = bucket_metadata.projectNumber
 
     # If not specified, choose a sensible default for the Cloud Pub/Sub topic
@@ -645,9 +644,8 @@ class NotificationCommand(Command):
 
     # Verify that the service account is in the IAM policy.
     policy = pubsub_api.GetTopicIamPolicy(topic_name=pubsub_topic)
-    binding = Binding(
-        role='roles/pubsub.publisher',
-        members=['serviceAccount:%s' % service_account])
+    binding = Binding(role='roles/pubsub.publisher',
+                      members=['serviceAccount:%s' % service_account])
 
     # This could be more extensive. We could, for instance, check for roles
     # that are stronger that pubsub.publisher, like owner. We could also
@@ -762,8 +760,9 @@ class NotificationCommand(Command):
     return 0
 
   def _DeleteNotification(self, bucket_name, notification_id):
-    self.gsutil_api.DeleteNotificationConfig(
-        bucket_name, notification=notification_id, provider='gs')
+    self.gsutil_api.DeleteNotificationConfig(bucket_name,
+                                             notification=notification_id,
+                                             provider='gs')
     return 0
 
   def _RunSubCommand(self, func):

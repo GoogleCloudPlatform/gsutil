@@ -149,8 +149,8 @@ class ResumableStreamingJsonUploadWrapper(object):
           oldest_data = self._buffer.popleft()
           self._buffer_start += len(oldest_data)
         if oldest_data:
-          refill_amount = self._max_buffer_size - (
-              self._buffer_end - self._buffer_start)
+          refill_amount = self._max_buffer_size - (self._buffer_end -
+                                                   self._buffer_start)
           if refill_amount:
             self._buffer.appendleft(oldest_data[-refill_amount:])
             self._buffer_start -= refill_amount

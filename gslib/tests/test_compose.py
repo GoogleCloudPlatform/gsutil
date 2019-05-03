@@ -56,10 +56,9 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 
   def test_compose_too_many_fails(self):
     components = ['gs://b/component-obj'] * (MAX_COMPOSE_ARITY + 1)
-    stderr = self.RunGsUtil(
-        ['compose'] + components + ['gs://b/composite-obj'],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['compose'] + components + ['gs://b/composite-obj'],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertIn('command accepts at most', stderr)
 
   def test_compose_too_few_fails(self):
@@ -74,10 +73,9 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     target = 'gs://b/composite-obj'
     offending_obj = 'gs://alt-b/obj2'
     components = ['gs://b/obj1', offending_obj]
-    stderr = self.RunGsUtil(
-        ['compose'] + components + [target],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['compose'] + components + [target],
+                            expected_status=1,
+                            return_stderr=True)
     expected_msg = ('CommandException: GCS does '
                     'not support inter-bucket composing.\n')
     self.assertIn(expected_msg, stderr)
@@ -103,10 +101,12 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     """Tests composing objects with a wildcarded URI."""
     bucket_uri = self.CreateBucket()
 
-    component1 = self.CreateObject(
-        bucket_uri=bucket_uri, contents=b'hello ', object_name='component1')
-    component2 = self.CreateObject(
-        bucket_uri=bucket_uri, contents=b'world!', object_name='component2')
+    component1 = self.CreateObject(bucket_uri=bucket_uri,
+                                   contents=b'hello ',
+                                   object_name='component1')
+    component2 = self.CreateObject(bucket_uri=bucket_uri,
+                                   contents=b'world!',
+                                   object_name='component2')
 
     composite = bucket_uri.clone_replace_name(self.MakeTempName('obj'))
 
@@ -148,14 +148,12 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
       return unittest.skip(
           'gsutil does not support encryption with the XML API')
     bucket_uri = self.CreateBucket()
-    object_uri1 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        contents=b'foo',
-        encryption_key=TEST_ENCRYPTION_KEY1)
-    object_uri2 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        contents=b'bar',
-        encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri,
+                                    contents=b'foo',
+                                    encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri,
+                                    contents=b'bar',
+                                    encryption_key=TEST_ENCRYPTION_KEY1)
 
     # Compose without correct key should fail.
     stderr = self.RunGsUtil([
@@ -196,14 +194,12 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
   def test_compose_different_encryption_keys(self):
     """Tests composing encrypted objects with different encryption keys."""
     bucket_uri = self.CreateBucket()
-    object_uri1 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        contents=b'foo',
-        encryption_key=TEST_ENCRYPTION_KEY1)
-    object_uri2 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        contents=b'bar',
-        encryption_key=TEST_ENCRYPTION_KEY2)
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri,
+                                    contents=b'foo',
+                                    encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri,
+                                    contents=b'bar',
+                                    encryption_key=TEST_ENCRYPTION_KEY2)
 
     with SetBotoConfigForTest([
         ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1),

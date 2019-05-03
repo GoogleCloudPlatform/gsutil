@@ -31,7 +31,13 @@ class StorageV1(base_api.BaseApiClient):
   BASE_URL = u'https://www.googleapis.com/storage/v1/'
 
   _PACKAGE = u'storage'
-  _SCOPES = [u'https://www.googleapis.com/auth/cloud-platform', u'https://www.googleapis.com/auth/cloud-platform.read-only', u'https://www.googleapis.com/auth/devstorage.full_control', u'https://www.googleapis.com/auth/devstorage.read_only', u'https://www.googleapis.com/auth/devstorage.read_write']
+  _SCOPES = [
+      u'https://www.googleapis.com/auth/cloud-platform',
+      u'https://www.googleapis.com/auth/cloud-platform.read-only',
+      u'https://www.googleapis.com/auth/devstorage.full_control',
+      u'https://www.googleapis.com/auth/devstorage.read_only',
+      u'https://www.googleapis.com/auth/devstorage.read_write'
+  ]
   _VERSION = u'v1'
   _CLIENT_ID = 'nomatter'
   _CLIENT_SECRET = 'nomatter'
@@ -50,27 +56,39 @@ class StorageV1(base_api.BaseApiClient):
   _URL_VERSION = u'v1'
   _API_KEY = None
 
-  def __init__(self, url='', credentials=None,
-               get_credentials=True, http=None, model=None,
-               log_request=False, log_response=False,
-               credentials_args=None, default_global_params=None,
+  def __init__(self,
+               url='',
+               credentials=None,
+               get_credentials=True,
+               http=None,
+               model=None,
+               log_request=False,
+               log_response=False,
+               credentials_args=None,
+               default_global_params=None,
                version=_VERSION,
-               additional_http_headers=None, response_encoding=None):
+               additional_http_headers=None,
+               response_encoding=None):
     """Create a new storage handle."""
     url = url or self.BASE_URL
-    super(StorageV1, self).__init__(
-        url, credentials=credentials,
-        get_credentials=get_credentials, http=http, model=model,
-        log_request=log_request, log_response=log_response,
-        credentials_args=credentials_args,
-        default_global_params=default_global_params,
-        additional_http_headers=additional_http_headers,
-        response_encoding=response_encoding)
+    super(StorageV1,
+          self).__init__(url,
+                         credentials=credentials,
+                         get_credentials=get_credentials,
+                         http=http,
+                         model=model,
+                         log_request=log_request,
+                         log_response=log_response,
+                         credentials_args=credentials_args,
+                         default_global_params=default_global_params,
+                         additional_http_headers=additional_http_headers,
+                         response_encoding=response_encoding)
     self._version = version
     self.bucketAccessControls = self.BucketAccessControlsService(self)
     self.buckets = self.BucketsService(self)
     self.channels = self.ChannelsService(self)
-    self.defaultObjectAccessControls = self.DefaultObjectAccessControlsService(self)
+    self.defaultObjectAccessControls = self.DefaultObjectAccessControlsService(
+        self)
     self.notifications = self.NotificationsService(self)
     self.objectAccessControls = self.ObjectAccessControlsService(self)
     self.objects = self.ObjectsService(self)
@@ -84,8 +102,7 @@ class StorageV1(base_api.BaseApiClient):
 
     def __init__(self, client):
       super(StorageV1.BucketAccessControlsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Delete(self, request, global_params=None):
       r"""Permanently deletes the ACL entry for the specified entity on the specified bucket.
@@ -97,8 +114,7 @@ class StorageV1(base_api.BaseApiClient):
         (StorageBucketAccessControlsDeleteResponse) The response message.
       """
       config = self.GetMethodConfig('Delete')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Delete.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'DELETE',
@@ -123,8 +139,7 @@ class StorageV1(base_api.BaseApiClient):
         (BucketAccessControl) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -149,8 +164,7 @@ class StorageV1(base_api.BaseApiClient):
         (BucketAccessControl) The response message.
       """
       config = self.GetMethodConfig('Insert')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Insert.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
@@ -175,8 +189,7 @@ class StorageV1(base_api.BaseApiClient):
         (BucketAccessControls) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -201,8 +214,7 @@ class StorageV1(base_api.BaseApiClient):
         (BucketAccessControl) The response message.
       """
       config = self.GetMethodConfig('Patch')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Patch.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PATCH',
@@ -227,8 +239,7 @@ class StorageV1(base_api.BaseApiClient):
         (BucketAccessControl) The response message.
       """
       config = self.GetMethodConfig('Update')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Update.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PUT',
@@ -250,8 +261,7 @@ class StorageV1(base_api.BaseApiClient):
 
     def __init__(self, client):
       super(StorageV1.BucketsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Delete(self, request, global_params=None):
       r"""Permanently deletes an empty bucket.
@@ -263,15 +273,15 @@ class StorageV1(base_api.BaseApiClient):
         (StorageBucketsDeleteResponse) The response message.
       """
       config = self.GetMethodConfig('Delete')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Delete.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'DELETE',
         method_id=u'storage.buckets.delete',
         ordered_params=[u'bucket'],
         path_params=[u'bucket'],
-        query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'userProject'],
+        query_params=
+        [u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'userProject'],
         relative_path=u'b/{bucket}',
         request_field='',
         request_type_name=u'StorageBucketsDeleteRequest',
@@ -289,15 +299,17 @@ class StorageV1(base_api.BaseApiClient):
         (Bucket) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
         method_id=u'storage.buckets.get',
         ordered_params=[u'bucket'],
         path_params=[u'bucket'],
-        query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'projection', u'userProject'],
+        query_params=[
+            u'ifMetagenerationMatch', u'ifMetagenerationNotMatch',
+            u'projection', u'userProject'
+        ],
         relative_path=u'b/{bucket}',
         request_field='',
         request_type_name=u'StorageBucketsGetRequest',
@@ -315,8 +327,7 @@ class StorageV1(base_api.BaseApiClient):
         (Policy) The response message.
       """
       config = self.GetMethodConfig('GetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     GetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -341,15 +352,17 @@ class StorageV1(base_api.BaseApiClient):
         (Bucket) The response message.
       """
       config = self.GetMethodConfig('Insert')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Insert.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
         method_id=u'storage.buckets.insert',
         ordered_params=[u'project'],
         path_params=[],
-        query_params=[u'predefinedAcl', u'predefinedDefaultObjectAcl', u'project', u'projection', u'userProject'],
+        query_params=[
+            u'predefinedAcl', u'predefinedDefaultObjectAcl', u'project',
+            u'projection', u'userProject'
+        ],
         relative_path=u'b',
         request_field=u'bucket',
         request_type_name=u'StorageBucketsInsertRequest',
@@ -367,15 +380,17 @@ class StorageV1(base_api.BaseApiClient):
         (Buckets) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
         method_id=u'storage.buckets.list',
         ordered_params=[u'project'],
         path_params=[],
-        query_params=[u'maxResults', u'pageToken', u'prefix', u'project', u'projection', u'userProject'],
+        query_params=[
+            u'maxResults', u'pageToken', u'prefix', u'project', u'projection',
+            u'userProject'
+        ],
         relative_path=u'b',
         request_field='',
         request_type_name=u'StorageBucketsListRequest',
@@ -393,8 +408,7 @@ class StorageV1(base_api.BaseApiClient):
         (Channels) The response message.
       """
       config = self.GetMethodConfig('ListChannels')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     ListChannels.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -419,8 +433,7 @@ class StorageV1(base_api.BaseApiClient):
         (Bucket) The response message.
       """
       config = self.GetMethodConfig('LockRetentionPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     LockRetentionPolicy.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
@@ -445,15 +458,18 @@ class StorageV1(base_api.BaseApiClient):
         (Bucket) The response message.
       """
       config = self.GetMethodConfig('Patch')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Patch.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PATCH',
         method_id=u'storage.buckets.patch',
         ordered_params=[u'bucket'],
         path_params=[u'bucket'],
-        query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'predefinedAcl', u'predefinedDefaultObjectAcl', u'projection', u'userProject'],
+        query_params=[
+            u'ifMetagenerationMatch', u'ifMetagenerationNotMatch',
+            u'predefinedAcl', u'predefinedDefaultObjectAcl', u'projection',
+            u'userProject'
+        ],
         relative_path=u'b/{bucket}',
         request_field=u'bucketResource',
         request_type_name=u'StorageBucketsPatchRequest',
@@ -471,8 +487,7 @@ class StorageV1(base_api.BaseApiClient):
         (Policy) The response message.
       """
       config = self.GetMethodConfig('SetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     SetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PUT',
@@ -497,8 +512,7 @@ class StorageV1(base_api.BaseApiClient):
         (TestIamPermissionsResponse) The response message.
       """
       config = self.GetMethodConfig('TestIamPermissions')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     TestIamPermissions.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -523,15 +537,18 @@ class StorageV1(base_api.BaseApiClient):
         (Bucket) The response message.
       """
       config = self.GetMethodConfig('Update')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Update.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PUT',
         method_id=u'storage.buckets.update',
         ordered_params=[u'bucket'],
         path_params=[u'bucket'],
-        query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'predefinedAcl', u'predefinedDefaultObjectAcl', u'projection', u'userProject'],
+        query_params=[
+            u'ifMetagenerationMatch', u'ifMetagenerationNotMatch',
+            u'predefinedAcl', u'predefinedDefaultObjectAcl', u'projection',
+            u'userProject'
+        ],
         relative_path=u'b/{bucket}',
         request_field=u'bucketResource',
         request_type_name=u'StorageBucketsUpdateRequest',
@@ -546,8 +563,7 @@ class StorageV1(base_api.BaseApiClient):
 
     def __init__(self, client):
       super(StorageV1.ChannelsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Stop(self, request, global_params=None):
       r"""Stop watching resources through this channel.
@@ -559,8 +575,7 @@ class StorageV1(base_api.BaseApiClient):
         (StorageChannelsStopResponse) The response message.
       """
       config = self.GetMethodConfig('Stop')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Stop.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
@@ -582,8 +597,7 @@ class StorageV1(base_api.BaseApiClient):
 
     def __init__(self, client):
       super(StorageV1.DefaultObjectAccessControlsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Delete(self, request, global_params=None):
       r"""Permanently deletes the default object ACL entry for the specified entity on the specified bucket.
@@ -595,8 +609,7 @@ class StorageV1(base_api.BaseApiClient):
         (StorageDefaultObjectAccessControlsDeleteResponse) The response message.
       """
       config = self.GetMethodConfig('Delete')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Delete.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'DELETE',
@@ -621,8 +634,7 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControl) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -647,8 +659,7 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControl) The response message.
       """
       config = self.GetMethodConfig('Insert')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Insert.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
@@ -673,15 +684,15 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControls) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
         method_id=u'storage.defaultObjectAccessControls.list',
         ordered_params=[u'bucket'],
         path_params=[u'bucket'],
-        query_params=[u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'userProject'],
+        query_params=
+        [u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'userProject'],
         relative_path=u'b/{bucket}/defaultObjectAcl',
         request_field='',
         request_type_name=u'StorageDefaultObjectAccessControlsListRequest',
@@ -699,8 +710,7 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControl) The response message.
       """
       config = self.GetMethodConfig('Patch')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Patch.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PATCH',
@@ -725,8 +735,7 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControl) The response message.
       """
       config = self.GetMethodConfig('Update')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Update.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PUT',
@@ -748,8 +757,7 @@ class StorageV1(base_api.BaseApiClient):
 
     def __init__(self, client):
       super(StorageV1.NotificationsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Delete(self, request, global_params=None):
       r"""Permanently deletes a notification subscription.
@@ -761,8 +769,7 @@ class StorageV1(base_api.BaseApiClient):
         (StorageNotificationsDeleteResponse) The response message.
       """
       config = self.GetMethodConfig('Delete')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Delete.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'DELETE',
@@ -787,8 +794,7 @@ class StorageV1(base_api.BaseApiClient):
         (Notification) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -813,8 +819,7 @@ class StorageV1(base_api.BaseApiClient):
         (Notification) The response message.
       """
       config = self.GetMethodConfig('Insert')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Insert.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
@@ -839,8 +844,7 @@ class StorageV1(base_api.BaseApiClient):
         (Notifications) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -862,8 +866,7 @@ class StorageV1(base_api.BaseApiClient):
 
     def __init__(self, client):
       super(StorageV1.ObjectAccessControlsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Delete(self, request, global_params=None):
       r"""Permanently deletes the ACL entry for the specified entity on the specified object.
@@ -875,8 +878,7 @@ class StorageV1(base_api.BaseApiClient):
         (StorageObjectAccessControlsDeleteResponse) The response message.
       """
       config = self.GetMethodConfig('Delete')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Delete.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'DELETE',
@@ -901,8 +903,7 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControl) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -927,8 +928,7 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControl) The response message.
       """
       config = self.GetMethodConfig('Insert')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Insert.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
@@ -953,8 +953,7 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControls) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -979,8 +978,7 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControl) The response message.
       """
       config = self.GetMethodConfig('Patch')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Patch.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PATCH',
@@ -1005,8 +1003,7 @@ class StorageV1(base_api.BaseApiClient):
         (ObjectAccessControl) The response message.
       """
       config = self.GetMethodConfig('Update')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Update.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PUT',
@@ -1029,15 +1026,18 @@ class StorageV1(base_api.BaseApiClient):
     def __init__(self, client):
       super(StorageV1.ObjectsService, self).__init__(client)
       self._upload_configs = {
-          'Insert': base_api.ApiUploadInfo(
+          'Insert':
+          base_api.ApiUploadInfo(
               accept=['*/*'],
               max_size=None,
               resumable_multipart=True,
-              resumable_path=u'/resumable/upload/storage/' + self._client._version + '/b/{bucket}/o',
+              resumable_path=u'/resumable/upload/storage/' +
+              self._client._version + '/b/{bucket}/o',
               simple_multipart=True,
-              simple_path=u'/upload/storage/' + self._client._version + '/b/{bucket}/o',
+              simple_path=u'/upload/storage/' + self._client._version +
+              '/b/{bucket}/o',
           ),
-          }
+      }
 
     def Compose(self, request, global_params=None):
       r"""Concatenates a list of existing objects into a new object in the same bucket.
@@ -1049,15 +1049,17 @@ class StorageV1(base_api.BaseApiClient):
         (Object) The response message.
       """
       config = self.GetMethodConfig('Compose')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Compose.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
         method_id=u'storage.objects.compose',
         ordered_params=[u'destinationBucket', u'destinationObject'],
         path_params=[u'destinationBucket', u'destinationObject'],
-        query_params=[u'destinationPredefinedAcl', u'ifGenerationMatch', u'ifMetagenerationMatch', u'kmsKeyName', u'userProject'],
+        query_params=[
+            u'destinationPredefinedAcl', u'ifGenerationMatch',
+            u'ifMetagenerationMatch', u'kmsKeyName', u'userProject'
+        ],
         relative_path=u'b/{destinationBucket}/o/{destinationObject}/compose',
         request_field=u'composeRequest',
         request_type_name=u'StorageObjectsComposeRequest',
@@ -1075,16 +1077,29 @@ class StorageV1(base_api.BaseApiClient):
         (Object) The response message.
       """
       config = self.GetMethodConfig('Copy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Copy.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
         method_id=u'storage.objects.copy',
-        ordered_params=[u'sourceBucket', u'sourceObject', u'destinationBucket', u'destinationObject'],
-        path_params=[u'destinationBucket', u'destinationObject', u'sourceBucket', u'sourceObject'],
-        query_params=[u'destinationPredefinedAcl', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'ifSourceGenerationMatch', u'ifSourceGenerationNotMatch', u'ifSourceMetagenerationMatch', u'ifSourceMetagenerationNotMatch', u'projection', u'sourceGeneration', u'userProject'],
-        relative_path=u'b/{sourceBucket}/o/{sourceObject}/copyTo/b/{destinationBucket}/o/{destinationObject}',
+        ordered_params=[
+            u'sourceBucket', u'sourceObject', u'destinationBucket',
+            u'destinationObject'
+        ],
+        path_params=[
+            u'destinationBucket', u'destinationObject', u'sourceBucket',
+            u'sourceObject'
+        ],
+        query_params=[
+            u'destinationPredefinedAcl', u'ifGenerationMatch',
+            u'ifGenerationNotMatch', u'ifMetagenerationMatch',
+            u'ifMetagenerationNotMatch', u'ifSourceGenerationMatch',
+            u'ifSourceGenerationNotMatch', u'ifSourceMetagenerationMatch',
+            u'ifSourceMetagenerationNotMatch', u'projection',
+            u'sourceGeneration', u'userProject'
+        ],
+        relative_path=
+        u'b/{sourceBucket}/o/{sourceObject}/copyTo/b/{destinationBucket}/o/{destinationObject}',
         request_field=u'object',
         request_type_name=u'StorageObjectsCopyRequest',
         response_type_name=u'Object',
@@ -1101,15 +1116,18 @@ class StorageV1(base_api.BaseApiClient):
         (StorageObjectsDeleteResponse) The response message.
       """
       config = self.GetMethodConfig('Delete')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Delete.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'DELETE',
         method_id=u'storage.objects.delete',
         ordered_params=[u'bucket', u'object'],
         path_params=[u'bucket', u'object'],
-        query_params=[u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'userProject'],
+        query_params=[
+            u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch',
+            u'ifMetagenerationMatch', u'ifMetagenerationNotMatch',
+            u'userProject'
+        ],
         relative_path=u'b/{bucket}/o/{object}',
         request_field='',
         request_type_name=u'StorageObjectsDeleteRequest',
@@ -1129,16 +1147,21 @@ class StorageV1(base_api.BaseApiClient):
         (Object) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params,
-          download=download)
+      return self._RunMethod(config,
+                             request,
+                             global_params=global_params,
+                             download=download)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
         method_id=u'storage.objects.get',
         ordered_params=[u'bucket', u'object'],
         path_params=[u'bucket', u'object'],
-        query_params=[u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'projection', u'userProject'],
+        query_params=[
+            u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch',
+            u'ifMetagenerationMatch', u'ifMetagenerationNotMatch',
+            u'projection', u'userProject'
+        ],
         relative_path=u'b/{bucket}/o/{object}',
         request_field='',
         request_type_name=u'StorageObjectsGetRequest',
@@ -1156,8 +1179,7 @@ class StorageV1(base_api.BaseApiClient):
         (Policy) The response message.
       """
       config = self.GetMethodConfig('GetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     GetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -1185,16 +1207,23 @@ class StorageV1(base_api.BaseApiClient):
       """
       config = self.GetMethodConfig('Insert')
       upload_config = self.GetUploadConfig('Insert')
-      return self._RunMethod(
-          config, request, global_params=global_params,
-          upload=upload, upload_config=upload_config)
+      return self._RunMethod(config,
+                             request,
+                             global_params=global_params,
+                             upload=upload,
+                             upload_config=upload_config)
 
     Insert.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
         method_id=u'storage.objects.insert',
         ordered_params=[u'bucket'],
         path_params=[u'bucket'],
-        query_params=[u'contentEncoding', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'kmsKeyName', u'name', u'predefinedAcl', u'projection', u'userProject'],
+        query_params=[
+            u'contentEncoding', u'ifGenerationMatch', u'ifGenerationNotMatch',
+            u'ifMetagenerationMatch', u'ifMetagenerationNotMatch',
+            u'kmsKeyName', u'name', u'predefinedAcl', u'projection',
+            u'userProject'
+        ],
         relative_path=u'b/{bucket}/o',
         request_field=u'object',
         request_type_name=u'StorageObjectsInsertRequest',
@@ -1212,15 +1241,17 @@ class StorageV1(base_api.BaseApiClient):
         (Objects) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
         method_id=u'storage.objects.list',
         ordered_params=[u'bucket'],
         path_params=[u'bucket'],
-        query_params=[u'delimiter', u'includeTrailingDelimiter', u'maxResults', u'pageToken', u'prefix', u'projection', u'userProject', u'versions'],
+        query_params=[
+            u'delimiter', u'includeTrailingDelimiter', u'maxResults',
+            u'pageToken', u'prefix', u'projection', u'userProject', u'versions'
+        ],
         relative_path=u'b/{bucket}/o',
         request_field='',
         request_type_name=u'StorageObjectsListRequest',
@@ -1238,15 +1269,18 @@ class StorageV1(base_api.BaseApiClient):
         (Object) The response message.
       """
       config = self.GetMethodConfig('Patch')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Patch.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PATCH',
         method_id=u'storage.objects.patch',
         ordered_params=[u'bucket', u'object'],
         path_params=[u'bucket', u'object'],
-        query_params=[u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'predefinedAcl', u'projection', u'userProject'],
+        query_params=[
+            u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch',
+            u'ifMetagenerationMatch', u'ifMetagenerationNotMatch',
+            u'predefinedAcl', u'projection', u'userProject'
+        ],
         relative_path=u'b/{bucket}/o/{object}',
         request_field=u'objectResource',
         request_type_name=u'StorageObjectsPatchRequest',
@@ -1264,16 +1298,30 @@ class StorageV1(base_api.BaseApiClient):
         (RewriteResponse) The response message.
       """
       config = self.GetMethodConfig('Rewrite')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Rewrite.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
         method_id=u'storage.objects.rewrite',
-        ordered_params=[u'sourceBucket', u'sourceObject', u'destinationBucket', u'destinationObject'],
-        path_params=[u'destinationBucket', u'destinationObject', u'sourceBucket', u'sourceObject'],
-        query_params=[u'destinationKmsKeyName', u'destinationPredefinedAcl', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'ifSourceGenerationMatch', u'ifSourceGenerationNotMatch', u'ifSourceMetagenerationMatch', u'ifSourceMetagenerationNotMatch', u'maxBytesRewrittenPerCall', u'projection', u'rewriteToken', u'sourceGeneration', u'userProject'],
-        relative_path=u'b/{sourceBucket}/o/{sourceObject}/rewriteTo/b/{destinationBucket}/o/{destinationObject}',
+        ordered_params=[
+            u'sourceBucket', u'sourceObject', u'destinationBucket',
+            u'destinationObject'
+        ],
+        path_params=[
+            u'destinationBucket', u'destinationObject', u'sourceBucket',
+            u'sourceObject'
+        ],
+        query_params=[
+            u'destinationKmsKeyName', u'destinationPredefinedAcl',
+            u'ifGenerationMatch', u'ifGenerationNotMatch',
+            u'ifMetagenerationMatch', u'ifMetagenerationNotMatch',
+            u'ifSourceGenerationMatch', u'ifSourceGenerationNotMatch',
+            u'ifSourceMetagenerationMatch', u'ifSourceMetagenerationNotMatch',
+            u'maxBytesRewrittenPerCall', u'projection', u'rewriteToken',
+            u'sourceGeneration', u'userProject'
+        ],
+        relative_path=
+        u'b/{sourceBucket}/o/{sourceObject}/rewriteTo/b/{destinationBucket}/o/{destinationObject}',
         request_field=u'object',
         request_type_name=u'StorageObjectsRewriteRequest',
         response_type_name=u'RewriteResponse',
@@ -1290,8 +1338,7 @@ class StorageV1(base_api.BaseApiClient):
         (Policy) The response message.
       """
       config = self.GetMethodConfig('SetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     SetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PUT',
@@ -1316,8 +1363,7 @@ class StorageV1(base_api.BaseApiClient):
         (TestIamPermissionsResponse) The response message.
       """
       config = self.GetMethodConfig('TestIamPermissions')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     TestIamPermissions.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -1342,15 +1388,18 @@ class StorageV1(base_api.BaseApiClient):
         (Object) The response message.
       """
       config = self.GetMethodConfig('Update')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Update.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'PUT',
         method_id=u'storage.objects.update',
         ordered_params=[u'bucket', u'object'],
         path_params=[u'bucket', u'object'],
-        query_params=[u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch', u'ifMetagenerationMatch', u'ifMetagenerationNotMatch', u'predefinedAcl', u'projection', u'userProject'],
+        query_params=[
+            u'generation', u'ifGenerationMatch', u'ifGenerationNotMatch',
+            u'ifMetagenerationMatch', u'ifMetagenerationNotMatch',
+            u'predefinedAcl', u'projection', u'userProject'
+        ],
         relative_path=u'b/{bucket}/o/{object}',
         request_field=u'objectResource',
         request_type_name=u'StorageObjectsUpdateRequest',
@@ -1368,15 +1417,17 @@ class StorageV1(base_api.BaseApiClient):
         (Channel) The response message.
       """
       config = self.GetMethodConfig('WatchAll')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     WatchAll.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'POST',
         method_id=u'storage.objects.watchAll',
         ordered_params=[u'bucket'],
         path_params=[u'bucket'],
-        query_params=[u'delimiter', u'includeTrailingDelimiter', u'maxResults', u'pageToken', u'prefix', u'projection', u'userProject', u'versions'],
+        query_params=[
+            u'delimiter', u'includeTrailingDelimiter', u'maxResults',
+            u'pageToken', u'prefix', u'projection', u'userProject', u'versions'
+        ],
         relative_path=u'b/{bucket}/o/watch',
         request_field=u'channel',
         request_type_name=u'StorageObjectsWatchAllRequest',
@@ -1391,8 +1442,7 @@ class StorageV1(base_api.BaseApiClient):
 
     def __init__(self, client):
       super(StorageV1.ProjectsServiceAccountService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Get(self, request, global_params=None):
       r"""Get the email address of this project's Google Cloud Storage service account.
@@ -1404,8 +1454,7 @@ class StorageV1(base_api.BaseApiClient):
         (ServiceAccount) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         http_method=u'GET',
@@ -1427,5 +1476,4 @@ class StorageV1(base_api.BaseApiClient):
 
     def __init__(self, client):
       super(StorageV1.ProjectsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}

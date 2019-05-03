@@ -202,9 +202,8 @@ _CH_DESCRIPTION = """
                 set when invoking the gsutil -m option.
 """
 
-_SYNOPSIS = (
-    _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + _CH_SYNOPSIS.lstrip('\n') +
-    '\n\n')
+_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
+             _CH_SYNOPSIS.lstrip('\n') + '\n\n')
 
 _DESCRIPTION = """
   The iam command has three sub-commands:
@@ -336,11 +335,9 @@ class IamCommand(Command):
 
     storage_url = StorageUrlFromString(list(matches)[0].url_string)
     policy = self.GetIamHelper(storage_url, thread_state=thread_state)
-    print(
-        json.dumps(
-            json.loads(protojson.encode_message(policy)),
-            sort_keys=True,
-            indent=2))
+    print(json.dumps(json.loads(protojson.encode_message(policy)),
+                     sort_keys=True,
+                     indent=2))
 
   def _SetIamHelperInternal(self, storage_url, policy, thread_state=None):
     """Sets IAM policy for a single, resolved bucket / object URL.
@@ -364,15 +361,15 @@ class IamCommand(Command):
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
     if storage_url.IsBucket():
-      gsutil_api.SetBucketIamPolicy(
-          storage_url.bucket_name, policy, provider=storage_url.scheme)
+      gsutil_api.SetBucketIamPolicy(storage_url.bucket_name,
+                                    policy,
+                                    provider=storage_url.scheme)
     else:
-      gsutil_api.SetObjectIamPolicy(
-          storage_url.bucket_name,
-          storage_url.object_name,
-          policy,
-          generation=storage_url.generation,
-          provider=storage_url.scheme)
+      gsutil_api.SetObjectIamPolicy(storage_url.bucket_name,
+                                    storage_url.object_name,
+                                    policy,
+                                    generation=storage_url.generation,
+                                    provider=storage_url.scheme)
 
   def SetIamHelper(self, storage_url, policy, thread_state=None):
     """Handles the potential exception raised by the internal set function."""
@@ -401,8 +398,9 @@ class IamCommand(Command):
         self.gsutil_api if thread_state is set to None.
     """
     try:
-      self._PatchIamHelperInternal(
-          storage_url, bindings_tuples, thread_state=thread_state)
+      self._PatchIamHelperInternal(storage_url,
+                                   bindings_tuples,
+                                   thread_state=thread_state)
     except ServiceException:
       if self.continue_on_error:
         self.everything_set_okay = False
@@ -539,12 +537,11 @@ class IamCommand(Command):
 
       serialized_bindings_tuples_it = itertools.repeat(
           [SerializeBindingsTuple(t) for t in patch_bindings_tuples])
-      self.Apply(
-          _PatchIamWrapper,
-          zip(serialized_bindings_tuples_it, name_expansion_iterator),
-          _PatchIamExceptionHandler,
-          fail_on_error=not self.continue_on_error,
-          seek_ahead_iterator=seek_ahead_iterator)
+      self.Apply(_PatchIamWrapper,
+                 zip(serialized_bindings_tuples_it, name_expansion_iterator),
+                 _PatchIamExceptionHandler,
+                 fail_on_error=not self.continue_on_error,
+                 seek_ahead_iterator=seek_ahead_iterator)
 
       self.everything_set_okay &= not GetFailureCount() > 0
 
@@ -653,12 +650,11 @@ class IamCommand(Command):
           all_versions=self.all_versions)
 
       policy_it = itertools.repeat(protojson.encode_message(policy))
-      self.Apply(
-          _SetIamWrapper,
-          zip(policy_it, name_expansion_iterator),
-          _SetIamExceptionHandler,
-          fail_on_error=not self.continue_on_error,
-          seek_ahead_iterator=seek_ahead_iterator)
+      self.Apply(_SetIamWrapper,
+                 zip(policy_it, name_expansion_iterator),
+                 _SetIamExceptionHandler,
+                 fail_on_error=not self.continue_on_error,
+                 seek_ahead_iterator=seek_ahead_iterator)
 
       self.everything_set_okay &= not GetFailureCount() > 0
 

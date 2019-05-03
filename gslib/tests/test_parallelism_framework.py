@@ -137,24 +137,22 @@ def _ReApplyWithReplicatedArguments(cls, args, thread_state=None):
   new_args = [args] * 7
   process_count = _AdjustProcessCountIfWindows(args[0])
   thread_count = args[1]
-  return_values = cls.Apply(
-      _PerformNRecursiveCalls,
-      new_args,
-      _ExceptionHandler,
-      arg_checker=DummyArgChecker,
-      process_count=process_count,
-      thread_count=thread_count,
-      should_return_results=True)
+  return_values = cls.Apply(_PerformNRecursiveCalls,
+                            new_args,
+                            _ExceptionHandler,
+                            arg_checker=DummyArgChecker,
+                            process_count=process_count,
+                            thread_count=thread_count,
+                            should_return_results=True)
   ret = sum(return_values)
 
-  return_values = cls.Apply(
-      _ReturnOneValue,
-      new_args,
-      _ExceptionHandler,
-      arg_checker=DummyArgChecker,
-      process_count=process_count,
-      thread_count=thread_count,
-      should_return_results=True)
+  return_values = cls.Apply(_ReturnOneValue,
+                            new_args,
+                            _ExceptionHandler,
+                            arg_checker=DummyArgChecker,
+                            process_count=process_count,
+                            thread_count=thread_count,
+                            should_return_results=True)
 
   return len(return_values) + ret
 
@@ -176,13 +174,12 @@ def _PerformNRecursiveCalls(cls, args, thread_state=None):
   """
   process_count = _AdjustProcessCountIfWindows(args[0])
   thread_count = args[1]
-  return_values = cls.Apply(
-      _ReturnOneValue, [()] * args[2],
-      _ExceptionHandler,
-      arg_checker=DummyArgChecker,
-      process_count=process_count,
-      thread_count=thread_count,
-      should_return_results=True)
+  return_values = cls.Apply(_ReturnOneValue, [()] * args[2],
+                            _ExceptionHandler,
+                            arg_checker=DummyArgChecker,
+                            process_count=process_count,
+                            thread_count=thread_count,
+                            should_return_results=True)
   return len(return_values)
 
 
@@ -271,16 +268,15 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     command_inst = command_inst or self.command_class(True)
     exception_handler = thr_exc_handler or _ExceptionHandler
 
-    return command_inst.Apply(
-        func,
-        args_iterator,
-        exception_handler,
-        thread_count=thread_count,
-        process_count=process_count,
-        arg_checker=arg_checker,
-        should_return_results=True,
-        shared_attrs=shared_attrs,
-        fail_on_error=fail_on_error)
+    return command_inst.Apply(func,
+                              args_iterator,
+                              exception_handler,
+                              thread_count=thread_count,
+                              process_count=process_count,
+                              arg_checker=arg_checker,
+                              should_return_results=True,
+                              shared_attrs=shared_attrs,
+                              fail_on_error=fail_on_error)
 
   @RequiresIsolation
   def testBasicApplySingleProcessSingleThread(self):
@@ -367,8 +363,8 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
                              process_count, thread_count)
     usage_dict = {}  # (process_id, thread_id): number of tasks performed
     for (process_id, thread_id) in results:
-      usage_dict[(process_id, thread_id)] = (
-          usage_dict.get((process_id, thread_id), 0) + 1)
+      usage_dict[(process_id, thread_id)] = (usage_dict.get(
+          (process_id, thread_id), 0) + 1)
 
     for (id_tuple, num_tasks_completed) in six.iteritems(usage_dict):
       self.assertEqual(
@@ -415,12 +411,11 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     if process_count * thread_count > 1:
       # In this case, we should ignore the fail_on_error flag.
       args = FailingIterator(10, [9])
-      results = self._RunApply(
-          _ReturnOneValue,
-          args,
-          process_count,
-          thread_count,
-          fail_on_error=True)
+      results = self._RunApply(_ReturnOneValue,
+                               args,
+                               process_count,
+                               thread_count,
+                               fail_on_error=True)
       self.assertEqual(9, len(results))
 
     args = FailingIterator(10, range(10))
@@ -455,13 +450,12 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     command_inst = self.command_class(True)
     command_inst.arg_length_sum = 19
     args = ['foo', ['bar', 'baz'], [], ['x', 'y'], [], 'abcd']
-    self._RunApply(
-        _IncrementByLength,
-        args,
-        process_count,
-        thread_count,
-        command_inst=command_inst,
-        shared_attrs=['arg_length_sum'])
+    self._RunApply(_IncrementByLength,
+                   args,
+                   process_count,
+                   thread_count,
+                   command_inst=command_inst,
+                   shared_attrs=['arg_length_sum'])
     expected_sum = 19
     for arg in args:
       expected_sum += len(arg)
@@ -475,13 +469,12 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
                                      (FailingIterator(5, [4]), 1)):
       command_inst = self.command_class(True)
       args = failing_iterator
-      self._RunApply(
-          _ReturnOneValue,
-          args,
-          process_count,
-          thread_count,
-          command_inst=command_inst,
-          shared_attrs=['failure_count'])
+      self._RunApply(_ReturnOneValue,
+                     args,
+                     process_count,
+                     thread_count,
+                     command_inst=command_inst,
+                     shared_attrs=['failure_count'])
       self.assertEqual(
           expected_failure_count,
           command_inst.failure_count,
@@ -512,14 +505,13 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
   def _TestThreadsSurviveExceptionsInFunc(self, process_count, thread_count):
     command_inst = self.command_class(True)
     args = ([()] * 5)
-    self._RunApply(
-        _FailureFunc,
-        args,
-        process_count,
-        thread_count,
-        command_inst=command_inst,
-        shared_attrs=['failure_count'],
-        thr_exc_handler=_FailingExceptionHandler)
+    self._RunApply(_FailureFunc,
+                   args,
+                   process_count,
+                   thread_count,
+                   command_inst=command_inst,
+                   shared_attrs=['failure_count'],
+                   thr_exc_handler=_FailingExceptionHandler)
     self.assertEqual(len(args), command_inst.failure_count)
 
   @RequiresIsolation
@@ -544,14 +536,13 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
   def _TestThreadsSurviveExceptionsInHandler(self, process_count, thread_count):
     command_inst = self.command_class(True)
     args = ([()] * 5)
-    self._RunApply(
-        _FailureFunc,
-        args,
-        process_count,
-        thread_count,
-        command_inst=command_inst,
-        shared_attrs=['failure_count'],
-        thr_exc_handler=_FailingExceptionHandler)
+    self._RunApply(_FailureFunc,
+                   args,
+                   process_count,
+                   thread_count,
+                   command_inst=command_inst,
+                   shared_attrs=['failure_count'],
+                   thr_exc_handler=_FailingExceptionHandler)
     self.assertEqual(len(args), command_inst.failure_count)
 
   @RequiresIsolation
@@ -572,14 +563,13 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     def _RunFailureFunc():
       command_inst = self.command_class(True)
       args = ([()] * 5)
-      self._RunApply(
-          _FailureFunc,
-          args,
-          1,
-          1,
-          command_inst=command_inst,
-          shared_attrs=['failure_count'],
-          fail_on_error=True)
+      self._RunApply(_FailureFunc,
+                     args,
+                     1,
+                     1,
+                     command_inst=command_inst,
+                     shared_attrs=['failure_count'],
+                     fail_on_error=True)
 
     _ExpectCustomException(_RunFailureFunc)
 
@@ -700,23 +690,21 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     # Skip a proper subset of the arguments.
     n = 2 * process_count * thread_count
     args = range(1, n + 1)
-    results = self._RunApply(
-        _ReturnOneValue,
-        args,
-        process_count,
-        thread_count,
-        arg_checker=_SkipEvenNumbersArgChecker)
+    results = self._RunApply(_ReturnOneValue,
+                             args,
+                             process_count,
+                             thread_count,
+                             arg_checker=_SkipEvenNumbersArgChecker)
     self.assertEqual(n / 2, len(results))  # We know n is even.
     self.assertEqual(n / 2, sum(results))
 
     # Skip all arguments.
     args = [2 * x for x in args]
-    results = self._RunApply(
-        _ReturnOneValue,
-        args,
-        process_count,
-        thread_count,
-        arg_checker=_SkipEvenNumbersArgChecker)
+    results = self._RunApply(_ReturnOneValue,
+                             args,
+                             process_count,
+                             thread_count,
+                             arg_checker=_SkipEvenNumbersArgChecker)
     self.assertEqual(0, len(results))
 
 

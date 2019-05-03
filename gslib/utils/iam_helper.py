@@ -81,13 +81,12 @@ def SerializeBindingsTuple(bindings_tuple):
 
 def DeserializeBindingsTuple(serialized_bindings_tuple):
   (is_grant, bindings) = serialized_bindings_tuple
-  return BindingsTuple(
-      is_grant=is_grant,
-      bindings=[
-          protojson.decode_message(
-              apitools_messages.Policy.BindingsValueListEntry, t)
-          for t in bindings
-      ])
+  return BindingsTuple(is_grant=is_grant,
+                       bindings=[
+                           protojson.decode_message(
+                               apitools_messages.Policy.BindingsValueListEntry,
+                               t) for t in bindings
+                       ])
 
 
 def BindingsToDict(bindings):

@@ -49,12 +49,12 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
         flags=re.IGNORECASE)
 
     # Make sure the storage class shows up as nearline from defstorageclass get.
-    stdout = self.RunGsUtil(
-        self._get_dsc_cmd + [suri(bucket_uri)], return_stdout=True)
-    self.assertRegexpMatchesWithFlags(
-        stdout,
-        r'%s:\s+%s' % (suri(bucket_uri), new_storage_class),
-        flags=re.IGNORECASE)
+    stdout = self.RunGsUtil(self._get_dsc_cmd + [suri(bucket_uri)],
+                            return_stdout=True)
+    self.assertRegexpMatchesWithFlags(stdout,
+                                      r'%s:\s+%s' %
+                                      (suri(bucket_uri), new_storage_class),
+                                      flags=re.IGNORECASE)
 
   def test_set_and_get_for_multiple_buckets(self):
     bucket1_uri = self.CreateBucket()
@@ -80,46 +80,47 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
         [suri(bucket1_uri), suri(bucket2_uri)],
         return_stdout=True)
     for bucket_uri in (suri(bucket1_uri), suri(bucket2_uri)):
-      self.assertRegexpMatchesWithFlags(
-          stdout,
-          r'%s:\s+%s' % (bucket_uri, new_storage_class),
-          flags=re.IGNORECASE)
+      self.assertRegexpMatchesWithFlags(stdout,
+                                        r'%s:\s+%s' %
+                                        (bucket_uri, new_storage_class),
+                                        flags=re.IGNORECASE)
 
   def test_set_invalid_storage_class_fails(self):
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(
-        self._set_dsc_cmd + ['invalidclass', suri(bucket_uri)],
-        return_stderr=True,
-        expected_status=1)
+    stderr = self.RunGsUtil(self._set_dsc_cmd +
+                            ['invalidclass', suri(bucket_uri)],
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('BadRequestException: 400', stderr)
 
   def test_too_few_arguments_fails(self):
     # No arguments for set, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._set_dsc_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._set_dsc_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # Argument given for set, but no buckets listed.
-    stderr = self.RunGsUtil(
-        self._set_dsc_cmd + ['std'], return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._set_dsc_cmd + ['std'],
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._get_dsc_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._get_dsc_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
   def test_helpful_failure_with_s3_urls(self):
     s3_bucket_url = 's3://somebucket'
     failure_msg = 'does not support the URL "%s"' % s3_bucket_url
-    stderr = self.RunGsUtil(
-        self._get_dsc_cmd + [s3_bucket_url],
-        return_stderr=True,
-        expected_status=1)
+    stderr = self.RunGsUtil(self._get_dsc_cmd + [s3_bucket_url],
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn(failure_msg, stderr)
 
-    stderr = self.RunGsUtil(
-        self._set_dsc_cmd + ['ClassFoo', s3_bucket_url],
-        return_stderr=True,
-        expected_status=1)
+    stderr = self.RunGsUtil(self._set_dsc_cmd + ['ClassFoo', s3_bucket_url],
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn(failure_msg, stderr)

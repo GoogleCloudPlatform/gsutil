@@ -239,8 +239,9 @@ def WriteComponentToParallelUploadTrackerFile(tracker_file_name,
     encryption_key_sha256: Encryption key SHA256 for use in this upload, if any.
   """
   with tracker_file_lock:
-    (existing_enc_key_sha256, prefix, existing_components) = (
-        ReadParallelUploadTrackerFile(tracker_file_name, logger))
+    (existing_enc_key_sha256, prefix,
+     existing_components) = (ReadParallelUploadTrackerFile(
+         tracker_file_name, logger))
     if existing_enc_key_sha256 != encryption_key_sha256:
       raise CommandException(
           'gsutil client error: encryption key SHA256 (%s) in tracker file '
@@ -249,11 +250,10 @@ def WriteComponentToParallelUploadTrackerFile(tracker_file_name,
            component.object_name))
     newly_completed_components = [component]
     completed_components = existing_components + newly_completed_components
-    WriteParallelUploadTrackerFile(
-        tracker_file_name,
-        prefix,
-        completed_components,
-        encryption_key_sha256=encryption_key_sha256)
+    WriteParallelUploadTrackerFile(tracker_file_name,
+                                   prefix,
+                                   completed_components,
+                                   encryption_key_sha256=encryption_key_sha256)
 
 
 def WriteParallelUploadTrackerFile(tracker_file_name,
@@ -292,8 +292,10 @@ def WriteParallelUploadTrackerFile(tracker_file_name,
   tracker_components = []
   for component in components:
     tracker_components.append({
-        _CompositeUploadTrackerEntry.COMPONENT_NAME: component.object_name,
-        _CompositeUploadTrackerEntry.COMPONENT_GENERATION: component.generation
+        _CompositeUploadTrackerEntry.COMPONENT_NAME:
+        component.object_name,
+        _CompositeUploadTrackerEntry.COMPONENT_GENERATION:
+        component.generation
     })
   tracker_file_data = {
       _CompositeUploadTrackerEntry.COMPONENTS_LIST: tracker_components,

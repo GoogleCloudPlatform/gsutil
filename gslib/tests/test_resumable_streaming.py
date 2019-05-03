@@ -55,8 +55,9 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
   def testReadInChunks(self):
     tmp_file = self._GetTestFile()
     with open(tmp_file, 'rb') as stream:
-      wrapper = ResumableStreamingJsonUploadWrapper(
-          stream, TRANSFER_BUFFER_SIZE, test_small_buffer=True)
+      wrapper = ResumableStreamingJsonUploadWrapper(stream,
+                                                    TRANSFER_BUFFER_SIZE,
+                                                    test_small_buffer=True)
       hash_dict = {'md5': md5()}
       # CalculateHashesFromContents reads in chunks, but does not seek.
       CalculateHashesFromContents(wrapper, hash_dict)
@@ -80,8 +81,9 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
         # exception.
         expect_exception = buffer_size < self._temp_test_file_len
         with open(tmp_file, 'rb') as stream:
-          wrapper = ResumableStreamingJsonUploadWrapper(
-              stream, buffer_size, test_small_buffer=True)
+          wrapper = ResumableStreamingJsonUploadWrapper(stream,
+                                                        buffer_size,
+                                                        test_small_buffer=True)
           wrapper.read(initial_read)
           # CalculateMd5FromContents seeks to 0, reads in chunks, then seeks
           # to 0 again.
@@ -136,8 +138,9 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
         '(but was actually: %s)' % (self._temp_test_file_len, initial_position))
 
     with open(tmp_file, 'rb') as stream:
-      wrapper = ResumableStreamingJsonUploadWrapper(
-          stream, buffer_size, test_small_buffer=True)
+      wrapper = ResumableStreamingJsonUploadWrapper(stream,
+                                                    buffer_size,
+                                                    test_small_buffer=True)
       position = 0
       for read_size in initial_reads:
         data = wrapper.read(read_size)
@@ -215,8 +218,9 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
     tmp_file = self._GetTestFile()
     read_size = TRANSFER_BUFFER_SIZE
     with open(tmp_file, 'rb') as stream:
-      wrapper = ResumableStreamingJsonUploadWrapper(
-          stream, TRANSFER_BUFFER_SIZE * 3, test_small_buffer=True)
+      wrapper = ResumableStreamingJsonUploadWrapper(stream,
+                                                    TRANSFER_BUFFER_SIZE * 3,
+                                                    test_small_buffer=True)
       position = 0
       for _ in range(3):
         data = wrapper.read(read_size)
@@ -245,8 +249,9 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
                         TRANSFER_BUFFER_SIZE + 1):
         expect_exception = seek_back > buffer_size
         with open(tmp_file, 'rb') as stream:
-          wrapper = ResumableStreamingJsonUploadWrapper(
-              stream, buffer_size, test_small_buffer=True)
+          wrapper = ResumableStreamingJsonUploadWrapper(stream,
+                                                        buffer_size,
+                                                        test_small_buffer=True)
           # Read to the end.
           while wrapper.read(TRANSFER_BUFFER_SIZE):
             pass

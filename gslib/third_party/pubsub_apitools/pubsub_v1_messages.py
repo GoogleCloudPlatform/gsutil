@@ -7,7 +7,6 @@ Provides reliable, many-to-many, asynchronous messaging between applications.
 from apitools.base.protorpclite import messages as _messages
 from apitools.base.py import encoding
 
-
 package = 'pubsub'
 
 
@@ -55,7 +54,6 @@ class Empty(_messages.Message):
   rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);     }  The
   JSON representation for `Empty` is empty JSON object `{}`.
   """
-
 
 
 class ListSubscriptionsResponse(_messages.Message):
@@ -114,7 +112,8 @@ class ModifyAckDeadlineRequest(_messages.Message):
     ackIds: List of acknowledgment IDs.
   """
 
-  ackDeadlineSeconds = _messages.IntegerField(1, variant=_messages.Variant.INT32)
+  ackDeadlineSeconds = _messages.IntegerField(1,
+                                              variant=_messages.Variant.INT32)
   ackIds = _messages.StringField(2, repeated=True)
 
 
@@ -231,7 +230,9 @@ class PubsubMessage(_messages.Message):
       key = _messages.StringField(1)
       value = _messages.StringField(2)
 
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+    additionalProperties = _messages.MessageField('AdditionalProperty',
+                                                  1,
+                                                  repeated=True)
 
   attributes = _messages.MessageField('AttributesValue', 1)
   data = _messages.BytesField(2)
@@ -278,7 +279,8 @@ class PubsubProjectsSnapshotsTestIamPermissionsRequest(_messages.Message):
   """
 
   resource = _messages.StringField(1, required=True)
-  testIamPermissionsRequest = _messages.MessageField('TestIamPermissionsRequest', 2)
+  testIamPermissionsRequest = _messages.MessageField(
+      'TestIamPermissionsRequest', 2)
 
 
 class PubsubProjectsSubscriptionsAcknowledgeRequest(_messages.Message):
@@ -356,7 +358,8 @@ class PubsubProjectsSubscriptionsModifyAckDeadlineRequest(_messages.Message):
       `projects/{project}/subscriptions/{sub}`.
   """
 
-  modifyAckDeadlineRequest = _messages.MessageField('ModifyAckDeadlineRequest', 1)
+  modifyAckDeadlineRequest = _messages.MessageField('ModifyAckDeadlineRequest',
+                                                    1)
   subscription = _messages.StringField(2, required=True)
 
 
@@ -414,7 +417,8 @@ class PubsubProjectsSubscriptionsTestIamPermissionsRequest(_messages.Message):
   """
 
   resource = _messages.StringField(1, required=True)
-  testIamPermissionsRequest = _messages.MessageField('TestIamPermissionsRequest', 2)
+  testIamPermissionsRequest = _messages.MessageField(
+      'TestIamPermissionsRequest', 2)
 
 
 class PubsubProjectsTopicsDeleteRequest(_messages.Message):
@@ -527,7 +531,8 @@ class PubsubProjectsTopicsTestIamPermissionsRequest(_messages.Message):
   """
 
   resource = _messages.StringField(1, required=True)
-  testIamPermissionsRequest = _messages.MessageField('TestIamPermissionsRequest', 2)
+  testIamPermissionsRequest = _messages.MessageField(
+      'TestIamPermissionsRequest', 2)
 
 
 class PullRequest(_messages.Message):
@@ -638,7 +643,9 @@ class PushConfig(_messages.Message):
       key = _messages.StringField(1)
       value = _messages.StringField(2)
 
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+    additionalProperties = _messages.MessageField('AdditionalProperty',
+                                                  1,
+                                                  repeated=True)
 
   attributes = _messages.MessageField('AttributesValue', 1)
   pushEndpoint = _messages.StringField(2)
@@ -770,7 +777,8 @@ class Subscription(_messages.Message):
       this field will be `_deleted-topic_` if the topic has been deleted.
   """
 
-  ackDeadlineSeconds = _messages.IntegerField(1, variant=_messages.Variant.INT32)
+  ackDeadlineSeconds = _messages.IntegerField(1,
+                                              variant=_messages.Variant.INT32)
   name = _messages.StringField(2)
   pushConfig = _messages.MessageField('PushConfig', 3)
   topic = _messages.StringField(4)
@@ -815,9 +823,9 @@ class Topic(_messages.Message):
   name = _messages.StringField(1)
 
 
-encoding.AddCustomJsonFieldMapping(
-    StandardQueryParameters, 'f__xgafv', '$.xgafv')
-encoding.AddCustomJsonEnumMapping(
-    StandardQueryParameters.FXgafvValueValuesEnum, '_1', '1')
-encoding.AddCustomJsonEnumMapping(
-    StandardQueryParameters.FXgafvValueValuesEnum, '_2', '2')
+encoding.AddCustomJsonFieldMapping(StandardQueryParameters, 'f__xgafv',
+                                   '$.xgafv')
+encoding.AddCustomJsonEnumMapping(StandardQueryParameters.FXgafvValueValuesEnum,
+                                  '_1', '1')
+encoding.AddCustomJsonEnumMapping(StandardQueryParameters.FXgafvValueValuesEnum,
+                                  '_2', '2')

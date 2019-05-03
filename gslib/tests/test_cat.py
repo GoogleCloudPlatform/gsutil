@@ -73,13 +73,13 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     """Tests cat command on versioned objects."""
     bucket_uri = self.CreateVersionedBucket()
     # Create 2 versions of an object.
-    uri1 = self.CreateObject(
-        bucket_uri=bucket_uri, contents=b'data1', gs_idempotent_generation=0)
-    uri2 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name=uri1.object_name,
-        contents=b'data2',
-        gs_idempotent_generation=urigen(uri1))
+    uri1 = self.CreateObject(bucket_uri=bucket_uri,
+                             contents=b'data1',
+                             gs_idempotent_generation=0)
+    uri2 = self.CreateObject(bucket_uri=bucket_uri,
+                             object_name=uri1.object_name,
+                             contents=b'data2',
+                             gs_idempotent_generation=urigen(uri1))
     stdout = self.RunGsUtil(['cat', suri(uri1)], return_stdout=True)
     # Last version written should be live.
     self.assertEqual('data2', stdout)
@@ -145,10 +145,9 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
       return unittest.skip(
           'gsutil does not support encryption with the XML API')
     object_contents = b'0123456789'
-    object_uri = self.CreateObject(
-        object_name='foo',
-        contents=object_contents,
-        encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(object_name='foo',
+                                   contents=object_contents,
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
 
     stderr = self.RunGsUtil(['cat', suri(object_uri)],
                             expected_status=1,

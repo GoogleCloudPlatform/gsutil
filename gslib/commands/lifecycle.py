@@ -147,23 +147,23 @@ class LifecycleCommand(Command):
     # Iterate over URLs, expanding wildcards and setting the lifecycle on each.
     some_matched = False
     for url_str in url_args:
-      bucket_iter = self.GetBucketUrlIterFromArg(
-          url_str, bucket_fields=['lifecycle'])
+      bucket_iter = self.GetBucketUrlIterFromArg(url_str,
+                                                 bucket_fields=['lifecycle'])
       for blr in bucket_iter:
         url = blr.storage_url
         some_matched = True
         self.logger.info('Setting lifecycle configuration on %s...', blr)
         if url.scheme == 's3':
-          self.gsutil_api.XmlPassThroughSetLifecycle(
-              lifecycle_txt, url, provider=url.scheme)
+          self.gsutil_api.XmlPassThroughSetLifecycle(lifecycle_txt,
+                                                     url,
+                                                     provider=url.scheme)
         else:
           lifecycle = LifecycleTranslation.JsonLifecycleToMessage(lifecycle_txt)
           bucket_metadata = apitools_messages.Bucket(lifecycle=lifecycle)
-          self.gsutil_api.PatchBucket(
-              url.bucket_name,
-              bucket_metadata,
-              provider=url.scheme,
-              fields=['id'])
+          self.gsutil_api.PatchBucket(url.bucket_name,
+                                      bucket_metadata,
+                                      provider=url.scheme,
+                                      fields=['id'])
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
     return 0

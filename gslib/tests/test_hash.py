@@ -67,20 +67,24 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
   def testHashWildcard(self):
     num_test_files = 2
     tmp_dir = self.CreateTempDir(test_files=num_test_files)
-    stdout = self.RunCommand(
-        'hash', args=[os.path.join(tmp_dir, '*')], return_stdout=True)
+    stdout = self.RunCommand('hash',
+                             args=[os.path.join(tmp_dir, '*')],
+                             return_stdout=True)
     # One summary line and two hash lines per file.
     num_expected_lines = num_test_files * (1 + 2)
     self.assertEquals(len(stdout.splitlines()), num_expected_lines)
 
   def testHashSelectAlg(self):
     tmp_file = self.CreateTempFile(contents=_TEST_FILE_CONTENTS)
-    stdout_crc = self.RunCommand(
-        'hash', args=['-c', tmp_file], return_stdout=True)
-    stdout_md5 = self.RunCommand(
-        'hash', args=['-m', tmp_file], return_stdout=True)
-    stdout_both = self.RunCommand(
-        'hash', args=['-c', '-m', tmp_file], return_stdout=True)
+    stdout_crc = self.RunCommand('hash',
+                                 args=['-c', tmp_file],
+                                 return_stdout=True)
+    stdout_md5 = self.RunCommand('hash',
+                                 args=['-m', tmp_file],
+                                 return_stdout=True)
+    stdout_both = self.RunCommand('hash',
+                                  args=['-c', '-m', tmp_file],
+                                  return_stdout=True)
     for stdout in (stdout_crc, stdout_both):
       self.assertIn(
           ('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC).encode('ascii'),
@@ -121,12 +125,12 @@ class TestHash(testcase.GsUtilIntegrationTestCase):
   def testHashCompositeObject(self):
     """Test hash command on a composite object (which only has crc32c)."""
     bucket = self.CreateBucket()
-    obj1 = self.CreateObject(
-        bucket_uri=bucket, object_name='obj1', contents=_TEST_FILE_CONTENTS)
-    obj2 = self.CreateObject(
-        bucket_uri=bucket,
-        object_name='tmp',
-        contents=_TEST_COMPOSITE_ADDED_CONTENTS)
+    obj1 = self.CreateObject(bucket_uri=bucket,
+                             object_name='obj1',
+                             contents=_TEST_FILE_CONTENTS)
+    obj2 = self.CreateObject(bucket_uri=bucket,
+                             object_name='tmp',
+                             contents=_TEST_COMPOSITE_ADDED_CONTENTS)
     self.RunGsUtil(['compose', suri(obj1), suri(obj2), suri(obj1)])
 
     stdout = self.RunGsUtil(['hash', '-h', suri(obj1)], return_stdout=True)

@@ -166,10 +166,9 @@ class LoggingCommand(Command):
         self.args[0], bucket_fields=['logging'])
 
     if bucket_url.scheme == 's3':
-      text_util.print_to_fd(
-          self.gsutil_api.XmlPassThroughGetLogging(
-              bucket_url, provider=bucket_url.scheme),
-          end='')
+      text_util.print_to_fd(self.gsutil_api.XmlPassThroughGetLogging(
+          bucket_url, provider=bucket_url.scheme),
+                            end='')
     else:
       if (bucket_metadata.logging and bucket_metadata.logging.logBucket and
           bucket_metadata.logging.logObjectPrefix):
@@ -213,11 +212,10 @@ class LoggingCommand(Command):
             logObjectPrefix=target_prefix or url.bucket_name)
 
         bucket_metadata = apitools_messages.Bucket(logging=logging)
-        self.gsutil_api.PatchBucket(
-            url.bucket_name,
-            bucket_metadata,
-            provider=url.scheme,
-            fields=['id'])
+        self.gsutil_api.PatchBucket(url.bucket_name,
+                                    bucket_metadata,
+                                    provider=url.scheme,
+                                    fields=['id'])
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(self.args))
     return 0
@@ -235,11 +233,10 @@ class LoggingCommand(Command):
         logging = apitools_messages.Bucket.LoggingValue()
 
         bucket_metadata = apitools_messages.Bucket(logging=logging)
-        self.gsutil_api.PatchBucket(
-            url.bucket_name,
-            bucket_metadata,
-            provider=url.scheme,
-            fields=['id'])
+        self.gsutil_api.PatchBucket(url.bucket_name,
+                                    bucket_metadata,
+                                    provider=url.scheme,
+                                    fields=['id'])
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(self.args))
     return 0

@@ -112,14 +112,13 @@ class HelpCommand(Command):
     if not self.args:
       output.append('%s\nAvailable commands:\n' % top_level_usage_string)
       format_str = '  %-' + str(MAX_HELP_NAME_LEN) + 's%s\n'
-      for help_prov in sorted(
-          help_type_map['command_help'], key=lambda hp: hp.help_spec.help_name):
+      for help_prov in sorted(help_type_map['command_help'],
+                              key=lambda hp: hp.help_spec.help_name):
         output.append(format_str % (help_prov.help_spec.help_name,
                                     help_prov.help_spec.help_one_line_summary))
       output.append('\nAdditional help topics:\n')
-      for help_prov in sorted(
-          help_type_map['additional_help'],
-          key=lambda hp: hp.help_spec.help_name):
+      for help_prov in sorted(help_type_map['additional_help'],
+                              key=lambda hp: hp.help_spec.help_name):
         output.append(format_str % (help_prov.help_spec.help_name,
                                     help_prov.help_spec.help_one_line_summary))
       output.append('\nUse gsutil help <command or topic> for detailed help.')

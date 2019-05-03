@@ -144,7 +144,9 @@ setup(
         ],),
     include_package_data=True,
     entry_points={
-        'console_scripts': ['gsutil = gslib.__main__:main',],
+        'console_scripts': [
+            'gsutil = gslib.__main__:main',
+        ],
     },
     install_requires=requires,
     cmdclass={

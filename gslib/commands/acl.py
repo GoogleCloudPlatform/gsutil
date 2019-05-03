@@ -277,9 +277,8 @@ _CH_DESCRIPTION = """
     -u          Add or modify a user entity's role.
 """
 
-_SYNOPSIS = (
-    _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + _CH_SYNOPSIS.lstrip('\n') +
-    '\n\n')
+_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
+             _CH_SYNOPSIS.lstrip('\n') + '\n\n')
 
 _DESCRIPTION = ("""
   The acl command has three sub-commands:
@@ -409,11 +408,10 @@ class AclCommand(Command):
               self.command_name))
 
     self.everything_set_okay = True
-    self.ApplyAclFunc(
-        _ApplyAclChangesWrapper,
-        _ApplyExceptionHandler,
-        self.args,
-        object_fields=['acl', 'generation', 'metageneration'])
+    self.ApplyAclFunc(_ApplyAclChangesWrapper,
+                      _ApplyExceptionHandler,
+                      self.args,
+                      object_fields=['acl', 'generation', 'metageneration'])
     if not self.everything_set_okay:
       raise CommandException('ACLs for some objects could not be set.')
 
@@ -437,10 +435,9 @@ class AclCommand(Command):
 
     url = name_expansion_result.expanded_storage_url
     if url.IsBucket():
-      bucket = gsutil_api.GetBucket(
-          url.bucket_name,
-          provider=url.scheme,
-          fields=['acl', 'metageneration'])
+      bucket = gsutil_api.GetBucket(url.bucket_name,
+                                    provider=url.scheme,
+                                    fields=['acl', 'metageneration'])
       current_acl = bucket.acl
     elif url.IsObject():
       gcs_object = encoding.JsonToMessage(apitools_messages.Object,
@@ -457,26 +454,23 @@ class AclCommand(Command):
       if url.IsBucket():
         preconditions = Preconditions(meta_gen_match=bucket.metageneration)
         bucket_metadata = apitools_messages.Bucket(acl=current_acl)
-        gsutil_api.PatchBucket(
-            url.bucket_name,
-            bucket_metadata,
-            preconditions=preconditions,
-            provider=url.scheme,
-            fields=['id'])
+        gsutil_api.PatchBucket(url.bucket_name,
+                               bucket_metadata,
+                               preconditions=preconditions,
+                               provider=url.scheme,
+                               fields=['id'])
       else:  # Object
-        preconditions = Preconditions(
-            gen_match=gcs_object.generation,
-            meta_gen_match=gcs_object.metageneration)
+        preconditions = Preconditions(gen_match=gcs_object.generation,
+                                      meta_gen_match=gcs_object.metageneration)
         object_metadata = apitools_messages.Object(acl=current_acl)
         try:
-          gsutil_api.PatchObjectMetadata(
-              url.bucket_name,
-              url.object_name,
-              object_metadata,
-              preconditions=preconditions,
-              provider=url.scheme,
-              generation=url.generation,
-              fields=['id'])
+          gsutil_api.PatchObjectMetadata(url.bucket_name,
+                                         url.object_name,
+                                         object_metadata,
+                                         preconditions=preconditions,
+                                         provider=url.scheme,
+                                         generation=url.generation,
+                                         fields=['id'])
         except PreconditionException as e:
           # Special retry case where we want to do an additional step, the read
           # of the read-modify-write cycle, to fetch the correct object
@@ -511,17 +505,15 @@ class AclCommand(Command):
       return
 
     object_metadata = apitools_messages.Object(acl=current_acl)
-    preconditions = Preconditions(
-        gen_match=gcs_object.generation,
-        meta_gen_match=gcs_object.metageneration)
-    gsutil_api.PatchObjectMetadata(
-        url.bucket_name,
-        url.object_name,
-        object_metadata,
-        preconditions=preconditions,
-        provider=url.scheme,
-        generation=gcs_object.generation,
-        fields=['id'])
+    preconditions = Preconditions(gen_match=gcs_object.generation,
+                                  meta_gen_match=gcs_object.metageneration)
+    gsutil_api.PatchObjectMetadata(url.bucket_name,
+                                   url.object_name,
+                                   object_metadata,
+                                   preconditions=preconditions,
+                                   provider=url.scheme,
+                                   generation=gcs_object.generation,
+                                   fields=['id'])
 
   def _ApplyAclChangesAndReturnChangeCount(self, storage_url, acl_message):
     modification_count = 0

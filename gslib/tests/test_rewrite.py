@@ -66,8 +66,8 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     """Tests that rewrite fails on a URL that includes a generation."""
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(
-        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(contents=b'bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
     generation = object_uri.generation
     stderr = self.RunGsUtil(
         ['rewrite', '-k',
@@ -80,8 +80,9 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     """Tests that rewrite fails when no decryption key matches."""
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(
-        object_name='foo', contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(object_name='foo',
+                                   contents=b'bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
     boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
                             ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY3)]
     with SetBotoConfigForTest(boto_config_for_test):
@@ -96,8 +97,8 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     """Tests rewrite with arguments supplied on stdin."""
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(
-        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(contents=b'bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
     stdin_arg = suri(object_uri)
 
     boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
@@ -110,8 +111,8 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     """Tests rewrite with the -O flag."""
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(
-        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(contents=b'bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
     self.RunGsUtil(['acl', 'ch', '-u', 'AllUsers:R', suri(object_uri)])
     stdout = self.RunGsUtil(['acl', 'get', suri(object_uri)],
                             return_stdout=True)
@@ -152,23 +153,21 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
       command_args: list of args to gsutil command.
     """
     object_contents = b'bar'
-    object_uri1 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo/foo',
-        contents=object_contents,
-        encryption_key=TEST_ENCRYPTION_KEY1)
-    object_uri2 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo/bar',
-        contents=object_contents,
-        encryption_key=TEST_ENCRYPTION_KEY2)
-    object_uri3 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo/baz',
-        contents=object_contents,
-        encryption_key=TEST_ENCRYPTION_KEY3)
-    object_uri4 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo/qux', contents=object_contents)
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo/foo',
+                                    contents=object_contents,
+                                    encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo/bar',
+                                    contents=object_contents,
+                                    encryption_key=TEST_ENCRYPTION_KEY2)
+    object_uri3 = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo/baz',
+                                    contents=object_contents,
+                                    encryption_key=TEST_ENCRYPTION_KEY3)
+    object_uri4 = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo/qux',
+                                    contents=object_contents)
 
     # Rotate all keys to TEST_ENCRYPTION_KEY1.
     boto_config_for_test = [
@@ -202,8 +201,8 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_seek_ahead(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(
-        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(contents=b'bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
     # Remove encryption
     boto_config_for_test = [('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY1),
                             ('GSUtil', 'task_estimation_threshold', '1'),
@@ -217,8 +216,8 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_unintentional_key_rotation_fails(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    encrypted_obj_uri = self.CreateObject(
-        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
+    encrypted_obj_uri = self.CreateObject(contents=b'bar',
+                                          encryption_key=TEST_ENCRYPTION_KEY1)
     unencrypted_obj_uri = self.CreateObject(contents=b'bar')
 
     boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
@@ -243,8 +242,8 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_key_rotation_single_object(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(
-        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(contents=b'bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
 
     # Rotate key.
     boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
@@ -273,23 +272,21 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     object_contents = b'bar'
     rotate_subdir = suri(bucket_uri, 'bar')
-    object_uri1 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo/bar',
-        contents=object_contents,
-        encryption_key=TEST_ENCRYPTION_KEY1)
-    object_uri2 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='bar/foo',
-        contents=object_contents,
-        encryption_key=TEST_ENCRYPTION_KEY2)
-    object_uri3 = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='bar/baz',
-        contents=object_contents,
-        encryption_key=TEST_ENCRYPTION_KEY3)
-    object_uri4 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='bar/qux', contents=object_contents)
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo/bar',
+                                    contents=object_contents,
+                                    encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='bar/foo',
+                                    contents=object_contents,
+                                    encryption_key=TEST_ENCRYPTION_KEY2)
+    object_uri3 = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='bar/baz',
+                                    contents=object_contents,
+                                    encryption_key=TEST_ENCRYPTION_KEY3)
+    object_uri4 = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='bar/qux',
+                                    contents=object_contents)
 
     # Rotate subdir keys to TEST_ENCRYPTION_KEY3.
     boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY3),
@@ -337,8 +334,8 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     # performing the other desired transformations.
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(
-        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(contents=b'bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
     boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil(['rewrite', '-s', 'nearline',
@@ -349,8 +346,8 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_key_rotation_with_storage_class_change(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(
-        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(contents=b'bar',
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
 
     # Rotate key and change storage class to nearline.
     boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
@@ -400,10 +397,9 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_with_same_key_and_storage_class_is_skipped(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(
-        contents=b'foo',
-        encryption_key=TEST_ENCRYPTION_KEY1,
-        storage_class='standard')
+    object_uri = self.CreateObject(contents=b'foo',
+                                   encryption_key=TEST_ENCRYPTION_KEY1,
+                                   storage_class='standard')
 
     boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
     with SetBotoConfigForTest(boto_config_for_test):
@@ -428,23 +424,20 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
                                          TEST_ENCRYPTION_KEY2)
 
   def test_rewrite_resume_restart_source_encryption_changed(self):
-    self._test_rewrite_resume_or_restart(
-        TEST_ENCRYPTION_KEY1,
-        TEST_ENCRYPTION_KEY2,
-        new_dec_key=TEST_ENCRYPTION_KEY3)
+    self._test_rewrite_resume_or_restart(TEST_ENCRYPTION_KEY1,
+                                         TEST_ENCRYPTION_KEY2,
+                                         new_dec_key=TEST_ENCRYPTION_KEY3)
 
   def test_rewrite_resume_restart_dest_encryption_changed(self):
-    self._test_rewrite_resume_or_restart(
-        TEST_ENCRYPTION_KEY1,
-        TEST_ENCRYPTION_KEY2,
-        new_enc_key=TEST_ENCRYPTION_KEY3)
+    self._test_rewrite_resume_or_restart(TEST_ENCRYPTION_KEY1,
+                                         TEST_ENCRYPTION_KEY2,
+                                         new_enc_key=TEST_ENCRYPTION_KEY3)
 
   def test_rewrite_resume_restart_both_encryption_changed(self):
-    self._test_rewrite_resume_or_restart(
-        TEST_ENCRYPTION_KEY1,
-        TEST_ENCRYPTION_KEY2,
-        new_dec_key=TEST_ENCRYPTION_KEY3,
-        new_enc_key=TEST_ENCRYPTION_KEY4)
+    self._test_rewrite_resume_or_restart(TEST_ENCRYPTION_KEY1,
+                                         TEST_ENCRYPTION_KEY2,
+                                         new_dec_key=TEST_ENCRYPTION_KEY3,
+                                         new_enc_key=TEST_ENCRYPTION_KEY4)
 
   def authorize_project_to_use_testing_kms_key(
       self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
@@ -540,8 +533,9 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
 
     # Create an unencrypted object.
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo', contents=b'foo')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                   object_name='foo',
+                                   contents=b'foo')
 
     # Set the bucket's default KMS key.
     self.RunGsUtil(['kms', 'encryption', '-k', key_fqn, suri(bucket_uri)])
@@ -583,12 +577,11 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     # maxBytesPerCall must be >= 1 MiB, so create an object > 2 MiB because we
     # need 2 response from the service: 1 success, 1 failure prior to
     # completion.
-    object_uri = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo',
-        contents=(b'12' * ONE_MIB) + b'bar',
-        prefer_json_api=True,
-        encryption_key=initial_dec_key)
+    object_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                   object_name='foo',
+                                   contents=(b'12' * ONE_MIB) + b'bar',
+                                   prefer_json_api=True,
+                                   encryption_key=initial_dec_key)
     gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
                             DiscardMessagesQueue(), self.default_provider)
     with SetBotoConfigForTest([('GSUtil', 'decryption_key1', initial_dec_key)]):
@@ -610,13 +603,13 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
 
     try:
       try:
-        gsutil_api.CopyObject(
-            src_obj_metadata,
-            dst_obj_metadata,
-            progress_callback=HaltingRewriteCallbackHandler(ONE_MIB * 2).call,
-            max_bytes_per_call=ONE_MIB,
-            decryption_tuple=decryption_tuple,
-            encryption_tuple=encryption_tuple)
+        gsutil_api.CopyObject(src_obj_metadata,
+                              dst_obj_metadata,
+                              progress_callback=HaltingRewriteCallbackHandler(
+                                  ONE_MIB * 2).call,
+                              max_bytes_per_call=ONE_MIB,
+                              decryption_tuple=decryption_tuple,
+                              encryption_tuple=encryption_tuple)
         self.fail('Expected RewriteHaltException.')
       except RewriteHaltException:
         pass
@@ -626,13 +619,12 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
 
       if new_dec_key:
         # Recreate the object with a different encryption key.
-        self.CreateObject(
-            bucket_uri=bucket_uri,
-            object_name='foo',
-            contents=(b'12' * ONE_MIB) + b'bar',
-            prefer_json_api=True,
-            encryption_key=new_dec_key,
-            gs_idempotent_generation=urigen(object_uri))
+        self.CreateObject(bucket_uri=bucket_uri,
+                          object_name='foo',
+                          contents=(b'12' * ONE_MIB) + b'bar',
+                          prefer_json_api=True,
+                          encryption_key=new_dec_key,
+                          gs_idempotent_generation=urigen(object_uri))
 
       with SetBotoConfigForTest([('GSUtil', 'decryption_key1', new_dec_key or
                                   initial_dec_key)]):
@@ -649,13 +641,12 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
         progress_callback = EnsureRewriteResumeCallbackHandler(ONE_MIB * 2).call
 
       # Now resume. Callback ensures the appropriate resume/restart behavior.
-      gsutil_api.CopyObject(
-          src_obj_metadata,
-          dst_obj_metadata,
-          progress_callback=progress_callback,
-          max_bytes_per_call=ONE_MIB,
-          decryption_tuple=decryption_tuple2,
-          encryption_tuple=encryption_tuple2)
+      gsutil_api.CopyObject(src_obj_metadata,
+                            dst_obj_metadata,
+                            progress_callback=progress_callback,
+                            max_bytes_per_call=ONE_MIB,
+                            decryption_tuple=decryption_tuple2,
+                            encryption_tuple=encryption_tuple2)
 
       # Copy completed; tracker file should be deleted.
       self.assertFalse(os.path.exists(tracker_file_name))

@@ -144,8 +144,7 @@ class CatCommand(Command):
         else:
           self.RaiseInvalidArgumentException()
 
-    return cat_helper.CatHelper(self).CatUrlStrings(
-        self.args,
-        show_header=show_header,
-        start_byte=start_byte,
-        end_byte=end_byte)
+    return cat_helper.CatHelper(self).CatUrlStrings(self.args,
+                                                    show_header=show_header,
+                                                    start_byte=start_byte,
+                                                    end_byte=end_byte)

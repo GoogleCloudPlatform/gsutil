@@ -36,34 +36,37 @@ class TestLogging(testcase.GsUtilIntegrationTestCase):
     """Tests enabling and disabling logging."""
     bucket_uri = self.CreateBucket()
     bucket_suri = suri(bucket_uri)
-    stderr = self.RunGsUtil(
-        self._enable_log_cmd + ['-b', bucket_suri, bucket_suri],
-        return_stderr=True)
+    stderr = self.RunGsUtil(self._enable_log_cmd +
+                            ['-b', bucket_suri, bucket_suri],
+                            return_stderr=True)
     self.assertIn('Enabling logging', stderr)
 
-    stdout = self.RunGsUtil(
-        self._get_log_cmd + [bucket_suri], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_log_cmd + [bucket_suri],
+                            return_stdout=True)
     self.assertIn('LogObjectPrefix'.lower(), stdout.lower())
 
-    stderr = self.RunGsUtil(
-        self._disable_log_cmd + [bucket_suri], return_stderr=True)
+    stderr = self.RunGsUtil(self._disable_log_cmd + [bucket_suri],
+                            return_stderr=True)
     self.assertIn('Disabling logging', stderr)
 
   def testTooFewArgumentsFails(self):
     """Ensures logging commands fail with too few arguments."""
     # No arguments for enable, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._enable_log_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._enable_log_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for disable, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._disable_log_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._disable_log_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._get_log_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._get_log_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # Neither arguments nor subcommand.

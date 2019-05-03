@@ -176,9 +176,8 @@ def HumanReadableWithDecimalPlaces(number, decimal_places=1):
   else:
     num_length = len(num)
     if decimal_places:
-      num = (
-          num[:num_length - decimal_places] + '.' +
-          num[num_length - decimal_places:])
+      num = (num[:num_length - decimal_places] + '.' +
+             num[num_length - decimal_places:])
     number_format[0] = num
   return ' '.join(number_format)
 

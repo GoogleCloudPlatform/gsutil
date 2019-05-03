@@ -101,13 +101,12 @@ class FakeCommandWithInvalidCompleter(Command):
   command_spec = Command.CreateCommandSpec(
       'fake1', argparse_arguments=[CommandArgument('arg', completer='BAD')])
 
-  help_spec = Command.HelpSpec(
-      help_name='fake1',
-      help_name_aliases=[],
-      help_type='command_help',
-      help_one_line_summary='fake command for tests',
-      help_text='fake command for tests',
-      subcommand_help_text={})
+  help_spec = Command.HelpSpec(help_name='fake1',
+                               help_name_aliases=[],
+                               help_type='command_help',
+                               help_one_line_summary='fake command for tests',
+                               help_text='fake command for tests',
+                               subcommand_help_text={})
 
   def __init__(self):
     pass
@@ -119,16 +118,15 @@ class FakeCommandWithNestedArguments(object):
   # Matches the number of CommandArguments in argparse_arguments below.
   num_args = 2
 
-  command_spec = Command.CreateCommandSpec(
-      'FakeCommandWithNestedArguments',
-      argparse_arguments={
-          subcommand_name: {
-              subcommand_subname: [
-                  CommandArgument('arg1'),
-                  CommandArgument('arg2'),
-              ]
-          }
-      })
+  command_spec = Command.CreateCommandSpec('FakeCommandWithNestedArguments',
+                                           argparse_arguments={
+                                               subcommand_name: {
+                                                   subcommand_subname: [
+                                                       CommandArgument('arg1'),
+                                                       CommandArgument('arg2'),
+                                                   ]
+                                               }
+                                           })
 
 
 class FakeCommandWithCompleters(Command):
@@ -145,13 +143,12 @@ class FakeCommandWithCompleters(Command):
           CommandArgument.MakeFileURLOrCannedACLArgument(),
       ])
 
-  help_spec = Command.HelpSpec(
-      help_name='fake2',
-      help_name_aliases=[],
-      help_type='command_help',
-      help_one_line_summary='fake command for tests',
-      help_text='fake command for tests',
-      subcommand_help_text={})
+  help_spec = Command.HelpSpec(help_name='fake2',
+                               help_name_aliases=[],
+                               help_type='command_help',
+                               help_one_line_summary='fake command for tests',
+                               help_text='fake command for tests',
+                               subcommand_help_text={})
 
   def __init__(self):
     pass
@@ -198,10 +195,9 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
     # Create a fake pub tarball that will be used to check for gsutil version.
     self.pub_bucket_uri = self.CreateBucket('pub')
-    self.gsutil_tarball_uri = self.CreateObject(
-        bucket_uri=self.pub_bucket_uri,
-        object_name='gsutil.tar.gz',
-        contents='foo')
+    self.gsutil_tarball_uri = self.CreateObject(bucket_uri=self.pub_bucket_uri,
+                                                object_name='gsutil.tar.gz',
+                                                contents='foo')
 
   def tearDown(self):
     """Tears down the command runner mock objects."""
@@ -332,7 +328,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
     command_map = {
         FakeCommandWithInvalidCompleter.command_spec.command_name:
-            FakeCommandWithInvalidCompleter()
+        FakeCommandWithInvalidCompleter()
     }
 
     runner = CommandRunner(
@@ -351,7 +347,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   def test_command_argument_parser_setup_nested_argparse_arguments(self):
     command_map = {
         FakeCommandWithNestedArguments.command_spec.command_name:
-            FakeCommandWithNestedArguments(),
+        FakeCommandWithNestedArguments(),
     }
     runner = CommandRunner(
         bucket_storage_uri_class=self.mock_bucket_storage_uri,
@@ -377,8 +373,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     # FakeArgparseParser adds a FakeArgparseArgument in place of any arguments
     # passed in via add_argument(), so we can't check for anything beyond the
     # presence of the correct number of arguments here.
-    self.assertEqual(
-        len(cur_subparser.arguments), FakeCommandWithNestedArguments.num_args)
+    self.assertEqual(len(cur_subparser.arguments),
+                     FakeCommandWithNestedArguments.num_args)
 
   @unittest.skipUnless(ARGCOMPLETE_AVAILABLE,
                        'Tab completion requires argcomplete')
@@ -386,7 +382,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
     command_map = {
         FakeCommandWithCompleters.command_spec.command_name:
-            FakeCommandWithCompleters()
+        FakeCommandWithCompleters()
     }
 
     runner = CommandRunner(

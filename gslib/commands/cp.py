@@ -498,8 +498,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 
   Parallel composite uploads can be disabled by setting the
   "parallel_composite_upload_threshold" variable in the .boto config file to 0.
-""" % (
-    PARALLEL_UPLOAD_TEMP_NAMESPACE)
+""" % (PARALLEL_UPLOAD_TEMP_NAMESPACE)
 
 _CHANGING_TEMP_DIRECTORIES_TEXT = """
 <B>CHANGING TEMP DIRECTORIES</B>
@@ -777,8 +776,9 @@ CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRs:tUvz:Zj:J'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
-  cls.CopyFunc(
-      args, thread_state=thread_state, preserve_posix=cls.preserve_posix_attrs)
+  cls.CopyFunc(args,
+               thread_state=thread_state,
+               preserve_posix=cls.preserve_posix_attrs)
 
 
 def _CopyExceptionHandler(cls, e):
@@ -945,23 +945,26 @@ class CpCommand(Command):
       mode, _, _, _, uid, gid, _, atime, mtime, _ = os.stat(
           exp_src_url.object_name)
       mode = ConvertModeToBase8(mode)
-      posix_attrs = POSIXAttributes(
-          atime=atime, mtime=mtime, uid=uid, gid=gid, mode=mode)
+      posix_attrs = POSIXAttributes(atime=atime,
+                                    mtime=mtime,
+                                    uid=uid,
+                                    gid=gid,
+                                    mode=mode)
       custom_metadata = apitools_messages.Object.MetadataValue(
           additionalProperties=[])
-      SerializeFileAttributesToObjectMetadata(
-          posix_attrs, custom_metadata, preserve_posix=preserve_posix)
+      SerializeFileAttributesToObjectMetadata(posix_attrs,
+                                              custom_metadata,
+                                              preserve_posix=preserve_posix)
       src_obj_metadata.metadata = custom_metadata
 
     if src_obj_metadata and dst_url.IsFileUrl():
       posix_attrs = DeserializeFileAttributesFromObjectMetadata(
           src_obj_metadata, src_url.url_string)
       mode = posix_attrs.mode.permissions
-      valid, err = ValidateFilePermissionAccess(
-          src_url.url_string,
-          uid=posix_attrs.uid,
-          gid=posix_attrs.gid,
-          mode=mode)
+      valid, err = ValidateFilePermissionAccess(src_url.url_string,
+                                                uid=posix_attrs.uid,
+                                                gid=posix_attrs.gid,
+                                                mode=mode)
       if preserve_posix and not valid:
         logging.getLogger().critical(err)
         raise CommandException('This sync will orphan file(s), please fix their'
@@ -971,21 +974,20 @@ class CpCommand(Command):
     try:
       if copy_helper_opts.use_manifest:
         self.manifest.Initialize(exp_src_url.url_string, dst_url.url_string)
-      (_, bytes_transferred, result_url, md5) = (
-          copy_helper.PerformCopy(
-              self.logger,
-              exp_src_url,
-              dst_url,
-              gsutil_api,
-              self,
-              _CopyExceptionHandler,
-              src_obj_metadata=src_obj_metadata,
-              allow_splitting=True,
-              headers=self.headers,
-              manifest=self.manifest,
-              gzip_encoded=self.gzip_encoded,
-              gzip_exts=self.gzip_exts,
-              preserve_posix=preserve_posix))
+      (_, bytes_transferred, result_url,
+       md5) = (copy_helper.PerformCopy(self.logger,
+                                       exp_src_url,
+                                       dst_url,
+                                       gsutil_api,
+                                       self,
+                                       _CopyExceptionHandler,
+                                       src_obj_metadata=src_obj_metadata,
+                                       allow_splitting=True,
+                                       headers=self.headers,
+                                       manifest=self.manifest,
+                                       gzip_encoded=self.gzip_encoded,
+                                       gzip_exts=self.gzip_exts,
+                                       preserve_posix=preserve_posix))
       if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.url_string, 'md5', md5)
@@ -1033,11 +1035,10 @@ class CpCommand(Command):
       if copy_helper_opts.perform_mv:
         self.logger.info('Removing %s...', exp_src_url)
         if exp_src_url.IsCloudUrl():
-          gsutil_api.DeleteObject(
-              exp_src_url.bucket_name,
-              exp_src_url.object_name,
-              generation=exp_src_url.generation,
-              provider=exp_src_url.scheme)
+          gsutil_api.DeleteObject(exp_src_url.bucket_name,
+                                  exp_src_url.object_name,
+                                  generation=exp_src_url.generation,
+                                  provider=exp_src_url.scheme)
         else:
           os.unlink(exp_src_url.object_name)
 
@@ -1074,10 +1075,9 @@ class CpCommand(Command):
       # destination directory. In another scenario, all the threads might find
       # that the destination directory does not exist and copy the source
       # directories to the destination directory.
-      (exp_dst_url, have_existing_dst_container) = (
-          copy_helper.ExpandUrlToSingleBlr(
-              dst_url_str, self.gsutil_api, self.project_id,
-              logger=self.logger))
+      (exp_dst_url,
+       have_existing_dst_container) = (copy_helper.ExpandUrlToSingleBlr(
+           dst_url_str, self.gsutil_api, self.project_id, logger=self.logger))
       name_expansion_iterator_dst_tuple = NameExpansionIteratorDestinationTuple(
           NameExpansionIterator(
               self.command_name,
@@ -1118,11 +1118,10 @@ class CpCommand(Command):
       if self.preserve_posix_attrs:
         raise CommandException('Cannot preserve POSIX attributes with a '
                                'stream or a named pipe.')
-      cat_out_fd = (
-          GetStreamFromFileUrl(dst_url, mode='wb')
-          if dst_url.IsFifo() else None)
-      return cat_helper.CatHelper(self).CatUrlStrings(
-          self.args[:-1], cat_out_fd=cat_out_fd)
+      cat_out_fd = (GetStreamFromFileUrl(dst_url, mode='wb')
+                    if dst_url.IsFifo() else None)
+      return cat_helper.CatHelper(self).CatUrlStrings(self.args[:-1],
+                                                      cat_out_fd=cat_out_fd)
 
     if copy_helper_opts.read_args_from_stdin:
       if len(self.args) != 1:
@@ -1179,13 +1178,12 @@ class CpCommand(Command):
     # Perform copy requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
-    self.Apply(
-        _CopyFuncWrapper,
-        name_expansion_iterator,
-        _CopyExceptionHandler,
-        shared_attrs,
-        fail_on_error=(not self.continue_on_error),
-        seek_ahead_iterator=seek_ahead_iterator)
+    self.Apply(_CopyFuncWrapper,
+               name_expansion_iterator,
+               _CopyExceptionHandler,
+               shared_attrs,
+               fail_on_error=(not self.continue_on_error),
+               seek_ahead_iterator=seek_ahead_iterator)
     self.logger.debug('total_bytes_transferred: %d',
                       self.total_bytes_transferred)
 

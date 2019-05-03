@@ -100,8 +100,8 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     src_tmpdir = os.path.split(src_dir_root)[1]
 
     lines = self.AssertNObjectsInBucket(dst_bucket_uri, 4)
-    self.assertEqual(
-        suri(dst_bucket_uri, src_tmpdir, 'dir0', 'dir1', 'nested'), lines[0])
+    self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'dir0', 'dir1', 'nested'),
+                     lines[0])
     self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'f0'), lines[1])
     self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'f1'), lines[2])
     self.assertEqual(suri(dst_bucket_uri, src_tmpdir, 'f2.txt'), lines[3])
@@ -180,10 +180,12 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     # Test with and without final slash on dest subdir.
     for final_dst_char in ('', '/'):
       dst_bucket_uri = self.CreateBucket()
-      self.CreateObject(
-          dst_bucket_uri, object_name='subdir0/existing', contents=b'foo')
-      self.CreateObject(
-          dst_bucket_uri, object_name='subdir1/existing', contents=b'foo')
+      self.CreateObject(dst_bucket_uri,
+                        object_name='subdir0/existing',
+                        contents=b'foo')
+      self.CreateObject(dst_bucket_uri,
+                        object_name='subdir1/existing',
+                        contents=b'foo')
       src_dir = self.CreateTempDir(test_files=['f0', 'f1', 'f2'])
 
       for i in range(2):
@@ -201,8 +203,8 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
               return_stdout=True)
           lines = stdout.split('\n')
           self.assertEqual(5, len(lines))
-          self.assertEqual(
-              suri(dst_bucket_uri, 'subdir%d' % i, 'existing'), lines[0])
+          self.assertEqual(suri(dst_bucket_uri, 'subdir%d' % i, 'existing'),
+                           lines[0])
           self.assertEqual(suri(dst_bucket_uri, 'subdir%d' % i, 'f0'), lines[1])
           self.assertEqual(suri(dst_bucket_uri, 'subdir%d' % i, 'f1'), lines[2])
           self.assertEqual(suri(dst_bucket_uri, 'subdir%d' % i, 'f2'), lines[3])
@@ -216,10 +218,12 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     for final_dst_char in ('', '/'):
 
       dst_bucket_uri = self.CreateBucket()
-      self.CreateObject(
-          dst_bucket_uri, object_name='d0/placeholder', contents=b'foo')
-      self.CreateObject(
-          dst_bucket_uri, object_name='d1/placeholder', contents=b'foo')
+      self.CreateObject(dst_bucket_uri,
+                        object_name='d0/placeholder',
+                        contents=b'foo')
+      self.CreateObject(dst_bucket_uri,
+                        object_name='d1/placeholder',
+                        contents=b'foo')
 
       for i in range(2):
         src_dir = self.CreateTempDir(test_files=[('d3', 'd4', 'nested', 'f1')])
@@ -230,9 +234,9 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
         ])
 
       lines = self.AssertNObjectsInBucket(dst_bucket_uri, 4)
-      self.assertEqual(
-          suri(dst_bucket_uri, 'd0', 'd3', 'd4', 'nested', 'f1'), lines[0])
+      self.assertEqual(suri(dst_bucket_uri, 'd0', 'd3', 'd4', 'nested', 'f1'),
+                       lines[0])
       self.assertEqual(suri(dst_bucket_uri, 'd0', 'placeholder'), lines[1])
-      self.assertEqual(
-          suri(dst_bucket_uri, 'd1', 'd3', 'd4', 'nested', 'f1'), lines[2])
+      self.assertEqual(suri(dst_bucket_uri, 'd1', 'd3', 'd4', 'nested', 'f1'),
+                       lines[2])
       self.assertEqual(suri(dst_bucket_uri, 'd1', 'placeholder'), lines[3])

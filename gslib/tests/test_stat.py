@@ -58,11 +58,10 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     old_object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
 
     # Update object
-    self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name=old_object_uri.object_name,
-        contents=b'z',
-        gs_idempotent_generation=urigen(old_object_uri))
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name=old_object_uri.object_name,
+                      contents=b'z',
+                      gs_idempotent_generation=urigen(old_object_uri))
 
     stdout = self.RunGsUtil(['stat', old_object_uri.version_specific_uri],
                             return_stdout=True)
@@ -121,8 +120,9 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
 
   def test_stat_one_missing(self):
     bucket_uri = self.CreateBucket()
-    self.CreateObject(
-        bucket_uri=bucket_uri, object_name='notmissing', contents=b'z')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='notmissing',
+                      contents=b'z')
     stdout, stderr = self.RunGsUtil(
         ['stat',
          suri(bucket_uri, 'missing'),
@@ -135,8 +135,9 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
 
   def test_stat_one_missing_wildcard(self):
     bucket_uri = self.CreateBucket()
-    self.CreateObject(
-        bucket_uri=bucket_uri, object_name='notmissing', contents=b'z')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='notmissing',
+                      contents=b'z')
     stdout, stderr = self.RunGsUtil(
         ['stat',
          suri(bucket_uri, 'missin*'),
@@ -158,10 +159,12 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
 
   def test_stat_object_wildcard(self):
     bucket_uri = self.CreateBucket()
-    object1_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo1', contents=b'z')
-    object2_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo2', contents=b'z')
+    object1_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo1',
+                                    contents=b'z')
+    object2_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo2',
+                                    contents=b'z')
     stat_string = suri(object1_uri)[:-2] + '*'
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -180,11 +183,10 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
       return unittest.skip(
           'gsutil does not support encryption with the XML API')
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo',
-        contents=TEST_ENCRYPTION_CONTENT1,
-        encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                   object_name='foo',
+                                   contents=TEST_ENCRYPTION_CONTENT1,
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
 
     # Stat object with key should return unencrypted hashes.
     with SetBotoConfigForTest([('GSUtil', 'encryption_key',
@@ -207,20 +209,17 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
       return unittest.skip(
           'gsutil does not support encryption with the XML API')
     bucket_uri = self.CreateBucket()
-    object1_uri = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo1',
-        contents=TEST_ENCRYPTION_CONTENT1,
-        encryption_key=TEST_ENCRYPTION_KEY1)
-    object2_uri = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo2',
-        contents=TEST_ENCRYPTION_CONTENT2,
-        encryption_key=TEST_ENCRYPTION_KEY2)
-    object3_uri = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo3',
-        contents=TEST_ENCRYPTION_CONTENT3)
+    object1_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo1',
+                                    contents=TEST_ENCRYPTION_CONTENT1,
+                                    encryption_key=TEST_ENCRYPTION_KEY1)
+    object2_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo2',
+                                    contents=TEST_ENCRYPTION_CONTENT2,
+                                    encryption_key=TEST_ENCRYPTION_KEY2)
+    object3_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo3',
+                                    contents=TEST_ENCRYPTION_CONTENT3)
 
     stat_string = suri(object1_uri)[:-2] + '*'
 

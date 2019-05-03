@@ -228,9 +228,8 @@ class GsUtilTestCase(unittest.TestCase):
       fpath = fpath.decode(UTF8)
 
     with open(fpath, 'wb') as f:
-      contents = (
-          contents if contents is not None else self.MakeTempName(
-              str('contents')))
+      contents = (contents if contents is not None else self.MakeTempName(
+          str('contents')))
       if isinstance(contents, bytearray):
         contents = bytes(contents)
       else:

@@ -138,11 +138,10 @@ class DefStorageClassCommand(Command):
         self.logger.info('Setting default storage class to "%s" for bucket %s' %
                          (normalized_storage_class, blr.url_string.rstrip('/')))
         bucket_metadata.storageClass = normalized_storage_class
-        self.gsutil_api.PatchBucket(
-            blr.storage_url.bucket_name,
-            bucket_metadata,
-            provider=blr.storage_url.scheme,
-            fields=['id'])
+        self.gsutil_api.PatchBucket(blr.storage_url.bucket_name,
+                                    bucket_metadata,
+                                    provider=blr.storage_url.scheme,
+                                    fields=['id'])
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 
@@ -153,8 +152,8 @@ class DefStorageClassCommand(Command):
     some_matched = False
     for url_str in url_args:
       self._CheckIsGsUrl(url_str)
-      bucket_iter = self.GetBucketUrlIterFromArg(
-          url_str, bucket_fields=['storageClass'])
+      bucket_iter = self.GetBucketUrlIterFromArg(url_str,
+                                                 bucket_fields=['storageClass'])
       for blr in bucket_iter:
         some_matched = True
         print('%s: %s' %

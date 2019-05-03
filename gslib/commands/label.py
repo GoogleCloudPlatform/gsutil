@@ -114,9 +114,8 @@ _CH_DESCRIPTION = """
     -d          Remove the label with the specified key.
 """
 
-_SYNOPSIS = (
-    _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + _CH_SYNOPSIS.lstrip('\n') +
-    '\n\n')
+_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
+             _CH_SYNOPSIS.lstrip('\n') + '\n\n')
 
 _DESCRIPTION = """
   Gets, sets, or changes the label configuration (also called the tagging
@@ -201,8 +200,9 @@ class LabelCommand(Command):
       self.logger.info('Setting label configuration on %s...', blr)
 
       if url.scheme == 's3':  # Uses only XML.
-        self.gsutil_api.XmlPassThroughSetTagging(
-            label_text, url, provider=url.scheme)
+        self.gsutil_api.XmlPassThroughSetTagging(label_text,
+                                                 url,
+                                                 provider=url.scheme)
       else:  # Must be a 'gs://' bucket.
         labels_message = None
         # When performing a read-modify-write cycle, include metageneration to
@@ -231,12 +231,11 @@ class LabelCommand(Command):
 
         preconditions = Preconditions(meta_gen_match=metageneration)
         bucket_metadata = apitools_messages.Bucket(labels=labels_message)
-        self.gsutil_api.PatchBucket(
-            url.bucket_name,
-            bucket_metadata,
-            preconditions=preconditions,
-            provider=url.scheme,
-            fields=['id'])
+        self.gsutil_api.PatchBucket(url.bucket_name,
+                                    bucket_metadata,
+                                    preconditions=preconditions,
+                                    provider=url.scheme,
+                                    fields=['id'])
 
     some_matched = False
     url_args = self.args[1:]
@@ -325,12 +324,11 @@ class LabelCommand(Command):
 
       preconditions = Preconditions(meta_gen_match=metageneration)
       bucket_metadata = apitools_messages.Bucket(labels=labels_message)
-      self.gsutil_api.PatchBucket(
-          url.bucket_name,
-          bucket_metadata,
-          preconditions=preconditions,
-          provider=url.scheme,
-          fields=['id'])
+      self.gsutil_api.PatchBucket(url.bucket_name,
+                                  bucket_metadata,
+                                  preconditions=preconditions,
+                                  provider=url.scheme,
+                                  fields=['id'])
 
     some_matched = False
     url_args = self.args
@@ -348,15 +346,16 @@ class LabelCommand(Command):
 
   def _GetAndPrintLabel(self, bucket_arg):
     """Gets and prints the labels for a cloud bucket."""
-    (bucket_url, bucket_metadata) = self.GetSingleBucketUrlFromArg(
-        bucket_arg, bucket_fields=['labels'])
+    (bucket_url,
+     bucket_metadata) = self.GetSingleBucketUrlFromArg(bucket_arg,
+                                                       bucket_fields=['labels'])
     if bucket_url.scheme == 's3':
       print((self.gsutil_api.XmlPassThroughGetTagging(
           bucket_url, provider=bucket_url.scheme)))
     else:
       if bucket_metadata.labels:
-        print((LabelTranslation.JsonFromMessage(
-            bucket_metadata.labels, pretty_print=True)))
+        print((LabelTranslation.JsonFromMessage(bucket_metadata.labels,
+                                                pretty_print=True)))
       else:
         print(('%s has no label configuration.' % bucket_url))
 

@@ -217,8 +217,9 @@ class DaisyChainWrapper(object):
           raise
 
     # TODO: If we do gzip encoding transforms mid-transfer, this will fail.
-    self.download_thread = threading.Thread(
-        target=PerformDownload, args=(start_byte, progress_callback))
+    self.download_thread = threading.Thread(target=PerformDownload,
+                                            args=(start_byte,
+                                                  progress_callback))
     self.download_thread.start()
 
   def read(self, amt=None):  # pylint: disable=invalid-name
@@ -314,8 +315,8 @@ class DaisyChainWrapper(object):
           self.bytes_buffered = 0
           self.last_position = 0
           self.last_data = None
-        self.StartDownloadThread(
-            start_byte=offset, progress_callback=self.progress_callback)
+        self.StartDownloadThread(start_byte=offset,
+                                 progress_callback=self.progress_callback)
     else:
       raise IOError('Daisy-chain download wrapper does not support '
                     'seek mode %s' % whence)

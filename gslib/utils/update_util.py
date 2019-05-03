@@ -103,11 +103,10 @@ def LookUpGsutilVersion(gsutil_api, url_str):
   """
   url = StorageUrlFromString(url_str)
   if url.IsCloudUrl():
-    obj = gsutil_api.GetObjectMetadata(
-        url.bucket_name,
-        url.object_name,
-        provider=url.scheme,
-        fields=['metadata'])
+    obj = gsutil_api.GetObjectMetadata(url.bucket_name,
+                                       url.object_name,
+                                       provider=url.scheme,
+                                       fields=['metadata'])
     if obj.metadata and obj.metadata.additionalProperties:
       for prop in obj.metadata.additionalProperties:
         if prop.key == 'gsutil_version':

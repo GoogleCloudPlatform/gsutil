@@ -356,13 +356,12 @@ class RewriteCommand(Command):
       print('%s\n' % msg, file=sys.stderr)
 
     # Perform rewrite requests in parallel (-m) mode, if requested.
-    self.Apply(
-        _RewriteFuncWrapper,
-        name_expansion_iterator,
-        _RewriteExceptionHandler,
-        fail_on_error=(not self.continue_on_error),
-        shared_attrs=['op_failure_count'],
-        seek_ahead_iterator=seek_ahead_iterator)
+    self.Apply(_RewriteFuncWrapper,
+               name_expansion_iterator,
+               _RewriteExceptionHandler,
+               fail_on_error=(not self.continue_on_error),
+               shared_attrs=['op_failure_count'],
+               seek_ahead_iterator=seek_ahead_iterator)
 
     if self.op_failure_count:
       plural_str = 's' if self.op_failure_count else ''
@@ -400,8 +399,8 @@ class RewriteCommand(Command):
     # encryption_key value (including decrypting if no key is present).
 
     # Store metadata about src encryption to make logic below easier to read.
-    src_encryption_kms_key = (
-        src_metadata.kmsKeyName if src_metadata.kmsKeyName else None)
+    src_encryption_kms_key = (src_metadata.kmsKeyName
+                              if src_metadata.kmsKeyName else None)
 
     src_encryption_sha256 = None
     if (src_metadata.customerEncryption and
@@ -410,8 +409,8 @@ class RewriteCommand(Command):
       # In python3, hashes are bytes, use ascii since it should be ascii
       src_encryption_sha256 = src_encryption_sha256.encode('ascii')
 
-    src_was_encrypted = (
-        src_encryption_sha256 is not None or src_encryption_kms_key is not None)
+    src_was_encrypted = (src_encryption_sha256 is not None or
+                         src_encryption_kms_key is not None)
 
     # Also store metadata about dest encryption.
     dest_encryption_kms_key = None
@@ -427,9 +426,8 @@ class RewriteCommand(Command):
 
     should_encrypt_dest = self.boto_file_encryption_keywrapper is not None
 
-    encryption_unchanged = (
-        src_encryption_sha256 == dest_encryption_sha256 and
-        src_encryption_kms_key == dest_encryption_kms_key)
+    encryption_unchanged = (src_encryption_sha256 == dest_encryption_sha256 and
+                            src_encryption_kms_key == dest_encryption_kms_key)
 
     # Prevent accidental key rotation.
     if (_TransformTypes.CRYPTO_KEY not in self.transform_types and
@@ -528,39 +526,36 @@ class RewriteCommand(Command):
 
     # Message indicating beginning of operation.
     gsutil_api.status_queue.put(
-        FileMessage(
-            transform_url,
-            None,
-            time.time(),
-            finished=False,
-            size=src_metadata.size,
-            message_type=FileMessage.FILE_REWRITE))
+        FileMessage(transform_url,
+                    None,
+                    time.time(),
+                    finished=False,
+                    size=src_metadata.size,
+                    message_type=FileMessage.FILE_REWRITE))
 
     progress_callback = FileProgressCallbackHandler(
         gsutil_api.status_queue,
         src_url=transform_url,
         operation_name=operation_name).call
 
-    gsutil_api.CopyObject(
-        src_metadata,
-        dest_metadata,
-        src_generation=transform_url.generation,
-        preconditions=self.preconditions,
-        progress_callback=progress_callback,
-        decryption_tuple=decryption_keywrapper,
-        encryption_tuple=self.boto_file_encryption_keywrapper,
-        provider=transform_url.scheme,
-        fields=[])
+    gsutil_api.CopyObject(src_metadata,
+                          dest_metadata,
+                          src_generation=transform_url.generation,
+                          preconditions=self.preconditions,
+                          progress_callback=progress_callback,
+                          decryption_tuple=decryption_keywrapper,
+                          encryption_tuple=self.boto_file_encryption_keywrapper,
+                          provider=transform_url.scheme,
+                          fields=[])
 
     # Message indicating end of operation.
     gsutil_api.status_queue.put(
-        FileMessage(
-            transform_url,
-            None,
-            time.time(),
-            finished=True,
-            size=src_metadata.size,
-            message_type=FileMessage.FILE_REWRITE))
+        FileMessage(transform_url,
+                    None,
+                    time.time(),
+                    finished=True,
+                    size=src_metadata.size,
+                    message_type=FileMessage.FILE_REWRITE))
 
 
 def _ConstructAnnounceText(operation_name, url_string):

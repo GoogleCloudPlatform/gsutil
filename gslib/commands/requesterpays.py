@@ -140,11 +140,10 @@ class RequesterPaysCommand(Command):
         else:
           self.logger.info('Disabling requester pays for %s...', url)
           bucket_metadata.billing.requesterPays = False
-        self.gsutil_api.PatchBucket(
-            url.bucket_name,
-            bucket_metadata,
-            provider=url.scheme,
-            fields=['id'])
+        self.gsutil_api.PatchBucket(url.bucket_name,
+                                    bucket_metadata,
+                                    provider=url.scheme,
+                                    fields=['id'])
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 
@@ -156,8 +155,8 @@ class RequesterPaysCommand(Command):
     # configuration on each.
     some_matched = False
     for url_str in url_args:
-      bucket_iter = self.GetBucketUrlIterFromArg(
-          url_str, bucket_fields=['billing'])
+      bucket_iter = self.GetBucketUrlIterFromArg(url_str,
+                                                 bucket_fields=['billing'])
       for blr in bucket_iter:
         some_matched = True
         if blr.root_object.billing and blr.root_object.billing.requesterPays:

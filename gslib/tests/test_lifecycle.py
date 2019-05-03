@@ -163,15 +163,15 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     """Tests setting and turning off lifecycle configuration."""
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
-    fpath = self.CreateTempFile(
-        tmpdir=tmpdir, contents=self.lifecycle_doc.encode('ascii'))
+    fpath = self.CreateTempFile(tmpdir=tmpdir,
+                                contents=self.lifecycle_doc.encode('ascii'))
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(
         ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
-    fpath = self.CreateTempFile(
-        tmpdir=tmpdir, contents=self.empty_doc1.encode('ascii'))
+    fpath = self.CreateTempFile(tmpdir=tmpdir,
+                                contents=self.empty_doc1.encode('ascii'))
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(
         ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)

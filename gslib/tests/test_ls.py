@@ -220,8 +220,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   def test_bucket_with_Lb_bucket_policy_only(self):
     if self.test_api == ApiSelector.JSON:
-      bucket_uri = self.CreateBucket(
-          bucket_policy_only=True, prefer_json_api=True)
+      bucket_uri = self.CreateBucket(bucket_policy_only=True,
+                                     prefer_json_api=True)
       stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
                               return_stdout=True)
       self._AssertBucketPolicyOnly(True, stdout)
@@ -630,8 +630,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # needs to be added to the site-packages on Windows python.
     object_name = u'Аудиоархив'
     bucket_uri = self.CreateVersionedBucket()
-    key_uri = self.CreateObject(
-        bucket_uri=bucket_uri, contents=b'foo', object_name=object_name)
+    key_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                contents=b'foo',
+                                object_name=object_name)
     self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
     stdout = self.RunGsUtil(['ls', '-ael', suri(key_uri)], return_stdout=True)
     self.assertIn(object_name, stdout)
@@ -720,14 +721,12 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     wildcard_folder_object = 'wildcard*/'
     object_matching_folder = 'wildcard10/foo'
-    self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name=wildcard_folder_object,
-        contents=b'foo')
-    self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name=object_matching_folder,
-        contents=b'foo')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name=wildcard_folder_object,
+                      contents=b'foo')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name=object_matching_folder,
+                      contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 2)
     stderr = self.RunGsUtil(['ls', suri(bucket_uri, 'wildcard*')],
                             return_stderr=True,
@@ -750,8 +749,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_get_object_without_list_bucket_permission(self):
     # Bucket is not publicly readable by default.
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='permitted', contents=b'foo')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                   object_name='permitted',
+                                   contents=b'foo')
     # Set this object to be publicly readable.
     self.RunGsUtil(['acl', 'set', 'public-read', suri(object_uri)])
     # Drop credentials.
@@ -765,10 +765,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     if self.test_api == ApiSelector.XML:
       return unittest.skip(
           'gsutil does not support encryption with the XML API')
-    object_uri = self.CreateObject(
-        object_name='foo',
-        contents=TEST_ENCRYPTION_CONTENT1,
-        encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(object_name='foo',
+                                   contents=TEST_ENCRYPTION_CONTENT1,
+                                   encryption_key=TEST_ENCRYPTION_KEY1)
 
     # Listing object with key should return unencrypted hashes.
     with SetBotoConfigForTest([('GSUtil', 'encryption_key',
@@ -807,30 +806,25 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     """Tests listing objects with various encryption interactions."""
     bucket_uri = self.CreateBucket()
 
-    self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo',
-        contents=TEST_ENCRYPTION_CONTENT1,
-        encryption_key=TEST_ENCRYPTION_KEY1)
-    self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo2',
-        contents=TEST_ENCRYPTION_CONTENT2,
-        encryption_key=TEST_ENCRYPTION_KEY2)
-    self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo3',
-        contents=TEST_ENCRYPTION_CONTENT3,
-        encryption_key=TEST_ENCRYPTION_KEY3)
-    self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo4',
-        contents=TEST_ENCRYPTION_CONTENT4,
-        encryption_key=TEST_ENCRYPTION_KEY4)
-    self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo5',
-        contents=TEST_ENCRYPTION_CONTENT5)
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='foo',
+                      contents=TEST_ENCRYPTION_CONTENT1,
+                      encryption_key=TEST_ENCRYPTION_KEY1)
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='foo2',
+                      contents=TEST_ENCRYPTION_CONTENT2,
+                      encryption_key=TEST_ENCRYPTION_KEY2)
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='foo3',
+                      contents=TEST_ENCRYPTION_CONTENT3,
+                      encryption_key=TEST_ENCRYPTION_KEY3)
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='foo4',
+                      contents=TEST_ENCRYPTION_CONTENT4,
+                      encryption_key=TEST_ENCRYPTION_KEY4)
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='foo5',
+                      contents=TEST_ENCRYPTION_CONTENT5)
 
     # List 5 objects, one encrypted with each of four keys, and one
     # unencrypted. Supplying keys [1,3,4] should result in four unencrypted
@@ -903,11 +897,10 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     key_fqn = self.set_default_kms_key_on_bucket(bucket_uri)
     # Copy an object into our bucket and encrypt using the key from above.
-    obj_uri = self.CreateObject(
-        bucket_uri=bucket_uri,
-        object_name='foo',
-        contents=b'foo',
-        kms_key_name=key_fqn)
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                object_name='foo',
+                                contents=b'foo',
+                                kms_key_name=key_fqn)
 
     stdout = self.RunGsUtil(['ls', '-L', suri(obj_uri)], return_stdout=True)
 

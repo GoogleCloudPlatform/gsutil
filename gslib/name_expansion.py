@@ -160,8 +160,8 @@ class _NameExpansionIterator(object):
     self.project_id = project_id
     self.ignore_symlinks = ignore_symlinks
     self.continue_on_error = continue_on_error
-    self.bucket_listing_fields = (
-        set(['name']) if not bucket_listing_fields else bucket_listing_fields)
+    self.bucket_listing_fields = (set(['name']) if not bucket_listing_fields
+                                  else bucket_listing_fields)
 
     # Map holding wildcard strings to use for flat vs subdir-by-subdir listings.
     # (A flat listing means show all objects expanded all the way down.)
@@ -256,8 +256,8 @@ class _NameExpansionIterator(object):
                                     self.cmd_supports_recursion, self.logger))
 
       src_url_expands_to_multi = post_step3_iter.HasPlurality()
-      is_multi_source_request = (
-          self.url_strs.has_plurality or src_url_expands_to_multi)
+      is_multi_source_request = (self.url_strs.has_plurality or
+                                 src_url_expands_to_multi)
 
       # Step 4. Expand directories and buckets. This step yields the iterated
       # values. Starting with gs://bucket this step would expand to:
@@ -290,10 +290,10 @@ class _NameExpansionIterator(object):
           wc_iter = PluralityCheckableIterator(
               self.WildcardIterator(url_to_iterate).IterObjects(
                   bucket_listing_fields=self.bucket_listing_fields))
-          src_url_expands_to_multi = (
-              src_url_expands_to_multi or wc_iter.HasPlurality())
-          is_multi_source_request = (
-              self.url_strs.has_plurality or src_url_expands_to_multi)
+          src_url_expands_to_multi = (src_url_expands_to_multi or
+                                      wc_iter.HasPlurality())
+          is_multi_source_request = (self.url_strs.has_plurality or
+                                     src_url_expands_to_multi)
           # This will be a flattened listing of all underlying objects in the
           # subdir.
           for blr in wc_iter:

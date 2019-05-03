@@ -116,11 +116,10 @@ def GetRewriteTrackerFilePath(src_bucket_name, src_obj_name, dst_bucket_name,
   """
   # Encode the src and dest bucket and object names into the tracker file
   # name.
-  res_tracker_file_name = (
-      re.sub(
-          '[/\\\\]', '_', 'rewrite__%s__%s__%s__%s__%s.token' %
-          (src_bucket_name, src_obj_name, dst_bucket_name, dst_obj_name,
-           api_selector)))
+  res_tracker_file_name = (re.sub(
+      '[/\\\\]', '_', 'rewrite__%s__%s__%s__%s__%s.token' %
+      (src_bucket_name, src_obj_name, dst_bucket_name, dst_obj_name,
+       api_selector)))
 
   return _HashAndReturnPath(res_tracker_file_name, TrackerFileType.REWRITE)
 
@@ -144,37 +143,31 @@ def GetTrackerFilePath(dst_url,
   """
   if tracker_file_type == TrackerFileType.UPLOAD:
     # Encode the dest bucket and object name into the tracker file name.
-    res_tracker_file_name = (
-        re.sub(
-            '[/\\\\]', '_', 'resumable_upload__%s__%s__%s.url' %
-            (dst_url.bucket_name, dst_url.object_name, api_selector)))
+    res_tracker_file_name = (re.sub(
+        '[/\\\\]', '_', 'resumable_upload__%s__%s__%s.url' %
+        (dst_url.bucket_name, dst_url.object_name, api_selector)))
   elif tracker_file_type == TrackerFileType.DOWNLOAD:
     # Encode the fully-qualified dest file name into the tracker file name.
-    res_tracker_file_name = (
-        re.sub(
-            '[/\\\\]', '_', 'resumable_download__%s__%s.etag' %
-            (os.path.realpath(dst_url.object_name), api_selector)))
+    res_tracker_file_name = (re.sub(
+        '[/\\\\]', '_', 'resumable_download__%s__%s.etag' %
+        (os.path.realpath(dst_url.object_name), api_selector)))
   elif tracker_file_type == TrackerFileType.DOWNLOAD_COMPONENT:
     # Encode the fully-qualified dest file name and the component number
     # into the tracker file name.
-    res_tracker_file_name = (
-        re.sub(
-            '[/\\\\]', '_',
-            'resumable_download__%s__%s__%d.etag' % (os.path.realpath(
-                dst_url.object_name), api_selector, component_num)))
+    res_tracker_file_name = (re.sub(
+        '[/\\\\]', '_', 'resumable_download__%s__%s__%d.etag' %
+        (os.path.realpath(dst_url.object_name), api_selector, component_num)))
   elif tracker_file_type == TrackerFileType.PARALLEL_UPLOAD:
     # Encode the dest bucket and object names as well as the source file name
     # into the tracker file name.
-    res_tracker_file_name = (
-        re.sub(
-            '[/\\\\]', '_', 'parallel_upload__%s__%s__%s__%s.url' %
-            (dst_url.bucket_name, dst_url.object_name, src_url, api_selector)))
+    res_tracker_file_name = (re.sub(
+        '[/\\\\]', '_', 'parallel_upload__%s__%s__%s__%s.url' %
+        (dst_url.bucket_name, dst_url.object_name, src_url, api_selector)))
   elif tracker_file_type == TrackerFileType.SLICED_DOWNLOAD:
     # Encode the fully-qualified dest file name into the tracker file name.
-    res_tracker_file_name = (
-        re.sub(
-            '[/\\\\]', '_', 'sliced_download__%s__%s.etag' %
-            (os.path.realpath(dst_url.object_name), api_selector)))
+    res_tracker_file_name = (re.sub(
+        '[/\\\\]', '_', 'sliced_download__%s__%s.etag' %
+        (os.path.realpath(dst_url.object_name), api_selector)))
   elif tracker_file_type == TrackerFileType.REWRITE:
     # Should use GetRewriteTrackerFilePath instead.
     raise NotImplementedError()
@@ -235,11 +228,10 @@ def GetSlicedDownloadTrackerFilePaths(dst_url,
 
   for i in range(num_components):
     tracker_file_paths.append(
-        GetTrackerFilePath(
-            dst_url,
-            TrackerFileType.DOWNLOAD_COMPONENT,
-            api_selector,
-            component_num=i))
+        GetTrackerFilePath(dst_url,
+                           TrackerFileType.DOWNLOAD_COMPONENT,
+                           api_selector,
+                           component_num=i))
 
   return tracker_file_paths
 
@@ -422,8 +414,10 @@ def ReadOrCreateDownloadTrackerFile(src_obj_metadata,
     tracker_file_type = TrackerFileType.DOWNLOAD_COMPONENT
     download_name += ' component %d' % component_num
 
-  tracker_file_name = GetTrackerFilePath(
-      dst_url, tracker_file_type, api_selector, component_num=component_num)
+  tracker_file_name = GetTrackerFilePath(dst_url,
+                                         tracker_file_type,
+                                         api_selector,
+                                         component_num=component_num)
   tracker_file = None
   # Check to see if we already have a matching tracker file.
   try:
@@ -500,8 +494,10 @@ def GetDownloadStartByte(src_obj_metadata,
   else:
     tracker_file_type = TrackerFileType.DOWNLOAD_COMPONENT
 
-  tracker_file_name = GetTrackerFilePath(
-      dst_url, tracker_file_type, api_selector, component_num=component_num)
+  tracker_file_name = GetTrackerFilePath(dst_url,
+                                         tracker_file_type,
+                                         api_selector,
+                                         component_num=component_num)
   tracker_file = None
   # Check to see if we already have a matching tracker file.
   try:
@@ -550,8 +546,8 @@ def WriteDownloadComponentTrackerFile(tracker_file_name, src_obj_metadata,
 def _WriteTrackerFile(tracker_file_name, data):
   """Creates a tracker file, storing the input data."""
   try:
-    with os.fdopen(
-        os.open(tracker_file_name, os.O_WRONLY | os.O_CREAT, 0o600), 'w') as tf:
+    with os.fdopen(os.open(tracker_file_name, os.O_WRONLY | os.O_CREAT, 0o600),
+                   'w') as tf:
       tf.write(data)
     return False
   except (IOError, OSError) as e:

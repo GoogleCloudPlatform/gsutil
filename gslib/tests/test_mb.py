@@ -51,17 +51,17 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_create_with_retention_seconds(self):
     bucket_name = self.MakeTempName('bucket')
-    bucket_uri = boto.storage_uri(
-        'gs://%s' % (bucket_name.lower()), suppress_consec_slashes=False)
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '--retention', '60s', suri(bucket_uri)])
-    self.VerifyRetentionPolicy(
-        bucket_uri, expected_retention_period_in_seconds=60)
+    self.VerifyRetentionPolicy(bucket_uri,
+                               expected_retention_period_in_seconds=60)
 
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_create_with_retention_days(self):
     bucket_name = self.MakeTempName('bucket')
-    bucket_uri = boto.storage_uri(
-        'gs://%s' % (bucket_name.lower()), suppress_consec_slashes=False)
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '--retention', '1d', suri(bucket_uri)])
     self.VerifyRetentionPolicy(
         bucket_uri, expected_retention_period_in_seconds=SECONDS_IN_DAY)
@@ -69,8 +69,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_create_with_retention_months(self):
     bucket_name = self.MakeTempName('bucket')
-    bucket_uri = boto.storage_uri(
-        'gs://%s' % (bucket_name.lower()), suppress_consec_slashes=False)
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '--retention', '1m', suri(bucket_uri)])
     self.VerifyRetentionPolicy(
         bucket_uri, expected_retention_period_in_seconds=SECONDS_IN_MONTH)
@@ -78,8 +78,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_create_with_retention_years(self):
     bucket_name = self.MakeTempName('bucket')
-    bucket_uri = boto.storage_uri(
-        'gs://%s' % (bucket_name.lower()), suppress_consec_slashes=False)
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '--retention', '1y', suri(bucket_uri)])
     self.VerifyRetentionPolicy(
         bucket_uri, expected_retention_period_in_seconds=SECONDS_IN_YEAR)
@@ -87,8 +87,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_create_with_retention_invalid_arg(self):
     bucket_name = self.MakeTempName('bucket')
-    bucket_uri = boto.storage_uri(
-        'gs://%s' % (bucket_name.lower()), suppress_consec_slashes=False)
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
     stderr = self.RunGsUtil(['mb', '--retention', '1second',
                              suri(bucket_uri)],
                             expected_status=1,
@@ -97,8 +97,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
 
   def test_create_with_retention_on_s3_urls_fails(self):
     bucket_name = self.MakeTempName('bucket')
-    bucket_uri = boto.storage_uri(
-        's3://%s' % (bucket_name.lower()), suppress_consec_slashes=False)
+    bucket_uri = boto.storage_uri('s3://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
     stderr = self.RunGsUtil(
         ['mb', '--retention', '1y', suri(bucket_uri)],
         expected_status=1,

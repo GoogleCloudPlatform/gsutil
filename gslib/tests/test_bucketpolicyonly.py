@@ -31,8 +31,8 @@ class TestBucketPolicyOnly(testcase.GsUtilIntegrationTestCase):
   _get_bpo_cmd = ['bucketpolicyonly', 'get']
 
   def _AssertEnabled(self, bucket_uri, value):
-    stdout = self.RunGsUtil(
-        self._get_bpo_cmd + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_bpo_cmd + [suri(bucket_uri)],
+                            return_stdout=True)
     bucket_policy_only_re = re.compile(r'^\s*Enabled:\s+(?P<enabled_val>.+)$',
                                        re.MULTILINE)
     bucket_policy_only_match = re.search(bucket_policy_only_re, stdout)
@@ -48,8 +48,8 @@ class TestBucketPolicyOnly(testcase.GsUtilIntegrationTestCase):
   def test_turning_off_on_enabled_buckets(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('XML API has no concept of Bucket Policy Only')
-    bucket_uri = self.CreateBucket(
-        bucket_policy_only=True, prefer_json_api=True)
+    bucket_uri = self.CreateBucket(bucket_policy_only=True,
+                                   prefer_json_api=True)
     self._AssertEnabled(bucket_uri, True)
 
     self.RunGsUtil(self._set_bpo_cmd + ['off', suri(bucket_uri)])
@@ -79,13 +79,15 @@ class TestBucketPolicyOnly(testcase.GsUtilIntegrationTestCase):
   def testTooFewArgumentsFails(self):
     """Ensures bucketpolicyonly commands fail with too few arguments."""
     # No arguments for set, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._set_bpo_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._set_bpo_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._get_bpo_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._get_bpo_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # Neither arguments nor subcommand.

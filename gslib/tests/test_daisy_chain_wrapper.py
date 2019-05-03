@@ -47,8 +47,8 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
     contents = pkgutil.get_data('gslib', 'tests/test_data/%s' % _TEST_FILE)
     if not self._temp_test_file:
       # Write to a temp file because pkgutil doesn't expose a stream interface.
-      self._temp_test_file = self.CreateTempFile(
-          file_name=_TEST_FILE, contents=contents)
+      self._temp_test_file = self.CreateTempFile(file_name=_TEST_FILE,
+                                                 contents=contents)
     return self._temp_test_file
 
   class MockDownloadCloudApi(gslib.cloud_api.CloudApi):
@@ -112,11 +112,10 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
     # Test for a single call even if the chunk size is larger than the data.
     for chunk_size in (self.test_data_file_len, self.test_data_file_len + 1):
       mock_api = self.MockDownloadCloudApi(write_values)
-      daisy_chain_wrapper = DaisyChainWrapper(
-          self._dummy_url,
-          self.test_data_file_len,
-          mock_api,
-          download_chunk_size=chunk_size)
+      daisy_chain_wrapper = DaisyChainWrapper(self._dummy_url,
+                                              self.test_data_file_len,
+                                              mock_api,
+                                              download_chunk_size=chunk_size)
       self._WriteFromWrapperToFile(daisy_chain_wrapper, upload_file)
       # Since the chunk size is >= the file size, only a single GetObjectMedia
       # call should be made.
@@ -189,20 +188,20 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
 
     write_values_dict = {
         'First byte first chunk unaligned':
-            (one_byte, chunk_minus_one_byte, chunk, chunk),
+        (one_byte, chunk_minus_one_byte, chunk, chunk),
         'Last byte first chunk unaligned': (chunk_minus_one_byte, chunk, chunk),
         'First byte second chunk unaligned':
-            (chunk, one_byte, chunk_minus_one_byte, chunk),
+        (chunk, one_byte, chunk_minus_one_byte, chunk),
         'Last byte second chunk unaligned':
-            (chunk, chunk_minus_one_byte, one_byte, chunk),
-        'First byte final chunk unaligned':
-            (chunk, chunk, one_byte, chunk_minus_one_byte),
-        'Last byte final chunk unaligned':
-            (chunk, chunk, chunk_minus_one_byte, one_byte),
+        (chunk, chunk_minus_one_byte, one_byte, chunk),
+        'First byte final chunk unaligned': (chunk, chunk, one_byte,
+                                             chunk_minus_one_byte),
+        'Last byte final chunk unaligned': (chunk, chunk, chunk_minus_one_byte,
+                                            one_byte),
         'Half chunks': (half_chunk, half_chunk, half_chunk),
         'Many unaligned':
-            (one_byte, half_chunk, one_byte, half_chunk, chunk,
-             chunk_minus_one_byte, chunk, one_byte, half_chunk, one_byte)
+        (one_byte, half_chunk, one_byte, half_chunk, chunk,
+         chunk_minus_one_byte, chunk, one_byte, half_chunk, one_byte)
     }
     upload_file = self.CreateTempFile()
     for case_name, write_values in six.iteritems(write_values_dict):

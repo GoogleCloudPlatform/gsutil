@@ -342,8 +342,8 @@ class LsCommand(Command):
     if bucket.retentionPolicy:
       fields['retention_policy'] = 'Present'
     if bucket.labels:
-      fields['labels'] = LabelTranslation.JsonFromMessage(
-          bucket.labels, pretty_print=True)
+      fields['labels'] = LabelTranslation.JsonFromMessage(bucket.labels,
+                                                          pretty_print=True)
     else:
       fields['labels'] = 'None'
     if bucket.encryption and bucket.encryption.defaultKmsKeyName:
@@ -435,8 +435,8 @@ class LsCommand(Command):
       num_objs = 0
       url_str += '<DeleteMarker>'
     else:
-      size_string = (
-          MakeHumanReadable(obj.size) if self.human_readable else str(obj.size))
+      size_string = (MakeHumanReadable(obj.size)
+                     if self.human_readable else str(obj.size))
       num_bytes = obj.size
       num_objs = 1
 
@@ -538,10 +538,9 @@ class LsCommand(Command):
             # Iterator does not make an HTTP call for non-wildcarded
             # listings with fields=='id'. Ensure the bucket exists by calling
             # GetBucket.
-            self.gsutil_api.GetBucket(
-                blr.storage_url.bucket_name,
-                fields=['id'],
-                provider=storage_url.scheme)
+            self.gsutil_api.GetBucket(blr.storage_url.bucket_name,
+                                      fields=['id'],
+                                      provider=storage_url.scheme)
           self._PrintBucketInfo(blr, listing_style)
           total_buckets += 1
         if not ContainsWildcard(url_str) and not total_buckets:
@@ -581,8 +580,8 @@ class LsCommand(Command):
 
         elif listing_style == ListingStyle.LONG_LONG:
           # List all fields
-          bucket_listing_fields = (
-              UNENCRYPTED_FULL_LISTING_FIELDS + ENCRYPTED_FIELDS)
+          bucket_listing_fields = (UNENCRYPTED_FULL_LISTING_FIELDS +
+                                   ENCRYPTED_FIELDS)
           listing_helper = LsHelper(
               self.WildcardIterator,
               self.logger,

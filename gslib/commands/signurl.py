@@ -319,20 +319,18 @@ def _GenSignedUrl(key,
   signature = base64.b16encode(sign(key, string_to_sign,
                                     digest)).lower().decode()
 
-  final_url = _SIGNED_URL_FORMAT.format(
-      host=gs_host,
-      path=gcs_path,
-      sig=signature,
-      query_string=canonical_query_string)
+  final_url = _SIGNED_URL_FORMAT.format(host=gs_host,
+                                        path=gcs_path,
+                                        sig=signature,
+                                        query_string=canonical_query_string)
 
   return final_url
 
 
 def _ReadKeystore(ks_contents, passwd):
   ks = load_pkcs12(ks_contents, passwd)
-  client_email = (
-      ks.get_certificate().get_subject().CN.replace(
-          '.apps.googleusercontent.com', '@developer.gserviceaccount.com'))
+  client_email = (ks.get_certificate().get_subject().CN.replace(
+      '.apps.googleusercontent.com', '@developer.gserviceaccount.com'))
 
   return ks.get_privatekey(), client_email
 
@@ -547,22 +545,21 @@ class UrlSignCommand(Command):
             raise CommandException(
                 '{}: Failed to auto-detect location for bucket \'{}\'. Please '
                 'ensure you have storage.buckets.get permission on the bucket '
-                'or specify the bucket\'s location using the \'-r\' option.'
-                .format(e.__class__.__name__, url.bucket_name))
+                'or specify the bucket\'s location using the \'-r\' option.'.
+                format(e.__class__.__name__, url.bucket_name))
           bucket_region = bucket.location.lower()
           region_cache[url.bucket_name] = bucket_region
       else:
         bucket_region = region
-      final_url = _GenSignedUrl(
-          key,
-          client_email,
-          method,
-          delta,
-          gcs_path,
-          self.logger,
-          bucket_region,
-          content_type,
-          string_to_sign_debug=True)
+      final_url = _GenSignedUrl(key,
+                                client_email,
+                                method,
+                                delta,
+                                gcs_path,
+                                self.logger,
+                                bucket_region,
+                                content_type,
+                                string_to_sign_debug=True)
 
       expiration = calendar.timegm((datetime.utcnow() + delta).utctimetuple())
       expiration_dt = datetime.fromtimestamp(expiration)
@@ -595,8 +592,8 @@ class UrlSignCommand(Command):
           if method != 'PUT' and method != 'RESUMABLE':
             raise CommandException(
                 'Object {0} does not exist. Please create/upload an object '
-                'with that name before a creating signed URL to access it.'
-                .format(url))
+                'with that name before a creating signed URL to access it.'.
+                format(url))
       elif response_code == 403:
         self.logger.warn(
             '%s does not have permissions on %s, using this link will likely '

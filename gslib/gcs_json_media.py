@@ -305,13 +305,12 @@ def WrapUploadHttpRequest(upload_http):
       override_connection_type = connection_type
     else:
       override_connection_type = None
-    return request_orig(
-        uri,
-        method=method,
-        body=body,
-        headers=headers,
-        redirections=redirections,
-        connection_type=override_connection_type)
+    return request_orig(uri,
+                        method=method,
+                        body=body,
+                        headers=headers,
+                        redirections=redirections,
+                        connection_type=override_connection_type)
 
   # Replace the request method with our own closure.
   upload_http.request = NewRequest
@@ -545,21 +544,19 @@ def WrapDownloadHttpRequest(download_http):
                  redirections=httplib2.DEFAULT_MAX_REDIRECTS,
                  connection_type=None):
     if method == 'POST':
-      return request_orig(
-          uri,
-          method=method,
-          body=body,
-          headers=headers,
-          redirections=redirections,
-          connection_type=None)
+      return request_orig(uri,
+                          method=method,
+                          body=body,
+                          headers=headers,
+                          redirections=redirections,
+                          connection_type=None)
     else:
-      return request_orig(
-          uri,
-          method=method,
-          body=body,
-          headers=headers,
-          redirections=redirections,
-          connection_type=connection_type)
+      return request_orig(uri,
+                          method=method,
+                          body=body,
+                          headers=headers,
+                          redirections=redirections,
+                          connection_type=connection_type)
 
   # Replace the request methods with our own closures.
   download_http._request = types.MethodType(OverrideRequest, download_http)

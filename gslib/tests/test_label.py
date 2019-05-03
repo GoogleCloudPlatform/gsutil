@@ -88,9 +88,8 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertItemsEqual(
-          self._LabelDictFromXmlString(stdout),
-          self._LabelDictFromXmlString(self._label_xml))
+      self.assertItemsEqual(self._LabelDictFromXmlString(stdout),
+                            self._LabelDictFromXmlString(self._label_xml))
 
     _Check1()
 
@@ -109,9 +108,8 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertItemsEqual(
-          self._LabelDictFromXmlString(stdout),
-          self._LabelDictFromXmlString(self._label_xml))
+      self.assertItemsEqual(self._LabelDictFromXmlString(stdout),
+                            self._LabelDictFromXmlString(self._label_xml))
 
     _Check1()
 
@@ -202,8 +200,8 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
     ]
 
     # Ensure 'ch' progress message shows in stderr.
-    stderr = self.RunGsUtil(
-        ['label', 'ch'] + ch_subargs + [suri(bucket_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['label', 'ch'] + ch_subargs + [suri(bucket_uri)],
+                            return_stderr=True)
     self.assertEqual(stderr.strip(), LABEL_SETTING_OUTPUT % suri(bucket_uri))
 
     # Check the bucket to ensure it's configured with the labels we just
@@ -234,8 +232,8 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
     ]
 
     # Ensure 'ch' progress message appears for both buckets in stderr.
-    stderr = self.RunGsUtil(
-        ['label', 'ch'] + ch_subargs + bucket_suris, return_stderr=True)
+    stderr = self.RunGsUtil(['label', 'ch'] + ch_subargs + bucket_suris,
+                            return_stderr=True)
     actual = set(stderr.splitlines())
     expected = set(
         [LABEL_SETTING_OUTPUT % bucket_suri for bucket_suri in bucket_suris])

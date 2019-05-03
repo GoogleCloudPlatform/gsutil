@@ -22,7 +22,6 @@ from apitools.base.protorpclite import messages as _messages
 from apitools.base.py import encoding
 from apitools.base.py import extra_types
 
-
 package = 'storage'
 
 
@@ -210,7 +209,9 @@ class Bucket(_messages.Message):
       key = _messages.StringField(1)
       value = _messages.StringField(2)
 
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+    additionalProperties = _messages.MessageField('AdditionalProperty',
+                                                  1,
+                                                  repeated=True)
 
   class LifecycleValue(_messages.Message):
     r"""The bucket's lifecycle configuration. See lifecycle management for
@@ -275,7 +276,8 @@ class Bucket(_messages.Message):
         createdBefore = extra_types.DateField(2)
         isLive = _messages.BooleanField(3)
         matchesStorageClass = _messages.StringField(4, repeated=True)
-        numNewerVersions = _messages.IntegerField(5, variant=_messages.Variant.INT32)
+        numNewerVersions = _messages.IntegerField(
+            5, variant=_messages.Variant.INT32)
 
       action = _messages.MessageField('ActionValue', 1)
       condition = _messages.MessageField('ConditionValue', 2)
@@ -366,7 +368,9 @@ class Bucket(_messages.Message):
   billing = _messages.MessageField('BillingValue', 2)
   cors = _messages.MessageField('CorsValueListEntry', 3, repeated=True)
   defaultEventBasedHold = _messages.BooleanField(4)
-  defaultObjectAcl = _messages.MessageField('ObjectAccessControl', 5, repeated=True)
+  defaultObjectAcl = _messages.MessageField('ObjectAccessControl',
+                                            5,
+                                            repeated=True)
   encryption = _messages.MessageField('EncryptionValue', 6)
   etag = _messages.StringField(7)
   iamConfiguration = _messages.MessageField('IamConfigurationValue', 8)
@@ -517,7 +521,9 @@ class Channel(_messages.Message):
       key = _messages.StringField(1)
       value = _messages.StringField(2)
 
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+    additionalProperties = _messages.MessageField('AdditionalProperty',
+                                                  1,
+                                                  repeated=True)
 
   address = _messages.StringField(1)
   expiration = _messages.IntegerField(2)
@@ -529,6 +535,7 @@ class Channel(_messages.Message):
   resourceUri = _messages.StringField(8)
   token = _messages.StringField(9)
   type = _messages.StringField(10)
+
 
 class Channels(_messages.Message):
   r"""A channels list response.
@@ -562,6 +569,7 @@ class Channels(_messages.Message):
 
   items = _messages.MessageField('ItemsValueListEntry', 1, repeated=True)
   kind = _messages.StringField(2, default=u'storage#channels')
+
 
 class ComposeRequest(_messages.Message):
   r"""A Compose request.
@@ -611,7 +619,9 @@ class ComposeRequest(_messages.Message):
 
   destination = _messages.MessageField('Object', 1)
   kind = _messages.StringField(2, default=u'storage#composeRequest')
-  sourceObjects = _messages.MessageField('SourceObjectsValueListEntry', 3, repeated=True)
+  sourceObjects = _messages.MessageField('SourceObjectsValueListEntry',
+                                         3,
+                                         repeated=True)
   userProject = _messages.StringField(4)
 
 
@@ -693,7 +703,9 @@ class Notification(_messages.Message):
       key = _messages.StringField(1)
       value = _messages.StringField(2)
 
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+    additionalProperties = _messages.MessageField('AdditionalProperty',
+                                                  1,
+                                                  repeated=True)
 
   custom_attributes = _messages.MessageField('CustomAttributesValue', 1)
   etag = _messages.StringField(2)
@@ -838,7 +850,9 @@ class Object(_messages.Message):
       key = _messages.StringField(1)
       value = _messages.StringField(2)
 
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+    additionalProperties = _messages.MessageField('AdditionalProperty',
+                                                  1,
+                                                  repeated=True)
 
   class OwnerValue(_messages.Message):
     r"""The owner of the object. This will always be the uploader of the
@@ -1394,7 +1408,8 @@ class StorageBucketsInsertRequest(_messages.Message):
 
   bucket = _messages.MessageField('Bucket', 1)
   predefinedAcl = _messages.EnumField('PredefinedAclValueValuesEnum', 2)
-  predefinedDefaultObjectAcl = _messages.EnumField('PredefinedDefaultObjectAclValueValuesEnum', 3)
+  predefinedDefaultObjectAcl = _messages.EnumField(
+      'PredefinedDefaultObjectAclValueValuesEnum', 3)
   project = _messages.StringField(4, required=True)
   projection = _messages.EnumField('ProjectionValueValuesEnum', 5)
   userProject = _messages.StringField(6)
@@ -1427,12 +1442,15 @@ class StorageBucketsListRequest(_messages.Message):
     full = 0
     noAcl = 1
 
-  maxResults = _messages.IntegerField(1, variant=_messages.Variant.UINT32, default=1000)
+  maxResults = _messages.IntegerField(1,
+                                      variant=_messages.Variant.UINT32,
+                                      default=1000)
   pageToken = _messages.StringField(2)
   prefix = _messages.StringField(3)
   project = _messages.StringField(4, required=True)
   projection = _messages.EnumField('ProjectionValueValuesEnum', 5)
   userProject = _messages.StringField(6)
+
 
 class StorageBucketsListChannelsRequest(_messages.Message):
   r"""A StorageBucketsListChannelsRequest object.
@@ -1548,7 +1566,8 @@ class StorageBucketsPatchRequest(_messages.Message):
   ifMetagenerationMatch = _messages.IntegerField(3)
   ifMetagenerationNotMatch = _messages.IntegerField(4)
   predefinedAcl = _messages.EnumField('PredefinedAclValueValuesEnum', 5)
-  predefinedDefaultObjectAcl = _messages.EnumField('PredefinedDefaultObjectAclValueValuesEnum', 6)
+  predefinedDefaultObjectAcl = _messages.EnumField(
+      'PredefinedDefaultObjectAclValueValuesEnum', 6)
   projection = _messages.EnumField('ProjectionValueValuesEnum', 7)
   userProject = _messages.StringField(8)
 
@@ -1668,7 +1687,8 @@ class StorageBucketsUpdateRequest(_messages.Message):
   ifMetagenerationMatch = _messages.IntegerField(3)
   ifMetagenerationNotMatch = _messages.IntegerField(4)
   predefinedAcl = _messages.EnumField('PredefinedAclValueValuesEnum', 5)
-  predefinedDefaultObjectAcl = _messages.EnumField('PredefinedDefaultObjectAclValueValuesEnum', 6)
+  predefinedDefaultObjectAcl = _messages.EnumField(
+      'PredefinedDefaultObjectAclValueValuesEnum', 6)
   projection = _messages.EnumField('ProjectionValueValuesEnum', 7)
   userProject = _messages.StringField(8)
 
@@ -2050,7 +2070,8 @@ class StorageObjectsComposeRequest(_messages.Message):
   composeRequest = _messages.MessageField('ComposeRequest', 1)
   destinationBucket = _messages.StringField(2, required=True)
   destinationObject = _messages.StringField(3, required=True)
-  destinationPredefinedAcl = _messages.EnumField('DestinationPredefinedAclValueValuesEnum', 4)
+  destinationPredefinedAcl = _messages.EnumField(
+      'DestinationPredefinedAclValueValuesEnum', 4)
   ifGenerationMatch = _messages.IntegerField(5)
   ifMetagenerationMatch = _messages.IntegerField(6)
   kmsKeyName = _messages.StringField(7)
@@ -2147,7 +2168,8 @@ class StorageObjectsCopyRequest(_messages.Message):
 
   destinationBucket = _messages.StringField(1, required=True)
   destinationObject = _messages.StringField(2, required=True)
-  destinationPredefinedAcl = _messages.EnumField('DestinationPredefinedAclValueValuesEnum', 3)
+  destinationPredefinedAcl = _messages.EnumField(
+      'DestinationPredefinedAclValueValuesEnum', 3)
   ifGenerationMatch = _messages.IntegerField(4)
   ifGenerationNotMatch = _messages.IntegerField(5)
   ifMetagenerationMatch = _messages.IntegerField(6)
@@ -2406,7 +2428,9 @@ class StorageObjectsListRequest(_messages.Message):
   bucket = _messages.StringField(1, required=True)
   delimiter = _messages.StringField(2)
   includeTrailingDelimiter = _messages.BooleanField(3)
-  maxResults = _messages.IntegerField(4, variant=_messages.Variant.UINT32, default=1000)
+  maxResults = _messages.IntegerField(4,
+                                      variant=_messages.Variant.UINT32,
+                                      default=1000)
   pageToken = _messages.StringField(5)
   prefix = _messages.StringField(6)
   projection = _messages.EnumField('ProjectionValueValuesEnum', 7)
@@ -2598,7 +2622,8 @@ class StorageObjectsRewriteRequest(_messages.Message):
   destinationBucket = _messages.StringField(1, required=True)
   destinationKmsKeyName = _messages.StringField(2)
   destinationObject = _messages.StringField(3, required=True)
-  destinationPredefinedAcl = _messages.EnumField('DestinationPredefinedAclValueValuesEnum', 4)
+  destinationPredefinedAcl = _messages.EnumField(
+      'DestinationPredefinedAclValueValuesEnum', 4)
   ifGenerationMatch = _messages.IntegerField(5)
   ifGenerationNotMatch = _messages.IntegerField(6)
   ifMetagenerationMatch = _messages.IntegerField(7)
@@ -2782,7 +2807,9 @@ class StorageObjectsWatchAllRequest(_messages.Message):
   channel = _messages.MessageField('Channel', 2)
   delimiter = _messages.StringField(3)
   includeTrailingDelimiter = _messages.BooleanField(4)
-  maxResults = _messages.IntegerField(5, variant=_messages.Variant.UINT32, default=1000)
+  maxResults = _messages.IntegerField(5,
+                                      variant=_messages.Variant.UINT32,
+                                      default=1000)
   pageToken = _messages.StringField(6)
   prefix = _messages.StringField(7)
   projection = _messages.EnumField('ProjectionValueValuesEnum', 8)
@@ -2825,5 +2852,3 @@ class TestIamPermissionsResponse(_messages.Message):
 
   kind = _messages.StringField(1, default=u'storage#testIamPermissionsResponse')
   permissions = _messages.StringField(2, repeated=True)
-
-

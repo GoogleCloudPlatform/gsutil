@@ -42,35 +42,51 @@ class CloudkmsV1(base_api.BaseApiClient):
   _URL_VERSION = u'v1'
   _API_KEY = None
 
-  def __init__(self, url='', credentials=None,
-               get_credentials=True, http=None, model=None,
-               log_request=False, log_response=False,
-               credentials_args=None, default_global_params=None,
+  def __init__(self,
+               url='',
+               credentials=None,
+               get_credentials=True,
+               http=None,
+               model=None,
+               log_request=False,
+               log_response=False,
+               credentials_args=None,
+               default_global_params=None,
                additional_http_headers=None):
     """Create a new cloudkms handle."""
     url = url or self.BASE_URL
-    super(CloudkmsV1, self).__init__(
-        url, credentials=credentials,
-        get_credentials=get_credentials, http=http, model=model,
-        log_request=log_request, log_response=log_response,
-        credentials_args=credentials_args,
-        default_global_params=default_global_params,
-        additional_http_headers=additional_http_headers)
-    self.projects_locations_keyRings_cryptoKeys_cryptoKeyVersions = self.ProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsService(self)
-    self.projects_locations_keyRings_cryptoKeys = self.ProjectsLocationsKeyRingsCryptoKeysService(self)
-    self.projects_locations_keyRings = self.ProjectsLocationsKeyRingsService(self)
+    super(CloudkmsV1,
+          self).__init__(url,
+                         credentials=credentials,
+                         get_credentials=get_credentials,
+                         http=http,
+                         model=model,
+                         log_request=log_request,
+                         log_response=log_response,
+                         credentials_args=credentials_args,
+                         default_global_params=default_global_params,
+                         additional_http_headers=additional_http_headers)
+    self.projects_locations_keyRings_cryptoKeys_cryptoKeyVersions = self.ProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsService(
+        self)
+    self.projects_locations_keyRings_cryptoKeys = self.ProjectsLocationsKeyRingsCryptoKeysService(
+        self)
+    self.projects_locations_keyRings = self.ProjectsLocationsKeyRingsService(
+        self)
     self.projects_locations = self.ProjectsLocationsService(self)
     self.projects = self.ProjectsService(self)
 
-  class ProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsService(base_api.BaseApiService):
+  class ProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsService(
+      base_api.BaseApiService):
     """Service class for the projects_locations_keyRings_cryptoKeys_cryptoKeyVersions resource."""
 
     _NAME = u'projects_locations_keyRings_cryptoKeys_cryptoKeyVersions'
 
     def __init__(self, client):
-      super(CloudkmsV1.ProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      super(
+          CloudkmsV1.
+          ProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsService,
+          self).__init__(client)
+      self._upload_configs = {}
 
     def Create(self, request, global_params=None):
       """Create a new CryptoKeyVersion in a CryptoKey.
@@ -86,19 +102,21 @@ ENABLED.
         (CryptoKeyVersion) The response message.
       """
       config = self.GetMethodConfig('Create')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Create.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions',
         http_method=u'POST',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.create',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.create',
         ordered_params=[u'parent'],
         path_params=[u'parent'],
         query_params=[],
         relative_path=u'v1/{+parent}/cryptoKeyVersions',
         request_field=u'cryptoKeyVersion',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsCreateRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsCreateRequest',
         response_type_name=u'CryptoKeyVersion',
         supports_download=False,
     )
@@ -124,19 +142,21 @@ RestoreCryptoKeyVersion may be called to reverse the process.
         (CryptoKeyVersion) The response message.
       """
       config = self.GetMethodConfig('Destroy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Destroy.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions/{cryptoKeyVersionsId}:destroy',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions/{cryptoKeyVersionsId}:destroy',
         http_method=u'POST',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.destroy',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.destroy',
         ordered_params=[u'name'],
         path_params=[u'name'],
         query_params=[],
         relative_path=u'v1/{+name}:destroy',
         request_field=u'destroyCryptoKeyVersionRequest',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsDestroyRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsDestroyRequest',
         response_type_name=u'CryptoKeyVersion',
         supports_download=False,
     )
@@ -151,19 +171,21 @@ RestoreCryptoKeyVersion may be called to reverse the process.
         (CryptoKeyVersion) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions/{cryptoKeyVersionsId}',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions/{cryptoKeyVersionsId}',
         http_method=u'GET',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.get',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.get',
         ordered_params=[u'name'],
         path_params=[u'name'],
         query_params=[],
         relative_path=u'v1/{+name}',
         request_field='',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsGetRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsGetRequest',
         response_type_name=u'CryptoKeyVersion',
         supports_download=False,
     )
@@ -178,19 +200,21 @@ RestoreCryptoKeyVersion may be called to reverse the process.
         (ListCryptoKeyVersionsResponse) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions',
         http_method=u'GET',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.list',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.list',
         ordered_params=[u'parent'],
         path_params=[u'parent'],
         query_params=[u'pageSize', u'pageToken'],
         relative_path=u'v1/{+parent}/cryptoKeyVersions',
         request_field='',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsListRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsListRequest',
         response_type_name=u'ListCryptoKeyVersionsResponse',
         supports_download=False,
     )
@@ -211,19 +235,21 @@ move between other states.
         (CryptoKeyVersion) The response message.
       """
       config = self.GetMethodConfig('Patch')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Patch.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions/{cryptoKeyVersionsId}',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions/{cryptoKeyVersionsId}',
         http_method=u'PATCH',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.patch',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.patch',
         ordered_params=[u'name'],
         path_params=[u'name'],
         query_params=[u'updateMask'],
         relative_path=u'v1/{+name}',
         request_field=u'cryptoKeyVersion',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsPatchRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsPatchRequest',
         response_type_name=u'CryptoKeyVersion',
         supports_download=False,
     )
@@ -244,19 +270,21 @@ and destroy_time will be cleared.
         (CryptoKeyVersion) The response message.
       """
       config = self.GetMethodConfig('Restore')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Restore.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions/{cryptoKeyVersionsId}:restore',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}/cryptoKeyVersions/{cryptoKeyVersionsId}:restore',
         http_method=u'POST',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.restore',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions.restore',
         ordered_params=[u'name'],
         path_params=[u'name'],
         query_params=[],
         relative_path=u'v1/{+name}:restore',
         request_field=u'restoreCryptoKeyVersionRequest',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsRestoreRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCryptoKeyVersionsRestoreRequest',
         response_type_name=u'CryptoKeyVersion',
         supports_download=False,
     )
@@ -267,9 +295,9 @@ and destroy_time will be cleared.
     _NAME = u'projects_locations_keyRings_cryptoKeys'
 
     def __init__(self, client):
-      super(CloudkmsV1.ProjectsLocationsKeyRingsCryptoKeysService, self).__init__(client)
-      self._upload_configs = {
-          }
+      super(CloudkmsV1.ProjectsLocationsKeyRingsCryptoKeysService,
+            self).__init__(client)
+      self._upload_configs = {}
 
     def Create(self, request, global_params=None):
       """Create a new CryptoKey within a KeyRing.
@@ -283,11 +311,11 @@ CryptoKey.purpose is required.
         (CryptoKey) The response message.
       """
       config = self.GetMethodConfig('Create')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Create.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys',
         http_method=u'POST',
         method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.create',
         ordered_params=[u'parent'],
@@ -295,7 +323,8 @@ CryptoKey.purpose is required.
         query_params=[u'cryptoKeyId'],
         relative_path=u'v1/{+parent}/cryptoKeys',
         request_field=u'cryptoKey',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCreateRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysCreateRequest',
         response_type_name=u'CryptoKey',
         supports_download=False,
     )
@@ -310,11 +339,11 @@ CryptoKey.purpose is required.
         (DecryptResponse) The response message.
       """
       config = self.GetMethodConfig('Decrypt')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Decrypt.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:decrypt',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:decrypt',
         http_method=u'POST',
         method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.decrypt',
         ordered_params=[u'name'],
@@ -322,7 +351,8 @@ CryptoKey.purpose is required.
         query_params=[],
         relative_path=u'v1/{+name}:decrypt',
         request_field=u'decryptRequest',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysDecryptRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysDecryptRequest',
         response_type_name=u'DecryptResponse',
         supports_download=False,
     )
@@ -337,11 +367,11 @@ CryptoKey.purpose is required.
         (EncryptResponse) The response message.
       """
       config = self.GetMethodConfig('Encrypt')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Encrypt.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:encrypt',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:encrypt',
         http_method=u'POST',
         method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.encrypt',
         ordered_params=[u'name'],
@@ -349,7 +379,8 @@ CryptoKey.purpose is required.
         query_params=[],
         relative_path=u'v1/{+name}:encrypt',
         request_field=u'encryptRequest',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysEncryptRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysEncryptRequest',
         response_type_name=u'EncryptResponse',
         supports_download=False,
     )
@@ -365,11 +396,11 @@ primary CryptoKeyVersion.
         (CryptoKey) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}',
         http_method=u'GET',
         method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.get',
         ordered_params=[u'name'],
@@ -377,7 +408,8 @@ primary CryptoKeyVersion.
         query_params=[],
         relative_path=u'v1/{+name}',
         request_field='',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysGetRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysGetRequest',
         response_type_name=u'CryptoKey',
         supports_download=False,
     )
@@ -394,19 +426,21 @@ set.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('GetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     GetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:getIamPolicy',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:getIamPolicy',
         http_method=u'GET',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.getIamPolicy',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.getIamPolicy',
         ordered_params=[u'resource'],
         path_params=[u'resource'],
         query_params=[],
         relative_path=u'v1/{+resource}:getIamPolicy',
         request_field='',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysGetIamPolicyRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysGetIamPolicyRequest',
         response_type_name=u'Policy',
         supports_download=False,
     )
@@ -421,11 +455,11 @@ set.
         (ListCryptoKeysResponse) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys',
         http_method=u'GET',
         method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.list',
         ordered_params=[u'parent'],
@@ -433,7 +467,8 @@ set.
         query_params=[u'pageSize', u'pageToken'],
         relative_path=u'v1/{+parent}/cryptoKeys',
         request_field='',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysListRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysListRequest',
         response_type_name=u'ListCryptoKeysResponse',
         supports_download=False,
     )
@@ -448,11 +483,11 @@ set.
         (CryptoKey) The response message.
       """
       config = self.GetMethodConfig('Patch')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Patch.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}',
         http_method=u'PATCH',
         method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.patch',
         ordered_params=[u'name'],
@@ -460,7 +495,8 @@ set.
         query_params=[u'updateMask'],
         relative_path=u'v1/{+name}',
         request_field=u'cryptoKey',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysPatchRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysPatchRequest',
         response_type_name=u'CryptoKey',
         supports_download=False,
     )
@@ -476,19 +512,21 @@ existing policy.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('SetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     SetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:setIamPolicy',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:setIamPolicy',
         http_method=u'POST',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.setIamPolicy',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.setIamPolicy',
         ordered_params=[u'resource'],
         path_params=[u'resource'],
         query_params=[],
         relative_path=u'v1/{+resource}:setIamPolicy',
         request_field=u'setIamPolicyRequest',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysSetIamPolicyRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysSetIamPolicyRequest',
         response_type_name=u'Policy',
         supports_download=False,
     )
@@ -509,19 +547,21 @@ may "fail open" without warning.
         (TestIamPermissionsResponse) The response message.
       """
       config = self.GetMethodConfig('TestIamPermissions')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     TestIamPermissions.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:testIamPermissions',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:testIamPermissions',
         http_method=u'POST',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.testIamPermissions',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.testIamPermissions',
         ordered_params=[u'resource'],
         path_params=[u'resource'],
         query_params=[],
         relative_path=u'v1/{+resource}:testIamPermissions',
         request_field=u'testIamPermissionsRequest',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysTestIamPermissionsRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysTestIamPermissionsRequest',
         response_type_name=u'TestIamPermissionsResponse',
         supports_download=False,
     )
@@ -536,19 +576,21 @@ may "fail open" without warning.
         (CryptoKey) The response message.
       """
       config = self.GetMethodConfig('UpdatePrimaryVersion')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     UpdatePrimaryVersion.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:updatePrimaryVersion',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}/cryptoKeys/{cryptoKeysId}:updatePrimaryVersion',
         http_method=u'POST',
-        method_id=u'cloudkms.projects.locations.keyRings.cryptoKeys.updatePrimaryVersion',
+        method_id=
+        u'cloudkms.projects.locations.keyRings.cryptoKeys.updatePrimaryVersion',
         ordered_params=[u'name'],
         path_params=[u'name'],
         query_params=[],
         relative_path=u'v1/{+name}:updatePrimaryVersion',
         request_field=u'updateCryptoKeyPrimaryVersionRequest',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsCryptoKeysUpdatePrimaryVersionRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsCryptoKeysUpdatePrimaryVersionRequest',
         response_type_name=u'CryptoKey',
         supports_download=False,
     )
@@ -560,8 +602,7 @@ may "fail open" without warning.
 
     def __init__(self, client):
       super(CloudkmsV1.ProjectsLocationsKeyRingsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Create(self, request, global_params=None):
       """Create a new KeyRing in a given Project and Location.
@@ -573,8 +614,7 @@ may "fail open" without warning.
         (KeyRing) The response message.
       """
       config = self.GetMethodConfig('Create')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Create.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings',
@@ -600,11 +640,11 @@ may "fail open" without warning.
         (KeyRing) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}',
         http_method=u'GET',
         method_id=u'cloudkms.projects.locations.keyRings.get',
         ordered_params=[u'name'],
@@ -629,11 +669,11 @@ set.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('GetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     GetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}:getIamPolicy',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}:getIamPolicy',
         http_method=u'GET',
         method_id=u'cloudkms.projects.locations.keyRings.getIamPolicy',
         ordered_params=[u'resource'],
@@ -641,7 +681,8 @@ set.
         query_params=[],
         relative_path=u'v1/{+resource}:getIamPolicy',
         request_field='',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsGetIamPolicyRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsGetIamPolicyRequest',
         response_type_name=u'Policy',
         supports_download=False,
     )
@@ -656,8 +697,7 @@ set.
         (ListKeyRingsResponse) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings',
@@ -684,11 +724,11 @@ existing policy.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('SetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     SetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}:setIamPolicy',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}:setIamPolicy',
         http_method=u'POST',
         method_id=u'cloudkms.projects.locations.keyRings.setIamPolicy',
         ordered_params=[u'resource'],
@@ -696,7 +736,8 @@ existing policy.
         query_params=[],
         relative_path=u'v1/{+resource}:setIamPolicy',
         request_field=u'setIamPolicyRequest',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsSetIamPolicyRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsSetIamPolicyRequest',
         response_type_name=u'Policy',
         supports_download=False,
     )
@@ -717,11 +758,11 @@ may "fail open" without warning.
         (TestIamPermissionsResponse) The response message.
       """
       config = self.GetMethodConfig('TestIamPermissions')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     TestIamPermissions.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}:testIamPermissions',
+        flat_path=
+        u'v1/projects/{projectsId}/locations/{locationsId}/keyRings/{keyRingsId}:testIamPermissions',
         http_method=u'POST',
         method_id=u'cloudkms.projects.locations.keyRings.testIamPermissions',
         ordered_params=[u'resource'],
@@ -729,7 +770,8 @@ may "fail open" without warning.
         query_params=[],
         relative_path=u'v1/{+resource}:testIamPermissions',
         request_field=u'testIamPermissionsRequest',
-        request_type_name=u'CloudkmsProjectsLocationsKeyRingsTestIamPermissionsRequest',
+        request_type_name=
+        u'CloudkmsProjectsLocationsKeyRingsTestIamPermissionsRequest',
         response_type_name=u'TestIamPermissionsResponse',
         supports_download=False,
     )
@@ -741,8 +783,7 @@ may "fail open" without warning.
 
     def __init__(self, client):
       super(CloudkmsV1.ProjectsLocationsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Get(self, request, global_params=None):
       """Get information about a location.
@@ -754,8 +795,7 @@ may "fail open" without warning.
         (Location) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/locations/{locationsId}',
@@ -781,8 +821,7 @@ may "fail open" without warning.
         (ListLocationsResponse) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/locations',
@@ -805,5 +844,4 @@ may "fail open" without warning.
 
     def __init__(self, client):
       super(CloudkmsV1.ProjectsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}

@@ -175,8 +175,8 @@ class WebCommand(Command):
 
     if bucket_url.scheme == 's3':
       sys.stdout.write(
-          self.gsutil_api.XmlPassThroughGetWebsite(
-              bucket_url, provider=bucket_url.scheme))
+          self.gsutil_api.XmlPassThroughGetWebsite(bucket_url,
+                                                   provider=bucket_url.scheme))
     else:
       if bucket_metadata.website and (bucket_metadata.website.mainPageSuffix or
                                       bucket_metadata.website.notFoundPage):
@@ -213,11 +213,10 @@ class WebCommand(Command):
         some_matched = True
         self.logger.info('Setting website configuration on %s...', blr)
         bucket_metadata = apitools_messages.Bucket(website=website)
-        self.gsutil_api.PatchBucket(
-            url.bucket_name,
-            bucket_metadata,
-            provider=url.scheme,
-            fields=['id'])
+        self.gsutil_api.PatchBucket(url.bucket_name,
+                                    bucket_metadata,
+                                    provider=url.scheme,
+                                    fields=['id'])
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
     return 0
@@ -237,6 +236,6 @@ class WebCommand(Command):
 
     # Commands with both suboptions and subcommands need to reparse for
     # suboptions, so we log again.
-    metrics.LogCommandParams(
-        subcommands=[action_subcommand], sub_opts=self.sub_opts)
+    metrics.LogCommandParams(subcommands=[action_subcommand],
+                             sub_opts=self.sub_opts)
     return func()

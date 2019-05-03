@@ -250,14 +250,12 @@ _TEMP_DESCRIPTION = """
     gsutil -m retention temp set gs://bucket/*.jpg
 """
 
-_SYNOPSIS = (
-    _SET_SYNOPSIS + _CLEAR_SYNOPSIS + _GET_SYNOPSIS + _LOCK_SYNOPSIS +
-    _EVENT_DEFAULT_SYNOPSIS + _EVENT_SYNOPSIS + _TEMP_SYNOPSIS)
+_SYNOPSIS = (_SET_SYNOPSIS + _CLEAR_SYNOPSIS + _GET_SYNOPSIS + _LOCK_SYNOPSIS +
+             _EVENT_DEFAULT_SYNOPSIS + _EVENT_SYNOPSIS + _TEMP_SYNOPSIS)
 
-_DESCRIPTION = (
-    _SET_DESCRIPTION + _CLEAR_DESCRIPTION + _GET_DESCRIPTION +
-    _LOCK_DESCRIPTION + _EVENT_DEFAULT_DESCRIPTION + _EVENT_DESCRIPTION +
-    _TEMP_DESCRIPTION)
+_DESCRIPTION = (_SET_DESCRIPTION + _CLEAR_DESCRIPTION + _GET_DESCRIPTION +
+                _LOCK_DESCRIPTION + _EVENT_DEFAULT_DESCRIPTION +
+                _EVENT_DESCRIPTION + _TEMP_DESCRIPTION)
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
@@ -362,8 +360,8 @@ class RetentionCommand(Command):
 
     # Commands with both suboptions and subcommands need to reparse for
     # suboptions, so we log again.
-    metrics.LogCommandParams(
-        subcommands=[action_subcommand], sub_opts=self.sub_opts)
+    metrics.LogCommandParams(subcommands=[action_subcommand],
+                             sub_opts=self.sub_opts)
     return func()
 
   def BucketUpdateFunc(self, url_args, bucket_metadata_update, fields,
@@ -380,12 +378,11 @@ class RetentionCommand(Command):
         url = blr.storage_url
         some_matched = True
         self.logger.info(log_msg_template, blr)
-        self.gsutil_api.PatchBucket(
-            url.bucket_name,
-            bucket_metadata_update,
-            preconditions=preconditions,
-            provider=url.scheme,
-            fields=fields)
+        self.gsutil_api.PatchBucket(url.bucket_name,
+                                    bucket_metadata_update,
+                                    preconditions=preconditions,
+                                    provider=url.scheme,
+                                    fields=fields)
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 
@@ -419,14 +416,13 @@ class RetentionCommand(Command):
     if preconditions.meta_gen_match is None:
       preconditions.meta_gen_match = cloud_obj_metadata.metageneration
 
-    gsutil_api.PatchObjectMetadata(
-        exp_src_url.bucket_name,
-        exp_src_url.object_name,
-        patch_obj_metadata,
-        generation=exp_src_url.generation,
-        preconditions=preconditions,
-        provider=exp_src_url.scheme,
-        fields=['id'])
+    gsutil_api.PatchObjectMetadata(exp_src_url.bucket_name,
+                                   exp_src_url.object_name,
+                                   patch_obj_metadata,
+                                   generation=exp_src_url.generation,
+                                   preconditions=preconditions,
+                                   provider=exp_src_url.scheme,
+                                   fields=['id'])
     PutToQueueWithTimeout(gsutil_api.status_queue,
                           MetadataMessage(message_time=time.time()))
 
@@ -443,46 +439,43 @@ class RetentionCommand(Command):
         bucket_listing_fields=['generation', 'metageneration'])
 
   def _GetSeekAheadNameExpansionIterator(self, url_args):
-    return SeekAheadNameExpansionIterator(
-        self.command_name,
-        self.debug,
-        self.GetSeekAheadGsutilApi(),
-        url_args,
-        self.recursion_requested,
-        all_versions=self.all_versions,
-        project_id=self.project_id)
+    return SeekAheadNameExpansionIterator(self.command_name,
+                                          self.debug,
+                                          self.GetSeekAheadGsutilApi(),
+                                          url_args,
+                                          self.recursion_requested,
+                                          all_versions=self.all_versions,
+                                          project_id=self.project_id)
 
   def _SetRetention(self):
     """Set retention retention_period on one or more buckets."""
 
     seconds = RetentionInSeconds(self.args[0])
-    retention_policy = (
-        apitools_messages.Bucket.RetentionPolicyValue(retentionPeriod=seconds))
+    retention_policy = (apitools_messages.Bucket.RetentionPolicyValue(
+        retentionPeriod=seconds))
 
     log_msg_template = 'Setting Retention Policy on %s...'
     bucket_metadata_update = apitools_messages.Bucket(
         retentionPolicy=retention_policy)
     url_args = self.args[1:]
-    self.BucketUpdateFunc(
-        url_args,
-        bucket_metadata_update,
-        fields=['id', 'retentionPolicy'],
-        log_msg_template=log_msg_template)
+    self.BucketUpdateFunc(url_args,
+                          bucket_metadata_update,
+                          fields=['id', 'retentionPolicy'],
+                          log_msg_template=log_msg_template)
     return 0
 
   def _ClearRetention(self):
     """Clear retention retention_period on one or more buckets."""
-    retention_policy = (
-        apitools_messages.Bucket.RetentionPolicyValue(retentionPeriod=None))
+    retention_policy = (apitools_messages.Bucket.RetentionPolicyValue(
+        retentionPeriod=None))
     log_msg_template = 'Clearing Retention Policy on %s...'
     bucket_metadata_update = apitools_messages.Bucket(
         retentionPolicy=retention_policy)
     url_args = self.args
-    self.BucketUpdateFunc(
-        url_args,
-        bucket_metadata_update,
-        fields=['id', 'retentionPolicy'],
-        log_msg_template=log_msg_template)
+    self.BucketUpdateFunc(url_args,
+                          bucket_metadata_update,
+                          fields=['id', 'retentionPolicy'],
+                          log_msg_template=log_msg_template)
     return 0
 
   def _GetRetention(self):
@@ -519,10 +512,9 @@ class RetentionCommand(Command):
         elif ConfirmLockRequest(url.bucket_name,
                                 bucket_metadata.retentionPolicy):
           self.logger.info('Locking Retention Policy on %s...', blr)
-          self.gsutil_api.LockRetentionPolicy(
-              url.bucket_name,
-              bucket_metadata.metageneration,
-              provider=url.scheme)
+          self.gsutil_api.LockRetentionPolicy(url.bucket_name,
+                                              bucket_metadata.metageneration,
+                                              provider=url.scheme)
         else:
           self.logger.error(
               '  Abort Locking Retention Policy on {}'.format(blr))
@@ -549,11 +541,10 @@ class RetentionCommand(Command):
     bucket_metadata_update = apitools_messages.Bucket(
         defaultEventBasedHold=hold)
     url_args = self.args[1:]
-    self.BucketUpdateFunc(
-        url_args,
-        bucket_metadata_update,
-        fields=['id', 'defaultEventBasedHold'],
-        log_msg_template=log_msg_template)
+    self.BucketUpdateFunc(url_args,
+                          bucket_metadata_update,
+                          fields=['id', 'defaultEventBasedHold'],
+                          log_msg_template=log_msg_template)
     return 0
 
   def _EventHold(self):
@@ -562,8 +553,8 @@ class RetentionCommand(Command):
     sub_command_full_name = 'Event-Based'
     hold = self._ProcessHoldArgs(sub_command_name)
     url_args = self.args[1:]
-    obj_metadata_update_wrapper = (
-        SetEventHoldFuncWrapper if hold else ReleaseEventHoldFuncWrapper)
+    obj_metadata_update_wrapper = (SetEventHoldFuncWrapper
+                                   if hold else ReleaseEventHoldFuncWrapper)
     self._SetHold(obj_metadata_update_wrapper, url_args, sub_command_full_name)
     return 0
 
@@ -573,8 +564,8 @@ class RetentionCommand(Command):
     sub_command_full_name = 'Temporary'
     hold = self._ProcessHoldArgs(sub_command_name)
     url_args = self.args[1:]
-    obj_metadata_update_wrapper = (
-        SetTempHoldFuncWrapper if hold else ReleaseTempHoldFuncWrapper)
+    obj_metadata_update_wrapper = (SetTempHoldFuncWrapper
+                                   if hold else ReleaseTempHoldFuncWrapper)
     self._SetHold(obj_metadata_update_wrapper, url_args, sub_command_full_name)
     return 0
 
@@ -630,12 +621,11 @@ class RetentionCommand(Command):
       # Perform requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
       # perform requests with sequential function calls in current process.
-      self.Apply(
-          obj_metadata_update_wrapper,
-          name_expansion_iterator,
-          UpdateObjectMetadataExceptionHandler,
-          fail_on_error=True,
-          seek_ahead_iterator=seek_ahead_iterator)
+      self.Apply(obj_metadata_update_wrapper,
+                 name_expansion_iterator,
+                 UpdateObjectMetadataExceptionHandler,
+                 fail_on_error=True,
+                 seek_ahead_iterator=seek_ahead_iterator)
 
     except AccessDeniedException as e:
       if e.status == 403:

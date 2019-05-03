@@ -43,15 +43,15 @@ coverage_outfile = os.getenv('GSUTIL_COVERAGE_OUTPUT_FILE', None)
 if coverage_outfile:
   try:
     import coverage  # pylint: disable=g-import-not-at-top
-    coverage_controller = coverage.coverage(
-        data_file=coverage_outfile,
-        data_suffix=True,
-        auto_data=True,
-        source=['gslib'],
-        omit=[
-            'gslib/third_party/*', 'gslib/tests/*',
-            tempfile.gettempdir() + '*'
-        ])
+    coverage_controller = coverage.coverage(data_file=coverage_outfile,
+                                            data_suffix=True,
+                                            auto_data=True,
+                                            source=['gslib'],
+                                            omit=[
+                                                'gslib/third_party/*',
+                                                'gslib/tests/*',
+                                                tempfile.gettempdir() + '*'
+                                            ])
     coverage_controller.start()
   except ImportError:
     pass

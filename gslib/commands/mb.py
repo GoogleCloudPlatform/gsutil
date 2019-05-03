@@ -227,8 +227,8 @@ class MbCommand(Command):
           InsistOnOrOff(a, 'Only on and off values allowed for -b option')
           bucket_policy_only = (a == 'on')
 
-    bucket_metadata = apitools_messages.Bucket(
-        location=location, storageClass=storage_class)
+    bucket_metadata = apitools_messages.Bucket(location=location,
+                                               storageClass=storage_class)
     if bucket_policy_only:
       bucket_metadata.iamConfiguration = IamConfigurationValue()
       iam_config = bucket_metadata.iamConfiguration
@@ -241,9 +241,8 @@ class MbCommand(Command):
         if bucket_url.scheme != 'gs':
           raise CommandException('Retention policy can only be specified for '
                                  'GCS buckets.')
-        retention_policy = (
-            apitools_messages.Bucket.RetentionPolicyValue(
-                retentionPeriod=seconds))
+        retention_policy = (apitools_messages.Bucket.RetentionPolicyValue(
+            retentionPeriod=seconds))
         bucket_metadata.retentionPolicy = retention_policy
 
       if not bucket_url.IsBucket():
@@ -258,11 +257,10 @@ class MbCommand(Command):
       # Pass storage_class param only if this is a GCS bucket. (In S3 the
       # storage class is specified on the key object.)
       try:
-        self.gsutil_api.CreateBucket(
-            bucket_url.bucket_name,
-            project_id=self.project_id,
-            metadata=bucket_metadata,
-            provider=bucket_url.scheme)
+        self.gsutil_api.CreateBucket(bucket_url.bucket_name,
+                                     project_id=self.project_id,
+                                     metadata=bucket_metadata,
+                                     provider=bucket_url.scheme)
       except BadRequestException as e:
         if (e.status == 400 and e.reason == 'DotfulBucketNameNotUnderTld' and
             bucket_url.scheme == 'gs'):

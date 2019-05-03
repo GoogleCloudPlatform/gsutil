@@ -135,8 +135,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     dst_bucket_uri = self.CreateBucket()
     self.RunCommand('cp', [src_file0, src_file1, suri(dst_bucket_uri)])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri, 'f0'),
         suri(dst_bucket_uri, 'f1'),
@@ -159,8 +159,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.RunCommand('cp', [src_file, suri(dst_bucket_uri, 'subdir/a')])
     self.RunCommand('cp', [src_file, suri(dst_bucket_uri, 'subdir')])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterObjects())
+        str(u) for u in self._test_wildcard_iterator(suri(dst_bucket_uri,
+                                                          '**')).IterObjects())
     expected = set([
         suri(dst_bucket_uri, 'subdir', 'a'),
         suri(dst_bucket_uri, 'subdir', 'obj'),
@@ -181,8 +181,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
          suri(src_bucket_uri, '*', 'sub-test'),
          suri(dst_bucket_uri)])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_bucket_uri, 'sub-test', 'foo')])
     self.assertEqual(expected, actual)
 
@@ -198,8 +198,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         suri(dst_bucket_uri2)
     ])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri2, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri2, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri2, 'dir2', 'foo'),
         suri(dst_bucket_uri2, 'dir2', 'bar')
@@ -213,8 +213,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         suri(dst_bucket_uri3)
     ])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri3, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri3, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri3, 'dir2', 'foo'),
         suri(dst_bucket_uri3, 'dir2', 'bar')
@@ -235,8 +235,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         suri(dst_bucket_uri4)
     ])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri4, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri4, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri4, 'dir3', 'foo'),
         suri(dst_bucket_uri4, 'dir3', 'bar')
@@ -251,8 +251,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         test_files=['f0', 'f1', 'f2.txt', ('dir0', 'dir1', 'nested')])
     self.RunCommand('cp', ['-R', src_dir_root, suri(dst_bucket_uri)])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     src_tmpdir = os.path.split(src_dir_root)[1]
     expected = set([
         suri(dst_bucket_uri, src_tmpdir, 'f0'),
@@ -269,8 +269,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     src_dir = self.CreateTempDir(test_files=[('dir0', 'f1')])
     self.RunCommand('cp', ['-R', 'dir0', suri(dst_bucket_uri)], cwd=src_dir)
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_bucket_uri, 'dir0', 'f1')])
     self.assertEqual(expected, actual)
 
@@ -284,8 +284,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     # console (or various other tools), which gsutil understands to mean there
     # is a folder into which the object is being copied.
     dst_bucket_uri = self.CreateBucket()
-    self.CreateObject(
-        bucket_uri=dst_bucket_uri, object_name='abc_$folder$', contents='')
+    self.CreateObject(bucket_uri=dst_bucket_uri,
+                      object_name='abc_$folder$',
+                      contents='')
     src_dir = self.CreateTempDir(test_files=[('dir0', 'dir1', 'f1')])
     self.RunCommand(
         'cp',
@@ -293,8 +294,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
          suri(dst_bucket_uri, 'abc')],
         cwd=src_dir)
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri, 'abc_$folder$'),
         suri(dst_bucket_uri, 'abc', 'dir1', 'f1')
@@ -316,8 +317,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
          suri(dst_bucket_uri, 'abc') + '/'],
         cwd=src_dir)
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_bucket_uri, 'abc', 'dir1', 'f1')])
     self.assertEqual(expected, actual)
 
@@ -331,8 +332,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                suri(dst_bucket_uri)],
         cwd=src_dir)
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_bucket_uri, 'dir1', 'f1')])
     self.assertEqual(expected, actual)
 
@@ -442,8 +443,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     dst_bucket_uri = self.CreateBucket()
     self.RunCommand('cp', ['-R', suri(src_bucket_uri), suri(dst_bucket_uri)])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri, src_bucket_uri.bucket_name, 'foo'),
         suri(dst_bucket_uri, src_bucket_uri.bucket_name, 'dir', 'foo2')
@@ -519,8 +520,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.assertEqual('f2.txt', actual_obj.name)
     self.assertEqual('gzip', actual_obj.contentEncoding)
 
-    stdout = self.RunCommand(
-        'cat', [suri(dst_bucket_uri, 'f2.txt')], return_stdout=True)
+    stdout = self.RunCommand('cat', [suri(dst_bucket_uri, 'f2.txt')],
+                             return_stdout=True)
 
     f = gzip.GzipFile(fileobj=six.BytesIO(stdout), mode='rb')
     try:
@@ -565,8 +566,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
           os.path.join(src_dir, '**'), dst_dir
       ])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            os.path.join(dst_dir, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(os.path.join(
+            dst_dir, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_dir, 'f1'), suri(dst_dir, 'f2')])
     self.assertEqual(expected, actual)
 
@@ -577,9 +578,9 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     for final_char in ('/', ''):
       # Mock objects don't support hash digestion.
       with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
-        self.RunCommand(
-            'cp', [suri(src_bucket_uri, 'f1'),
-                   '.%s' % final_char], cwd=dst_dir)
+        self.RunCommand('cp', [suri(src_bucket_uri, 'f1'),
+                               '.%s' % final_char],
+                        cwd=dst_dir)
       actual = set()
       for dirname, dirnames, filenames in os.walk(dst_dir):
         for subdirname in dirnames:
@@ -602,8 +603,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         suri(dst_bucket_uri)
     ])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_bucket_uri, 'f1'), suri(dst_bucket_uri, 'f2')])
     self.assertEqual(expected, actual)
 
@@ -626,8 +627,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                     ['-R', src_dir + '/dir1',
                      suri(dst_bucket_uri, 'dir3')])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_bucket_uri, 'dir3/dir2/foo')])
     self.assertEqual(expected, actual)
 
@@ -637,8 +638,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     dst_bucket_uri = self.CreateBucket()
     self.RunCommand('cp', ['-R', src_file, suri(dst_bucket_uri, 'dir/foo')])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_bucket_uri, 'dir/foo')])
     self.assertEqual(expected, actual)
 
@@ -652,8 +653,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         'cp', ['-R', src_file1, src_file2,
                suri(dst_bucket_uri, 'dir/foo')])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri, 'dir/foo/foo'),
         suri(dst_bucket_uri, 'dir/foo/bar')
@@ -761,8 +762,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
                     [suri(dst_bucket_uri, 'old*'),
                      suri(dst_bucket_uri, 'new')])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_bucket_uri, 'new')])
     self.assertEqual(expected, actual)
 
@@ -780,8 +781,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     """Test that ls of a bucket returns expected results."""
     src_bucket_uri = self.CreateBucket(
         test_objects=['foo1', 'd0/foo2', 'd1/d2/foo3'])
-    output = self.RunCommand(
-        'ls', [suri(src_bucket_uri, '*')], return_stdout=True)
+    output = self.RunCommand('ls', [suri(src_bucket_uri, '*')],
+                             return_stdout=True)
     expected = set(
         uri.encode(UTF8) for uri in [
             suri(src_bucket_uri, 'foo1'),
@@ -798,8 +799,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     """Test that ls -R of a bucket returns expected results."""
     src_bucket_uri = self.CreateBucket(
         test_objects=['foo1', 'd0/foo2', 'd1/d2/foo3'])
-    output = self.RunCommand(
-        'ls', ['-R', suri(src_bucket_uri, '*')], return_stdout=True)
+    output = self.RunCommand('ls', ['-R', suri(src_bucket_uri, '*')],
+                             return_stdout=True)
     expected = set(
         uri.encode(UTF8) for uri in [
             suri(src_bucket_uri, 'foo1'),
@@ -816,8 +817,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
   def testLsBucketRecursiveWithLeadingSlashObjectName(self):
     """Test that ls -R of a bucket with an object that has leading slash."""
     dst_bucket_uri = self.CreateBucket(test_objects=['f0'])
-    output = self.RunCommand(
-        'ls', ['-R', suri(dst_bucket_uri, '*')], return_stdout=True)
+    output = self.RunCommand('ls', ['-R', suri(dst_bucket_uri, '*')],
+                             return_stdout=True)
     expected = set([suri(dst_bucket_uri, 'f0').encode(UTF8)])
     expected.add(b'')  # Blank line between subdir listings.
     actual = set([line.strip() for line in output.split(b'\n')])
@@ -827,8 +828,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     """Test that ls of a bucket subdir returns expected results."""
     src_bucket_uri = self.CreateBucket(
         test_objects=['src_subdir/foo', 'src_subdir/nested/foo2'])
-    output = self.RunCommand(
-        'ls', [suri(src_bucket_uri, 'src_subdir')], return_stdout=True)
+    output = self.RunCommand('ls', [suri(src_bucket_uri, 'src_subdir')],
+                             return_stdout=True)
     expected = set([
         suri(src_bucket_uri, 'src_subdir', 'foo').encode(UTF8),
         (suri(src_bucket_uri, 'src_subdir', 'nested') +
@@ -924,8 +925,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       ])
 
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set()
     for i in range(2):
       expected.add(suri(dst_bucket_uri, 'dst_subdir%d' % i, 'existing'))
@@ -974,8 +975,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
         suri(dst_bucket_uri, 'dst_subdir')
     ])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri, 'dst_subdir', 'f0'),
         suri(dst_bucket_uri, 'dst_subdir', 'nested', 'f1'),
@@ -1107,8 +1108,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       ])
 
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set()
     for i in range(4):
       expected.add(suri(dst_bucket_uri, 'dst_subdir%d' % i, 'existing'))
@@ -1214,8 +1215,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       ])
 
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri, 'dst_subdir0', 'existing_obj'),
         suri(dst_bucket_uri, 'dst_subdir0', 'f0f0'),
@@ -1243,8 +1244,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       ])
 
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([
         suri(dst_bucket_uri, 'dst_subdir0', 'existing_obj'),
         suri(dst_bucket_uri, 'dst_subdir0', 'obj0'),
@@ -1254,8 +1255,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(expected, actual)
 
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(src_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            src_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     self.assertEqual(actual, set())
 
   def testWildcardSrcSubDirMoveDisallowed(self):
@@ -1310,8 +1311,8 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
       self.RunCommand(
           'rm', ['-R', suri(dst_bucket_uri, 'dir%d' % i) + final_src_char])
     actual = set(
-        str(u) for u in self._test_wildcard_iterator(
-            suri(dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
     expected = set([suri(dst_bucket_uri, 'f0')])
     self.assertEqual(expected, actual)
 
@@ -1336,16 +1337,18 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     """Tests that you can list an object with unicode characters."""
     object_name = 'フォ'
     bucket_uri = self.CreateBucket()
-    self.CreateObject(
-        bucket_uri=bucket_uri, object_name=object_name, contents=b'foo')
-    stdout = self.RunCommand(
-        'ls', [suri(bucket_uri, object_name)], return_stdout=True)
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name=object_name,
+                      contents=b'foo')
+    stdout = self.RunCommand('ls', [suri(bucket_uri, object_name)],
+                             return_stdout=True)
     self.assertIn(object_name.encode(UTF8), stdout)
 
   def testRecursiveListTrailingSlash(self):
     bucket_uri = self.CreateBucket()
-    obj_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='/', contents=b'foo')
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                object_name='/',
+                                contents=b'foo')
     stdout = self.RunCommand('ls', ['-R', suri(bucket_uri)], return_stdout=True)
     # Note: The suri function normalizes the URI, so the double slash gets
     # removed.

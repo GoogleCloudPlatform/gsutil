@@ -53,10 +53,14 @@ class TestTrackerFile(GsUtilUnitTestCase):
                                                   self.test_api)
     # Should succeed regardless of whether it exists.
     DeleteTrackerFile(tracker_file_name)
-    src_obj_metadata = apitools_messages.Object(
-        bucket='bk1', name='obj1', etag='etag1', md5Hash='12345')
-    src_obj2_metadata = apitools_messages.Object(
-        bucket='bk1', name='obj1', etag='etag2', md5Hash='67890')
+    src_obj_metadata = apitools_messages.Object(bucket='bk1',
+                                                name='obj1',
+                                                etag='etag1',
+                                                md5Hash='12345')
+    src_obj2_metadata = apitools_messages.Object(bucket='bk1',
+                                                 name='obj1',
+                                                 etag='etag2',
+                                                 md5Hash='67890')
     dst_obj_metadata = apitools_messages.Object(bucket='bk2', name='obj2')
     rewrite_token = 'token1'
     self.assertIsNone(
@@ -124,8 +128,10 @@ class TestTrackerFile(GsUtilUnitTestCase):
         ObjectFromTracker('obj1', '42'),
         ObjectFromTracker('obj2', '314159')
     ]
-    WriteParallelUploadTrackerFile(
-        fpath, random_prefix, objects, encryption_key_sha256=enc_key)
+    WriteParallelUploadTrackerFile(fpath,
+                                   random_prefix,
+                                   objects,
+                                   encryption_key_sha256=enc_key)
     (actual_key, actual_prefix,
      actual_objects) = ReadParallelUploadTrackerFile(fpath, self.logger)
     self.assertEqual(enc_key, actual_key)
@@ -141,26 +147,26 @@ class TestTrackerFile(GsUtilUnitTestCase):
         ObjectFromTracker('obj1', '42'),
         ObjectFromTracker('obj2', '314159')
     ]
-    WriteParallelUploadTrackerFile(
-        fpath, random_prefix, objects, encryption_key_sha256=enc_key)
+    WriteParallelUploadTrackerFile(fpath,
+                                   random_prefix,
+                                   objects,
+                                   encryption_key_sha256=enc_key)
     new_object = ObjectFromTracker('obj3', '43')
     try:
-      WriteComponentToParallelUploadTrackerFile(
-          fpath,
-          tracker_file_lock,
-          new_object,
-          self.logger,
-          encryption_key_sha256=None)
+      WriteComponentToParallelUploadTrackerFile(fpath,
+                                                tracker_file_lock,
+                                                new_object,
+                                                self.logger,
+                                                encryption_key_sha256=None)
       self.fail('Expected CommandException due to different encryption key')
     except CommandException as e:
       self.assertIn('does not match encryption key', str(e))
 
-    WriteComponentToParallelUploadTrackerFile(
-        fpath,
-        tracker_file_lock,
-        new_object,
-        self.logger,
-        encryption_key_sha256='456')
+    WriteComponentToParallelUploadTrackerFile(fpath,
+                                              tracker_file_lock,
+                                              new_object,
+                                              self.logger,
+                                              encryption_key_sha256='456')
 
     (actual_key, actual_prefix,
      actual_objects) = ReadParallelUploadTrackerFile(fpath, self.logger)
@@ -177,8 +183,10 @@ class TestTrackerFile(GsUtilUnitTestCase):
         ObjectFromTracker('obj1', '42'),
         ObjectFromTracker('obj2', '314159')
     ]
-    WriteParallelUploadTrackerFile(
-        fpath, random_prefix, objects, encryption_key_sha256=old_enc_key)
+    WriteParallelUploadTrackerFile(fpath,
+                                   random_prefix,
+                                   objects,
+                                   encryption_key_sha256=old_enc_key)
 
     # Mock command object since Valdiate will call Apply() to delete the
     # existing components.

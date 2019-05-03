@@ -42,8 +42,8 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
   def _GetTestFile(self):
     contents = pkgutil.get_data('gslib', 'tests/test_data/%s' % _TEST_FILE)
     if not self._temp_test_file:
-      self._temp_test_file = self.CreateTempFile(
-          file_name=_TEST_FILE, contents=contents)
+      self._temp_test_file = self.CreateTempFile(file_name=_TEST_FILE,
+                                                 contents=contents)
     return self._temp_test_file
 
   def testReadToEOF(self):
@@ -97,8 +97,8 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
       wrapper.seek(initial_position - seek_back_amount)
       self.assertEqual(wrapper.tell(), initial_position - seek_back_amount)
       data = wrapper.read()
-      self.assertEqual(
-          len(data), tmp_file_len - (initial_position - seek_back_amount))
+      self.assertEqual(len(data),
+                       tmp_file_len - (initial_position - seek_back_amount))
     with open(tmp_file, 'rb') as stream:
       actual = CalculateMd5FromContents(stream)
     self.assertEqual(actual, digesters['md5'].hexdigest())

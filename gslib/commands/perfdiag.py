@@ -326,19 +326,17 @@ def _UploadObject(cls, args, thread_state=None):
   """
   gsutil_api = GetCloudApiInstance(cls, thread_state)
   if args.need_to_slice:
-    cls.PerformSlicedUpload(
-        args.file_name,
-        args.object_name,
-        args.use_file,
-        gsutil_api,
-        gzip_encoded=args.gzip_encoded)
+    cls.PerformSlicedUpload(args.file_name,
+                            args.object_name,
+                            args.use_file,
+                            gsutil_api,
+                            gzip_encoded=args.gzip_encoded)
   else:
-    cls.Upload(
-        args.file_name,
-        args.object_name,
-        gsutil_api,
-        args.use_file,
-        gzip_encoded=args.gzip_encoded)
+    cls.Upload(args.file_name,
+               args.object_name,
+               gsutil_api,
+               args.use_file,
+               gzip_encoded=args.gzip_encoded)
 
 
 def _UploadSlice(cls, args, thread_state=None):
@@ -350,14 +348,13 @@ def _UploadSlice(cls, args, thread_state=None):
     thread_state: gsutil Cloud API instance to use for the operation.
   """
   gsutil_api = GetCloudApiInstance(cls, thread_state)
-  cls.Upload(
-      args.file_name,
-      args.object_name,
-      gsutil_api,
-      args.use_file,
-      args.file_start,
-      args.file_size,
-      gzip_encoded=args.gzip_encoded)
+  cls.Upload(args.file_name,
+             args.object_name,
+             gsutil_api,
+             args.use_file,
+             args.file_start,
+             args.file_size,
+             gzip_encoded=args.gzip_encoded)
 
 
 def _DeleteWrapper(cls, object_name, thread_state=None):
@@ -572,8 +569,10 @@ class PerfDiagCommand(Command):
     Returns:
       The file path of the created temporary file.
     """
-    fd, fpath = tempfile.mkstemp(
-        suffix='.bin', prefix=prefix, dir=self.directory, text=False)
+    fd, fpath = tempfile.mkstemp(suffix='.bin',
+                                 prefix=prefix,
+                                 dir=self.directory,
+                                 text=False)
     with os.fdopen(fd, 'wb') as fp:
       _GenerateFileData(fp, file_size, random_ratio)
 
@@ -618,8 +617,9 @@ class PerfDiagCommand(Command):
     if self.diag_tests.intersection(
         (self.RTHRU, self.WTHRU, self.RTHRU_FILE, self.WTHRU_FILE)):
       # Create a file for warming up the TCP connection.
-      self.tcp_warmup_file = self._MakeTempFile(
-          5 * 1024 * 1024, mem_metadata=True, mem_data=True)
+      self.tcp_warmup_file = self._MakeTempFile(5 * 1024 * 1024,
+                                                mem_metadata=True,
+                                                mem_data=True)
 
       # For in memory tests, throughput tests transfer the same object N times
       # instead of creating N objects, in order to avoid excessive memory usage.
@@ -799,12 +799,11 @@ class PerfDiagCommand(Command):
         def _Upload():
           io_fp = six.BytesIO(file_data.data)
           with self._Time('UPLOAD_%d' % file_size, self.results['latency']):
-            self.gsutil_api.UploadObject(
-                io_fp,
-                upload_target,
-                size=file_size,
-                provider=self.provider,
-                fields=['name'])
+            self.gsutil_api.UploadObject(io_fp,
+                                         upload_target,
+                                         size=file_size,
+                                         provider=self.provider,
+                                         fields=['name'])
 
         self._RunOperation(_Upload)
 
@@ -833,8 +832,9 @@ class PerfDiagCommand(Command):
 
         def _Delete():
           with self._Time('DELETE_%d' % file_size, self.results['latency']):
-            self.gsutil_api.DeleteObject(
-                url.bucket_name, url.object_name, provider=self.provider)
+            self.gsutil_api.DeleteObject(url.bucket_name,
+                                         url.object_name,
+                                         provider=self.provider)
 
         self._RunOperation(_Delete)
 
@@ -1003,8 +1003,9 @@ class PerfDiagCommand(Command):
         dst_obj_metadata = apitools_messages.Object()
         dst_obj_metadata.name = object_name
         dst_obj_metadata.bucket = self.bucket_url.bucket_name
-        gsutil_api.ComposeObject(
-            request_components, dst_obj_metadata, provider=self.provider)
+        gsutil_api.ComposeObject(request_components,
+                                 dst_obj_metadata,
+                                 provider=self.provider)
 
       self._RunOperation(_Compose)
     finally:
@@ -1148,29 +1149,26 @@ class PerfDiagCommand(Command):
     t0 = time.time()
     if self.processes == 1 and self.threads == 1:
       for i in range(self.num_objects):
-        self.Upload(
-            file_names[i],
-            object_names[i],
-            self.gsutil_api,
-            use_file,
-            gzip_encoded=self.gzip_encoded_writes)
+        self.Upload(file_names[i],
+                    object_names[i],
+                    self.gsutil_api,
+                    use_file,
+                    gzip_encoded=self.gzip_encoded_writes)
     else:
       if self.parallel_strategy in (self.FAN, self.BOTH):
         need_to_slice = (self.parallel_strategy == self.BOTH)
-        self.PerformFannedUpload(
-            need_to_slice,
-            file_names,
-            object_names,
-            use_file,
-            gzip_encoded=self.gzip_encoded_writes)
+        self.PerformFannedUpload(need_to_slice,
+                                 file_names,
+                                 object_names,
+                                 use_file,
+                                 gzip_encoded=self.gzip_encoded_writes)
       elif self.parallel_strategy == self.SLICE:
         for i in range(self.num_objects):
-          self.PerformSlicedUpload(
-              file_names[i],
-              object_names[i],
-              use_file,
-              self.gsutil_api,
-              gzip_encoded=self.gzip_encoded_writes)
+          self.PerformSlicedUpload(file_names[i],
+                                   object_names[i],
+                                   use_file,
+                                   self.gsutil_api,
+                                   gzip_encoded=self.gzip_encoded_writes)
     t1 = time.time()
 
     time_took = t1 - t0
@@ -1196,8 +1194,10 @@ class PerfDiagCommand(Command):
     list_prefix = 'gsutil-perfdiag-list-' + random_id + '-'
 
     for _ in xrange(self.num_objects):
-      fpath = self._MakeTempFile(
-          0, mem_data=True, mem_metadata=True, prefix=list_prefix)
+      fpath = self._MakeTempFile(0,
+                                 mem_data=True,
+                                 mem_metadata=True,
+                                 prefix=list_prefix)
       object_name = os.path.basename(fpath)
       list_objects.append(object_name)
       args.append(FanUploadTuple(False, fpath, object_name, False, False))
@@ -1207,11 +1207,10 @@ class PerfDiagCommand(Command):
     self.logger.info('\nWriting %s objects for listing test...',
                      self.num_objects)
 
-    self.Apply(
-        _UploadObject,
-        args,
-        _PerfdiagExceptionHandler,
-        arg_checker=DummyArgChecker)
+    self.Apply(_UploadObject,
+               args,
+               _PerfdiagExceptionHandler,
+               arg_checker=DummyArgChecker)
 
     list_latencies = []
     files_seen = []
@@ -1223,12 +1222,11 @@ class PerfDiagCommand(Command):
       """Lists and returns objects in the bucket. Also records latency."""
       t0 = time.time()
       objects = list(
-          self.gsutil_api.ListObjects(
-              self.bucket_url.bucket_name,
-              prefix=list_prefix,
-              delimiter='/',
-              provider=self.provider,
-              fields=['items/name']))
+          self.gsutil_api.ListObjects(self.bucket_url.bucket_name,
+                                      prefix=list_prefix,
+                                      delimiter='/',
+                                      provider=self.provider,
+                                      fields=['items/name']))
       if len(objects) > self.num_objects:
         self.logger.warning(
             'Listing produced more than the expected %d object(s).',
@@ -1262,11 +1260,10 @@ class PerfDiagCommand(Command):
     args = [object_name for object_name in list_objects]
     self.logger.info('Deleting %s objects for listing test...',
                      self.num_objects)
-    self.Apply(
-        _DeleteWrapper,
-        args,
-        _PerfdiagExceptionHandler,
-        arg_checker=DummyArgChecker)
+    self.Apply(_DeleteWrapper,
+               args,
+               _PerfdiagExceptionHandler,
+               arg_checker=DummyArgChecker)
 
     self.logger.info('Listing bucket %s waiting for %s objects to disappear...',
                      self.bucket_url.bucket_name, self.num_objects)
@@ -1341,13 +1338,12 @@ class PerfDiagCommand(Command):
 
       def _InnerUpload():
         if file_size < ResumableThreshold():
-          return gsutil_api.UploadObject(
-              fp,
-              upload_target,
-              provider=self.provider,
-              size=file_size,
-              fields=['name', 'mediaLink', 'size'],
-              gzip_encoded=gzip_encoded)
+          return gsutil_api.UploadObject(fp,
+                                         upload_target,
+                                         provider=self.provider,
+                                         size=file_size,
+                                         fields=['name', 'mediaLink', 'size'],
+                                         gzip_encoded=gzip_encoded)
         else:
           return gsutil_api.UploadObjectResumable(
               fp,
@@ -1401,14 +1397,13 @@ class PerfDiagCommand(Command):
         fp = self.discard_sink
 
       def _InnerDownload():
-        gsutil_api.GetObjectMedia(
-            self.bucket_url.bucket_name,
-            object_name,
-            fp,
-            provider=self.provider,
-            start_byte=start_byte,
-            end_byte=end_byte,
-            serialization_data=serialization_data)
+        gsutil_api.GetObjectMedia(self.bucket_url.bucket_name,
+                                  object_name,
+                                  fp,
+                                  provider=self.provider,
+                                  start_byte=start_byte,
+                                  end_byte=end_byte,
+                                  serialization_data=serialization_data)
 
       self._RunOperation(_InnerDownload)
     finally:
@@ -1425,8 +1420,9 @@ class PerfDiagCommand(Command):
     try:
 
       def _InnerDelete():
-        gsutil_api.DeleteObject(
-            self.bucket_url.bucket_name, object_name, provider=self.provider)
+        gsutil_api.DeleteObject(self.bucket_url.bucket_name,
+                                object_name,
+                                provider=self.provider)
 
       self._RunOperation(_InnerDelete)
     except NotFoundException:
@@ -1592,17 +1588,17 @@ class PerfDiagCommand(Command):
           # "gcloud compute" commands will (hopefully) fail on these envs due to
           # lack of credentials/permissions to access compute resources.
           mute_stderr = IsRunningInCiEnvironment()
-          sysinfo['gce_instance_info'] = (
-              self._Exec(cmd, return_output=True, mute_stderr=mute_stderr))
+          sysinfo['gce_instance_info'] = (self._Exec(cmd,
+                                                     return_output=True,
+                                                     mute_stderr=mute_stderr))
         except (CommandException, OSError):
           sysinfo['gce_instance_info'] = ''
 
     # Record info about location and storage class of the bucket being used for
     # performance testing.
-    bucket_info = self.gsutil_api.GetBucket(
-        self.bucket_url.bucket_name,
-        fields=['location', 'storageClass'],
-        provider=self.bucket_url.scheme)
+    bucket_info = self.gsutil_api.GetBucket(self.bucket_url.bucket_name,
+                                            fields=['location', 'storageClass'],
+                                            provider=self.bucket_url.scheme)
     sysinfo['bucket_location'] = bucket_info.location
     sysinfo['bucket_storageClass'] = bucket_info.storageClass
 
@@ -1699,17 +1695,17 @@ class PerfDiagCommand(Command):
       with open('/proc/meminfo', 'r') as f:
         for line in f:
           if line.startswith('MemTotal'):
-            mem_total = (
-                int(''.join(c for c in line if c in string.digits)) * 1000)
+            mem_total = (int(''.join(c for c in line if c in string.digits)) *
+                         1000)
           elif line.startswith('MemFree'):
-            mem_free = (
-                int(''.join(c for c in line if c in string.digits)) * 1000)
+            mem_free = (int(''.join(c for c in line if c in string.digits)) *
+                        1000)
           elif line.startswith('Buffers'):
-            mem_buffers = (
-                int(''.join(c for c in line if c in string.digits)) * 1000)
+            mem_buffers = (int(''.join(c for c in line if c in string.digits)) *
+                           1000)
           elif line.startswith('Cached'):
-            mem_cached = (
-                int(''.join(c for c in line if c in string.digits)) * 1000)
+            mem_cached = (int(''.join(c for c in line if c in string.digits)) *
+                          1000)
     except (IOError, ValueError):
       pass
 
@@ -1758,8 +1754,9 @@ class PerfDiagCommand(Command):
     text_util.print_to_fd(str(n).rjust(6), '', end=' ')
     text_util.print_to_fd(('%.1f' % (mean * 1000)).rjust(9), '', end=' ')
     text_util.print_to_fd(('%.1f' % (stdev * 1000)).rjust(12), '', end=' ')
-    text_util.print_to_fd(
-        ('%.1f' % (Percentile(trials, 0.5) * 1000)).rjust(11), '', end=' ')
+    text_util.print_to_fd(('%.1f' % (Percentile(trials, 0.5) * 1000)).rjust(11),
+                          '',
+                          end=' ')
     text_util.print_to_fd(('%.1f' % (Percentile(trials, 0.9) * 1000)).rjust(11),
                           '')
 
@@ -1787,23 +1784,27 @@ class PerfDiagCommand(Command):
         numbytes = int(numbytes)
         if op == 'METADATA':
           text_util.print_to_fd('Metadata'.rjust(9), '', end=' ')
-          text_util.print_to_fd(
-              MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9),
+                                '',
+                                end=' ')
           self._DisplayStats(trials)
         if op == 'DOWNLOAD':
           text_util.print_to_fd('Download'.rjust(9), '', end=' ')
-          text_util.print_to_fd(
-              MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9),
+                                '',
+                                end=' ')
           self._DisplayStats(trials)
         if op == 'UPLOAD':
           text_util.print_to_fd('Upload'.rjust(9), '', end=' ')
-          text_util.print_to_fd(
-              MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9),
+                                '',
+                                end=' ')
           self._DisplayStats(trials)
         if op == 'DELETE':
           text_util.print_to_fd('Delete'.rjust(9), '', end=' ')
-          text_util.print_to_fd(
-              MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9),
+                                '',
+                                end=' ')
           self._DisplayStats(trials)
 
     if 'write_throughput' in self.results:
@@ -1973,9 +1974,8 @@ class PerfDiagCommand(Command):
         netstat_before = info['netstat_start']
         for tcp_type in ('sent', 'received', 'retransmit'):
           try:
-            delta = (
-                netstat_after['tcp_%s' % tcp_type] -
-                netstat_before['tcp_%s' % tcp_type])
+            delta = (netstat_after['tcp_%s' % tcp_type] -
+                     netstat_before['tcp_%s' % tcp_type])
             text_util.print_to_fd('TCP segments %s during test:\n  %d' %
                                   (tcp_type, delta))
           except TypeError:
@@ -2217,18 +2217,17 @@ class PerfDiagCommand(Command):
           'sizes, specify rthru_file and/or wthru_file with the -t option.')
 
     perform_slice = self.parallel_strategy in (self.SLICE, self.BOTH)
-    slice_not_available = (
-        self.provider == 's3' and
-        self.diag_tests.intersection(self.WTHRU, self.WTHRU_FILE))
+    slice_not_available = (self.provider == 's3' and
+                           self.diag_tests.intersection(self.WTHRU,
+                                                        self.WTHRU_FILE))
     if perform_slice and slice_not_available:
       raise CommandException('Sliced uploads are not available for s3. '
                              'Use -p fan or sequential uploads for s3.')
 
     # Ensure the bucket exists.
-    self.gsutil_api.GetBucket(
-        self.bucket_url.bucket_name,
-        provider=self.bucket_url.scheme,
-        fields=['id'])
+    self.gsutil_api.GetBucket(self.bucket_url.bucket_name,
+                              provider=self.bucket_url.scheme,
+                              fields=['id'])
     self.exceptions = [
         http_client.HTTPException, socket.error, socket.gaierror,
         socket.timeout, http_client.BadStatusLine, ServiceException

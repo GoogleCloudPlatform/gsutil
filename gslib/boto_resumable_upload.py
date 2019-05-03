@@ -156,13 +156,12 @@ class BotoResumableUpload(object):
         'Content-Range': (self._BuildContentRangeHeader('*', file_length)),
         'Content-Length': '0'
     }
-    return AWSAuthConnection.make_request(
-        conn,
-        'PUT',
-        path=self.upload_url_path,
-        auth_path=self.upload_url_path,
-        headers=put_headers,
-        host=self.upload_url_host)
+    return AWSAuthConnection.make_request(conn,
+                                          'PUT',
+                                          path=self.upload_url_path,
+                                          auth_path=self.upload_url_path,
+                                          headers=put_headers,
+                                          host=self.upload_url_host)
 
   def _QueryServicePos(self, conn, file_length):
     """Queries service to find out what bytes it currently has.
@@ -425,8 +424,8 @@ class BotoResumableUpload(object):
     if self.upload_url:
       # Try to resume existing resumable upload.
       try:
-        (service_start, service_end) = (
-            self._QueryServicePos(conn, file_length))
+        (service_start,
+         service_end) = (self._QueryServicePos(conn, file_length))
         self.service_has_bytes = service_start
         if conn.debug >= 1:
           self.logger.debug('Resuming transfer.')
@@ -595,9 +594,9 @@ class BotoResumableUpload(object):
         # Save generation and metageneration in class state so caller
         # can find these values, for use in preconditions of future
         # operations on the uploaded object.
-        (_, self.generation, self.metageneration) = (
-            self._AttemptResumableUpload(key, fp, file_length, headers, cb,
-                                         num_cb))
+        (_, self.generation,
+         self.metageneration) = (self._AttemptResumableUpload(
+             key, fp, file_length, headers, cb, num_cb))
 
         key.generation = self.generation
         if debug >= 1:
@@ -616,5 +615,5 @@ class BotoResumableUpload(object):
       except ResumableUploadException as e:
         self.HandleResumableUploadException(e, debug)
 
-      self.TrackProgressLessIterations(
-          service_had_bytes_before_attempt, debug=debug)
+      self.TrackProgressLessIterations(service_had_bytes_before_attempt,
+                                       debug=debug)

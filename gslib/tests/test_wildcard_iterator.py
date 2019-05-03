@@ -59,16 +59,18 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
                                               self.prefix_bucket_name)
     self.test_bucket0_obj_uri_strs = set()
     for obj_name in self.all_obj_names:
-      obj_uri = self.CreateObject(
-          bucket_uri=self.test_bucket0_uri, object_name=obj_name, contents='')
+      obj_uri = self.CreateObject(bucket_uri=self.test_bucket0_uri,
+                                  object_name=obj_name,
+                                  contents='')
       self.test_bucket0_obj_uri_strs.add(suri(obj_uri))
 
     self.test_bucket1_uri = self.CreateBucket(bucket_name='%s1' %
                                               self.prefix_bucket_name)
     self.test_bucket1_obj_uri_strs = set()
     for obj_name in self.all_obj_names:
-      obj_uri = self.CreateObject(
-          bucket_uri=self.test_bucket1_uri, object_name=obj_name, contents='')
+      obj_uri = self.CreateObject(bucket_uri=self.test_bucket1_uri,
+                                  object_name=obj_name,
+                                  contents='')
       self.test_bucket1_obj_uri_strs.add(suri(obj_uri))
 
   def testNoOpObjectIterator(self):
@@ -251,17 +253,15 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testWildcardFields(self):
     """Tests that wildcard w/fields specification returns correct fields."""
-    blrs = set(
-        u for u in self._test_wildcard_iterator(
-            self.test_bucket0_uri.clone_replace_name('**')).IterAll(
-                bucket_listing_fields=['timeCreated']))
+    blrs = set(u for u in self._test_wildcard_iterator(
+        self.test_bucket0_uri.clone_replace_name('**')).IterAll(
+            bucket_listing_fields=['timeCreated']))
     self.assertTrue(len(blrs))
     for blr in blrs:
       self.assertTrue(blr.root_object and blr.root_object.timeCreated)
-    blrs = set(
-        u for u in self._test_wildcard_iterator(
-            self.test_bucket0_uri.clone_replace_name('**')).IterAll(
-                bucket_listing_fields=['generation']))
+    blrs = set(u for u in self._test_wildcard_iterator(
+        self.test_bucket0_uri.clone_replace_name('**')).IterAll(
+            bucket_listing_fields=['generation']))
     self.assertTrue(len(blrs))
     for blr in blrs:
       self.assertTrue(blr.root_object and not blr.root_object.timeCreated)
@@ -289,8 +289,8 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
         [suri(self.test_dir, 'dir1', 'dir2', 'zzz')])
 
     self.immed_child_uri_strs = self.root_files_uri_strs | self.subdirs_uri_strs
-    self.all_file_uri_strs = (
-        self.root_files_uri_strs | self.nested_files_uri_strs)
+    self.all_file_uri_strs = (self.root_files_uri_strs |
+                              self.nested_files_uri_strs)
 
   def testContainsWildcard(self):
     """Tests ContainsWildcard call."""

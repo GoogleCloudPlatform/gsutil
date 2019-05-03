@@ -99,60 +99,60 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
 
   def test_default_cors(self):
     bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(self.no_cors, stdout)
 
   def test_set_empty_cors1(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.empty_doc1.encode(UTF8))
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(self.no_cors, stdout)
 
   def test_set_empty_cors2(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.empty_doc2.encode(UTF8))
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(self.no_cors, stdout)
 
   def test_non_null_cors(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.cors_doc.encode(UTF8))
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.cors_json_obj)
 
   def test_bad_cors_xml(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.xml_cors_doc.encode(UTF8))
-    stderr = self.RunGsUtil(
-        self._set_cmd_prefix + [fpath, suri(bucket_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(self._set_cmd_prefix +
+                            [fpath, suri(bucket_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertIn('XML CORS data provided', stderr)
 
   def test_bad_cors(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.cors_bad.encode(UTF8))
-    stderr = self.RunGsUtil(
-        self._set_cmd_prefix + [fpath, suri(bucket_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(self._set_cmd_prefix +
+                            [fpath, suri(bucket_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertNotIn('XML CORS data provided', stderr)
 
   def test_cors_doc_not_wrapped_in_json_list(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(
         contents=self.cors_doc_not_nested_in_list.encode(UTF8))
-    stderr = self.RunGsUtil(
-        self._set_cmd_prefix + [fpath, suri(bucket_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(self._set_cmd_prefix +
+                            [fpath, suri(bucket_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertIn('should be formatted as a list', stderr)
 
   def set_cors_and_reset(self):
@@ -161,14 +161,14 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     tmpdir = self.CreateTempDir()
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.cors_doc)
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.valid_cors_obj)
 
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.empty_doc1)
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(self.no_cors, stdout)
 
   def set_partial_cors_and_reset(self):
@@ -177,14 +177,14 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     tmpdir = self.CreateTempDir()
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.cors_doc2)
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.cors_json_obj2)
 
     fpath = self.CreateTempFile(tmpdir=tmpdir, contents=self.empty_doc1)
     self.RunGsUtil(self._set_cmd_prefix + [fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(self.no_cors, stdout)
 
   def set_multi_non_null_cors(self):
@@ -195,11 +195,11 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(
         self._set_cmd_prefix +
         [fpath, suri(bucket1_uri), suri(bucket2_uri)])
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket1_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket1_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.cors_json_obj)
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket2_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket2_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.cors_json_obj)
 
   def test_set_wildcard_non_null_cors(self):
@@ -233,8 +233,8 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Ensures expect set lines are present in command output."""
-      stderr = self.RunGsUtil(
-          self._set_cmd_prefix + [fpath, wildcard], return_stderr=True)
+      stderr = self.RunGsUtil(self._set_cmd_prefix + [fpath, wildcard],
+                              return_stderr=True)
       outlines = stderr.splitlines()
       for line in outlines:
         # Ignore the deprecation warnings from running the old cors command.
@@ -249,23 +249,25 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
 
     _Check1()
 
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket1_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket1_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.cors_json_obj)
-    stdout = self.RunGsUtil(
-        self._get_cmd_prefix + [suri(bucket2_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_cmd_prefix + [suri(bucket2_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.cors_json_obj)
 
   def testTooFewArgumentsFails(self):
     """Ensures CORS commands fail with too few arguments."""
     # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._get_cmd_prefix, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._get_cmd_prefix,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for set, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._set_cmd_prefix, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._set_cmd_prefix,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # Neither arguments nor subcommand.

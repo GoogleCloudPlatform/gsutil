@@ -34,18 +34,18 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     """Creates a nested subdirectory for use by tests in this module."""
     bucket_uri = self.CreateBucket()
     obj_uris = [
-        self.CreateObject(
-            bucket_uri=bucket_uri, object_name='sub1材/five', contents=b'5five'),
-        self.CreateObject(
-            bucket_uri=bucket_uri, object_name='sub1材/four', contents=b'four'),
-        self.CreateObject(
-            bucket_uri=bucket_uri,
-            object_name='sub1材/sub2/five',
-            contents=b'5five'),
-        self.CreateObject(
-            bucket_uri=bucket_uri,
-            object_name='sub1材/sub2/four',
-            contents=b'four')
+        self.CreateObject(bucket_uri=bucket_uri,
+                          object_name='sub1材/five',
+                          contents=b'5five'),
+        self.CreateObject(bucket_uri=bucket_uri,
+                          object_name='sub1材/four',
+                          contents=b'four'),
+        self.CreateObject(bucket_uri=bucket_uri,
+                          object_name='sub1材/sub2/five',
+                          contents=b'5five'),
+        self.CreateObject(bucket_uri=bucket_uri,
+                          object_name='sub1材/sub2/four',
+                          contents=b'four')
     ]
     self.AssertNObjectsInBucket(bucket_uri, 4)
     return bucket_uri, obj_uris
@@ -187,8 +187,9 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
   def test_versioned(self):
     """Tests listing all versions with the -a flag."""
     bucket_uri = self.CreateVersionedBucket()
-    object_uri1 = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo', contents=b'foo')
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri,
+                                    object_name='foo',
+                                    contents=b'foo')
     object_uri2 = self.CreateObject(
         bucket_uri=bucket_uri,
         object_name='foo',

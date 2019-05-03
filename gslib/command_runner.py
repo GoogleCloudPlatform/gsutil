@@ -215,8 +215,8 @@ class CommandRunner(object):
     def HandleDict():
       subparsers = parser.add_subparsers()
       for subcommand_name, subcommand_value in subcommands_or_arguments.items():
-        cur_subcommand_parser = subparsers.add_parser(
-            subcommand_name, add_help=False)
+        cur_subcommand_parser = subparsers.add_parser(subcommand_name,
+                                                      add_help=False)
         logger.info(
             'Constructing argument parsers for {}'.format(subcommand_name))
         self._ConfigureCommandArgumentParserArguments(cur_subcommand_parser,
@@ -249,12 +249,11 @@ class CommandRunner(object):
     gsutil_api_map = GsutilApiMapFactory.GetApiMap(
         self.gsutil_api_class_map_factory, support_map, default_map)
 
-    gsutil_api = CloudApiDelegator(
-        self.bucket_storage_uri_class,
-        gsutil_api_map,
-        self._GetTabCompleteLogger(),
-        DiscardMessagesQueue(),
-        debug=0)
+    gsutil_api = CloudApiDelegator(self.bucket_storage_uri_class,
+                                   gsutil_api_map,
+                                   self._GetTabCompleteLogger(),
+                                   DiscardMessagesQueue(),
+                                   debug=0)
     return gsutil_api
 
   def ConfigureCommandArgumentParsers(self, main_parser):
@@ -357,13 +356,14 @@ class CommandRunner(object):
     headers['x-goog-api-version'] = api_version
 
     if command_name not in self.command_map:
-      close_matches = difflib.get_close_matches(
-          command_name, self.command_map.keys(), n=1)
+      close_matches = difflib.get_close_matches(command_name,
+                                                self.command_map.keys(),
+                                                n=1)
       if close_matches:
         # Instead of suggesting a deprecated command alias, suggest the new
         # name for that command.
-        translated_command_name = (
-            OLD_ALIAS_MAP.get(close_matches[0], close_matches)[0])
+        translated_command_name = (OLD_ALIAS_MAP.get(close_matches[0],
+                                                     close_matches)[0])
         print('Did you mean this?', file=sys.stderr)
         print('\t%s' % translated_command_name, file=sys.stderr)
       elif command_name == 'update' and gslib.IS_PACKAGE_INSTALL:
@@ -390,29 +390,27 @@ class CommandRunner(object):
     HandleHeaderCoding(headers)
 
     command_class = self.command_map[command_name]
-    command_inst = command_class(
-        self,
-        args,
-        headers,
-        debug,
-        trace_token,
-        parallel_operations,
-        self.bucket_storage_uri_class,
-        self.gsutil_api_class_map_factory,
-        logging_filters,
-        command_alias_used=command_name,
-        perf_trace_token=perf_trace_token,
-        user_project=user_project)
+    command_inst = command_class(self,
+                                 args,
+                                 headers,
+                                 debug,
+                                 trace_token,
+                                 parallel_operations,
+                                 self.bucket_storage_uri_class,
+                                 self.gsutil_api_class_map_factory,
+                                 logging_filters,
+                                 command_alias_used=command_name,
+                                 perf_trace_token=perf_trace_token,
+                                 user_project=user_project)
 
     # Log the command name, command alias, and sub-options after being parsed by
     # RunCommand and the command constructor. For commands with subcommands and
     # suboptions, we need to log the suboptions again within the command itself
     # because the command constructor will not parse the suboptions fully.
     if collect_analytics:
-      metrics.LogCommandParams(
-          command_name=command_inst.command_name,
-          sub_opts=command_inst.sub_opts,
-          command_alias=command_name)
+      metrics.LogCommandParams(command_name=command_inst.command_name,
+                               sub_opts=command_inst.sub_opts,
+                               command_alias=command_name)
 
     return_code = command_inst.RunCommand()
 
@@ -498,12 +496,11 @@ class CommandRunner(object):
         software_update_check_period * SECONDS_PER_DAY):
       # Create a credential-less gsutil API to check for the public
       # update tarball.
-      gsutil_api = GcsJsonApi(
-          self.bucket_storage_uri_class,
-          logger,
-          DiscardMessagesQueue(),
-          credentials=NoOpCredentials(),
-          debug=debug)
+      gsutil_api = GcsJsonApi(self.bucket_storage_uri_class,
+                              logger,
+                              DiscardMessagesQueue(),
+                              credentials=NoOpCredentials(),
+                              debug=debug)
 
       cur_ver = LookUpGsutilVersion(gsutil_api, GSUTIL_PUB_TARBALL)
       with open(last_checked_for_gsutil_update_timestamp_file, 'w') as f:

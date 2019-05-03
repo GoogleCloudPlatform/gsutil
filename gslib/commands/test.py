@@ -328,8 +328,10 @@ def CreateTestProcesses(parallel_tests,
     for k, v in six.iteritems(env):
       envstr[six.ensure_str(k)] = six.ensure_str(v)
     process_list.append(
-        subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=envstr))
+        subprocess.Popen(cmd,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         env=envstr))
     test_index += 1
     process_done.append(False)
     if time.time() - last_log_time > 5:
@@ -390,13 +392,12 @@ class TestCommand(Command):
     completed_as_of_last_log = 0
     num_parallel_tests = len(parallel_integration_tests)
     parallel_start_time = last_log_time = time.time()
-    test_index = CreateTestProcesses(
-        parallel_integration_tests,
-        0,
-        process_list,
-        process_done,
-        max_parallel_tests,
-        root_coverage_file=coverage_filename)
+    test_index = CreateTestProcesses(parallel_integration_tests,
+                                     0,
+                                     process_list,
+                                     process_done,
+                                     max_parallel_tests,
+                                     root_coverage_file=coverage_filename)
     while len(process_results) < num_parallel_tests:
       for proc_num in range(len(process_list)):
         if process_done[proc_num] or process_list[proc_num].poll() is None:
@@ -409,19 +410,17 @@ class TestCommand(Command):
         if process_list[proc_num].returncode != 0:
           num_parallel_failures += 1
         process_results.append(
-            TestProcessData(
-                name=parallel_integration_tests[proc_num],
-                return_code=process_list[proc_num].returncode,
-                stdout=stdout,
-                stderr=stderr))
+            TestProcessData(name=parallel_integration_tests[proc_num],
+                            return_code=process_list[proc_num].returncode,
+                            stdout=stdout,
+                            stderr=stderr))
       if len(process_list) < num_parallel_tests:
-        test_index = CreateTestProcesses(
-            parallel_integration_tests,
-            test_index,
-            process_list,
-            process_done,
-            max_parallel_tests,
-            root_coverage_file=coverage_filename)
+        test_index = CreateTestProcesses(parallel_integration_tests,
+                                         test_index,
+                                         process_list,
+                                         process_done,
+                                         max_parallel_tests,
+                                         root_coverage_file=coverage_filename)
       if len(process_results) < num_parallel_tests:
         if time.time() - last_log_time > 5:
           print(
@@ -610,12 +609,12 @@ class TestCommand(Command):
       # modules and any third-party code. We also filter out anything under the
       # temporary directory. Otherwise, the gsutil update test (which copies
       # code to the temporary directory) gets included in the output.
-      coverage_controller = coverage.coverage(
-          source=['gslib'],
-          omit=[
-              'gslib/third_party/*', 'gslib/tests/*',
-              tempfile.gettempdir() + '*'
-          ])
+      coverage_controller = coverage.coverage(source=['gslib'],
+                                              omit=[
+                                                  'gslib/third_party/*',
+                                                  'gslib/tests/*',
+                                                  tempfile.gettempdir() + '*'
+                                              ])
       coverage_controller.erase()
       coverage_controller.start()
 
@@ -623,8 +622,7 @@ class TestCommand(Command):
     sequential_success = False
 
     (sequential_tests, isolated_tests, parallel_unit_tests,
-     parallel_integration_tests) = (
-         SplitParallelizableTestSuite(suite))
+     parallel_integration_tests) = (SplitParallelizableTestSuite(suite))
 
     # Since parallel integration tests are run in a separate process, they
     # won't get the override to tests.util, so skip them here.
@@ -640,9 +638,9 @@ class TestCommand(Command):
     # If we're running an already-isolated test (spawned in isolation by a
     # previous test process), or we have no parallel tests to run,
     # just run sequentially. For now, unit tests are always run sequentially.
-    run_tests_sequentially = (
-        sequential_only or
-        (len(parallel_integration_tests) <= 1 and not isolated_tests))
+    run_tests_sequentially = (sequential_only or
+                              (len(parallel_integration_tests) <= 1 and
+                               not isolated_tests))
 
     # Disable analytics for the duration of testing. This is set as an
     # environment variable so that the subprocesses will also not report.
@@ -652,8 +650,9 @@ class TestCommand(Command):
       total_tests = suite.countTestCases()
       resultclass = MakeCustomTestResultClass(total_tests)
 
-      runner = unittest.TextTestRunner(
-          verbosity=verbosity, resultclass=resultclass, failfast=failfast)
+      runner = unittest.TextTestRunner(verbosity=verbosity,
+                                       resultclass=resultclass,
+                                       failfast=failfast)
       ret = runner.run(suite)
       sequential_success = ret.wasSuccessful()
     else:
@@ -675,8 +674,9 @@ class TestCommand(Command):
             sorted([test_name for test_name in sequential_tests_to_run]))
         num_sequential_tests = suite.countTestCases()
         resultclass = MakeCustomTestResultClass(num_sequential_tests)
-        runner = unittest.TextTestRunner(
-            verbosity=verbosity, resultclass=resultclass, failfast=failfast)
+        runner = unittest.TextTestRunner(verbosity=verbosity,
+                                         resultclass=resultclass,
+                                         failfast=failfast)
 
         ret = runner.run(suite)
         sequential_success = ret.wasSuccessful()

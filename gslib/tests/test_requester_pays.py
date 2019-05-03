@@ -66,8 +66,8 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     expected to pass because the source bucket is Requester Pays. If a regex
     pattern is supplied, also assert that stdout of the command matches it.
     """
-    stdout = self.RunGsUtil(
-        self.user_project_flag + command_list, return_stdout=True)
+    stdout = self.RunGsUtil(self.user_project_flag + command_list,
+                            return_stdout=True)
     if regex:
       if isinstance(regex, bytes):
         regex = regex.decode(UTF8)
@@ -80,13 +80,13 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     command will still succeed, because with GA user project is accepted for
     all requests.
     """
-    stdout = self.RunGsUtil(
-        self.user_project_flag + command_list, return_stdout=True)
+    stdout = self.RunGsUtil(self.user_project_flag + command_list,
+                            return_stdout=True)
 
   def test_off_default(self):
     bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil(
-        self._get_rp_cmd + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_rp_cmd + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(stdout.strip(), '%s: Disabled' % suri(bucket_uri))
 
   def test_turning_on(self):
@@ -94,8 +94,8 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_rp_cmd + ['on', suri(bucket_uri)])
 
     def _Check1():
-      stdout = self.RunGsUtil(
-          self._get_rp_cmd + [suri(bucket_uri)], return_stdout=True)
+      stdout = self.RunGsUtil(self._get_rp_cmd + [suri(bucket_uri)],
+                              return_stdout=True)
       self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket_uri))
 
     _Check1()
@@ -105,8 +105,8 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_rp_cmd + ['on', suri(bucket_uri)])
 
     def _Check1():
-      stdout = self.RunGsUtil(
-          self._get_rp_cmd + [suri(bucket_uri)], return_stdout=True)
+      stdout = self.RunGsUtil(self._get_rp_cmd + [suri(bucket_uri)],
+                              return_stdout=True)
       self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket_uri))
 
     _Check1()
@@ -114,8 +114,8 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_rp_cmd + ['off', suri(bucket_uri)])
 
     def _Check2():
-      stdout = self.RunGsUtil(
-          self._get_rp_cmd + [suri(bucket_uri)], return_stdout=True)
+      stdout = self.RunGsUtil(self._get_rp_cmd + [suri(bucket_uri)],
+                              return_stdout=True)
       self.assertEqual(stdout.strip(), '%s: Disabled' % suri(bucket_uri))
 
     _Check2()
@@ -123,13 +123,15 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
   def testTooFewArgumentsFails(self):
     """Ensures requesterpays commands fail with too few arguments."""
     # No arguments for set, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._set_rp_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._set_rp_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._get_rp_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._get_rp_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # Neither arguments nor subcommand.
@@ -233,10 +235,10 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
 
   def test_mv(self):
     requester_pays_bucket_uri = self.CreateBucket()
-    object1_uri = self.CreateObject(
-        bucket_uri=requester_pays_bucket_uri, contents=b'foo')
-    object2_uri = self.CreateObject(
-        bucket_uri=requester_pays_bucket_uri, contents=b'oOOo')
+    object1_uri = self.CreateObject(bucket_uri=requester_pays_bucket_uri,
+                                    contents=b'foo')
+    object2_uri = self.CreateObject(bucket_uri=requester_pays_bucket_uri,
+                                    contents=b'oOOo')
     self.AssertNObjectsInBucket(requester_pays_bucket_uri, 2)
     self._set_requester_pays(requester_pays_bucket_uri)
     dest_bucket_uri = self.CreateBucket()
@@ -262,8 +264,8 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
 
     req_pays_bucket_uri = self.CreateBucket()
     self._set_requester_pays(req_pays_bucket_uri)
-    req_pays_obj_uri = self.CreateObject(
-        bucket_uri=req_pays_bucket_uri, contents=b'baz')
+    req_pays_obj_uri = self.CreateObject(bucket_uri=req_pays_bucket_uri,
+                                         contents=b'baz')
     self._run_requester_pays_test(
         ['rewrite', '-s', 'dra', suri(req_pays_obj_uri)])
 
@@ -291,9 +293,8 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
         ['setmeta', '-h', 'content-type:text/html',
          suri(req_pays_obj_uri)])
 
-    obj_uri = self.CreateObject(
-        bucket_uri=self.non_requester_pays_bucket_uri,
-        contents=b'<html><body>text</body></html>')
+    obj_uri = self.CreateObject(bucket_uri=self.non_requester_pays_bucket_uri,
+                                contents=b'<html><body>text</body></html>')
     self._run_non_requester_pays_test(
         ['setmeta', '-h', 'content-type:text/html',
          suri(obj_uri)])

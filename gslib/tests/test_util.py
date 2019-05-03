@@ -70,10 +70,10 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(unit_util.MakeBitsHumanReadable(1024), '1 Kibit')
     self.assertEqual(unit_util.MakeBitsHumanReadable(1024**2), '1 Mibit')
     self.assertEqual(unit_util.MakeBitsHumanReadable(1024**3), '1 Gibit')
-    self.assertEqual(
-        unit_util.MakeBitsHumanReadable(1024**3 * 5.3), '5.3 Gibit')
-    self.assertEqual(
-        unit_util.MakeBitsHumanReadable(1024**4 * 2.7), '2.7 Tibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024**3 * 5.3),
+                     '5.3 Gibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024**4 * 2.7),
+                     '2.7 Tibit')
     self.assertEqual(unit_util.MakeBitsHumanReadable(1024**5), '1 Pibit')
     self.assertEqual(unit_util.MakeBitsHumanReadable(1024**6), '1 Eibit')
 
@@ -177,19 +177,15 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(pi1.proxy_pass, pi2.proxy_pass)
 
   def testMakeMetadataLine(self):
-    test_params = (TestParams(
-        args=('AFairlyShortKey', 'Value'),
-        expected='    AFairlyShortKey:        Value'),
-                   TestParams(
-                       args=('', 'Value'),
-                       expected='    :                       Value'),
-                   TestParams(
-                       args=('AnotherKey', 'Value'),
-                       kwargs={'indent': 2},
-                       expected='        AnotherKey:         Value'),
-                   TestParams(
-                       args=('AKeyMuchLongerThanTheLast', 'Value'),
-                       expected=('    AKeyMuchLongerThanTheLast:Value')))
+    test_params = (TestParams(args=('AFairlyShortKey', 'Value'),
+                              expected='    AFairlyShortKey:        Value'),
+                   TestParams(args=('', 'Value'),
+                              expected='    :                       Value'),
+                   TestParams(args=('AnotherKey', 'Value'),
+                              kwargs={'indent': 2},
+                              expected='        AnotherKey:         Value'),
+                   TestParams(args=('AKeyMuchLongerThanTheLast', 'Value'),
+                              expected=('    AKeyMuchLongerThanTheLast:Value')))
     for params in test_params:
       line = ls_helper.MakeMetadataLine(*(params.args), **(params.kwargs))
       self.assertEqual(line, params.expected)
@@ -235,23 +231,21 @@ class TestUtil(testcase.GsUtilUnitTestCase):
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
                 boto_util.ProxyInfoFromEnvironmentVar(env_var),
-                httplib2.ProxyInfo(
-                    httplib2.socks.PROXY_TYPE_HTTP,
-                    '1.2.3.4',
-                    50,
-                    proxy_user='foo',
-                    proxy_pass='bar'))
+                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP,
+                                   '1.2.3.4',
+                                   50,
+                                   proxy_user='foo',
+                                   proxy_pass='bar'))
         for url_string in [
             'bar@1.2.3.4:50', 'http://bar@1.2.3.4:50', 'https://bar@1.2.3.4:50'
         ]:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
                 boto_util.ProxyInfoFromEnvironmentVar(env_var),
-                httplib2.ProxyInfo(
-                    httplib2.socks.PROXY_TYPE_HTTP,
-                    '1.2.3.4',
-                    50,
-                    proxy_pass='bar'))
+                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP,
+                                   '1.2.3.4',
+                                   50,
+                                   proxy_pass='bar'))
       for env_var in ['proxy', 'noproxy', 'garbage']:
         for url_string in ['1.2.3.4:50', 'http://1.2.3.4:50']:
           with SetEnvironmentForTest({env_var: url_string}):

@@ -77,8 +77,8 @@ def BytesToFixedWidthString(num_bytes, decimal_places=1):
   Returns:
     String of fixed width representing num_bytes.
   """
-  human_readable = HumanReadableWithDecimalPlaces(
-      num_bytes, decimal_places=decimal_places)
+  human_readable = HumanReadableWithDecimalPlaces(num_bytes,
+                                                  decimal_places=decimal_places)
   number_format = human_readable.split()
   if int(round(float(number_format[0]))) >= 1000:
     # If we are in the [1000:1024) range for the whole part of the number,
@@ -164,8 +164,8 @@ class StatusMessageManager(object):
     self.total_size = 0
 
     # Time at last info update displayed.
-    self.refresh_message_time = (
-        self.custom_time if self.custom_time else time.time())
+    self.refresh_message_time = (self.custom_time
+                                 if self.custom_time else time.time())
     self.start_time = self.refresh_message_time
     # Time at last spinner update.
     self.refresh_spinner_time = self.refresh_message_time
@@ -276,8 +276,8 @@ class StatusMessageManager(object):
     Returns:
       Whether or not we should print the progress.
     """
-    sufficient_time_elapsed = (
-        cur_time - self.refresh_message_time >= self.update_message_period)
+    sufficient_time_elapsed = (cur_time - self.refresh_message_time >=
+                               self.update_message_period)
     # Don't report if we aren't actually going to do anything (for example,
     # an rsync that will sync 0 objects).
     nonzero_report = self.num_objects
@@ -387,15 +387,15 @@ class MetadataManager(StatusMessageManager):
     See argument documentation in StatusMessageManager base class.
     """
     # pylint: enable=g-doc-args
-    super(MetadataManager, self).__init__(
-        update_message_period=update_message_period,
-        update_spinner_period=update_spinner_period,
-        sliding_throughput_period=sliding_throughput_period,
-        first_throughput_latency=first_throughput_latency,
-        quiet_mode=quiet_mode,
-        custom_time=custom_time,
-        verbose=verbose,
-        console_width=console_width)
+    super(MetadataManager,
+          self).__init__(update_message_period=update_message_period,
+                         update_spinner_period=update_spinner_period,
+                         sliding_throughput_period=sliding_throughput_period,
+                         first_throughput_latency=first_throughput_latency,
+                         quiet_mode=quiet_mode,
+                         custom_time=custom_time,
+                         verbose=verbose,
+                         console_width=console_width)
 
   def GetProgress(self):
     """Gets the progress for a MetadataManager.
@@ -577,15 +577,15 @@ class DataManager(StatusMessageManager):
     See argument documentation in StatusMessageManager base class.
     """
     # pylint: disable=g-doc-args
-    super(DataManager, self).__init__(
-        update_message_period=update_message_period,
-        update_spinner_period=update_spinner_period,
-        sliding_throughput_period=sliding_throughput_period,
-        first_throughput_latency=first_throughput_latency,
-        quiet_mode=quiet_mode,
-        custom_time=custom_time,
-        verbose=verbose,
-        console_width=console_width)
+    super(DataManager,
+          self).__init__(update_message_period=update_message_period,
+                         update_spinner_period=update_spinner_period,
+                         sliding_throughput_period=sliding_throughput_period,
+                         first_throughput_latency=first_throughput_latency,
+                         quiet_mode=quiet_mode,
+                         custom_time=custom_time,
+                         verbose=verbose,
+                         console_width=console_width)
 
     self.first_item = True
 
@@ -628,8 +628,8 @@ class DataManager(StatusMessageManager):
       file_name = status_message.src_url.url_string
       status_message.size = status_message.size if status_message.size else 0
       # Creates a new entry on individual_file_progress.
-      self.individual_file_progress[file_name] = (
-          self._ProgressInformation(status_message.size))
+      self.individual_file_progress[file_name] = (self._ProgressInformation(
+          status_message.size))
 
       if self.num_objects_source >= EstimationSource.INDIVIDUAL_MESSAGES:
         # This ensures the file has not been counted on SeekAheadThread or
@@ -649,8 +649,8 @@ class DataManager(StatusMessageManager):
       self.objects_finished += 1
       file_name = status_message.src_url.url_string
       file_progress = self.individual_file_progress[file_name]
-      total_bytes_transferred = (
-          file_progress.new_progress_sum + file_progress.existing_progress_sum)
+      total_bytes_transferred = (file_progress.new_progress_sum +
+                                 file_progress.existing_progress_sum)
       # Ensures total_progress has the right value.
       self.total_progress += file_progress.size - total_bytes_transferred
       self.new_progress += file_progress.size - total_bytes_transferred
@@ -728,13 +728,13 @@ class DataManager(StatusMessageManager):
         file_progress = self.individual_file_progress[file_name]
 
         key = (status_message.component_num, status_message.dst_url)
-        last_update = (
-            file_progress.dict[key] if key in file_progress.dict else (0, 0))
+        last_update = (file_progress.dict[key] if key in file_progress.dict else
+                       (0, 0))
         self.total_progress += status_message.size - sum(last_update)
         self.new_progress += status_message.size - sum(last_update)
         self.last_progress_time = status_message.time
-        file_progress.new_progress_sum += (
-            status_message.size - sum(last_update))
+        file_progress.new_progress_sum += (status_message.size -
+                                           sum(last_update))
         file_progress.dict[key] = (status_message.size - last_update[1],
                                    last_update[1])
 
@@ -752,11 +752,11 @@ class DataManager(StatusMessageManager):
     # component. To ensure uniqueness (among components),
     # we use a (component_num, dst_url) tuple as our key.
     key = (status_message.component_num, status_message.dst_url)
-    last_update = (
-        file_progress.dict[key] if key in file_progress.dict else (0, 0))
+    last_update = (file_progress.dict[key] if key in file_progress.dict else
+                   (0, 0))
     status_message.processed_bytes -= last_update[1]
-    file_progress.new_progress_sum += (
-        status_message.processed_bytes - last_update[0])
+    file_progress.new_progress_sum += (status_message.processed_bytes -
+                                       last_update[0])
     # Updates total progress with new update from component.
     self.total_progress += status_message.processed_bytes - last_update[0]
     self.new_progress += status_message.processed_bytes - last_update[0]
@@ -1001,19 +1001,19 @@ class UIController(object):
     if not isinstance(status_message, StatusMessage):
       if status_message == _ZERO_TASKS_TO_DO_ARGUMENT and not self.manager:
         # Create a manager to handle early estimation messages before returning.
-        self.manager = (
-            DataManager(
-                update_message_period=self.update_message_period,
-                update_spinner_period=self.update_spinner_period,
-                sliding_throughput_period=self.sliding_throughput_period,
-                first_throughput_latency=self.first_throughput_latency,
-                quiet_mode=self.quiet_mode,
-                custom_time=self.custom_time,
-                verbose=self.verbose,
-                console_width=self.console_width))
+        self.manager = (DataManager(
+            update_message_period=self.update_message_period,
+            update_spinner_period=self.update_spinner_period,
+            sliding_throughput_period=self.sliding_throughput_period,
+            first_throughput_latency=self.first_throughput_latency,
+            quiet_mode=self.quiet_mode,
+            custom_time=self.custom_time,
+            verbose=self.verbose,
+            console_width=self.console_width))
         for estimation_message in self.early_estimation_messages:
-          self._HandleMessage(
-              estimation_message, stream, cur_time=estimation_message.time)
+          self._HandleMessage(estimation_message,
+                              stream,
+                              cur_time=estimation_message.time)
       return
     if self.dump_status_message_fp:
       # TODO: Add Unicode support to string methods on message classes.
@@ -1029,29 +1029,27 @@ class UIController(object):
         self.early_estimation_messages.append(status_message)
         return
       elif isinstance(status_message, MetadataMessage):
-        self.manager = (
-            MetadataManager(
-                update_message_period=self.update_message_period,
-                update_spinner_period=self.update_spinner_period,
-                sliding_throughput_period=self.sliding_throughput_period,
-                first_throughput_latency=self.first_throughput_latency,
-                quiet_mode=self.quiet_mode,
-                custom_time=self.custom_time,
-                verbose=self.verbose,
-                console_width=self.console_width))
+        self.manager = (MetadataManager(
+            update_message_period=self.update_message_period,
+            update_spinner_period=self.update_spinner_period,
+            sliding_throughput_period=self.sliding_throughput_period,
+            first_throughput_latency=self.first_throughput_latency,
+            quiet_mode=self.quiet_mode,
+            custom_time=self.custom_time,
+            verbose=self.verbose,
+            console_width=self.console_width))
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
       else:
-        self.manager = (
-            DataManager(
-                update_message_period=self.update_message_period,
-                update_spinner_period=self.update_spinner_period,
-                sliding_throughput_period=self.sliding_throughput_period,
-                first_throughput_latency=self.first_throughput_latency,
-                quiet_mode=self.quiet_mode,
-                custom_time=self.custom_time,
-                verbose=self.verbose,
-                console_width=self.console_width))
+        self.manager = (DataManager(
+            update_message_period=self.update_message_period,
+            update_spinner_period=self.update_spinner_period,
+            sliding_throughput_period=self.sliding_throughput_period,
+            first_throughput_latency=self.first_throughput_latency,
+            quiet_mode=self.quiet_mode,
+            custom_time=self.custom_time,
+            verbose=self.verbose,
+            console_width=self.console_width))
 
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
@@ -1066,15 +1064,14 @@ class UIController(object):
         # This can be done because we do not need any MetadataMessages to
         # properly handle a data operation. It could be useful to send the
         # early estimation messages, if those are available.
-        self.manager = (
-            DataManager(
-                update_message_period=self.update_message_period,
-                update_spinner_period=self.update_spinner_period,
-                sliding_throughput_period=self.sliding_throughput_period,
-                first_throughput_latency=self.first_throughput_latency,
-                custom_time=self.custom_time,
-                verbose=self.verbose,
-                console_width=self.console_width))
+        self.manager = (DataManager(
+            update_message_period=self.update_message_period,
+            update_spinner_period=self.update_spinner_period,
+            sliding_throughput_period=self.sliding_throughput_period,
+            first_throughput_latency=self.first_throughput_latency,
+            custom_time=self.custom_time,
+            verbose=self.verbose,
+            console_width=self.console_width))
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
       else:

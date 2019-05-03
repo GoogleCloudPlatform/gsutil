@@ -66,16 +66,17 @@ class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
     cors_path = self.CreateTempFile(contents=self.cors_doc.encode(UTF8))
 
     self.RunGsUtil(self._set_cors_command + [cors_path, suri(bucket_uri)])
-    cors_out = self.RunGsUtil(
-        self._get_cors_command + [suri(bucket_uri)], return_stdout=True)
+    cors_out = self.RunGsUtil(self._get_cors_command + [suri(bucket_uri)],
+                              return_stdout=True)
     self.assertEqual(json.loads(cors_out), self.cors_json_obj)
 
     self.RunGsUtil(self._set_lifecycle_command +
                    [lifecycle_path, suri(bucket_uri)])
-    cors_out = self.RunGsUtil(
-        self._get_cors_command + [suri(bucket_uri)], return_stdout=True)
-    lifecycle_out = self.RunGsUtil(
-        self._get_lifecycle_command + [suri(bucket_uri)], return_stdout=True)
+    cors_out = self.RunGsUtil(self._get_cors_command + [suri(bucket_uri)],
+                              return_stdout=True)
+    lifecycle_out = self.RunGsUtil(self._get_lifecycle_command +
+                                   [suri(bucket_uri)],
+                                   return_stdout=True)
     self.assertEqual(json.loads(cors_out), self.cors_json_obj)
     self.assertEqual(json.loads(lifecycle_out), self.lifecycle_json_obj)
 
@@ -85,31 +86,33 @@ class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
           self._set_acl_command +
           ['authenticated-read', suri(bucket_uri)])
 
-    cors_out = self.RunGsUtil(
-        self._get_cors_command + [suri(bucket_uri)], return_stdout=True)
-    lifecycle_out = self.RunGsUtil(
-        self._get_lifecycle_command + [suri(bucket_uri)], return_stdout=True)
+    cors_out = self.RunGsUtil(self._get_cors_command + [suri(bucket_uri)],
+                              return_stdout=True)
+    lifecycle_out = self.RunGsUtil(self._get_lifecycle_command +
+                                   [suri(bucket_uri)],
+                                   return_stdout=True)
     self.assertEqual(json.loads(cors_out), self.cors_json_obj)
     self.assertEqual(json.loads(lifecycle_out), self.lifecycle_json_obj)
 
     if not self._ServiceAccountCredentialsPresent():
-      acl_out = self.RunGsUtil(
-          self._get_acl_command + [suri(bucket_uri)], return_stdout=True)
+      acl_out = self.RunGsUtil(self._get_acl_command + [suri(bucket_uri)],
+                               return_stdout=True)
       self.assertIn('allAuthenticatedUsers', acl_out)
 
     self.RunGsUtil(self._set_defacl_command + ['public-read', suri(bucket_uri)])
 
-    cors_out = self.RunGsUtil(
-        self._get_cors_command + [suri(bucket_uri)], return_stdout=True)
-    lifecycle_out = self.RunGsUtil(
-        self._get_lifecycle_command + [suri(bucket_uri)], return_stdout=True)
-    def_acl_out = self.RunGsUtil(
-        self._get_defacl_command + [suri(bucket_uri)], return_stdout=True)
+    cors_out = self.RunGsUtil(self._get_cors_command + [suri(bucket_uri)],
+                              return_stdout=True)
+    lifecycle_out = self.RunGsUtil(self._get_lifecycle_command +
+                                   [suri(bucket_uri)],
+                                   return_stdout=True)
+    def_acl_out = self.RunGsUtil(self._get_defacl_command + [suri(bucket_uri)],
+                                 return_stdout=True)
     self.assertEqual(json.loads(cors_out), self.cors_json_obj)
     self.assertEqual(json.loads(lifecycle_out), self.lifecycle_json_obj)
     self.assertIn('allUsers', def_acl_out)
 
     if not self._ServiceAccountCredentialsPresent():
-      acl_out = self.RunGsUtil(
-          self._get_acl_command + [suri(bucket_uri)], return_stdout=True)
+      acl_out = self.RunGsUtil(self._get_acl_command + [suri(bucket_uri)],
+                               return_stdout=True)
       self.assertIn('allAuthenticatedUsers', acl_out)

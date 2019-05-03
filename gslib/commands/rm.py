@@ -309,13 +309,12 @@ class RmCommand(Command):
       # Perform remove requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
       # perform requests with sequential function calls in current process.
-      self.Apply(
-          _RemoveFuncWrapper,
-          name_expansion_iterator,
-          _RemoveExceptionHandler,
-          fail_on_error=(not self.continue_on_error),
-          shared_attrs=['op_failure_count', 'bucket_not_found_count'],
-          seek_ahead_iterator=seek_ahead_iterator)
+      self.Apply(_RemoveFuncWrapper,
+                 name_expansion_iterator,
+                 _RemoveExceptionHandler,
+                 fail_on_error=(not self.continue_on_error),
+                 shared_attrs=['op_failure_count', 'bucket_not_found_count'],
+                 seek_ahead_iterator=seek_ahead_iterator)
 
     # Assuming the bucket has versioning enabled, url's that don't map to
     # objects should throw an error even with all_versions, since the prior
@@ -362,11 +361,10 @@ class RmCommand(Command):
               project_id=self.project_id,
               all_versions=self.all_versions)
           # When we're removing folder objects, always continue on error
-          self.Apply(
-              _RemoveFuncWrapper,
-              name_expansion_iterator,
-              _RemoveFoldersExceptionHandler,
-              fail_on_error=False)
+          self.Apply(_RemoveFuncWrapper,
+                     name_expansion_iterator,
+                     _RemoveFoldersExceptionHandler,
+                     fail_on_error=False)
         except CommandException as e:
           # Ignore exception from name expansion due to an absent folder file.
           if not e.reason.startswith(NO_URLS_MATCHED_GENERIC):
@@ -394,11 +392,10 @@ class RmCommand(Command):
 
     exp_src_url = name_expansion_result.expanded_storage_url
     self.logger.info('Removing %s...', exp_src_url)
-    gsutil_api.DeleteObject(
-        exp_src_url.bucket_name,
-        exp_src_url.object_name,
-        preconditions=self.preconditions,
-        generation=exp_src_url.generation,
-        provider=exp_src_url.scheme)
+    gsutil_api.DeleteObject(exp_src_url.bucket_name,
+                            exp_src_url.object_name,
+                            preconditions=self.preconditions,
+                            generation=exp_src_url.generation,
+                            provider=exp_src_url.scheme)
     _PutToQueueWithTimeout(gsutil_api.status_queue,
                            MetadataMessage(message_time=time.time()))

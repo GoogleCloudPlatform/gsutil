@@ -63,14 +63,12 @@ MEASURING_TIME_ACTIVE = False
 
 # Filter out "module was already imported" warnings that get printed after we
 # add our bundled version of modules to the Python path.
-warnings.filterwarnings(
-    'ignore',
-    category=UserWarning,
-    message=r'.* httplib2 was already imported from')
-warnings.filterwarnings(
-    'ignore',
-    category=UserWarning,
-    message=r'.* oauth2client was already imported from')
+warnings.filterwarnings('ignore',
+                        category=UserWarning,
+                        message=r'.* httplib2 was already imported from')
+warnings.filterwarnings('ignore',
+                        category=UserWarning,
+                        message=r'.* oauth2client was already imported from')
 
 # List of third-party libraries. The first element of the tuple is the name of
 # the directory under third_party and the second element is the subdirectory
@@ -120,8 +118,8 @@ except ImportError:
   # Note: the bundled crcmod module under THIRD_PARTY_DIR does not include its
   # compiled C extension, but we still add it to sys.path because other parts of
   # gsutil assume that at least the core crcmod module will be available.
-  local_crcmod_path = (
-      CRCMOD_OSX_PATH if 'darwin' in str(sys.platform).lower() else CRCMOD_PATH)
+  local_crcmod_path = (CRCMOD_OSX_PATH if 'darwin' in str(sys.platform).lower()
+                       else CRCMOD_PATH)
   sys.path.insert(0, local_crcmod_path)
 
 

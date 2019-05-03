@@ -130,41 +130,37 @@ def UpdateObjectMetadataExceptionHandler(cls, e):
 def SetTempHoldFuncWrapper(cls, name_expansion_result, thread_state=None):
   log_template = 'Setting Temporary Hold on %s...'
   object_metadata_update = apitools_messages.Object(temporaryHold=True)
-  cls.ObjectUpdateMetadataFunc(
-      object_metadata_update,
-      log_template,
-      name_expansion_result,
-      thread_state=thread_state)
+  cls.ObjectUpdateMetadataFunc(object_metadata_update,
+                               log_template,
+                               name_expansion_result,
+                               thread_state=thread_state)
 
 
 def ReleaseTempHoldFuncWrapper(cls, name_expansion_result, thread_state=None):
   log_template = 'Releasing Temporary Hold on %s...'
   object_metadata_update = apitools_messages.Object(temporaryHold=False)
-  cls.ObjectUpdateMetadataFunc(
-      object_metadata_update,
-      log_template,
-      name_expansion_result,
-      thread_state=thread_state)
+  cls.ObjectUpdateMetadataFunc(object_metadata_update,
+                               log_template,
+                               name_expansion_result,
+                               thread_state=thread_state)
 
 
 def SetEventHoldFuncWrapper(cls, name_expansion_result, thread_state=None):
   log_template = 'Setting Event-Based Hold on %s...'
   object_metadata_update = apitools_messages.Object(eventBasedHold=True)
-  cls.ObjectUpdateMetadataFunc(
-      object_metadata_update,
-      log_template,
-      name_expansion_result,
-      thread_state=thread_state)
+  cls.ObjectUpdateMetadataFunc(object_metadata_update,
+                               log_template,
+                               name_expansion_result,
+                               thread_state=thread_state)
 
 
 def ReleaseEventHoldFuncWrapper(cls, name_expansion_result, thread_state=None):
   log_template = 'Releasing Event-Based Hold on %s...'
   object_metadata_update = apitools_messages.Object(eventBasedHold=False)
-  cls.ObjectUpdateMetadataFunc(
-      object_metadata_update,
-      log_template,
-      name_expansion_result,
-      thread_state=thread_state)
+  cls.ObjectUpdateMetadataFunc(object_metadata_update,
+                               log_template,
+                               name_expansion_result,
+                               thread_state=thread_state)
 
 
 def DaysToSeconds(days):

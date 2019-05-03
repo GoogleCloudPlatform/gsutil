@@ -139,8 +139,8 @@ def _CleanupSignalHandler(signal_num, cur_stack_frame):
     cur_stack_frame: Unused, but required in the method signature.
   """
   _Cleanup()
-  if (gslib.utils.parallelism_framework_util
-      .CheckMultiprocessingAvailableAndInit().is_available):
+  if (gslib.utils.parallelism_framework_util.
+      CheckMultiprocessingAvailableAndInit().is_available):
     gslib.command.TeardownMultiprocessingProcesses()
 
 
@@ -217,8 +217,8 @@ def main():
   from gcs_oauth2_boto_plugin import oauth2_client
   from apitools.base.py import credentials_lib
   # pylint: enable=unused-variable
-  if (gslib.utils.parallelism_framework_util
-      .CheckMultiprocessingAvailableAndInit().is_available):
+  if (gslib.utils.parallelism_framework_util.
+      CheckMultiprocessingAvailableAndInit().is_available):
     # These setup methods must be called, and, on Windows, they can only be
     # called from within an "if __name__ == '__main__':" block.
     gslib.command.InitializeMultiprocessingVariables()
@@ -496,14 +496,13 @@ def _HandleControlC(signal_num, cur_stack_frame):
   """
   if debug_level >= 2:
     stack_trace = ''.join(traceback.format_list(traceback.extract_stack()))
-    _OutputAndExit(
-        'DEBUG: Caught CTRL-C (signal %d) - Exception stack trace:\n'
-        '    %s' % (signal_num, re.sub('\\n', '\n    ', stack_trace)),
-        exception=ControlCException())
+    _OutputAndExit('DEBUG: Caught CTRL-C (signal %d) - Exception stack trace:\n'
+                   '    %s' %
+                   (signal_num, re.sub('\\n', '\n    ', stack_trace)),
+                   exception=ControlCException())
   else:
-    _OutputAndExit(
-        'Caught CTRL-C (signal %d) - exiting' % signal_num,
-        exception=ControlCException())
+    _OutputAndExit('Caught CTRL-C (signal %d) - exiting' % signal_num,
+                   exception=ControlCException())
 
 
 def _HandleSigQuit(signal_num, cur_stack_frame):
@@ -580,9 +579,9 @@ def _CheckAndHandleCredentialException(e, args):
         (e.reason == 'AccountProblem' or e.reason == 'Account disabled.' or
          'account for the specified project has been disabled' in e.reason) and
         ','.join(args).find('gs://') != -1):
-    _OutputAndExit(
-        '\n'.join(textwrap.wrap(_ConstructAccountProblemHelp(e.reason))),
-        exception=e)
+    _OutputAndExit('\n'.join(
+        textwrap.wrap(_ConstructAccountProblemHelp(e.reason))),
+                   exception=e)
 
 
 def _RunNamedCommandAndHandleExceptions(command_runner,
@@ -607,16 +606,15 @@ def _RunNamedCommandAndHandleExceptions(command_runner,
     if not system_util.IS_WINDOWS:
       RegisterSignalHandler(signal.SIGQUIT, _HandleSigQuit)
 
-    return command_runner.RunNamedCommand(
-        command_name,
-        args,
-        headers,
-        debug_level,
-        trace_token,
-        parallel_operations,
-        perf_trace_token=perf_trace_token,
-        collect_analytics=True,
-        user_project=user_project)
+    return command_runner.RunNamedCommand(command_name,
+                                          args,
+                                          headers,
+                                          debug_level,
+                                          trace_token,
+                                          parallel_operations,
+                                          perf_trace_token=perf_trace_token,
+                                          collect_analytics=True,
+                                          user_project=user_project)
   except AttributeError as e:
     if str(e).find('secret_access_key') != -1:
       _OutputAndExit(
@@ -695,10 +693,9 @@ def _RunNamedCommandAndHandleExceptions(command_runner,
     # These should usually be retried by the underlying implementation or
     # wrapped by CloudApi ServiceExceptions, but if we do get them,
     # print something useful.
-    _OutputAndExit(
-        'HttpError: %s, %s' %
-        (getattr(e.response, 'status', ''), e.content or ''),
-        exception=e)
+    _OutputAndExit('HttpError: %s, %s' %
+                   (getattr(e.response, 'status', ''), e.content or ''),
+                   exception=e)
   except socket.error as e:
     if e.args[0] == errno.EPIPE:
       # Retrying with a smaller file (per suggestion below) works because
@@ -713,26 +710,24 @@ def _RunNamedCommandAndHandleExceptions(command_runner,
           'object, and see if you get a more specific error code.',
           exception=e)
     elif e.args[0] == errno.ECONNRESET and ' '.join(args).contains('s3://'):
-      _OutputAndExit(
-          '\n'.join(
-              textwrap.wrap(
-                  'Got a "Connection reset by peer" error. One way this can happen is '
-                  'when copying data to/from an S3 regional bucket. If you are using a '
-                  'regional S3 bucket you could try re-running this command using the '
-                  'regional S3 endpoint, for example '
-                  's3://s3-<region>.amazonaws.com/your-bucket. For details about this '
-                  'problem see https://github.com/boto/boto/issues/2207')),
-          exception=e)
+      _OutputAndExit('\n'.join(
+          textwrap.wrap(
+              'Got a "Connection reset by peer" error. One way this can happen is '
+              'when copying data to/from an S3 regional bucket. If you are using a '
+              'regional S3 bucket you could try re-running this command using the '
+              'regional S3 endpoint, for example '
+              's3://s3-<region>.amazonaws.com/your-bucket. For details about this '
+              'problem see https://github.com/boto/boto/issues/2207')),
+                     exception=e)
     else:
       _HandleUnknownFailure(e)
   except oauth2client.client.FlowExchangeError as e:
-    _OutputAndExit(
-        '\n%s\n\n' % '\n'.join(
-            textwrap.wrap(
-                'Failed to retrieve valid credentials (%s). Make sure you selected and '
-                'pasted the ENTIRE authorization code (including any numeric prefix '
-                "e.g. '4/')." % e)),
-        exception=e)
+    _OutputAndExit('\n%s\n\n' % '\n'.join(
+        textwrap.wrap(
+            'Failed to retrieve valid credentials (%s). Make sure you selected and '
+            'pasted the ENTIRE authorization code (including any numeric prefix '
+            "e.g. '4/')." % e)),
+                   exception=e)
   except Exception as e:  # pylint: disable=broad-except
     config_paths = ', '.join(boto_util.GetFriendlyConfigFilePaths())
     # Check for two types of errors related to service accounts. These errors
@@ -764,10 +759,9 @@ def _PerformTabCompletion(command_runner):
     import argcomplete
     import argparse
   except ImportError as e:
-    _OutputAndExit(
-        'A library required for performing tab completion was'
-        ' not found.\nCause: %s' % e,
-        exception=e)
+    _OutputAndExit('A library required for performing tab completion was'
+                   ' not found.\nCause: %s' % e,
+                   exception=e)
   parser = argparse.ArgumentParser(add_help=False)
   command_runner.ConfigureCommandArgumentParsers(parser)
   argcomplete.autocomplete(parser, exit_method=sys.exit)

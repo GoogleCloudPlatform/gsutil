@@ -213,12 +213,11 @@ class SetMetaCommand(Command):
       # Perform requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
       # perform requests with sequential function calls in current process.
-      self.Apply(
-          _SetMetadataFuncWrapper,
-          name_expansion_iterator,
-          _SetMetadataExceptionHandler,
-          fail_on_error=True,
-          seek_ahead_iterator=seek_ahead_iterator)
+      self.Apply(_SetMetadataFuncWrapper,
+                 name_expansion_iterator,
+                 _SetMetadataExceptionHandler,
+                 fail_on_error=True,
+                 seek_ahead_iterator=seek_ahead_iterator)
     except AccessDeniedException as e:
       if e.status == 403:
         self._WarnServiceAccounts()
@@ -269,14 +268,13 @@ class SetMetaCommand(Command):
       patch_obj_metadata.generation = None
       patch_obj_metadata.metageneration = None
 
-    gsutil_api.PatchObjectMetadata(
-        exp_src_url.bucket_name,
-        exp_src_url.object_name,
-        patch_obj_metadata,
-        generation=exp_src_url.generation,
-        preconditions=preconditions,
-        provider=exp_src_url.scheme,
-        fields=['id'])
+    gsutil_api.PatchObjectMetadata(exp_src_url.bucket_name,
+                                   exp_src_url.object_name,
+                                   patch_obj_metadata,
+                                   generation=exp_src_url.generation,
+                                   preconditions=preconditions,
+                                   provider=exp_src_url.scheme,
+                                   fields=['id'])
     _PutToQueueWithTimeout(gsutil_api.status_queue,
                            MetadataMessage(message_time=time.time()))
 

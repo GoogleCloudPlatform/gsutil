@@ -162,17 +162,16 @@ class UpdateCommand(Command):
       mode = oct(stat.S_IMODE((os.stat(config_file)[stat.ST_MODE])))
       chmod_cmds.append('\n\tsudo chmod %s %s' % (mode, config_file))
 
-    raise CommandException(
-        '\n'.join(
-            textwrap.wrap(
-                'Since it was installed by a different user previously, you will need '
-                'to update using the following commands. You will be prompted for your '
-                'password, and the install will run as "root". If you\'re unsure what '
-                'this means please ask your system administrator for help:')) +
-        ('\n\tsudo chmod 0644 %s\n\tsudo env BOTO_CONFIG="%s" %s update'
-         '%s') %
-        (config_files, config_files, self.gsutil_path, ' '.join(chmod_cmds)),
-        informational=True)
+    raise CommandException('\n'.join(
+        textwrap.wrap(
+            'Since it was installed by a different user previously, you will need '
+            'to update using the following commands. You will be prompted for your '
+            'password, and the install will run as "root". If you\'re unsure what '
+            'this means please ask your system administrator for help:')) + (
+                '\n\tsudo chmod 0644 %s\n\tsudo env BOTO_CONFIG="%s" %s update'
+                '%s') % (config_files, config_files, self.gsutil_path,
+                         ' '.join(chmod_cmds)),
+                           informational=True)
 
   # This list is checked during gsutil update by doing a lowercased
   # slash-left-stripped check. For example "/Dev" would match the "dev" entry.
@@ -354,9 +353,9 @@ class UpdateCommand(Command):
     if not force_update and gslib.VERSION == tarball_version:
       self._CleanUpUpdateCommand(tf, dirs_to_remove, old_cwd)
       if self.args:
-        raise CommandException(
-            'You already have %s installed.' % update_from_url_str,
-            informational=True)
+        raise CommandException('You already have %s installed.' %
+                               update_from_url_str,
+                               informational=True)
       else:
         raise CommandException(
             'You already have the latest gsutil release '
@@ -431,15 +430,15 @@ class UpdateCommand(Command):
         for subdir in subdirs:
           fd = os.open(os.path.join(dirname, subdir), os.O_RDONLY)
           os.fchmod(
-              fd, stat.S_IRWXU | stat.S_IXGRP | stat.S_IXOTH | stat.S_IRGRP
-              | stat.S_IROTH)
+              fd, stat.S_IRWXU | stat.S_IXGRP | stat.S_IXOTH | stat.S_IRGRP |
+              stat.S_IROTH)
           os.close(fd)
 
       # Make main gsutil script owner-RWX and world-RX.
       fd = os.open(os.path.join(new_dir, 'gsutil', 'gsutil'), os.O_RDONLY)
       os.fchmod(
-          fd, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH
-          | stat.S_IXOTH)
+          fd, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH |
+          stat.S_IXOTH)
       os.close(fd)
 
     # Move old installation aside and new into place.

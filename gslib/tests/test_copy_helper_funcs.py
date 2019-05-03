@@ -113,8 +113,8 @@ class TestCpFuncs(GsUtilUnitTestCase):
     empty_object = apitools_messages.Object()
 
     # Already uploaded, contents still match, component still used.
-    fpath_uploaded_correctly = self.CreateTempFile(
-        file_name='foo1', contents=b'1')
+    fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
+                                                   contents=b'1')
     fpath_uploaded_correctly_url = StorageUrlFromString(
         str(fpath_uploaded_correctly))
     object_uploaded_correctly_url = StorageUrlFromString(
@@ -122,12 +122,11 @@ class TestCpFuncs(GsUtilUnitTestCase):
         (self.default_provider, bucket_name, fpath_uploaded_correctly))
     with open(fpath_uploaded_correctly, 'rb') as f_in:
       fpath_uploaded_correctly_md5 = _CalculateB64EncodedMd5FromContents(f_in)
-    mock_api.MockCreateObjectWithMetadata(
-        apitools_messages.Object(
-            bucket=bucket_name,
-            name=fpath_uploaded_correctly,
-            md5Hash=fpath_uploaded_correctly_md5),
-        contents=b'1')
+    mock_api.MockCreateObjectWithMetadata(apitools_messages.Object(
+        bucket=bucket_name,
+        name=fpath_uploaded_correctly,
+        md5Hash=fpath_uploaded_correctly_md5),
+                                          contents=b'1')
 
     args_uploaded_correctly = PerformParallelUploadFileToObjectArgs(
         fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly_url,
@@ -154,12 +153,11 @@ class TestCpFuncs(GsUtilUnitTestCase):
         (self.default_provider, bucket_name, fpath_wrong_contents))
     with open(self.CreateTempFile(contents=b'_'), 'rb') as f_in:
       fpath_wrong_contents_md5 = _CalculateB64EncodedMd5FromContents(f_in)
-    mock_api.MockCreateObjectWithMetadata(
-        apitools_messages.Object(
-            bucket=bucket_name,
-            name=fpath_wrong_contents,
-            md5Hash=fpath_wrong_contents_md5),
-        contents=b'1')
+    mock_api.MockCreateObjectWithMetadata(apitools_messages.Object(
+        bucket=bucket_name,
+        name=fpath_wrong_contents,
+        md5Hash=fpath_wrong_contents_md5),
+                                          contents=b'1')
 
     args_wrong_contents = PerformParallelUploadFileToObjectArgs(
         fpath_wrong_contents, 0, 1, fpath_wrong_contents_url,
@@ -177,10 +175,9 @@ class TestCpFuncs(GsUtilUnitTestCase):
     fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents=b'6')
     with open(fpath_no_longer_used, 'rb') as f_in:
       file_md5 = _CalculateB64EncodedMd5FromContents(f_in)
-    mock_api.MockCreateObjectWithMetadata(
-        apitools_messages.Object(
-            bucket=bucket_name, name='foo6', md5Hash=file_md5),
-        contents=b'6')
+    mock_api.MockCreateObjectWithMetadata(apitools_messages.Object(
+        bucket=bucket_name, name='foo6', md5Hash=file_md5),
+                                          contents=b'6')
 
     dst_args = {
         fpath_uploaded_correctly: args_uploaded_correctly,
@@ -199,9 +196,9 @@ class TestCpFuncs(GsUtilUnitTestCase):
     bucket_url = StorageUrlFromString('%s://%s' %
                                       (self.default_provider, bucket_name))
 
-    (components_to_upload, uploaded_components, existing_objects_to_delete) = (
-        FilterExistingComponents(dst_args, existing_components, bucket_url,
-                                 mock_api))
+    (components_to_upload, uploaded_components,
+     existing_objects_to_delete) = (FilterExistingComponents(
+         dst_args, existing_components, bucket_url, mock_api))
     uploaded_components = [i[0] for i in uploaded_components]
     for arg in [args_not_uploaded, args_wrong_contents, args_remote_deleted]:
       self.assertTrue(arg in components_to_upload)
@@ -229,17 +226,16 @@ class TestCpFuncs(GsUtilUnitTestCase):
     tracker_file_lock = parallelism_framework_util.CreateLock()
 
     # Already uploaded, contents still match, component still used.
-    fpath_uploaded_correctly = self.CreateTempFile(
-        file_name='foo1', contents=b'1')
+    fpath_uploaded_correctly = self.CreateTempFile(file_name='foo1',
+                                                   contents=b'1')
     fpath_uploaded_correctly_url = StorageUrlFromString(
         str(fpath_uploaded_correctly))
     with open(fpath_uploaded_correctly, 'rb') as f_in:
       fpath_uploaded_correctly_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     object_uploaded_correctly = mock_api.MockCreateObjectWithMetadata(
-        apitools_messages.Object(
-            bucket=bucket_name,
-            name=fpath_uploaded_correctly,
-            md5Hash=fpath_uploaded_correctly_md5),
+        apitools_messages.Object(bucket=bucket_name,
+                                 name=fpath_uploaded_correctly,
+                                 md5Hash=fpath_uploaded_correctly_md5),
         contents=b'1')
     object_uploaded_correctly_url = StorageUrlFromString(
         '%s://%s/%s#%s' %
@@ -254,10 +250,9 @@ class TestCpFuncs(GsUtilUnitTestCase):
     fpath_duplicate = fpath_uploaded_correctly
     fpath_duplicate_url = StorageUrlFromString(str(fpath_duplicate))
     duplicate_uploaded_correctly = mock_api.MockCreateObjectWithMetadata(
-        apitools_messages.Object(
-            bucket=bucket_name,
-            name=fpath_duplicate,
-            md5Hash=fpath_uploaded_correctly_md5),
+        apitools_messages.Object(bucket=bucket_name,
+                                 name=fpath_duplicate,
+                                 md5Hash=fpath_uploaded_correctly_md5),
         contents=b'1')
     duplicate_uploaded_correctly_url = StorageUrlFromString(
         '%s://%s/%s#%s' %
@@ -275,10 +270,9 @@ class TestCpFuncs(GsUtilUnitTestCase):
     with open(self.CreateTempFile(contents=b'_'), 'rb') as f_in:
       fpath_wrong_contents_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     object_wrong_contents = mock_api.MockCreateObjectWithMetadata(
-        apitools_messages.Object(
-            bucket=bucket_name,
-            name=fpath_wrong_contents,
-            md5Hash=fpath_wrong_contents_md5),
+        apitools_messages.Object(bucket=bucket_name,
+                                 name=fpath_wrong_contents,
+                                 md5Hash=fpath_wrong_contents_md5),
         contents=b'_')
     wrong_contents_url = StorageUrlFromString(
         '%s://%s/%s#%s' %
@@ -305,9 +299,9 @@ class TestCpFuncs(GsUtilUnitTestCase):
     bucket_url = StorageUrlFromString('%s://%s' %
                                       (self.default_provider, bucket_name))
 
-    (components_to_upload, uploaded_components, existing_objects_to_delete) = (
-        FilterExistingComponents(dst_args, existing_components, bucket_url,
-                                 mock_api))
+    (components_to_upload, uploaded_components,
+     existing_objects_to_delete) = (FilterExistingComponents(
+         dst_args, existing_components, bucket_url, mock_api))
     uploaded_components = [i[0] for i in uploaded_components]
     self.assertEqual([args_wrong_contents], components_to_upload)
     self.assertEqual(args_uploaded_correctly.dst_url.url_string,
@@ -373,21 +367,20 @@ class TestCpFuncs(GsUtilUnitTestCase):
     surprise_html = (b'<html><body>And you thought I was just '
                      b'text!</body></html>')
     temp_dir_path = self.CreateTempDir()
-    txt_file_path = self.CreateTempFile(
-        tmpdir=temp_dir_path,
-        contents=surprise_html,
-        file_name='html_in_disguise.txt')
+    txt_file_path = self.CreateTempFile(tmpdir=temp_dir_path,
+                                        contents=surprise_html,
+                                        file_name='html_in_disguise.txt')
     link_name = 'link_to_realfile'  # Notice no file extension was supplied.
     os.symlink(txt_file_path, temp_dir_path + os.path.sep + link_name)
     # Content-type of a symlink should be obtained from the link's target.
     dst_obj_metadata_mock = mock.MagicMock(contentType=None)
-    src_url_stub = mock.MagicMock(
-        object_name=temp_dir_path + os.path.sep + link_name,
-        **{
-            'IsFileUrl.return_value': True,
-            'IsStream.return_value': False,
-            'IsFifo.return_value': False
-        })
+    src_url_stub = mock.MagicMock(object_name=temp_dir_path + os.path.sep +
+                                  link_name,
+                                  **{
+                                      'IsFileUrl.return_value': True,
+                                      'IsStream.return_value': False,
+                                      'IsFifo.return_value': False
+                                  })
 
     # The file command should detect HTML in the real file.
     with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'True')]):
@@ -403,10 +396,9 @@ class TestCpFuncs(GsUtilUnitTestCase):
 
   _PI_DAY = datetime.datetime(2016, 3, 14, 15, 9, 26)
 
-  @mock.patch(
-      'time.time',
-      new=mock.MagicMock(
-          return_value=posix_util.ConvertDatetimeToPOSIX(_PI_DAY)))
+  @mock.patch('time.time',
+              new=mock.MagicMock(
+                  return_value=posix_util.ConvertDatetimeToPOSIX(_PI_DAY)))
   def testWarnIfMvEarlyDeletionChargeApplies(self):
     """Tests that WarnIfEarlyDeletionChargeApplies warns when appropriate."""
     test_logger = logging.Logger('test')

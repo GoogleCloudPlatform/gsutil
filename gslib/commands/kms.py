@@ -48,9 +48,8 @@ _SERVICEACCOUNT_SYNOPSIS = """
   gsutil kms serviceaccount [-p proj_id]
 """
 
-_SYNOPSIS = (
-    _AUTHORIZE_SYNOPSIS + _ENCRYPTION_SYNOPSIS.lstrip('\n') +
-    _SERVICEACCOUNT_SYNOPSIS.lstrip('\n') + '\n')
+_SYNOPSIS = (_AUTHORIZE_SYNOPSIS + _ENCRYPTION_SYNOPSIS.lstrip('\n') +
+             _SERVICEACCOUNT_SYNOPSIS.lstrip('\n') + '\n')
 
 # pylint: disable=line-too-long
 _AUTHORIZE_DESCRIPTION = """
@@ -118,9 +117,8 @@ _DESCRIPTION = """
 
   The kms command has several sub-commands that deal with configuring
   Cloud Storage's integration with Cloud KMS:
-""" + (
-    _AUTHORIZE_DESCRIPTION + _ENCRYPTION_DESCRIPTION +
-    _SERVICEACCOUNT_DESCRIPTION)
+""" + (_AUTHORIZE_DESCRIPTION + _ENCRYPTION_DESCRIPTION +
+       _SERVICEACCOUNT_DESCRIPTION)
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
@@ -216,9 +214,8 @@ class KmsCommand(Command):
     # Check if the required binding is already present; if not, add it and
     # update the key's IAM policy.
     added_new_binding = False
-    binding = Binding(
-        role='roles/cloudkms.cryptoKeyEncrypterDecrypter',
-        members=['serviceAccount:%s' % service_account])
+    binding = Binding(role='roles/cloudkms.cryptoKeyEncrypterDecrypter',
+                      members=['serviceAccount:%s' % service_account])
     if binding not in policy.bindings:
       policy.bindings.append(binding)
       kms_api.SetKeyIamPolicy(kms_key, policy)
@@ -250,11 +247,10 @@ class KmsCommand(Command):
     bucket_metadata.encryption = apitools_messages.Bucket.EncryptionValue()
     print('Clearing default encryption key for %s...' %
           str(bucket_url).rstrip('/'))
-    self.gsutil_api.PatchBucket(
-        bucket_url.bucket_name,
-        bucket_metadata,
-        fields=['encryption'],
-        provider=bucket_url.scheme)
+    self.gsutil_api.PatchBucket(bucket_url.bucket_name,
+                                bucket_metadata,
+                                fields=['encryption'],
+                                provider=bucket_url.scheme)
 
   def _EncryptionSetKey(self, bucket_metadata, bucket_url,
                         svc_acct_for_project_num):
@@ -284,11 +280,10 @@ class KmsCommand(Command):
         defaultKmsKeyName=self.kms_key)
     print('Setting default KMS key for bucket %s...' %
           str(bucket_url).rstrip('/'))
-    self.gsutil_api.PatchBucket(
-        bucket_url.bucket_name,
-        bucket_metadata,
-        fields=['encryption'],
-        provider=bucket_url.scheme)
+    self.gsutil_api.PatchBucket(bucket_url.bucket_name,
+                                bucket_metadata,
+                                fields=['encryption'],
+                                provider=bucket_url.scheme)
 
   def _Encryption(self):
     self._GatherSubOptions()

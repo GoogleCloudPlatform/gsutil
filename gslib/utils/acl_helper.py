@@ -38,8 +38,8 @@ class AclChange(object):
   email_scopes = ['UserByEmail', 'GroupByEmail']
   domain_scopes = ['GroupByDomain']
   project_scopes = ['Project']
-  scope_types = (
-      public_scopes + id_scopes + email_scopes + domain_scopes + project_scopes)
+  scope_types = (public_scopes + id_scopes + email_scopes + domain_scopes +
+                 project_scopes)
 
   public_entity_all_users = 'allUsers'
   public_entity_all_auth_users = 'allAuthenticatedUsers'
@@ -189,38 +189,32 @@ class AclChange(object):
   def _AddEntry(self, current_acl, entry_class):
     """Adds an entry to current_acl."""
     if self.scope_type == 'UserById':
-      entry = entry_class(
-          entityId=self.identifier,
-          role=self.perm,
-          entity=self.user_entity_prefix + self.identifier)
+      entry = entry_class(entityId=self.identifier,
+                          role=self.perm,
+                          entity=self.user_entity_prefix + self.identifier)
     elif self.scope_type == 'GroupById':
-      entry = entry_class(
-          entityId=self.identifier,
-          role=self.perm,
-          entity=self.group_entity_prefix + self.identifier)
+      entry = entry_class(entityId=self.identifier,
+                          role=self.perm,
+                          entity=self.group_entity_prefix + self.identifier)
     elif self.scope_type == 'Project':
-      entry = entry_class(
-          entityId=self.identifier,
-          role=self.perm,
-          entity=self.project_entity_prefix + self.identifier)
+      entry = entry_class(entityId=self.identifier,
+                          role=self.perm,
+                          entity=self.project_entity_prefix + self.identifier)
     elif self.scope_type == 'UserByEmail':
-      entry = entry_class(
-          email=self.identifier,
-          role=self.perm,
-          entity=self.user_entity_prefix + self.identifier)
+      entry = entry_class(email=self.identifier,
+                          role=self.perm,
+                          entity=self.user_entity_prefix + self.identifier)
     elif self.scope_type == 'GroupByEmail':
-      entry = entry_class(
-          email=self.identifier,
-          role=self.perm,
-          entity=self.group_entity_prefix + self.identifier)
+      entry = entry_class(email=self.identifier,
+                          role=self.perm,
+                          entity=self.group_entity_prefix + self.identifier)
     elif self.scope_type == 'GroupByDomain':
-      entry = entry_class(
-          domain=self.identifier,
-          role=self.perm,
-          entity=self.domain_entity_prefix + self.identifier)
+      entry = entry_class(domain=self.identifier,
+                          role=self.perm,
+                          entity=self.domain_entity_prefix + self.identifier)
     elif self.scope_type == 'AllAuthenticatedUsers':
-      entry = entry_class(
-          entity=self.public_entity_all_auth_users, role=self.perm)
+      entry = entry_class(entity=self.public_entity_all_auth_users,
+                          role=self.perm)
     elif self.scope_type == 'AllUsers':
       entry = entry_class(entity=self.public_entity_all_users, role=self.perm)
     else:

@@ -169,8 +169,8 @@ class HashCommand(Command):
 
   def RunCommand(self):
     """Command entry point for the hash command."""
-    (calc_crc32c, calc_md5, format_func, cloud_format_func, output_format) = (
-        self._ParseOpts(self.sub_opts, self.logger))
+    (calc_crc32c, calc_md5, format_func, cloud_format_func,
+     output_format) = (self._ParseOpts(self.sub_opts, self.logger))
 
     matched_one = False
     for url_str in self.args:
@@ -184,31 +184,28 @@ class HashCommand(Command):
         if StorageUrlFromString(url_str).IsFileUrl():
           file_size = os.path.getsize(file_name)
           self.gsutil_api.status_queue.put(
-              FileMessage(
-                  url,
-                  None,
-                  time.time(),
-                  size=file_size,
-                  finished=False,
-                  message_type=FileMessage.FILE_HASH))
+              FileMessage(url,
+                          None,
+                          time.time(),
+                          size=file_size,
+                          finished=False,
+                          message_type=FileMessage.FILE_HASH))
           callback_processor = ProgressCallbackWithTimeout(
               file_size,
-              FileProgressCallbackHandler(
-                  self.gsutil_api.status_queue,
-                  src_url=StorageUrlFromString(url_str),
-                  operation_name='Hashing').call)
+              FileProgressCallbackHandler(self.gsutil_api.status_queue,
+                                          src_url=StorageUrlFromString(url_str),
+                                          operation_name='Hashing').call)
           hash_dict = self._GetHashClassesFromArgs(calc_crc32c, calc_md5)
           with open(file_name, 'rb') as fp:
             hashing_helper.CalculateHashesFromContents(
                 fp, hash_dict, callback_processor=callback_processor)
           self.gsutil_api.status_queue.put(
-              FileMessage(
-                  url,
-                  None,
-                  time.time(),
-                  size=file_size,
-                  finished=True,
-                  message_type=FileMessage.FILE_HASH))
+              FileMessage(url,
+                          None,
+                          time.time(),
+                          size=file_size,
+                          finished=True,
+                          message_type=FileMessage.FILE_HASH))
         else:
           hash_dict = {}
           obj_metadata = file_ref.root_object

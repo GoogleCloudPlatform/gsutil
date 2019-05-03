@@ -99,10 +99,12 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     base_name = self.MakeTempName('bucket')
     # Workaround for XML API limitation, see PR 766 for details
     prefix = 'aaa-'
-    self.CreateBucket(
-        base_name, bucket_name_prefix=prefix, bucket_name_suffix='1')
-    self.CreateBucket(
-        base_name, bucket_name_prefix=prefix, bucket_name_suffix='2')
+    self.CreateBucket(base_name,
+                      bucket_name_prefix=prefix,
+                      bucket_name_suffix='1')
+    self.CreateBucket(base_name,
+                      bucket_name_prefix=prefix,
+                      bucket_name_suffix='2')
 
     request = '%s://%s' % (self.default_provider, ''.join([prefix, base_name]))
     expected_result1 = '//%s/' % ''.join([prefix, base_name, '1'])
@@ -131,11 +133,13 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
 
     object_base_name = self.MakeTempName('obj')
     object1_name = object_base_name + '-suffix1'
-    self.CreateObject(
-        bucket_uri=bucket_uri, object_name=object1_name, contents=b'data')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name=object1_name,
+                      contents=b'data')
     object2_name = object_base_name + '-suffix2'
-    self.CreateObject(
-        bucket_uri=bucket_uri, object_name=object2_name, contents=b'data')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name=object2_name,
+                      contents=b'data')
 
     request = '%s://%s/%s' % (self.default_provider, bucket_uri.bucket_name,
                               object_base_name)
@@ -292,8 +296,8 @@ class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     """
 
     with SetBotoConfigForTest([('GSUtil', 'state_dir', self.CreateTempDir())]):
-      object_uri = self.CreateObject(
-          object_name='subdir/subobj', contents=b'test data')
+      object_uri = self.CreateObject(object_name='subdir/subobj',
+                                     contents=b'test data')
 
       cached_prefix = '%s://%s/' % (self.default_provider,
                                     object_uri.bucket_name)
@@ -349,8 +353,9 @@ class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
       cached_prefix = '%s://%s/' % (self.default_provider,
                                     object_uri.bucket_name)
       cached_results = []
-      _WriteTabCompletionCache(
-          cached_prefix, cached_results, partial_results=True)
+      _WriteTabCompletionCache(cached_prefix,
+                               cached_results,
+                               partial_results=True)
 
       request = '%s://%s/o' % (self.default_provider, object_uri.bucket_name)
 

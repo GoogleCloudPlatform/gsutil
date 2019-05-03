@@ -118,11 +118,10 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     prefix = [sys.executable] if sys.executable else []
 
     # Run with an invalid gs:// URI.
-    p = subprocess.Popen(
-        prefix + ['gsutil', 'update', 'gs://pub'],
-        cwd=gsutil_dst,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+    p = subprocess.Popen(prefix + ['gsutil', 'update', 'gs://pub'],
+                         cwd=gsutil_dst,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
     (_, stderr) = p.communicate()
     p.stdout.close()
     p.stderr.close()
@@ -130,11 +129,11 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     self.assertIn(b'update command only works with tar.gz', stderr)
 
     # Run with non-existent gs:// URI.
-    p = subprocess.Popen(
-        prefix + ['gsutil', 'update', 'gs://pub/Jdjh38)(;.tar.gz'],
-        cwd=gsutil_dst,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+    p = subprocess.Popen(prefix +
+                         ['gsutil', 'update', 'gs://pub/Jdjh38)(;.tar.gz'],
+                         cwd=gsutil_dst,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
     (_, stderr) = p.communicate()
     p.stdout.close()
     p.stderr.close()

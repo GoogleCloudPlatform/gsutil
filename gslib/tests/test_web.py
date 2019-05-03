@@ -42,41 +42,43 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(
         self._set_web_cmd +
         ['-m', 'main', '-e', '404', suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_web_cmd + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEquals(json.loads(stdout), WEBCFG_FULL)
 
   def test_main(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(self._set_web_cmd + ['-m', 'main', suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_web_cmd + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEquals(json.loads(stdout), WEBCFG_MAIN)
 
   def test_error(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(self._set_web_cmd + ['-e', '404', suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_web_cmd + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEquals(json.loads(stdout), WEBCFG_ERROR)
 
   def test_empty(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(self._set_web_cmd + [suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        self._get_web_cmd + [suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(WEBCFG_EMPTY, stdout)
 
   def testTooFewArgumentsFails(self):
     """Ensures web commands fail with too few arguments."""
     # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._get_web_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._get_web_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for set, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._set_web_cmd, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._set_web_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # Neither arguments nor subcommand.

@@ -81,8 +81,9 @@ class RetryableErrorMessage(StatusMessage):
         testing).
       thread_id: Thread ID that produced this message (overridable for testing).
     """
-    super(RetryableErrorMessage, self).__init__(
-        message_time, process_id=process_id, thread_id=thread_id)
+    super(RetryableErrorMessage, self).__init__(message_time,
+                                                process_id=process_id,
+                                                thread_id=thread_id)
 
     self.error_type = exception.__class__.__name__
     # The socket module error class names aren't descriptive enough, so we
@@ -202,8 +203,9 @@ class FileMessage(StatusMessage):
       thread_id: Thread ID that produced this message (overridable for testing).
     """
 
-    super(FileMessage, self).__init__(
-        message_time, process_id=process_id, thread_id=thread_id)
+    super(FileMessage, self).__init__(message_time,
+                                      process_id=process_id,
+                                      thread_id=thread_id)
     self.src_url = src_url
     self.dst_url = dst_url
     self.size = size
@@ -357,8 +359,9 @@ class PerformanceSummaryMessage(StatusMessage):
         Epoch).
       uses_slice: True if the command uses slice parallelism.
     """
-    super(PerformanceSummaryMessage, self).__init__(
-        message_time, process_id=None, thread_id=None)
+    super(PerformanceSummaryMessage, self).__init__(message_time,
+                                                    process_id=None,
+                                                    thread_id=None)
     self.uses_slice = uses_slice
 
   def __str__(self):

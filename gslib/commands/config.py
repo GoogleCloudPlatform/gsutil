@@ -645,28 +645,38 @@ content_language = en
 #test_notification_url = https://yourdomain.url/notification-endpoint
 
 """ % {
-    'hash_fast_else_fail': CHECK_HASH_IF_FAST_ELSE_FAIL,
-    'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,
-    'hash_always': CHECK_HASH_ALWAYS,
-    'hash_never': CHECK_HASH_NEVER,
-    'resumable_threshold': constants.RESUMABLE_THRESHOLD_B,
-    'parallel_process_count': DEFAULT_PARALLEL_PROCESS_COUNT,
-    'parallel_thread_count': DEFAULT_PARALLEL_THREAD_COUNT,
+    'hash_fast_else_fail':
+    CHECK_HASH_IF_FAST_ELSE_FAIL,
+    'hash_fast_else_skip':
+    CHECK_HASH_IF_FAST_ELSE_SKIP,
+    'hash_always':
+    CHECK_HASH_ALWAYS,
+    'hash_never':
+    CHECK_HASH_NEVER,
+    'resumable_threshold':
+    constants.RESUMABLE_THRESHOLD_B,
+    'parallel_process_count':
+    DEFAULT_PARALLEL_PROCESS_COUNT,
+    'parallel_thread_count':
+    DEFAULT_PARALLEL_THREAD_COUNT,
     'parallel_composite_upload_threshold':
-        (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD),
+    (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD),
     'parallel_composite_upload_component_size':
-        (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE),
+    (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE),
     'sliced_object_download_threshold':
-        (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD),
+    (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD),
     'sliced_object_download_component_size':
-        (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE),
+    (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE),
     'sliced_object_download_max_components':
-        (DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS),
-    'max_component_count': MAX_COMPONENT_COUNT,
-    'task_estimation_threshold': DEFAULT_TASK_ESTIMATION_THRESHOLD,
+    (DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS),
+    'max_component_count':
+    MAX_COMPONENT_COUNT,
+    'task_estimation_threshold':
+    DEFAULT_TASK_ESTIMATION_THRESHOLD,
     'max_upload_compression_buffer_size':
-        (DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE),
-    'gzip_compression_level': DEFAULT_GZIP_COMPRESSION_LEVEL,
+    (DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE),
+    'gzip_compression_level':
+    DEFAULT_GZIP_COMPRESSION_LEVEL,
 }
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
@@ -1312,12 +1322,11 @@ class ConfigCommand(Command):
     # Catch ^C so we can restore the backup.
     RegisterSignalHandler(signal.SIGINT, _CleanupHandler)
     try:
-      self._WriteBotoConfigFile(
-          output_file,
-          launch_browser=launch_browser,
-          oauth2_scopes=scopes,
-          cred_type=cred_type,
-          configure_auth=configure_auth)
+      self._WriteBotoConfigFile(output_file,
+                                launch_browser=launch_browser,
+                                oauth2_scopes=scopes,
+                                cred_type=cred_type,
+                                configure_auth=configure_auth)
     except Exception as e:
       user_aborted = isinstance(e, AbortException)
       if user_aborted:

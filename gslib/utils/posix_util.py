@@ -171,25 +171,22 @@ def SerializeFileAttributesToObjectMetadata(posix_attrs,
   """
   # mtime will always be needed in the object metadata for rsync.
   if posix_attrs.mtime != NA_TIME:
-    CreateCustomMetadata(
-        entries={MTIME_ATTR: posix_attrs.mtime},
-        custom_metadata=custom_metadata)
+    CreateCustomMetadata(entries={MTIME_ATTR: posix_attrs.mtime},
+                         custom_metadata=custom_metadata)
   # Only add other POSIX attributes if the preserve_posix flag is set.
   if preserve_posix:
     if posix_attrs.atime != NA_TIME:
-      CreateCustomMetadata(
-          entries={ATIME_ATTR: posix_attrs.atime},
-          custom_metadata=custom_metadata)
+      CreateCustomMetadata(entries={ATIME_ATTR: posix_attrs.atime},
+                           custom_metadata=custom_metadata)
     if posix_attrs.uid != NA_ID:
-      CreateCustomMetadata(
-          entries={UID_ATTR: posix_attrs.uid}, custom_metadata=custom_metadata)
+      CreateCustomMetadata(entries={UID_ATTR: posix_attrs.uid},
+                           custom_metadata=custom_metadata)
     if posix_attrs.gid != NA_ID:
-      CreateCustomMetadata(
-          entries={GID_ATTR: posix_attrs.gid}, custom_metadata=custom_metadata)
+      CreateCustomMetadata(entries={GID_ATTR: posix_attrs.gid},
+                           custom_metadata=custom_metadata)
     if posix_attrs.mode.permissions != NA_MODE:
-      CreateCustomMetadata(
-          entries={MODE_ATTR: posix_attrs.mode.permissions},
-          custom_metadata=custom_metadata)
+      CreateCustomMetadata(entries={MODE_ATTR: posix_attrs.mode.permissions},
+                           custom_metadata=custom_metadata)
 
 
 def DeserializeIDAttribute(obj_metadata, attr, url_str, posix_attrs):
@@ -408,16 +405,21 @@ def ParseAndSetPOSIXAttributes(path,
     # thrown unless there are unexpected code changes.
     raise CommandException('obj_metadata cannot be None for %s' % path)
   try:
-    found_at, atime = GetValueFromObjectCustomMetadata(
-        obj_metadata, ATIME_ATTR, default_value=NA_TIME)
-    found_mt, mtime = GetValueFromObjectCustomMetadata(
-        obj_metadata, MTIME_ATTR, default_value=NA_TIME)
-    found_uid, uid = GetValueFromObjectCustomMetadata(
-        obj_metadata, UID_ATTR, default_value=NA_ID)
-    found_gid, gid = GetValueFromObjectCustomMetadata(
-        obj_metadata, GID_ATTR, default_value=NA_ID)
-    found_mode, mode = GetValueFromObjectCustomMetadata(
-        obj_metadata, MODE_ATTR, default_value=NA_MODE)
+    found_at, atime = GetValueFromObjectCustomMetadata(obj_metadata,
+                                                       ATIME_ATTR,
+                                                       default_value=NA_TIME)
+    found_mt, mtime = GetValueFromObjectCustomMetadata(obj_metadata,
+                                                       MTIME_ATTR,
+                                                       default_value=NA_TIME)
+    found_uid, uid = GetValueFromObjectCustomMetadata(obj_metadata,
+                                                      UID_ATTR,
+                                                      default_value=NA_ID)
+    found_gid, gid = GetValueFromObjectCustomMetadata(obj_metadata,
+                                                      GID_ATTR,
+                                                      default_value=NA_ID)
+    found_mode, mode = GetValueFromObjectCustomMetadata(obj_metadata,
+                                                        MODE_ATTR,
+                                                        default_value=NA_MODE)
     if not found_mode:
       mode = int(GetDefaultMode())
     if found_mt:

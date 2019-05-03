@@ -206,13 +206,12 @@ class FileProgressCallbackHandler(object):
 
     parallelism_framework_util.PutToQueueWithTimeout(
         self._status_queue,
-        ProgressMessage(
-            total_size,
-            last_byte_processed - self._start_byte,
-            self._src_url,
-            time.time(),
-            component_num=self._component_num,
-            operation_name=self._operation_name,
-            dst_url=self._dst_url))
+        ProgressMessage(total_size,
+                        last_byte_processed - self._start_byte,
+                        self._src_url,
+                        time.time(),
+                        component_num=self._component_num,
+                        operation_name=self._operation_name,
+                        dst_url=self._dst_url))
     if total_size and last_byte_processed - self._start_byte == total_size:
       self._last_byte_written = True

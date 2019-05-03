@@ -133,14 +133,14 @@ def GetCredentialStoreKey(credentials, api_version):
 
 def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
   """Helper to ensure each GCS API client shares the same credentials."""
-  api.credentials = (
-      credentials or _CheckAndGetCredentials(logger) or NoOpCredentials())
+  api.credentials = (credentials or _CheckAndGetCredentials(logger) or
+                     NoOpCredentials())
 
   # Set credential cache so that we don't have to get a new access token for
   # every call we make. All GCS APIs use the same credentials as the JSON API,
   # so we use its version in the key for caching access tokens.
-  credential_store_key = (
-      GetCredentialStoreKey(api.credentials, GetGcsJsonApiVersion()))
+  credential_store_key = (GetCredentialStoreKey(api.credentials,
+                                                GetGcsJsonApiVersion()))
   api.credentials.set_store(
       multiprocess_file_storage.MultiprocessFileStorage(
           GetCredentialStoreFilename(), credential_store_key))

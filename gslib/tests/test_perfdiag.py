@@ -64,10 +64,9 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     # If https://github.com/boto/boto/pull/2857 or its analog
     # is accepted in boto, set https_validate_certificates to False
     # in these tests and re-enable them.
-    python_version_less_than_2_7_9 = (
-        sys.version_info[0] == 2 and
-        ((sys.version_info[1] < 7) or
-         (sys.version_info[1] == 7 and sys.version_info[2] < 9)))
+    python_version_less_than_2_7_9 = (sys.version_info[0] == 2 and (
+        (sys.version_info[1] < 7) or
+        (sys.version_info[1] == 7 and sys.version_info[2] < 9)))
     return (self.test_api == 'XML' and not RUN_S3_TESTS and
             python_version_less_than_2_7_9 and
             not (os.environ.get('http_proxy') or os.environ.get('https_proxy')
@@ -104,8 +103,8 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     stderr_default = self.RunGsUtil(cmd, return_stderr=True)
     stderr_custom = None
     if self._should_run_with_custom_endpoints():
-      stderr_custom = self.RunGsUtil(
-          self._custom_endpoint_flags + cmd, return_stderr=True)
+      stderr_custom = self.RunGsUtil(self._custom_endpoint_flags + cmd,
+                                     return_stderr=True)
     self.AssertNObjectsInBucket(bucket_uri, 0, versioned=True)
     return (stderr_default, stderr_custom)
 
@@ -114,25 +113,22 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
                                          num_processes,
                                          num_threads,
                                          compression_ratio=None):
-    self._run_throughput_test(
-        test_name,
-        num_processes,
-        num_threads,
-        'fan',
-        compression_ratio=compression_ratio)
+    self._run_throughput_test(test_name,
+                              num_processes,
+                              num_threads,
+                              'fan',
+                              compression_ratio=compression_ratio)
     if not RUN_S3_TESTS:
-      self._run_throughput_test(
-          test_name,
-          num_processes,
-          num_threads,
-          'slice',
-          compression_ratio=compression_ratio)
-      self._run_throughput_test(
-          test_name,
-          num_processes,
-          num_threads,
-          'both',
-          compression_ratio=compression_ratio)
+      self._run_throughput_test(test_name,
+                                num_processes,
+                                num_threads,
+                                'slice',
+                                compression_ratio=compression_ratio)
+      self._run_throughput_test(test_name,
+                                num_processes,
+                                num_threads,
+                                'both',
+                                compression_ratio=compression_ratio)
 
   def test_write_throughput_single_process_single_thread(self):
     self._run_throughput_test('wthru', 1, 1)
@@ -212,27 +208,35 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
 
   @SkipForXML('No compressed transport encoding support for the XML API.')
   def test_gzip_write_throughput_single_process_single_thread(self):
-    (stderr_default, _) = self._run_throughput_test(
-        'wthru', 1, 1, compression_ratio=50)
+    (stderr_default, _) = self._run_throughput_test('wthru',
+                                                    1,
+                                                    1,
+                                                    compression_ratio=50)
     self.assertIn('Gzip compression ratio: 50', stderr_default)
     self.assertIn('Gzip transport encoding writes: True', stderr_default)
-    (stderr_default, _) = self._run_throughput_test(
-        'wthru_file', 1, 1, compression_ratio=50)
+    (stderr_default, _) = self._run_throughput_test('wthru_file',
+                                                    1,
+                                                    1,
+                                                    compression_ratio=50)
     self.assertIn('Gzip compression ratio: 50', stderr_default)
     self.assertIn('Gzip transport encoding writes: True', stderr_default)
 
   @SkipForXML('No compressed transport encoding support for the XML API.')
   def test_gzip_write_throughput_single_process_multi_thread(self):
     self._run_each_parallel_throughput_test('wthru', 1, 2, compression_ratio=50)
-    self._run_each_parallel_throughput_test(
-        'wthru_file', 1, 2, compression_ratio=50)
+    self._run_each_parallel_throughput_test('wthru_file',
+                                            1,
+                                            2,
+                                            compression_ratio=50)
 
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   @SkipForXML('No compressed transport encoding support for the XML API.')
   def test_gzip_write_throughput_multi_process_multi_thread(self):
     self._run_each_parallel_throughput_test('wthru', 2, 2, compression_ratio=50)
-    self._run_each_parallel_throughput_test(
-        'wthru_file', 2, 2, compression_ratio=50)
+    self._run_each_parallel_throughput_test('wthru_file',
+                                            2,
+                                            2,
+                                            compression_ratio=50)
 
 
 class TestPerfDiagUnitTests(testcase.GsUtilUnitTestCase):

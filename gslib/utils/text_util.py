@@ -330,8 +330,8 @@ def print_to_fd(*objects, **kwargs):
       if key not in expected_keywords:
         error_msg = ('{} is not a valid keyword argument. '
                      'Please use one of: {}')
-        raise KeyError(
-            error_msg.format(key, ' '.join(expected_keywords.keys())))
+        raise KeyError(error_msg.format(key,
+                                        ' '.join(expected_keywords.keys())))
       else:
         expected_keywords[key] = value
 

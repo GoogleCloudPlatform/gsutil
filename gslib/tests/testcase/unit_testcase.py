@@ -216,13 +216,12 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     try:
       with WorkingDirectory(cwd):
-        self.command_runner.RunNamedCommand(
-            command_name,
-            args=args,
-            headers=headers,
-            debug=debug,
-            parallel_operations=False,
-            do_shutdown=False)
+        self.command_runner.RunNamedCommand(command_name,
+                                            args=args,
+                                            headers=headers,
+                                            debug=debug,
+                                            parallel_operations=False,
+                                            do_shutdown=False)
     finally:
       sys.stdout.seek(0)
       sys.stderr.seek(0)
@@ -285,7 +284,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
   def MakeGsUtilApi(cls, debug=0):
     gsutil_api_map = {
         ApiMapConstants.API_MAP:
-            (cls.mock_gsutil_api_class_map_factory.GetClassMap()),
+        (cls.mock_gsutil_api_class_map_factory.GetClassMap()),
         ApiMapConstants.SUPPORT_MAP: {
             'gs': [ApiSelector.XML, ApiSelector.JSON],
             's3': [ApiSelector.XML]
@@ -296,12 +295,11 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         }
     }
 
-    return CloudApiDelegator(
-        cls.mock_bucket_storage_uri,
-        gsutil_api_map,
-        cls.logger,
-        DiscardMessagesQueue(),
-        debug=debug)
+    return CloudApiDelegator(cls.mock_bucket_storage_uri,
+                             gsutil_api_map,
+                             cls.logger,
+                             DiscardMessagesQueue(),
+                             debug=debug)
 
   @classmethod
   def _test_wildcard_iterator(cls, uri_or_str, debug=0):
@@ -386,10 +384,9 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     except TypeError:
       test_objects = [self.MakeTempName('obj') for _ in range(test_objects)]
     for i, name in enumerate(test_objects):
-      self.CreateObject(
-          bucket_uri=bucket_uri,
-          object_name=name,
-          contents='test {}'.format(i).encode(UTF8))
+      self.CreateObject(bucket_uri=bucket_uri,
+                        object_name=name,
+                        contents='test {}'.format(i).encode(UTF8))
     return bucket_uri
 
   def CreateObject(self, bucket_uri=None, object_name=None, contents=None):

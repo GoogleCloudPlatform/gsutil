@@ -121,11 +121,10 @@ def ReportMetrics(metrics_file_path, log_level, log_file_path=None):
   for metric in metrics:
     try:
       headers = {'User-Agent': metric.user_agent}
-      response = http.request(
-          metric.endpoint,
-          method=metric.method,
-          body=metric.body,
-          headers=headers)
+      response = http.request(metric.endpoint,
+                              method=metric.method,
+                              body=metric.body,
+                              headers=headers)
       logger.debug(metric)
       logger.debug('RESPONSE: %s', response[0]['status'])
     except Exception as e:  # pylint: disable=broad-except

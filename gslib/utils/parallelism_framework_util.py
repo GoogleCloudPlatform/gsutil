@@ -319,8 +319,8 @@ parallelism will be executed with multiple threads in a single process only.
 """ % os_name
     if logger:
       logger.warn(message)
-    return MultiprocessingIsAvailableResult(
-        is_available=False, stack_trace=None)
+    return MultiprocessingIsAvailableResult(is_available=False,
+                                            stack_trace=None)
 
   stack_trace = None
   multiprocessing_is_available = True

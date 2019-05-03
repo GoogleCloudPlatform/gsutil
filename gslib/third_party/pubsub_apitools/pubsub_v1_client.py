@@ -24,7 +24,10 @@ class PubsubV1(base_api.BaseApiClient):
   BASE_URL = u'https://pubsub.googleapis.com/'
 
   _PACKAGE = u'pubsub'
-  _SCOPES = [u'https://www.googleapis.com/auth/cloud-platform', u'https://www.googleapis.com/auth/pubsub']
+  _SCOPES = [
+      u'https://www.googleapis.com/auth/cloud-platform',
+      u'https://www.googleapis.com/auth/pubsub'
+  ]
   _VERSION = u'v1'
   _CLIENT_ID = 'nomatter'
   _CLIENT_SECRET = 'nomatter'
@@ -42,23 +45,34 @@ class PubsubV1(base_api.BaseApiClient):
   _URL_VERSION = u'v1'
   _API_KEY = None
 
-  def __init__(self, url='', credentials=None,
-               get_credentials=True, http=None, model=None,
-               log_request=False, log_response=False,
-               credentials_args=None, default_global_params=None,
+  def __init__(self,
+               url='',
+               credentials=None,
+               get_credentials=True,
+               http=None,
+               model=None,
+               log_request=False,
+               log_response=False,
+               credentials_args=None,
+               default_global_params=None,
                additional_http_headers=None):
     """Create a new pubsub handle."""
     url = url or self.BASE_URL
-    super(PubsubV1, self).__init__(
-        url, credentials=credentials,
-        get_credentials=get_credentials, http=http, model=model,
-        log_request=log_request, log_response=log_response,
-        credentials_args=credentials_args,
-        default_global_params=default_global_params,
-        additional_http_headers=additional_http_headers)
+    super(PubsubV1,
+          self).__init__(url,
+                         credentials=credentials,
+                         get_credentials=get_credentials,
+                         http=http,
+                         model=model,
+                         log_request=log_request,
+                         log_response=log_response,
+                         credentials_args=credentials_args,
+                         default_global_params=default_global_params,
+                         additional_http_headers=additional_http_headers)
     self.projects_snapshots = self.ProjectsSnapshotsService(self)
     self.projects_subscriptions = self.ProjectsSubscriptionsService(self)
-    self.projects_topics_subscriptions = self.ProjectsTopicsSubscriptionsService(self)
+    self.projects_topics_subscriptions = self.ProjectsTopicsSubscriptionsService(
+        self)
     self.projects_topics = self.ProjectsTopicsService(self)
     self.projects = self.ProjectsService(self)
 
@@ -69,8 +83,7 @@ class PubsubV1(base_api.BaseApiClient):
 
     def __init__(self, client):
       super(PubsubV1.ProjectsSnapshotsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def GetIamPolicy(self, request, global_params=None):
       """Gets the access control policy for a resource.
@@ -84,11 +97,11 @@ set.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('GetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     GetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/snapshots/{snapshotsId}:getIamPolicy',
+        flat_path=
+        u'v1/projects/{projectsId}/snapshots/{snapshotsId}:getIamPolicy',
         http_method=u'GET',
         method_id=u'pubsub.projects.snapshots.getIamPolicy',
         ordered_params=[u'resource'],
@@ -112,11 +125,11 @@ existing policy.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('SetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     SetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/snapshots/{snapshotsId}:setIamPolicy',
+        flat_path=
+        u'v1/projects/{projectsId}/snapshots/{snapshotsId}:setIamPolicy',
         http_method=u'POST',
         method_id=u'pubsub.projects.snapshots.setIamPolicy',
         ordered_params=[u'resource'],
@@ -145,11 +158,11 @@ may "fail open" without warning.
         (TestIamPermissionsResponse) The response message.
       """
       config = self.GetMethodConfig('TestIamPermissions')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     TestIamPermissions.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/snapshots/{snapshotsId}:testIamPermissions',
+        flat_path=
+        u'v1/projects/{projectsId}/snapshots/{snapshotsId}:testIamPermissions',
         http_method=u'POST',
         method_id=u'pubsub.projects.snapshots.testIamPermissions',
         ordered_params=[u'resource'],
@@ -169,8 +182,7 @@ may "fail open" without warning.
 
     def __init__(self, client):
       super(PubsubV1.ProjectsSubscriptionsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Acknowledge(self, request, global_params=None):
       """Acknowledges the messages associated with the `ack_ids` in the.
@@ -188,11 +200,11 @@ than once will not result in an error.
         (Empty) The response message.
       """
       config = self.GetMethodConfig('Acknowledge')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Acknowledge.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:acknowledge',
+        flat_path=
+        u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:acknowledge',
         http_method=u'POST',
         method_id=u'pubsub.projects.subscriptions.acknowledge',
         ordered_params=[u'subscription'],
@@ -224,8 +236,7 @@ Note that for REST API requests, you must specify a name in the request.
         (Subscription) The response message.
       """
       config = self.GetMethodConfig('Create')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Create.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}',
@@ -255,8 +266,7 @@ subscription or its topic unless the same topic is specified.
         (Empty) The response message.
       """
       config = self.GetMethodConfig('Delete')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Delete.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}',
@@ -282,8 +292,7 @@ subscription or its topic unless the same topic is specified.
         (Subscription) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}',
@@ -311,11 +320,11 @@ set.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('GetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     GetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:getIamPolicy',
+        flat_path=
+        u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:getIamPolicy',
         http_method=u'GET',
         method_id=u'pubsub.projects.subscriptions.getIamPolicy',
         ordered_params=[u'resource'],
@@ -338,8 +347,7 @@ set.
         (ListSubscriptionsResponse) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/subscriptions',
@@ -369,11 +377,11 @@ subscription-level `ackDeadlineSeconds` used for subsequent messages.
         (Empty) The response message.
       """
       config = self.GetMethodConfig('ModifyAckDeadline')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     ModifyAckDeadline.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:modifyAckDeadline',
+        flat_path=
+        u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:modifyAckDeadline',
         http_method=u'POST',
         method_id=u'pubsub.projects.subscriptions.modifyAckDeadline',
         ordered_params=[u'subscription'],
@@ -381,7 +389,8 @@ subscription-level `ackDeadlineSeconds` used for subsequent messages.
         query_params=[],
         relative_path=u'v1/{+subscription}:modifyAckDeadline',
         request_field=u'modifyAckDeadlineRequest',
-        request_type_name=u'PubsubProjectsSubscriptionsModifyAckDeadlineRequest',
+        request_type_name=
+        u'PubsubProjectsSubscriptionsModifyAckDeadlineRequest',
         response_type_name=u'Empty',
         supports_download=False,
     )
@@ -401,11 +410,11 @@ continuously through the call regardless of changes to the `PushConfig`.
         (Empty) The response message.
       """
       config = self.GetMethodConfig('ModifyPushConfig')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     ModifyPushConfig.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:modifyPushConfig',
+        flat_path=
+        u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:modifyPushConfig',
         http_method=u'POST',
         method_id=u'pubsub.projects.subscriptions.modifyPushConfig',
         ordered_params=[u'subscription'],
@@ -431,11 +440,11 @@ subscription.
         (PullResponse) The response message.
       """
       config = self.GetMethodConfig('Pull')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Pull.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:pull',
+        flat_path=
+        u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:pull',
         http_method=u'POST',
         method_id=u'pubsub.projects.subscriptions.pull',
         ordered_params=[u'subscription'],
@@ -459,11 +468,11 @@ existing policy.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('SetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     SetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:setIamPolicy',
+        flat_path=
+        u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:setIamPolicy',
         http_method=u'POST',
         method_id=u'pubsub.projects.subscriptions.setIamPolicy',
         ordered_params=[u'resource'],
@@ -492,11 +501,11 @@ may "fail open" without warning.
         (TestIamPermissionsResponse) The response message.
       """
       config = self.GetMethodConfig('TestIamPermissions')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     TestIamPermissions.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:testIamPermissions',
+        flat_path=
+        u'v1/projects/{projectsId}/subscriptions/{subscriptionsId}:testIamPermissions',
         http_method=u'POST',
         method_id=u'pubsub.projects.subscriptions.testIamPermissions',
         ordered_params=[u'resource'],
@@ -504,7 +513,8 @@ may "fail open" without warning.
         query_params=[],
         relative_path=u'v1/{+resource}:testIamPermissions',
         request_field=u'testIamPermissionsRequest',
-        request_type_name=u'PubsubProjectsSubscriptionsTestIamPermissionsRequest',
+        request_type_name=
+        u'PubsubProjectsSubscriptionsTestIamPermissionsRequest',
         response_type_name=u'TestIamPermissionsResponse',
         supports_download=False,
     )
@@ -516,8 +526,7 @@ may "fail open" without warning.
 
     def __init__(self, client):
       super(PubsubV1.ProjectsTopicsSubscriptionsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def List(self, request, global_params=None):
       """Lists the name of the subscriptions for this topic.
@@ -529,8 +538,7 @@ may "fail open" without warning.
         (ListTopicSubscriptionsResponse) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/topics/{topicsId}/subscriptions',
@@ -553,8 +561,7 @@ may "fail open" without warning.
 
     def __init__(self, client):
       super(PubsubV1.ProjectsTopicsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}
 
     def Create(self, request, global_params=None):
       """Creates the given topic with the given name.
@@ -566,8 +573,7 @@ may "fail open" without warning.
         (Topic) The response message.
       """
       config = self.GetMethodConfig('Create')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Create.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/topics/{topicsId}',
@@ -597,8 +603,7 @@ not deleted, but their `topic` field is set to `_deleted-topic_`.
         (Empty) The response message.
       """
       config = self.GetMethodConfig('Delete')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Delete.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/topics/{topicsId}',
@@ -624,8 +629,7 @@ not deleted, but their `topic` field is set to `_deleted-topic_`.
         (Topic) The response message.
       """
       config = self.GetMethodConfig('Get')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Get.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/topics/{topicsId}',
@@ -653,8 +657,7 @@ set.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('GetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     GetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/topics/{topicsId}:getIamPolicy',
@@ -680,8 +683,7 @@ set.
         (ListTopicsResponse) The response message.
       """
       config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     List.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/topics',
@@ -709,8 +711,7 @@ does not exist. The message payload must not be empty; it must contain
         (PublishResponse) The response message.
       """
       config = self.GetMethodConfig('Publish')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     Publish.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/topics/{topicsId}:publish',
@@ -737,8 +738,7 @@ existing policy.
         (Policy) The response message.
       """
       config = self.GetMethodConfig('SetIamPolicy')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     SetIamPolicy.method_config = lambda: base_api.ApiMethodInfo(
         flat_path=u'v1/projects/{projectsId}/topics/{topicsId}:setIamPolicy',
@@ -770,11 +770,11 @@ may "fail open" without warning.
         (TestIamPermissionsResponse) The response message.
       """
       config = self.GetMethodConfig('TestIamPermissions')
-      return self._RunMethod(
-          config, request, global_params=global_params)
+      return self._RunMethod(config, request, global_params=global_params)
 
     TestIamPermissions.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path=u'v1/projects/{projectsId}/topics/{topicsId}:testIamPermissions',
+        flat_path=
+        u'v1/projects/{projectsId}/topics/{topicsId}:testIamPermissions',
         http_method=u'POST',
         method_id=u'pubsub.projects.topics.testIamPermissions',
         ordered_params=[u'resource'],
@@ -794,5 +794,4 @@ may "fail open" without warning.
 
     def __init__(self, client):
       super(PubsubV1.ProjectsService, self).__init__(client)
-      self._upload_configs = {
-          }
+      self._upload_configs = {}

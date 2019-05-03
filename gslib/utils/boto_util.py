@@ -235,11 +235,10 @@ def GetMaxConcurrentCompressedUploads():
   upload_chunk_size = GetJsonResumableChunkSize()
   # From apitools compression.py.
   compression_chunk_size = 16 * ONE_MIB
-  total_upload_size = (
-      upload_chunk_size + compression_chunk_size + 17 + 5 *
-      (((compression_chunk_size - 1) / 16383) + 1))
-  max_concurrent_uploads = (
-      GetMaxUploadCompressionBufferSize() / total_upload_size)
+  total_upload_size = (upload_chunk_size + compression_chunk_size + 17 + 5 *
+                       (((compression_chunk_size - 1) / 16383) + 1))
+  max_concurrent_uploads = (GetMaxUploadCompressionBufferSize() /
+                            total_upload_size)
   if max_concurrent_uploads <= 0:
     max_concurrent_uploads = 1
   return max_concurrent_uploads
@@ -315,14 +314,12 @@ def GetTabCompletionCacheFilename():
 
 def HasConfiguredCredentials():
   """Determines if boto credential/config file exists."""
-  has_goog_creds = (
-      config.has_option('Credentials', 'gs_access_key_id') and
-      config.has_option('Credentials', 'gs_secret_access_key'))
-  has_amzn_creds = (
-      config.has_option('Credentials', 'aws_access_key_id') and
-      config.has_option('Credentials', 'aws_secret_access_key'))
-  has_oauth_creds = (
-      config.has_option('Credentials', 'gs_oauth2_refresh_token'))
+  has_goog_creds = (config.has_option('Credentials', 'gs_access_key_id') and
+                    config.has_option('Credentials', 'gs_secret_access_key'))
+  has_amzn_creds = (config.has_option('Credentials', 'aws_access_key_id') and
+                    config.has_option('Credentials', 'aws_secret_access_key'))
+  has_oauth_creds = (config.has_option('Credentials',
+                                       'gs_oauth2_refresh_token'))
   has_service_account_creds = (
       HAS_CRYPTO and
       config.has_option('Credentials', 'gs_service_client_id') and
@@ -334,17 +331,15 @@ def HasConfiguredCredentials():
 
   valid_auth_handler = None
   try:
-    valid_auth_handler = boto.auth.get_auth_handler(
-        GSConnection.DefaultHost,
-        config,
-        Provider('google'),
-        requested_capability=['s3'])
+    valid_auth_handler = boto.auth.get_auth_handler(GSConnection.DefaultHost,
+                                                    config,
+                                                    Provider('google'),
+                                                    requested_capability=['s3'])
     # Exclude the no-op auth handler as indicating credentials are configured.
     # Note we can't use isinstance() here because the no-op module may not be
     # imported so we can't get a reference to the class type.
-    if getattr(
-        getattr(valid_auth_handler, '__class__', None), '__name__',
-        None) == 'NoOpAuth':
+    if getattr(getattr(valid_auth_handler, '__class__', None), '__name__',
+               None) == 'NoOpAuth':
       valid_auth_handler = None
   except NoAuthHandlerFound:
     pass
@@ -449,12 +444,11 @@ def MonkeyPatchBoto():
       self.sock.ca_certs = self.ca_certs
       self.sock.ciphers = None
     else:
-      self.sock = ssl.wrap_socket(
-          sock,
-          keyfile=self.key_file,
-          certfile=self.cert_file,
-          cert_reqs=ssl.CERT_REQUIRED,
-          ca_certs=self.ca_certs)
+      self.sock = ssl.wrap_socket(sock,
+                                  keyfile=self.key_file,
+                                  certfile=self.cert_file,
+                                  cert_reqs=ssl.CERT_REQUIRED,
+                                  ca_certs=self.ca_certs)
     cert = self.sock.getpeercert()
     hostname = self.host.split(':', 0)[0]
     if not ValidateCertificateHostname(cert, hostname):
@@ -544,7 +538,8 @@ def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
                                           body)
 
     if err.error_code in ['RequestTimeout']:
-      raise boto.exception.PleaseRetryException(
-          'Saw %s, retrying' % err.error_code, response=response)
+      raise boto.exception.PleaseRetryException('Saw %s, retrying' %
+                                                err.error_code,
+                                                response=response)
 
   return False

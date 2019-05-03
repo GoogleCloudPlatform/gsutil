@@ -138,9 +138,8 @@ _CH_DESCRIPTION = """
     -u          Add or modify a user entity's role.
 """
 
-_SYNOPSIS = (
-    _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + _CH_SYNOPSIS.lstrip('\n') +
-    '\n\n')
+_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
+             _CH_SYNOPSIS.lstrip('\n') + '\n\n')
 
 _DESCRIPTION = """
   The defacl command has three sub-commands:
@@ -282,12 +281,11 @@ class DefAclCommand(Command):
     try:
       preconditions = Preconditions(meta_gen_match=bucket.metageneration)
       bucket_metadata = apitools_messages.Bucket(defaultObjectAcl=current_acl)
-      self.gsutil_api.PatchBucket(
-          url.bucket_name,
-          bucket_metadata,
-          preconditions=preconditions,
-          provider=url.scheme,
-          fields=['id'])
+      self.gsutil_api.PatchBucket(url.bucket_name,
+                                  bucket_metadata,
+                                  preconditions=preconditions,
+                                  provider=url.scheme,
+                                  fields=['id'])
       self.logger.info('Updated default ACL on %s', url)
     except BadRequestException as e:
       # Don't retry on bad requests, e.g. invalid email address.
@@ -322,7 +320,7 @@ class DefAclCommand(Command):
                              (action_subcommand, self.command_name))
     # Commands with both suboptions and subcommands need to reparse for
     # suboptions, so we log again.
-    metrics.LogCommandParams(
-        subcommands=[action_subcommand], sub_opts=self.sub_opts)
+    metrics.LogCommandParams(subcommands=[action_subcommand],
+                             sub_opts=self.sub_opts)
     func()
     return 0

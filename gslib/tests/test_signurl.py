@@ -144,8 +144,9 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
 
     for obj_name in objs:
       obj_urls.append(
-          self.CreateObject(
-              bucket_uri=bucket, object_name=obj_name, contents=b''))
+          self.CreateObject(bucket_uri=bucket,
+                            object_name=obj_name,
+                            contents=b''))
 
     stdout = self.RunGsUtil(
         ['signurl', '-p', 'notasecret',

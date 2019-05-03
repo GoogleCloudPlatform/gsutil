@@ -50,22 +50,22 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     test_regex = self._MakeScopeRegex('OWNER', 'group', self.GROUP_TEST_ADDRESS)
     test_regex2 = self._MakeScopeRegex('READER', 'group',
                                        self.GROUP_TEST_ADDRESS)
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                               return_stdout=True)
     self.assertNotRegex(json_text, test_regex)
 
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-g', self.GROUP_TEST_ADDRESS +
                     ':FC', suri(bucket)])
-    json_text2 = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text2 = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                                return_stdout=True)
     self.assertRegex(json_text2, test_regex)
 
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-g', self.GROUP_TEST_ADDRESS + ':READ',
                     suri(bucket)])
-    json_text3 = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text3 = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                                return_stdout=True)
     self.assertRegex(json_text3, test_regex2)
 
     stderr = self.RunGsUtil(
@@ -83,8 +83,8 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
 
     # First, clear out the default object ACL on the bucket.
     self.RunGsUtil(self._defacl_set_prefix + ['private', suri(bucket)])
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                               return_stdout=True)
     empty_regex = r'\[\]\s*'
     self.assertRegex(json_text, empty_regex)
 
@@ -93,8 +93,8 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-g', self.GROUP_TEST_ADDRESS + ':READ',
                     suri(bucket)])
-    json_text2 = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text2 = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                                return_stdout=True)
     self.assertRegex(json_text2, group_regex)
 
     if self.test_api == ApiSelector.JSON:
@@ -106,8 +106,8 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-d', self.GROUP_TEST_ADDRESS,
                     suri(bucket)])
-    json_text3 = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text3 = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                                return_stdout=True)
     self.assertRegex(json_text3, empty_regex)
 
   def testChangeMultipleBuckets(self):
@@ -117,11 +117,11 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
 
     test_regex = self._MakeScopeRegex('READER', 'group',
                                       self.GROUP_TEST_ADDRESS)
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket1)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket1)],
+                               return_stdout=True)
     self.assertNotRegex(json_text, test_regex)
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket2)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket2)],
+                               return_stdout=True)
     self.assertNotRegex(json_text, test_regex)
 
     self.RunGsUtil(
@@ -129,11 +129,11 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
         ['-g', self.GROUP_TEST_ADDRESS + ':READ',
          suri(bucket1),
          suri(bucket2)])
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket1)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket1)],
+                               return_stdout=True)
     self.assertRegex(json_text, test_regex)
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket2)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket2)],
+                               return_stdout=True)
     self.assertRegex(json_text, test_regex)
 
   def testChangeMultipleAcls(self):
@@ -144,8 +144,8 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
                                             self.GROUP_TEST_ADDRESS)
     test_regex_user = self._MakeScopeRegex('OWNER', 'user',
                                            self.USER_TEST_ADDRESS)
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                               return_stdout=True)
     self.assertNotRegex(json_text, test_regex_group)
     self.assertNotRegex(json_text, test_regex_user)
 
@@ -154,16 +154,16 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
         ':fc',
         suri(bucket)
     ])
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                               return_stdout=True)
     self.assertRegex(json_text, test_regex_group)
     self.assertRegex(json_text, test_regex_user)
 
   def testEmptyDefAcl(self):
     bucket = self.CreateBucket()
     self.RunGsUtil(self._defacl_set_prefix + ['private', suri(bucket)])
-    stdout = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    stdout = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                            return_stdout=True)
     self.assertEquals(stdout.rstrip(), '[]')
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-u', self.USER_TEST_ADDRESS +
@@ -174,39 +174,42 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     bucket = self.CreateBucket()
 
     test_regex = self._MakeScopeRegex('OWNER', 'user', self.USER_TEST_ADDRESS)
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                               return_stdout=True)
     self.assertNotRegex(json_text, test_regex)
 
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-u', self.USER_TEST_ADDRESS +
                     ':fc', suri(bucket)])
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                               return_stdout=True)
     self.assertRegex(json_text, test_regex)
 
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-d', self.USER_TEST_ADDRESS,
                     suri(bucket)])
-    json_text = self.RunGsUtil(
-        self._defacl_get_prefix + [suri(bucket)], return_stdout=True)
+    json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
+                               return_stdout=True)
     self.assertNotRegex(json_text, test_regex)
 
   def testTooFewArgumentsFails(self):
     """Tests calling defacl with insufficient number of arguments."""
     # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._defacl_get_prefix, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._defacl_get_prefix,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for set, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._defacl_set_prefix, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._defacl_set_prefix,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for ch, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._defacl_ch_prefix, return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(self._defacl_ch_prefix,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # Neither arguments nor subcommand.

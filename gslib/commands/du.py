@@ -143,13 +143,11 @@ class DuCommand(Command):
   )
 
   def _PrintSummaryLine(self, num_bytes, name):
-    size_string = (
-        MakeHumanReadable(num_bytes)
-        if self.human_readable else six.text_type(num_bytes))
-    text_util.print_to_fd(
-        '{size:<11}  {name}'.format(
-            size=size_string, name=six.ensure_text(name)),
-        end=self.line_ending)
+    size_string = (MakeHumanReadable(num_bytes)
+                   if self.human_readable else six.text_type(num_bytes))
+    text_util.print_to_fd('{size:<11}  {name}'.format(
+        size=size_string, name=six.ensure_text(name)),
+                          end=self.line_ending)
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
     """Print listing info for given bucket_listing_ref.
@@ -172,8 +170,8 @@ class DuCommand(Command):
       num_objs = 0
       url_str += '<DeleteMarker>'
     else:
-      size_string = (
-          MakeHumanReadable(obj.size) if self.human_readable else str(obj.size))
+      size_string = (MakeHumanReadable(obj.size)
+                     if self.human_readable else str(obj.size))
       num_bytes = obj.size
       num_objs = 1
 

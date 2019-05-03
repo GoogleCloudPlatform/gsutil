@@ -73,15 +73,14 @@ class CloudApiDelegator(CloudApi):
       perf_trace_token: Performance trace token to use when making API calls.
       user_project: Project to be billed for this project.
     """
-    super(CloudApiDelegator, self).__init__(
-        bucket_storage_uri_class,
-        logger,
-        status_queue,
-        provider=provider,
-        debug=debug,
-        trace_token=trace_token,
-        perf_trace_token=perf_trace_token,
-        user_project=user_project)
+    super(CloudApiDelegator, self).__init__(bucket_storage_uri_class,
+                                            logger,
+                                            status_queue,
+                                            provider=provider,
+                                            debug=debug,
+                                            trace_token=trace_token,
+                                            perf_trace_token=perf_trace_token,
+                                            user_project=user_project)
     self.api_map = gsutil_api_map
     self.prefer_api = boto.config.get('GSUtil', 'prefer_api', '').upper()
     self.loaded_apis = {}
@@ -179,8 +178,8 @@ class CloudApiDelegator(CloudApi):
         (config.has_option('Credentials', 'gs_access_key_id') and
          config.has_option('Credentials', 'gs_secret_access_key')))
 
-    configured_encryption = (
-        provider == 'gs' and (config.has_option('GSUtil', 'encryption_key') or
+    configured_encryption = (provider == 'gs' and
+                             (config.has_option('GSUtil', 'encryption_key') or
                               config.has_option('GSUtil', 'decryption_key1')))
 
     if using_gs_hmac and configured_encryption:
@@ -223,8 +222,8 @@ class CloudApiDelegator(CloudApi):
     return self._GetApi(provider).SetBucketIamPolicy(bucket_name, policy)
 
   def ListBuckets(self, project_id=None, provider=None, fields=None):
-    return self._GetApi(provider).ListBuckets(
-        project_id=project_id, fields=fields)
+    return self._GetApi(provider).ListBuckets(project_id=project_id,
+                                              fields=fields)
 
   def PatchBucket(self,
                   bucket_name,
@@ -234,17 +233,17 @@ class CloudApiDelegator(CloudApi):
                   preconditions=None,
                   provider=None,
                   fields=None):
-    return self._GetApi(provider).PatchBucket(
-        bucket_name,
-        metadata,
-        canned_acl=canned_acl,
-        canned_def_acl=canned_def_acl,
-        preconditions=preconditions,
-        fields=fields)
+    return self._GetApi(provider).PatchBucket(bucket_name,
+                                              metadata,
+                                              canned_acl=canned_acl,
+                                              canned_def_acl=canned_def_acl,
+                                              preconditions=preconditions,
+                                              fields=fields)
 
   def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
-    return self._GetApi(provider).LockRetentionPolicy(
-        bucket_name, metageneration, provider=provider)
+    return self._GetApi(provider).LockRetentionPolicy(bucket_name,
+                                                      metageneration,
+                                                      provider=provider)
 
   def CreateBucket(self,
                    bucket_name,
@@ -252,12 +251,14 @@ class CloudApiDelegator(CloudApi):
                    metadata=None,
                    provider=None,
                    fields=None):
-    return self._GetApi(provider).CreateBucket(
-        bucket_name, project_id=project_id, metadata=metadata, fields=fields)
+    return self._GetApi(provider).CreateBucket(bucket_name,
+                                               project_id=project_id,
+                                               metadata=metadata,
+                                               fields=fields)
 
   def DeleteBucket(self, bucket_name, preconditions=None, provider=None):
-    return self._GetApi(provider).DeleteBucket(
-        bucket_name, preconditions=preconditions)
+    return self._GetApi(provider).DeleteBucket(bucket_name,
+                                               preconditions=preconditions)
 
   def GetObjectIamPolicy(self,
                          bucket_name,
@@ -265,8 +266,10 @@ class CloudApiDelegator(CloudApi):
                          generation=None,
                          provider=None,
                          fields=None):
-    return self._GetApi(provider).GetObjectIamPolicy(
-        bucket_name, object_name, generation, fields=fields)
+    return self._GetApi(provider).GetObjectIamPolicy(bucket_name,
+                                                     object_name,
+                                                     generation,
+                                                     fields=fields)
 
   def SetObjectIamPolicy(self,
                          bucket_name,
@@ -284,12 +287,11 @@ class CloudApiDelegator(CloudApi):
                   all_versions=None,
                   provider=None,
                   fields=None):
-    return self._GetApi(provider).ListObjects(
-        bucket_name,
-        prefix=prefix,
-        delimiter=delimiter,
-        all_versions=all_versions,
-        fields=fields)
+    return self._GetApi(provider).ListObjects(bucket_name,
+                                              prefix=prefix,
+                                              delimiter=delimiter,
+                                              all_versions=all_versions,
+                                              fields=fields)
 
   def GetObjectMetadata(self,
                         bucket_name,
@@ -297,8 +299,10 @@ class CloudApiDelegator(CloudApi):
                         generation=None,
                         provider=None,
                         fields=None):
-    return self._GetApi(provider).GetObjectMetadata(
-        bucket_name, object_name, generation=generation, fields=fields)
+    return self._GetApi(provider).GetObjectMetadata(bucket_name,
+                                                    object_name,
+                                                    generation=generation,
+                                                    fields=fields)
 
   def PatchObjectMetadata(self,
                           bucket_name,
@@ -460,11 +464,10 @@ class CloudApiDelegator(CloudApi):
                    preconditions=None,
                    generation=None,
                    provider=None):
-    return self._GetApi(provider).DeleteObject(
-        bucket_name,
-        object_name,
-        preconditions=preconditions,
-        generation=generation)
+    return self._GetApi(provider).DeleteObject(bucket_name,
+                                               object_name,
+                                               preconditions=preconditions,
+                                               generation=generation)
 
   def WatchBucket(self,
                   bucket_name,
@@ -473,8 +476,11 @@ class CloudApiDelegator(CloudApi):
                   token=None,
                   provider=None,
                   fields=None):
-    return self._GetApi(provider).WatchBucket(
-        bucket_name, address, channel_id, token=token, fields=fields)
+    return self._GetApi(provider).WatchBucket(bucket_name,
+                                              address,
+                                              channel_id,
+                                              token=token,
+                                              fields=fields)
 
   def StopChannel(self, channel_id, resource_id, provider=None):
     return self._GetApi(provider).StopChannel(channel_id, resource_id)
@@ -527,8 +533,8 @@ class CloudApiDelegator(CloudApi):
     Returns:
       ACL XML for the resource specified by storage_url.
     """
-    return self._GetApi(provider).XmlPassThroughGetAcl(
-        storage_url, def_obj_acl=def_obj_acl)
+    return self._GetApi(provider).XmlPassThroughGetAcl(storage_url,
+                                                       def_obj_acl=def_obj_acl)
 
   def XmlPassThroughSetAcl(self,
                            acl_text,
@@ -553,8 +559,10 @@ class CloudApiDelegator(CloudApi):
     Returns:
       None.
     """
-    self._GetApi(provider).XmlPassThroughSetAcl(
-        acl_text, storage_url, canned=canned, def_obj_acl=def_obj_acl)
+    self._GetApi(provider).XmlPassThroughSetAcl(acl_text,
+                                                storage_url,
+                                                canned=canned,
+                                                def_obj_acl=def_obj_acl)
 
   def XmlPassThroughGetCors(self, storage_url, provider=None):
     """XML compatibility function for getting CORS configuration on a bucket.

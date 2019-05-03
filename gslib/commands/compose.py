@@ -120,8 +120,8 @@ class ComposeCommand(Command):
                              'the destination for gsutil compose - abort.' %
                              target_url)
 
-    dst_obj_metadata = apitools_messages.Object(
-        name=target_url.object_name, bucket=target_url.bucket_name)
+    dst_obj_metadata = apitools_messages.Object(name=target_url.object_name,
+                                                bucket=target_url.bucket_name)
 
     components = []
     # Remember the first source object so we can get its content type.

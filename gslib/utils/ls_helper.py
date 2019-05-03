@@ -229,8 +229,8 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     generation_str = GenerationFromUrlAndString(storage_url, obj.generation)
     text_util.print_to_fd(MakeMetadataLine('Generation', generation_str))
   if obj.metageneration:
-    text_util.print_to_fd(
-        MakeMetadataLine('Metageneration', obj.metageneration))
+    text_util.print_to_fd(MakeMetadataLine('Metageneration',
+                                           obj.metageneration))
   if incl_acl:
     # JSON API won't return acls as part of the response unless we have
     # full control scope
@@ -342,8 +342,8 @@ class LsHelper(object):
       # IsBucket() implies a top-level listing.
       if url.IsBucket():
         self._print_bucket_header_func(url)
-      return self._RecurseExpandUrlAndPrint(
-          url.url_string, print_initial_newline=False)
+      return self._RecurseExpandUrlAndPrint(url.url_string,
+                                            print_initial_newline=False)
     else:
       # User provided a prefix or object URL, but it's impossible to tell
       # which until we do a listing and see what matches.

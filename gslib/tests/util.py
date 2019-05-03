@@ -206,9 +206,8 @@ def TailSet(start_point, listing):
   return set(l[len(start_point):] for l in listing.strip().split('\n'))
 
 
-HAS_S3_CREDS = (
-    boto.config.get('Credentials', 'aws_access_key_id', None) and
-    boto.config.get('Credentials', 'aws_secret_access_key', None))
+HAS_S3_CREDS = (boto.config.get('Credentials', 'aws_access_key_id', None) and
+                boto.config.get('Credentials', 'aws_secret_access_key', None))
 
 _GS_HOST = boto.config.get('Credentials', 'gs_host', None)
 _DEFAULT_HOST = six.ensure_str(boto.gs.connection.GSConnection.DefaultHost)
@@ -299,8 +298,8 @@ def ObjectToURI(obj, *suffixes):
     Storage URI string.
   """
   if is_file(obj):
-    return 'file://{}'.format(
-        os.path.abspath(os.path.join(obj.name, *suffixes)))
+    return 'file://{}'.format(os.path.abspath(os.path.join(obj.name,
+                                                           *suffixes)))
   if isinstance(obj, six.string_types):
     return 'file://{}'.format(os.path.join(obj, *suffixes))
   uri = six.ensure_text(obj.uri)
@@ -493,8 +492,8 @@ def SetBotoConfigForTest(boto_config_list, use_existing_config=True):
       with open(tmp_filename, 'w') as tmp_file:
         boto.config.write(tmp_file)
     else:
-      _WriteSectionDictToFile(
-          _SectionDictFromConfigList(boto_config_list), tmp_filename)
+      _WriteSectionDictToFile(_SectionDictFromConfigList(boto_config_list),
+                              tmp_filename)
 
     with _SetBotoConfigFileForTest(tmp_filename):
       yield

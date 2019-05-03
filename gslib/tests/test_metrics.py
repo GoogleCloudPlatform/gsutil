@@ -118,11 +118,11 @@ def _TryExceptAndPass(func, *args, **kwargs):
 
 def _LogAllTestMetrics():
   """Logs all the common metrics for a test."""
-  metrics.LogCommandParams(
-      command_name='cmd1',
-      subcommands=['action1'],
-      global_opts=[('-y', 'value'), ('-z', ''), ('-x', '')],
-      sub_opts=[('optb', ''), ('opta', '')])
+  metrics.LogCommandParams(command_name='cmd1',
+                           subcommands=['action1'],
+                           global_opts=[('-y', 'value'), ('-z', ''),
+                                        ('-x', '')],
+                           sub_opts=[('optb', ''), ('opta', '')])
   retry_msg_1 = RetryableErrorMessage(Exception(), 0)
   retry_msg_2 = RetryableErrorMessage(ValueError(), 0)
   metrics.LogRetryableError(retry_msg_1)
@@ -175,22 +175,22 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(self.collector, MetricsCollector.GetCollector())
 
     # Test when gsutil is part of the Cloud SDK and the user opted in there.
-    with mock.patch.dict(
-        os.environ, values={
-            'CLOUDSDK_WRAPPER': '1',
-            'GA_CID': '555'
-        }):
+    with mock.patch.dict(os.environ,
+                         values={
+                             'CLOUDSDK_WRAPPER': '1',
+                             'GA_CID': '555'
+                         }):
       MetricsCollector._CheckAndSetDisabledCache()
       self.assertFalse(MetricsCollector._disabled_cache)
       self.assertEqual(self.collector, MetricsCollector.GetCollector())
 
     # Test when gsutil is part of the Cloud SDK and the user did not opt in
     # there.
-    with mock.patch.dict(
-        os.environ, values={
-            'CLOUDSDK_WRAPPER': '1',
-            'GA_CID': ''
-        }):
+    with mock.patch.dict(os.environ,
+                         values={
+                             'CLOUDSDK_WRAPPER': '1',
+                             'GA_CID': ''
+                         }):
       MetricsCollector._CheckAndSetDisabledCache()
       self.assertTrue(MetricsCollector._disabled_cache)
       self.assertEqual(None, MetricsCollector.GetCollector())
@@ -376,26 +376,24 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     self.collector.ga_params[metrics._GA_LABEL_MAP['Command Name']] = 'cp'
     # GetDiskCounters is called at initialization of _PerformanceSummaryParams,
     # which occurs during the first call to LogPerformanceSummaryParams.
-    with mock.patch(
-        'gslib.metrics.system_util.GetDiskCounters',
-        return_value={'fake-disk': (0, 0, 0, 0, 0, 0)}):
-      metrics.LogPerformanceSummaryParams(
-          uses_fan=True,
-          uses_slice=True,
-          avg_throughput=10,
-          is_daisy_chain=True,
-          has_file_dst=False,
-          has_cloud_dst=True,
-          has_file_src=False,
-          has_cloud_src=True,
-          total_bytes_transferred=100,
-          total_elapsed_time=10,
-          thread_idle_time=40,
-          thread_execution_time=10,
-          num_processes=2,
-          num_threads=3,
-          num_objects_transferred=3,
-          provider_types=['gs'])
+    with mock.patch('gslib.metrics.system_util.GetDiskCounters',
+                    return_value={'fake-disk': (0, 0, 0, 0, 0, 0)}):
+      metrics.LogPerformanceSummaryParams(uses_fan=True,
+                                          uses_slice=True,
+                                          avg_throughput=10,
+                                          is_daisy_chain=True,
+                                          has_file_dst=False,
+                                          has_cloud_dst=True,
+                                          has_file_src=False,
+                                          has_cloud_src=True,
+                                          total_bytes_transferred=100,
+                                          total_elapsed_time=10,
+                                          thread_idle_time=40,
+                                          thread_execution_time=10,
+                                          num_processes=2,
+                                          num_threads=3,
+                                          num_objects_transferred=3,
+                                          provider_types=['gs'])
 
     # Log a retryable service error and two retryable network errors.
     service_retry_msg = RetryableErrorMessage(
@@ -418,9 +416,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
         10)
 
     # GetDiskCounters is called a second time during collection.
-    with mock.patch(
-        'gslib.metrics.system_util.GetDiskCounters',
-        return_value={'fake-disk': (0, 0, 0, 0, 10, 10)}):
+    with mock.patch('gslib.metrics.system_util.GetDiskCounters',
+                    return_value={'fake-disk': (0, 0, 0, 0, 10, 10)}):
       self.collector._CollectPerformanceSummaryMetric()
 
     # Check for all the expected parameters.
@@ -451,10 +448,9 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
   def testCommandCollection(self):
     """Tests the collection of command parameters."""
-    _TryExceptAndPass(
-        self.command_runner.RunNamedCommand,
-        'acl', ['set', '-a'],
-        collect_analytics=True)
+    _TryExceptAndPass(self.command_runner.RunNamedCommand,
+                      'acl', ['set', '-a'],
+                      collect_analytics=True)
     self.assertEqual(
         'acl set',
         self.collector.ga_params.get(metrics._GA_LABEL_MAP['Command Name']))
@@ -475,10 +471,9 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
         self.collector.ga_params.get(metrics._GA_LABEL_MAP['Command Alias']))
 
     self.collector.ga_params.clear()
-    _TryExceptAndPass(
-        self.command_runner.RunNamedCommand,
-        'iam', ['get', 'dummy_bucket'],
-        collect_analytics=True)
+    _TryExceptAndPass(self.command_runner.RunNamedCommand,
+                      'iam', ['get', 'dummy_bucket'],
+                      collect_analytics=True)
     self.assertEqual(
         'iam get',
         self.collector.ga_params.get(metrics._GA_LABEL_MAP['Command Name']))
@@ -494,10 +489,10 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
         None, None, ValueError(), None, None, None)
     socket_error_retry_args = http_wrapper.ExceptionRetryArgs(
         None, None, socket.error(), None, None, None)
-    metadata_retry_func = LogAndHandleRetries(
-        is_data_transfer=False, status_queue=mock_queue)
-    media_retry_func = LogAndHandleRetries(
-        is_data_transfer=True, status_queue=mock_queue)
+    metadata_retry_func = LogAndHandleRetries(is_data_transfer=False,
+                                              status_queue=mock_queue)
+    media_retry_func = LogAndHandleRetries(is_data_transfer=True,
+                                           status_queue=mock_queue)
 
     metadata_retry_func(value_error_retry_args)
     self.assertEqual(self.collector.retryable_errors['ValueError'], 1)
@@ -523,8 +518,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     """Tests the exception catching decorator CaptureAndLogException."""
 
     # A wrapped function with an exception should not stop the process.
-    mock_exc_fn = mock.MagicMock(
-        __name__=str('mock_exc_fn'), side_effect=Exception())
+    mock_exc_fn = mock.MagicMock(__name__=str('mock_exc_fn'),
+                                 side_effect=Exception())
     wrapped_fn = metrics.CaptureAndLogException(mock_exc_fn)
     wrapped_fn()
 
@@ -535,8 +530,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
     self.assertEqual(1, mock_exc_fn.call_count)
 
-    mock_err_fn = mock.MagicMock(
-        __name__=str('mock_err_fn'), side_effect=TypeError())
+    mock_err_fn = mock.MagicMock(__name__=str('mock_err_fn'),
+                                 side_effect=TypeError())
     wrapped_fn = metrics.CaptureAndLogException(mock_err_fn)
     wrapped_fn()
     self.assertEqual(1, mock_err_fn.call_count)
@@ -547,8 +542,9 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     self.log_handler.reset()
 
     # Test that exceptions in the unprotected metrics functions are caught.
-    with mock.patch.object(
-        MetricsCollector, 'GetCollector', return_value='not a collector'):
+    with mock.patch.object(MetricsCollector,
+                           'GetCollector',
+                           return_value='not a collector'):
       # These calls should all fail, but the exceptions shouldn't propagate up.
       metrics.Shutdown()
       metrics.LogCommandParams()
@@ -649,11 +645,10 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     Returns:
       The string of metrics output.
     """
-    stderr = self.RunGsUtil(
-        ['-d'] + cmd,
-        return_stderr=True,
-        expected_status=expected_status,
-        env_vars={'GSUTIL_TEST_ANALYTICS': '2'})
+    stderr = self.RunGsUtil(['-d'] + cmd,
+                            return_stderr=True,
+                            expected_status=expected_status,
+                            env_vars={'GSUTIL_TEST_ANALYTICS': '2'})
     return METRICS_LOG_RE.search(stderr).group()
 
   def _StartObjectPatch(self, *args, **kwargs):
@@ -705,8 +700,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     self.assertIn('PYTHONPATH', args[1]['env'])
     # Ensure that we can access the same modules as the main process from
     # PYTHONPATH.
-    missing_paths = (
-        set(sys.path) - set(args[1]['env']['PYTHONPATH'].split(os.pathsep)))
+    missing_paths = (set(sys.path) -
+                     set(args[1]['env']['PYTHONPATH'].split(os.pathsep)))
     self.assertEqual(set(), missing_paths)
 
     # Check that the metrics were correctly dumped into the temp file.
@@ -737,17 +732,15 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     # Collect a metric and set log level for the metrics_reporter subprocess.
     def CollectMetricAndSetLogLevel(log_level, log_file_path):
-      metrics.LogCommandParams(
-          command_name='cmd1',
-          subcommands=['action1'],
-          sub_opts=[('optb', ''), ('opta', '')])
+      metrics.LogCommandParams(command_name='cmd1',
+                               subcommands=['action1'],
+                               sub_opts=[('optb', ''), ('opta', '')])
       metrics.LogFatalError(gslib.exception.CommandException('test'))
 
       # Wait for report to make sure the log is written before we check it.
-      self.collector.ReportMetrics(
-          wait_for_report=True,
-          log_level=log_level,
-          log_file_path=log_file_path)
+      self.collector.ReportMetrics(wait_for_report=True,
+                                   log_level=log_level,
+                                   log_file_path=log_file_path)
       self.assertEqual([], self.collector._metrics)
 
     metrics.LogCommandParams(global_opts=[('-y', 'value'), ('-z', ''), ('-x',
@@ -820,8 +813,9 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
       return unittest.skip('Retryable errors are only collected in JSON')
 
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='foo', contents=b'bar')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                   object_name='foo',
+                                   contents=b'bar')
     # Set the command name to rsync in order to collect PerformanceSummary info.
     self.collector.ga_params[metrics._GA_LABEL_MAP['Command Name']] = 'rsync'
     # Generate a JSON API instance to test with, because the RunGsUtil method
@@ -835,14 +829,16 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     # Throw an error when transferring metadata.
     key = object_uri.get_key()
-    src_obj_metadata = apitools_messages.Object(
-        name=key.name, bucket=key.bucket.name, contentType=key.content_type)
+    src_obj_metadata = apitools_messages.Object(name=key.name,
+                                                bucket=key.bucket.name,
+                                                contentType=key.content_type)
     dst_obj_metadata = apitools_messages.Object(
         bucket=src_obj_metadata.bucket,
         name=self.MakeTempName('object'),
         contentType=src_obj_metadata.contentType)
-    with mock.patch.object(
-        http_wrapper, '_MakeRequestNoRetry', side_effect=socket.error()):
+    with mock.patch.object(http_wrapper,
+                           '_MakeRequestNoRetry',
+                           side_effect=socket.error()):
       _TryExceptAndPass(gsutil_api.CopyObject, src_obj_metadata,
                         dst_obj_metadata)
     if six.PY2:
@@ -852,11 +848,10 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(self.collector.retryable_errors['OSError'], 1)
 
     # Throw an error when removing a bucket.
-    with mock.patch.object(
-        http_wrapper,
-        '_MakeRequestNoRetry',
-        side_effect=apitools_exceptions.HttpError('unused', 'unused',
-                                                  'unused')):
+    with mock.patch.object(http_wrapper,
+                           '_MakeRequestNoRetry',
+                           side_effect=apitools_exceptions.HttpError(
+                               'unused', 'unused', 'unused')):
       _TryExceptAndPass(gsutil_api.DeleteObject, bucket_uri.bucket_name,
                         object_uri.object_name)
     self.assertEqual(self.collector.retryable_errors['HttpError'], 1)
@@ -881,11 +876,9 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'a' * halt_size)
 
     # Test that the retry function for data transfers catches and logs an error.
-    test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(
-            _ResumableUploadRetryHandler(
-                5, apitools_exceptions.BadStatusCodeError, ('unused', 'unused',
-                                                            'unused'))))
+    test_callback_file = self.CreateTempFile(contents=pickle.dumps(
+        _ResumableUploadRetryHandler(5, apitools_exceptions.BadStatusCodeError,
+                                     ('unused', 'unused', 'unused'))))
     with SetBotoConfigForTest(boto_config_for_test):
       metrics_list = self._RunGsUtilWithAnalyticsOutput([
           'cp', '--testcallbackfile', test_callback_file, fpath,
@@ -1077,8 +1070,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     """Tests PerformanceSummary collection in a cloud-to-file transfer."""
     bucket_uri = self.CreateBucket()
     file_size = 6
-    object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, contents=b'a' * file_size)
+    object_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                   contents=b'a' * file_size)
 
     fpath = self.CreateTempFile()
     # Run a sliced object download with fan parallelism.
@@ -1115,8 +1108,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     file_size = 6
-    key_uri = self.CreateObject(
-        bucket_uri=bucket1_uri, contents=b'a' * file_size)
+    key_uri = self.CreateObject(bucket_uri=bucket1_uri,
+                                contents=b'a' * file_size)
 
     # Run a daisy-chain cloud-to-cloud copy without parallelism.
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
@@ -1124,8 +1117,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
          suri(bucket2_uri)])
 
     (slowest_throughput, fastest_throughput,
-     _) = self._GetAndCheckAllNumberMetrics(
-         metrics_list, multithread=False)
+     _) = self._GetAndCheckAllNumberMetrics(metrics_list, multithread=False)
     # Since there's a single thread, this must be the case.
     self.assertEqual(slowest_throughput, fastest_throughput)
 

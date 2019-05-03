@@ -63,9 +63,8 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(
         stderr.count('Copying') % 2, 0,
         'stderr did not contain even number of "Copying" lines:\n%s' % stderr)
-    self.assertEqual(
-        stderr.count('Removing'), 2,
-        'stderr did not contain 2 "Removing" lines:\n%s' % stderr)
+    self.assertEqual(stderr.count('Removing'), 2,
+                     'stderr did not contain 2 "Removing" lines:\n%s' % stderr)
 
     self.AssertNObjectsInBucket(bucket1_uri, 0)
     self.AssertNObjectsInBucket(bucket2_uri, 2)
@@ -155,8 +154,8 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(contents, 'data2')
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
-  @unittest.skipUnless(
-      UsingCrcmodExtension(crcmod), 'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+                       'Test requires fast crcmod.')
   def test_mv_preserve_posix_bucket_to_dir_no_errors(self):
     """Tests use of the -P flag with mv from a bucket to a local dir.
 
@@ -177,8 +176,9 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
 
-    obj = self.CreateObject(
-        bucket_uri=bucket_uri, object_name='obj', contents=b'obj')
+    obj = self.CreateObject(bucket_uri=bucket_uri,
+                            object_name='obj',
+                            contents=b'obj')
     TestCpMvPOSIXBucketToLocalErrors(self, bucket_uri, obj, tmpdir, is_cp=False)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
