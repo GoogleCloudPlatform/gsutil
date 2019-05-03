@@ -107,8 +107,8 @@ if not IS_WINDOWS:
   # Take the current user's UID and increment it by one, this counts as an
   # invalid UID, as the metric used is if the UID matches the current user's,
   # exactly.
-  INVALID_UID = LazyWrapper(lambda: sorted([user.pw_uid for user
-                                            in pwd.getpwall()])[-1] + 1)
+  INVALID_UID = LazyWrapper(lambda: sorted(
+      [user.pw_uid for user in pwd.getpwall()])[-1] + 1)
 
   # Note that because the system's GID mapping can change mid-test, tests that
   # check for specific errors should always re-fetch these GID-related values,
@@ -207,7 +207,7 @@ def TailSet(start_point, listing):
 
 
 HAS_S3_CREDS = (boto.config.get('Credentials', 'aws_access_key_id', None) and
-          boto.config.get('Credentials', 'aws_secret_access_key', None))
+                boto.config.get('Credentials', 'aws_secret_access_key', None))
 
 _GS_HOST = boto.config.get('Credentials', 'gs_host', None)
 _DEFAULT_HOST = six.ensure_str(boto.gs.connection.GSConnection.DefaultHost)
@@ -221,7 +221,8 @@ HAS_GS_HOST = _GS_HOST is not None
 
 HAS_GS_PORT = boto.config.get('Credentials', 'gs_port', None) is not None
 
-USING_JSON_API = boto.config.get('GSUtil', 'prefer_api', 'json').upper() != 'XML'
+USING_JSON_API = boto.config.get('GSUtil', 'prefer_api',
+                                 'json').upper() != 'XML'
 
 
 def _ArgcompleteAvailable():
@@ -233,6 +234,7 @@ def _ArgcompleteAvailable():
     except ImportError:
       pass
   return argcomplete is not None
+
 
 ARGCOMPLETE_AVAILABLE = _ArgcompleteAvailable()
 
@@ -296,8 +298,8 @@ def ObjectToURI(obj, *suffixes):
     Storage URI string.
   """
   if is_file(obj):
-    return 'file://{}'.format(
-      os.path.abspath(os.path.join(obj.name, *suffixes)))
+    return 'file://{}'.format(os.path.abspath(os.path.join(obj.name,
+                                                           *suffixes)))
   if isinstance(obj, six.string_types):
     return 'file://{}'.format(os.path.join(obj, *suffixes))
   uri = six.ensure_text(obj.uri)
@@ -317,6 +319,7 @@ class GSMockConnection(mock_storage_service.MockConnection):
     kwargs['provider'] = 'gs'
     self.debug = 0
     super(GSMockConnection, self).__init__(*args, **kwargs)
+
 
 mock_connection = GSMockConnection()
 
@@ -394,6 +397,7 @@ def SequentialAndParallelTransfer(func):
   Returns:
     Wrapped function.
   """
+
   @functools.wraps(func)
   def Wrapper(*args, **kwargs):
     # Run the test normally once.
@@ -405,7 +409,8 @@ def SequentialAndParallelTransfer(func):
           ('GSUtil', 'parallel_composite_upload_threshold', '1'),
           ('GSUtil', 'sliced_object_download_threshold', '1'),
           ('GSUtil', 'sliced_object_download_max_components', '3'),
-          ('GSUtil', 'check_hashes', 'always')]):
+          ('GSUtil', 'check_hashes', 'always')
+      ]):
         func(*args, **kwargs)
 
   return Wrapper
@@ -566,6 +571,7 @@ def GetTestNames():
       names.append(m.group('name'))
   return names
 
+
 def is_file(obj):
   if six.PY2:
     return isinstance(obj, file)
@@ -639,9 +645,9 @@ class HaltingCopyCallbackHandler(object):
     """Forcibly exits if the transfer has passed the halting point."""
     if total_bytes_transferred >= self._halt_at_byte:
       sys.stderr.write(
-          'Halting transfer after byte %s. %s/%s transferred.\r\n' % (
-              self._halt_at_byte, MakeHumanReadable(total_bytes_transferred),
-              MakeHumanReadable(total_size)))
+          'Halting transfer after byte %s. %s/%s transferred.\r\n' %
+          (self._halt_at_byte, MakeHumanReadable(total_bytes_transferred),
+           MakeHumanReadable(total_size)))
       if self._is_upload:
         raise ResumableUploadException('Artifically halting upload.')
       else:

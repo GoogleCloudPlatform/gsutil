@@ -51,8 +51,8 @@ class TestNotificationPubSub(testcase.GsUtilIntegrationTestCase):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Notifications only work with the JSON API.')
 
-    expected_topic_name = 'projects/%s/topics/%s' % (
-        PopulateProjectId(None), bucket_name)
+    expected_topic_name = 'projects/%s/topics/%s' % (PopulateProjectId(None),
+                                                     bucket_name)
     self.created_topic = expected_topic_name
     return expected_topic_name
 
@@ -62,8 +62,8 @@ class TestNotificationPubSub(testcase.GsUtilIntegrationTestCase):
       return unittest.skip('Notifications only work with the JSON API.')
 
     bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil([
-        'notification', 'list', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(
+        ['notification', 'list', suri(bucket_uri)], return_stdout=True)
     self.assertFalse(stdout)
 
   def test_delete_with_no_notifications(self):
@@ -72,8 +72,8 @@ class TestNotificationPubSub(testcase.GsUtilIntegrationTestCase):
       return unittest.skip('Notifications only work with the JSON API.')
 
     bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil([
-        'notification', 'delete', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(
+        ['notification', 'delete', suri(bucket_uri)], return_stdout=True)
     self.assertFalse(stdout)
 
   def test_create_basic(self):
@@ -85,7 +85,8 @@ class TestNotificationPubSub(testcase.GsUtilIntegrationTestCase):
     topic_name = self._RegisterDefaultTopicCreation(bucket_uri.bucket_name)
 
     stderr = self.RunGsUtil(
-        ['notification', 'create', '-f', 'json', suri(bucket_uri)],
+        ['notification', 'create', '-f', 'json',
+         suri(bucket_uri)],
         return_stderr=True)
     self.assertIn('Created notification', stderr)
     self.assertIn(topic_name, stderr)
@@ -99,27 +100,23 @@ class TestNotificationPubSub(testcase.GsUtilIntegrationTestCase):
     bucket_name = bucket_uri.bucket_name
     topic_name = self._RegisterDefaultTopicCreation(bucket_uri.bucket_name)
 
-    self.RunGsUtil(
-        ['notification', 'create',
-         '-f', 'json',
-         '-e', 'OBJECT_FINALIZE',
-         '-e', 'OBJECT_DELETE',
-         '-m', 'someKey:someValue',
-         '-p', 'somePrefix',
-         suri(bucket_uri)],
-        return_stderr=True)
-    stdout = self.RunGsUtil(['notification', 'list', suri(bucket_uri)],
-                            return_stdout=True)
+    self.RunGsUtil([
+        'notification', 'create', '-f', 'json', '-e', 'OBJECT_FINALIZE', '-e',
+        'OBJECT_DELETE', '-m', 'someKey:someValue', '-p', 'somePrefix',
+        suri(bucket_uri)
+    ],
+                   return_stderr=True)
+    stdout = self.RunGsUtil(
+        ['notification', 'list', suri(bucket_uri)], return_stdout=True)
     self.assertEquals(
-        stdout,
-        ('projects/_/buckets/{bucket_name}/notificationConfigs/1\n'
-         '\tCloud Pub/Sub topic: {topic_name}\n'
-         '\tCustom attributes:\n'
-         '\t\tsomeKey: someValue\n'
-         '\tFilters:\n'
-         '\t\tEvent Types: OBJECT_FINALIZE, OBJECT_DELETE\n'
-         '\t\tObject name prefix: \'somePrefix\'\n'.format(
-             bucket_name=bucket_name, topic_name=topic_name)))
+        stdout, ('projects/_/buckets/{bucket_name}/notificationConfigs/1\n'
+                 '\tCloud Pub/Sub topic: {topic_name}\n'
+                 '\tCustom attributes:\n'
+                 '\t\tsomeKey: someValue\n'
+                 '\tFilters:\n'
+                 '\t\tEvent Types: OBJECT_FINALIZE, OBJECT_DELETE\n'
+                 '\t\tObject name prefix: \'somePrefix\'\n'.format(
+                     bucket_name=bucket_name, topic_name=topic_name)))
 
   def test_delete(self):
     """Tests the create command succeeds in normal circumstances."""

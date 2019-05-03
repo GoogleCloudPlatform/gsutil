@@ -27,7 +27,6 @@ from apitools.base.protorpclite import protojson
 from gslib.exception import CommandException
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 
-
 TYPES = set([
     'user',
     'serviceAccount',
@@ -35,11 +34,7 @@ TYPES = set([
     'domain',
 ])
 
-DISCOURAGED_TYPES = set([
-    'projectOwner',
-    'projectEditor',
-    'projectViewer'
-])
+DISCOURAGED_TYPES = set(['projectOwner', 'projectEditor', 'projectViewer'])
 
 DISCOURAGED_TYPES_MSG = (
     'Assigning roles (e.g. objectCreator, legacyBucketOwner) for project '
@@ -50,10 +45,7 @@ DISCOURAGED_TYPES_MSG = (
     'information. Assigning a role to a project group can be achieved by '
     'setting the IAM policy directly (see gsutil help iam for specifics).')
 
-PUBLIC_MEMBERS = set([
-    'allUsers',
-    'allAuthenticatedUsers'
-])
+PUBLIC_MEMBERS = set(['allUsers', 'allAuthenticatedUsers'])
 
 # This is a convenience class to handle returned results from
 # BindingStringToTuple. is_grant is a boolean specifying if the
@@ -89,12 +81,12 @@ def SerializeBindingsTuple(bindings_tuple):
 
 def DeserializeBindingsTuple(serialized_bindings_tuple):
   (is_grant, bindings) = serialized_bindings_tuple
-  return BindingsTuple(
-      is_grant=is_grant,
-      bindings=[
-          protojson.decode_message(
-              apitools_messages.Policy.BindingsValueListEntry, t)
-          for t in bindings])
+  return BindingsTuple(is_grant=is_grant,
+                       bindings=[
+                           protojson.decode_message(
+                               apitools_messages.Policy.BindingsValueListEntry,
+                               t) for t in bindings
+                       ])
 
 
 def BindingsToDict(bindings):
@@ -141,11 +133,15 @@ def DiffBindings(old, new):
     granted[role].update(members.difference(tmp_old[role]))
 
   granted = [
-      apitools_messages.Policy.BindingsValueListEntry(
-          role=r, members=list(m)) for (r, m) in six.iteritems(granted) if m]
+      apitools_messages.Policy.BindingsValueListEntry(role=r, members=list(m))
+      for (r, m) in six.iteritems(granted)
+      if m
+  ]
   removed = [
-      apitools_messages.Policy.BindingsValueListEntry(
-          role=r, members=list(m)) for (r, m) in six.iteritems(removed) if m]
+      apitools_messages.Policy.BindingsValueListEntry(role=r, members=list(m))
+      for (r, m) in six.iteritems(removed)
+      if m
+  ]
 
   return (BindingsTuple(True, granted), BindingsTuple(False, removed))
 
@@ -182,8 +178,10 @@ def PatchBindings(base, diff):
 
   # Construct the BindingsValueListEntry list
   bindings = [
-      apitools_messages.Policy.BindingsValueListEntry(
-          role=r, members=list(m)) for (r, m) in six.iteritems(tmp_base) if m]
+      apitools_messages.Policy.BindingsValueListEntry(role=r, members=list(m))
+      for (r, m) in six.iteritems(tmp_base)
+      if m
+  ]
 
   return bindings
 
@@ -216,8 +214,8 @@ def BindingStringToTuple(is_grant, input_str):
       member = ':'.join(tokens)
       roles = DROP_ALL
     else:
-      raise CommandException(
-          'Incorrect public member type for binding %s' % input_str)
+      raise CommandException('Incorrect public member type for binding %s' %
+                             input_str)
   elif input_str.count(':') == 2:
     (member_type, member_id, roles) = input_str.split(':')
     if member_type in DISCOURAGED_TYPES:
@@ -234,8 +232,9 @@ def BindingStringToTuple(is_grant, input_str):
   roles = [ResolveRole(r) for r in roles.split(',')]
 
   bindings = [
-      apitools_messages.Policy.BindingsValueListEntry(
-          members=[member], role=r) for r in set(roles)]
+      apitools_messages.Policy.BindingsValueListEntry(members=[member], role=r)
+      for r in set(roles)
+  ]
   return BindingsTuple(is_grant=is_grant, bindings=bindings)
 
 

@@ -296,10 +296,7 @@ class LsCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
-  )
+      argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='ls',
@@ -345,8 +342,8 @@ class LsCommand(Command):
     if bucket.retentionPolicy:
       fields['retention_policy'] = 'Present'
     if bucket.labels:
-      fields['labels'] = LabelTranslation.JsonFromMessage(
-          bucket.labels, pretty_print=True)
+      fields['labels'] = LabelTranslation.JsonFromMessage(bucket.labels,
+                                                          pretty_print=True)
     else:
       fields['labels'] = 'None'
     if bucket.encryption and bucket.encryption.defaultKmsKeyName:
@@ -404,38 +401,35 @@ class LsCommand(Command):
       bucket_policy_only_enabled_line = ('\tBucket Policy Only enabled:\t'
                                          '{bucket_policy_only_enabled}\n')
 
-
-    text_util.print_to_fd((('{bucket} :\n'
-           '\tStorage class:\t\t\t{storage_class}\n'
-           '\tLocation constraint:\t\t{location_constraint}\n'
-           '\tVersioning enabled:\t\t{versioning}\n'
-           '\tLogging configuration:\t\t{logging_config}\n'
-           '\tWebsite configuration:\t\t{website_config}\n'
-           '\tCORS configuration: \t\t{cors_config}\n'
-           '\tLifecycle configuration:\t{lifecycle_config}\n'
-           '\tRequester Pays enabled:\t\t{requester_pays}\n' +
-           retention_policy_line +
-           default_eventbased_hold_line +
-           '\tLabels:\t\t\t\t{labels}\n' +
-           '\tDefault KMS key:\t\t{default_kms_key}\n' +
-           time_created_line +
-           time_updated_line +
-           metageneration_line +
-           bucket_policy_only_enabled_line +
-           '\tACL:\t\t\t\t{acl}\n'
-           '\tDefault ACL:\t\t\t{default_acl}').format(**fields)))
+    text_util.print_to_fd(
+        (('{bucket} :\n'
+          '\tStorage class:\t\t\t{storage_class}\n'
+          '\tLocation constraint:\t\t{location_constraint}\n'
+          '\tVersioning enabled:\t\t{versioning}\n'
+          '\tLogging configuration:\t\t{logging_config}\n'
+          '\tWebsite configuration:\t\t{website_config}\n'
+          '\tCORS configuration: \t\t{cors_config}\n'
+          '\tLifecycle configuration:\t{lifecycle_config}\n'
+          '\tRequester Pays enabled:\t\t{requester_pays}\n' +
+          retention_policy_line + default_eventbased_hold_line +
+          '\tLabels:\t\t\t\t{labels}\n' +
+          '\tDefault KMS key:\t\t{default_kms_key}\n' + time_created_line +
+          time_updated_line + metageneration_line +
+          bucket_policy_only_enabled_line + '\tACL:\t\t\t\t{acl}\n'
+          '\tDefault ACL:\t\t\t{default_acl}').format(**fields)))
     if bucket_blr.storage_url.scheme == 's3':
-      text_util.print_to_fd('Note: this is an S3 bucket so configuration values may be '
-            'blank. To retrieve bucket configuration values, use '
-            'individual configuration commands such as gsutil acl get '
-            '<bucket>.')
+      text_util.print_to_fd(
+          'Note: this is an S3 bucket so configuration values may be '
+          'blank. To retrieve bucket configuration values, use '
+          'individual configuration commands such as gsutil acl get '
+          '<bucket>.')
 
   def _PrintLongListing(self, bucket_listing_ref):
     """Prints an object with ListingStyle.LONG."""
     obj = bucket_listing_ref.root_object
     url_str = bucket_listing_ref.url_string
-    if (obj.metadata and S3_DELETE_MARKER_GUID in
-        obj.metadata.additionalProperties):
+    if (obj.metadata and
+        S3_DELETE_MARKER_GUID in obj.metadata.additionalProperties):
       size_string = '0'
       num_bytes = 0
       num_objs = 0
@@ -510,41 +504,30 @@ class LsCommand(Command):
     def MaybePrintBucketHeader(blr):
       if len(self.args) > 1:
         text_util.print_to_fd('%s:' % blr.url_string.decode(UTF8))
+
     print_bucket_header = MaybePrintBucketHeader
 
     for url_str in self.args:
       storage_url = StorageUrlFromString(url_str)
       if storage_url.IsFileUrl():
-        raise CommandException('Only cloud URLs are supported for %s'
-                               % self.command_name)
+        raise CommandException('Only cloud URLs are supported for %s' %
+                               self.command_name)
       bucket_fields = None
       if (listing_style == ListingStyle.SHORT or
           listing_style == ListingStyle.LONG):
         bucket_fields = ['id']
       elif listing_style == ListingStyle.LONG_LONG:
-        bucket_fields = ['acl',
-                         'billing',
-                         'cors',
-                         'defaultObjectAcl',
-                         'encryption',
-                         'iamConfiguration',
-                         'labels',
-                         'location',
-                         'logging',
-                         'lifecycle',
-                         'metageneration',
-                         'retentionPolicy',
-                         'defaultEventBasedHold',
-                         'storageClass',
-                         'timeCreated',
-                         'updated',
-                         'versioning',
-                         'website']
+        bucket_fields = [
+            'acl', 'billing', 'cors', 'defaultObjectAcl', 'encryption',
+            'iamConfiguration', 'labels', 'location', 'logging', 'lifecycle',
+            'metageneration', 'retentionPolicy', 'defaultEventBasedHold',
+            'storageClass', 'timeCreated', 'updated', 'versioning', 'website'
+        ]
       if storage_url.IsProvider():
         # Provider URL: use bucket wildcard to list buckets.
         for blr in self.WildcardIterator(
-            '%s://*' % storage_url.scheme).IterBuckets(
-                bucket_fields=bucket_fields):
+            '%s://*' %
+            storage_url.scheme).IterBuckets(bucket_fields=bucket_fields):
           self._PrintBucketInfo(blr, listing_style)
       elif storage_url.IsBucket() and get_bucket_info:
         # ls -b bucket listing request: List info about bucket(s).
@@ -555,9 +538,9 @@ class LsCommand(Command):
             # Iterator does not make an HTTP call for non-wildcarded
             # listings with fields=='id'. Ensure the bucket exists by calling
             # GetBucket.
-            self.gsutil_api.GetBucket(
-                blr.storage_url.bucket_name,
-                fields=['id'], provider=storage_url.scheme)
+            self.gsutil_api.GetBucket(blr.storage_url.bucket_name,
+                                      fields=['id'],
+                                      provider=storage_url.scheme)
           self._PrintBucketInfo(blr, listing_style)
           total_buckets += 1
         if not ContainsWildcard(url_str) and not total_buckets:
@@ -571,7 +554,8 @@ class LsCommand(Command):
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.
           listing_helper = LsHelper(
-              self.WildcardIterator, self.logger,
+              self.WildcardIterator,
+              self.logger,
               all_versions=self.all_versions,
               print_bucket_header_func=print_bucket_header,
               should_recurse=self.recursion_requested,
@@ -584,7 +568,8 @@ class LsCommand(Command):
             bucket_listing_fields.append('etag')
 
           listing_helper = LsHelper(
-              self.WildcardIterator, self.logger,
+              self.WildcardIterator,
+              self.logger,
               print_object_func=self._PrintLongListing,
               print_dir_func=_PrintPrefixLong,
               print_bucket_header_func=print_bucket_header,
@@ -598,7 +583,8 @@ class LsCommand(Command):
           bucket_listing_fields = (UNENCRYPTED_FULL_LISTING_FIELDS +
                                    ENCRYPTED_FIELDS)
           listing_helper = LsHelper(
-              self.WildcardIterator, self.logger,
+              self.WildcardIterator,
+              self.logger,
               print_object_func=PrintFullInfoAboutObject,
               print_dir_func=_PrintPrefixLong,
               print_bucket_header_func=print_bucket_header,
@@ -617,8 +603,9 @@ class LsCommand(Command):
         total_objs += exp_objs
 
     if total_objs and listing_style != ListingStyle.SHORT:
-      text_util.print_to_fd(('TOTAL: %d objects, %d bytes (%s)' %
-             (total_objs, total_bytes, MakeHumanReadable(float(total_bytes)))))
+      text_util.print_to_fd(
+          ('TOTAL: %d objects, %d bytes (%s)' %
+           (total_objs, total_bytes, MakeHumanReadable(float(total_bytes)))))
     if got_nomatch_errors:
       raise CommandException('One or more URLs matched no objects.')
     if got_bucket_nomatch_errors:

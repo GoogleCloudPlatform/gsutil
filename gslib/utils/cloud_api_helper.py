@@ -46,8 +46,9 @@ def GetCloudApiInstance(cls, thread_state=None):
   return thread_state or cls.gsutil_api
 
 
-def GetDownloadSerializationData(
-    src_obj_metadata, progress=0, user_project=None):
+def GetDownloadSerializationData(src_obj_metadata,
+                                 progress=0,
+                                 user_project=None):
   """Returns download serialization data.
 
   There are five entries:

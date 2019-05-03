@@ -56,13 +56,8 @@ class GsutilApiClassMapFactory(object):
         ApiSelector.XML: BotoTranslation,
         ApiSelector.JSON: GcsJsonApi
     }
-    s3_class_map = {
-        ApiSelector.XML: BotoTranslation
-    }
-    class_map = {
-        'gs': gs_class_map,
-        's3': s3_class_map
-    }
+    s3_class_map = {ApiSelector.XML: BotoTranslation}
+    class_map = {'gs': gs_class_map, 's3': s3_class_map}
     return class_map
 
 

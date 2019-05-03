@@ -76,10 +76,8 @@ _DETAILED_HELP_TEXT = ("""
   the specified pager.
 """)
 
-top_level_usage_string = (
-    'Usage: gsutil [-D] [-DD] [-h header]... '
-    '[-m] [-o] [-q] [command [opts...] args...]'
-)
+top_level_usage_string = ('Usage: gsutil [-D] [-DD] [-h header]... '
+                          '[-m] [-o] [-q] [command [opts...] args...]')
 
 
 class HelpCommand(Command):
@@ -116,15 +114,13 @@ class HelpCommand(Command):
       format_str = '  %-' + str(MAX_HELP_NAME_LEN) + 's%s\n'
       for help_prov in sorted(help_type_map['command_help'],
                               key=lambda hp: hp.help_spec.help_name):
-        output.append(format_str % (
-            help_prov.help_spec.help_name,
-            help_prov.help_spec.help_one_line_summary))
+        output.append(format_str % (help_prov.help_spec.help_name,
+                                    help_prov.help_spec.help_one_line_summary))
       output.append('\nAdditional help topics:\n')
       for help_prov in sorted(help_type_map['additional_help'],
                               key=lambda hp: hp.help_spec.help_name):
-        output.append(format_str % (
-            help_prov.help_spec.help_name,
-            help_prov.help_spec.help_one_line_summary))
+        output.append(format_str % (help_prov.help_spec.help_name,
+                                    help_prov.help_spec.help_one_line_summary))
       output.append('\nUse gsutil help <command or topic> for detailed help.')
     else:
       invalid_subcommand = False
@@ -142,15 +138,14 @@ class HelpCommand(Command):
           else:
             invalid_subcommand = True
             if not subcommand_map:
-              output.append((
-                  'The "%s" command has no subcommands. You can ask for the '
-                  'full help by running:\n\n\tgsutil help %s\n') %
-                            (arg, arg))
+              output.append(
+                  ('The "%s" command has no subcommands. You can ask for the '
+                   'full help by running:\n\n\tgsutil help %s\n') % (arg, arg))
             else:
               subcommand_examples = []
               for subcommand in subcommand_map:
-                subcommand_examples.append(
-                    '\tgsutil help %s %s' % (arg, subcommand))
+                subcommand_examples.append('\tgsutil help %s %s' %
+                                           (arg, subcommand))
               output.append(
                   ('Subcommand "%s" does not exist for command "%s".\n'
                    'You can either ask for the full help about the command by '
@@ -163,8 +158,8 @@ class HelpCommand(Command):
             help_text = help_prov.help_spec.help_text
 
           output.append('<B>NAME</B>\n')
-          output.append('  %s - %s\n' % (
-              help_name, help_prov.help_spec.help_one_line_summary))
+          output.append('  %s - %s\n' %
+                        (help_name, help_prov.help_spec.help_one_line_summary))
           output.append('\n\n')
           output.append(help_text.strip('\n'))
           new_alias = OLD_ALIAS_MAP.get(arg, [None])[0]
@@ -234,8 +229,8 @@ class HelpCommand(Command):
     for s in gslib.help_provider.ALL_HELP_TYPES:
       help_type_map[s] = []
     # Only include HelpProvider subclasses in the dict.
-    for help_prov in itertools.chain(
-        HelpProvider.__subclasses__(), Command.__subclasses__()):
+    for help_prov in itertools.chain(HelpProvider.__subclasses__(),
+                                     Command.__subclasses__()):
       if help_prov is Command:
         # Skip the Command base class itself; we just want its subclasses,
         # where the help command text lives (in addition to non-Command

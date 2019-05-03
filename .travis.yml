@@ -30,8 +30,11 @@ before_install:
 # command to install dependencies
 install:
   - pip install .
+  - pip install yapf
 
 # command to run tests
 script:
   - gsutil version -l
   - gsutil test -u
+  - yapf -dr
+

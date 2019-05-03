@@ -27,7 +27,6 @@ from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 from gslib.utils.constants import NO_MAX
 
-
 _SYNOPSIS = """
   gsutil mv [-p] src_url dst_url
   gsutil mv [-p] src_url... dst_url
@@ -119,8 +118,7 @@ class MvCommand(Command):
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
           CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
-      ]
-  )
+      ])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='mv',
@@ -155,8 +153,12 @@ class MvCommand(Command):
       unparsed_args.append('-R')
     unparsed_args.extend(self.unparsed_args)
     self.command_runner.RunNamedCommand(
-        'cp', args=unparsed_args, headers=self.headers, debug=self.debug,
-        trace_token=self.trace_token, user_project=self.user_project,
+        'cp',
+        args=unparsed_args,
+        headers=self.headers,
+        debug=self.debug,
+        trace_token=self.trace_token,
+        user_project=self.user_project,
         parallel_operations=self.parallel_operations)
 
     return 0

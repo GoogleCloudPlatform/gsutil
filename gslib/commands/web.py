@@ -33,7 +33,6 @@ from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
 
-
 _SET_SYNOPSIS = """
   gsutil web set [-m main_page_suffix] [-e error_page] bucket_url...
 """
@@ -152,14 +151,9 @@ class WebCommand(Command):
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
-          'set': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
-          ],
-          'get': [
-              CommandArgument.MakeNCloudBucketURLsArgument(1)
-          ]
-      }
-  )
+          'set': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
+          'get': [CommandArgument.MakeNCloudBucketURLsArgument(1)]
+      })
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='web',
@@ -168,7 +162,10 @@ class WebCommand(Command):
       help_one_line_summary=(
           'Set a main page and/or error page for one or more buckets'),
       help_text=_DETAILED_HELP_TEXT,
-      subcommand_help_text={'get': _get_help_text, 'set': _set_help_text},
+      subcommand_help_text={
+          'get': _get_help_text,
+          'set': _set_help_text
+      },
   )
 
   def _GetWeb(self):
@@ -177,13 +174,14 @@ class WebCommand(Command):
         self.args[0], bucket_fields=['website'])
 
     if bucket_url.scheme == 's3':
-      sys.stdout.write(self.gsutil_api.XmlPassThroughGetWebsite(
-          bucket_url, provider=bucket_url.scheme))
+      sys.stdout.write(
+          self.gsutil_api.XmlPassThroughGetWebsite(bucket_url,
+                                                   provider=bucket_url.scheme))
     else:
       if bucket_metadata.website and (bucket_metadata.website.mainPageSuffix or
                                       bucket_metadata.website.notFoundPage):
-        sys.stdout.write(str(encoding.MessageToJson(
-            bucket_metadata.website)) + '\n')
+        sys.stdout.write(
+            str(encoding.MessageToJson(bucket_metadata.website)) + '\n')
       else:
         sys.stdout.write('%s has no website configuration.\n' % bucket_url)
 
@@ -215,8 +213,10 @@ class WebCommand(Command):
         some_matched = True
         self.logger.info('Setting website configuration on %s...', blr)
         bucket_metadata = apitools_messages.Bucket(website=website)
-        self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
-                                    provider=url.scheme, fields=['id'])
+        self.gsutil_api.PatchBucket(url.bucket_name,
+                                    bucket_metadata,
+                                    provider=url.scheme,
+                                    fields=['id'])
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
     return 0
@@ -230,9 +230,9 @@ class WebCommand(Command):
     elif action_subcommand == 'set':
       func = self._SetWeb
     else:
-      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
-                              'See "gsutil help web".') %
-                             (action_subcommand, self.command_name))
+      raise CommandException(
+          ('Invalid subcommand "%s" for the %s command.\n'
+           'See "gsutil help web".') % (action_subcommand, self.command_name))
 
     # Commands with both suboptions and subcommands need to reparse for
     # suboptions, so we log again.

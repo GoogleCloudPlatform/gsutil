@@ -266,15 +266,15 @@ def ShouldProhibitMultiprocessing():
   except IOError as e:
     if e.errno == errno.ENOENT:
       logging.debug('Unable to open /etc/os-release to determine whether OS '
-                    'supports multiprocessing: errno=%d, message=%s'
-                    % (e.errno, str(e)))
+                    'supports multiprocessing: errno=%d, message=%s' %
+                    (e.errno, str(e)))
       return (False, 'Unknown')
     else:
       raise
   except Exception as exc:
     logging.debug('Something went wrong while trying to determine '
                   'multiprocessing capabilities.\nMessage: {0}'.format(
-      str(exc)))
+                      str(exc)))
     return (False, 'Unknown')
 
 
@@ -442,4 +442,6 @@ def PutToQueueWithTimeout(queue, msg, timeout=STATUS_QUEUE_OP_TIMEOUT):
       put_success = True
     except Queue.Full:
       pass
+
+
 # pylint: enable=invalid-name

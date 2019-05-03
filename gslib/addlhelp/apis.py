@@ -68,4 +68,3 @@ class CommandOptions(HelpProvider):
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
-

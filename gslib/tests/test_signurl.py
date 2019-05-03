@@ -71,7 +71,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
   def testSignUrlInvalidDuration(self):
     """Tests signurl fails with out of bounds value for valid duration."""
     stderr = self.RunGsUtil(['signurl', '-d', '123d', 'ks_file', 'gs://uri'],
-                            return_stderr=True, expected_status=1)
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('CommandException: Max valid duration allowed is 7 days',
                   stderr)
 
@@ -89,30 +90,35 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
     cmd_base = ['signurl'] if json_keystore else ['signurl', '-p', 'notasecret']
-    stdout = self.RunGsUtil(cmd_base + ['-m', 'PUT', ks_file, suri(object_uri)],
-                            return_stdout=True)
+    stdout = self.RunGsUtil(
+        cmd_base +
+        ['-m', 'PUT', ks_file, suri(object_uri)], return_stdout=True)
 
-    self.assertIn(
-        'x-goog-credential=test%40developer.gserviceaccount.com', stdout)
+    self.assertIn('x-goog-credential=test%40developer.gserviceaccount.com',
+                  stdout)
     self.assertIn('x-goog-expires=3600', stdout)
     self.assertIn('%2Fus-central1%2F', stdout)
     self.assertIn('\tPUT\t', stdout)
 
   def testSignUrlWithURLEncodeRequiredChars(self):
-    objs = ['gs://example.org/test 1', 'gs://example.org/test/test 2',
-            'gs://example.org/Аудиоарi хив']
+    objs = [
+        'gs://example.org/test 1', 'gs://example.org/test/test 2',
+        'gs://example.org/Аудиоарi хив'
+    ]
     expected_partial_urls = [
         'https://storage.googleapis.com/example.org/test%201?x-goog-signature=',
         ('https://storage.googleapis.com/example.org/test/test%202'
          '?x-goog-signature='),
         ('https://storage.googleapis.com/example.org/%D0%90%D1%83%D0%B4%D0%B8%D'
          '0%BE%D0%B0%D1%80i%20%D1%85%D0%B8%D0%B2?x-goog-signature=')
-        ]
+    ]
 
     self.assertEquals(len(objs), len(expected_partial_urls))
 
-    cmd_args = ['signurl', '-m', 'PUT', '-p', 'notasecret',
-                '-r', 'us', self._GetKsFile()]
+    cmd_args = [
+        'signurl', '-m', 'PUT', '-p', 'notasecret', '-r', 'us',
+        self._GetKsFile()
+    ]
     cmd_args.extend(objs)
 
     stdout = self.RunGsUtil(cmd_args, return_stdout=True)
@@ -137,12 +143,16 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     bucket = self.CreateBucket()
 
     for obj_name in objs:
-      obj_urls.append(self.CreateObject(bucket_uri=bucket,
-                                        object_name=obj_name, contents=b''))
+      obj_urls.append(
+          self.CreateObject(bucket_uri=bucket,
+                            object_name=obj_name,
+                            contents=b''))
 
-    stdout = self.RunGsUtil(['signurl', '-p',
-                             'notasecret', self._GetKsFile(),
-                             suri(bucket) + '/*'], return_stdout=True)
+    stdout = self.RunGsUtil(
+        ['signurl', '-p', 'notasecret',
+         self._GetKsFile(),
+         suri(bucket) + '/*'],
+        return_stdout=True)
 
     # Header, 3 signed urls, trailing newline
     self.assertEquals(len(stdout.split('\n')), 5)
@@ -153,7 +163,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
   def testSignUrlOfNonObjectUrl(self):
     """Tests the signurl output of a non-existent file."""
     self.RunGsUtil(['signurl', self._GetKsFile(), 'gs://'],
-                   expected_status=1, stdin='notasecret')
+                   expected_status=1,
+                   stdin='notasecret')
     self.RunGsUtil(['signurl', 'file://tmp/abc'], expected_status=1)
 
 
@@ -177,16 +188,17 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     gslib.commands.signurl._NowUTC = fake_now
 
   def testDurationSpec(self):
-    tests = [('1h', timedelta(hours=1)),
-             ('2d', timedelta(days=2)),
-             ('5D', timedelta(days=5)),
-             ('35s', timedelta(seconds=35)),
-             ('1h', timedelta(hours=1)),
-             ('33', timedelta(hours=33)),
-             ('22m', timedelta(minutes=22)),
-             ('3.7', None),
-             ('27Z', None),
-            ]
+    tests = [
+        ('1h', timedelta(hours=1)),
+        ('2d', timedelta(days=2)),
+        ('5D', timedelta(days=5)),
+        ('35s', timedelta(seconds=35)),
+        ('1h', timedelta(hours=1)),
+        ('33', timedelta(hours=33)),
+        ('22m', timedelta(minutes=22)),
+        ('3.7', None),
+        ('27Z', None),
+    ]
 
     for inp, expected in tests:
       try:
@@ -201,8 +213,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     expected = sigs.TEST_SIGN_PUT_SIG
 
     duration = timedelta(seconds=3600)
-    with SetBotoConfigForTest([
-        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+    with SetBotoConfigForTest([('Credentials', 'gs_host',
+                                'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
           client_id=self.client_email,
@@ -228,8 +240,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
 
     mock_logger = MockLogger()
     duration = timedelta(seconds=3600)
-    with SetBotoConfigForTest([
-        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+    with SetBotoConfigForTest([('Credentials', 'gs_host',
+                                'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
           client_id=self.client_email,
@@ -244,8 +256,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     self.assertTrue(mock_logger.warning_issued)
 
     mock_logger2 = MockLogger()
-    with SetBotoConfigForTest([
-        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+    with SetBotoConfigForTest([('Credentials', 'gs_host',
+                                'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
           client_id=self.client_email,
@@ -263,8 +275,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     expected = sigs.TEST_SIGN_URL_PUT_CONTENT
 
     duration = timedelta(seconds=3600)
-    with SetBotoConfigForTest([
-        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+    with SetBotoConfigForTest([('Credentials', 'gs_host',
+                                'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
           client_id=self.client_email,
@@ -281,8 +293,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     expected = sigs.TEST_SIGN_URL_GET
 
     duration = timedelta(seconds=0)
-    with SetBotoConfigForTest([
-        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+    with SetBotoConfigForTest([('Credentials', 'gs_host',
+                                'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
           client_id=self.client_email,
@@ -298,13 +310,13 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     """Tests _GenSignedUrl with a GET method and the test JSON private key."""
     expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY
 
-    json_contents = pkgutil.get_data('gslib', 'tests/test_data/test.json').decode()
-    key, client_email = gslib.commands.signurl._ReadJSONKeystore(
-        json_contents)
+    json_contents = pkgutil.get_data('gslib',
+                                     'tests/test_data/test.json').decode()
+    key, client_email = gslib.commands.signurl._ReadJSONKeystore(json_contents)
 
     duration = timedelta(seconds=0)
-    with SetBotoConfigForTest([
-        ('Credentials', 'gs_host', 'storage.googleapis.com')]):
+    with SetBotoConfigForTest([('Credentials', 'gs_host',
+                                'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           key,
           client_id=client_email,

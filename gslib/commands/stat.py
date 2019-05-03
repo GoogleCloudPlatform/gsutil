@@ -39,7 +39,6 @@ from gslib.utils.ls_helper import ENCRYPTED_FIELDS
 from gslib.utils.ls_helper import PrintFullInfoAboutObject
 from gslib.utils.ls_helper import UNENCRYPTED_FULL_LISTING_FIELDS
 
-
 _SYNOPSIS = """
   gsutil stat url...
 """
@@ -105,10 +104,7 @@ class StatCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
-  )
+      argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='stat',
@@ -135,13 +131,19 @@ class StatCommand(Command):
         else:
           try:
             single_obj = self.gsutil_api.GetObjectMetadata(
-                url.bucket_name, url.object_name, generation=url.generation,
-                provider=url.scheme, fields=stat_fields)
+                url.bucket_name,
+                url.object_name,
+                generation=url.generation,
+                provider=url.scheme,
+                fields=stat_fields)
           except EncryptionException:
             # Retry without requesting hashes.
             single_obj = self.gsutil_api.GetObjectMetadata(
-                url.bucket_name, url.object_name, generation=url.generation,
-                provider=url.scheme, fields=UNENCRYPTED_FULL_LISTING_FIELDS)
+                url.bucket_name,
+                url.object_name,
+                generation=url.generation,
+                provider=url.scheme,
+                fields=UNENCRYPTED_FULL_LISTING_FIELDS)
           blr_iter = [BucketListingObject(url, root_object=single_obj)]
         for blr in blr_iter:
           if blr.IsObject():

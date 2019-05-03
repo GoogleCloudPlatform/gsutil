@@ -36,31 +36,15 @@ from gslib.utils.translation_helper import AclTranslation
 from gslib.utils import text_util
 from gslib.wildcard_iterator import StorageUrlFromString
 
-
 ENCRYPTED_FIELDS = ['md5Hash', 'crc32c']
 UNENCRYPTED_FULL_LISTING_FIELDS = [
-    'acl',
-    'cacheControl',
-    'componentCount',
-    'contentDisposition',
-    'contentEncoding',
-    'contentLanguage',
-    'contentType',
-    'kmsKeyName',
-    'customerEncryption',
-    'etag',
-    'eventBasedHold',
-    'generation',
-    'metadata',
-    'metageneration',
-    'retentionExpirationTime',
-    'size',
-    'storageClass',
-    'temporaryHold',
-    'timeCreated',
-    'timeDeleted',
-    'timeStorageClassUpdated',
-    'updated']
+    'acl', 'cacheControl', 'componentCount', 'contentDisposition',
+    'contentEncoding', 'contentLanguage', 'contentType', 'kmsKeyName',
+    'customerEncryption', 'etag', 'eventBasedHold', 'generation', 'metadata',
+    'metageneration', 'retentionExpirationTime', 'size', 'storageClass',
+    'temporaryHold', 'timeCreated', 'timeDeleted', 'timeStorageClassUpdated',
+    'updated'
+]
 
 
 def MakeMetadataLine(label, value, indent=1):
@@ -153,8 +137,8 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   storage_url = StorageUrlFromString(url_str)
   obj = bucket_listing_ref.root_object
 
-  if (obj.metadata and S3_DELETE_MARKER_GUID in
-      obj.metadata.additionalProperties):
+  if (obj.metadata and
+      S3_DELETE_MARKER_GUID in obj.metadata.additionalProperties):
     num_bytes = 0
     num_objs = 0
     url_str += '<DeleteMarker>'
@@ -164,16 +148,19 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
 
   text_util.print_to_fd('{}:'.format(url_str))
   if obj.timeCreated:
-    text_util.print_to_fd(MakeMetadataLine(
-        'Creation time', obj.timeCreated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
+    text_util.print_to_fd(
+        MakeMetadataLine('Creation time',
+                         obj.timeCreated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.updated:
-    text_util.print_to_fd(MakeMetadataLine(
-        'Update time', obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
+    text_util.print_to_fd(
+        MakeMetadataLine('Update time',
+                         obj.updated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if (obj.timeStorageClassUpdated and
       obj.timeStorageClassUpdated != obj.timeCreated):
-    text_util.print_to_fd(MakeMetadataLine(
-        'Storage class update time',
-        obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
+    text_util.print_to_fd(
+        MakeMetadataLine(
+            'Storage class update time',
+            obj.timeStorageClassUpdated.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.storageClass:
     text_util.print_to_fd(MakeMetadataLine('Storage class', obj.storageClass))
   if obj.temporaryHold:
@@ -181,27 +168,32 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
   if obj.eventBasedHold:
     text_util.print_to_fd(MakeMetadataLine('Event-Based Hold', 'Enabled'))
   if obj.retentionExpirationTime:
-    text_util.print_to_fd(MakeMetadataLine(
-        'Retention Expiration',
-        obj.retentionExpirationTime.strftime('%a, %d %b %Y %H:%M:%S GMT')))
+    text_util.print_to_fd(
+        MakeMetadataLine(
+            'Retention Expiration',
+            obj.retentionExpirationTime.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   if obj.kmsKeyName:
     text_util.print_to_fd(MakeMetadataLine('KMS key', obj.kmsKeyName))
   if obj.cacheControl:
     text_util.print_to_fd(MakeMetadataLine('Cache-Control', obj.cacheControl))
   if obj.contentDisposition:
-    text_util.print_to_fd(MakeMetadataLine('Content-Disposition', obj.contentDisposition))
+    text_util.print_to_fd(
+        MakeMetadataLine('Content-Disposition', obj.contentDisposition))
   if obj.contentEncoding:
-    text_util.print_to_fd(MakeMetadataLine('Content-Encoding', obj.contentEncoding))
+    text_util.print_to_fd(
+        MakeMetadataLine('Content-Encoding', obj.contentEncoding))
   if obj.contentLanguage:
-    text_util.print_to_fd(MakeMetadataLine('Content-Language', obj.contentLanguage))
+    text_util.print_to_fd(
+        MakeMetadataLine('Content-Language', obj.contentLanguage))
   text_util.print_to_fd(MakeMetadataLine('Content-Length', obj.size))
   text_util.print_to_fd(MakeMetadataLine('Content-Type', obj.contentType))
   if obj.componentCount:
-    text_util.print_to_fd(MakeMetadataLine('Component-Count', obj.componentCount))
+    text_util.print_to_fd(
+        MakeMetadataLine('Component-Count', obj.componentCount))
   if obj.timeDeleted:
-    text_util.print_to_fd(MakeMetadataLine(
-        'Archived time',
-        obj.timeDeleted.strftime('%a, %d %b %Y %H:%M:%S GMT')))
+    text_util.print_to_fd(
+        MakeMetadataLine('Archived time',
+                         obj.timeDeleted.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   marker_props = {}
   if obj.metadata and obj.metadata.additionalProperties:
     non_marker_props = []
@@ -222,10 +214,12 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
       text_util.print_to_fd(MakeMetadataLine('Hash (crc32c)', 'encrypted'))
     if not obj.md5Hash:
       text_util.print_to_fd(MakeMetadataLine('Hash (md5)', 'encrypted'))
-    text_util.print_to_fd(MakeMetadataLine(
-        'Encryption algorithm', obj.customerEncryption.encryptionAlgorithm))
-    text_util.print_to_fd(MakeMetadataLine(
-        'Encryption key SHA256', obj.customerEncryption.keySha256))
+    text_util.print_to_fd(
+        MakeMetadataLine('Encryption algorithm',
+                         obj.customerEncryption.encryptionAlgorithm))
+    text_util.print_to_fd(
+        MakeMetadataLine('Encryption key SHA256',
+                         obj.customerEncryption.keySha256))
   if obj.crc32c:
     text_util.print_to_fd(MakeMetadataLine('Hash (crc32c)', obj.crc32c))
   if obj.md5Hash:
@@ -235,14 +229,17 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     generation_str = GenerationFromUrlAndString(storage_url, obj.generation)
     text_util.print_to_fd(MakeMetadataLine('Generation', generation_str))
   if obj.metageneration:
-    text_util.print_to_fd(MakeMetadataLine('Metageneration', obj.metageneration))
+    text_util.print_to_fd(MakeMetadataLine('Metageneration',
+                                           obj.metageneration))
   if incl_acl:
     # JSON API won't return acls as part of the response unless we have
     # full control scope
     if obj.acl:
-      text_util.print_to_fd(MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl)))
+      text_util.print_to_fd(
+          MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl)))
     elif S3_ACL_MARKER_GUID in marker_props:
-      text_util.print_to_fd(MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID]))
+      text_util.print_to_fd(
+          MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID]))
     else:
       # Empty ACLs are possible with Bucket Policy Only and no longer imply
       # ACCESS DENIED anymore.
@@ -273,15 +270,19 @@ def PrintObject(bucket_listing_ref):
 class LsHelper(object):
   """Helper class for ls and du."""
 
-  def __init__(self, iterator_func, logger,
+  def __init__(self,
+               iterator_func,
+               logger,
                print_object_func=PrintObject,
                print_dir_func=PrintDir,
                print_dir_header_func=PrintDirHeader,
                print_bucket_header_func=PrintBucketHeader,
                print_dir_summary_func=PrintDirSummary,
                print_newline_func=PrintNewLine,
-               all_versions=False, should_recurse=False,
-               exclude_patterns=None, fields=('name',),
+               all_versions=False,
+               should_recurse=False,
+               exclude_patterns=None,
+               fields=('name',),
                list_subdir_contents=True):
     """Initializes the helper class to prepare for listing.
 
@@ -350,11 +351,12 @@ class LsHelper(object):
     else:
       # User provided a prefix or object URL, but it's impossible to tell
       # which until we do a listing and see what matches.
-      top_level_iterator = PluralityCheckableIterator(self._iterator_func(
-          url.CreatePrefixUrl(wildcard_suffix=None),
-          all_versions=self.all_versions).IterAll(
-              expand_top_level_buckets=True,
-              bucket_listing_fields=self.bucket_listing_fields))
+      top_level_iterator = PluralityCheckableIterator(
+          self._iterator_func(
+              url.CreatePrefixUrl(wildcard_suffix=None),
+              all_versions=self.all_versions).IterAll(
+                  expand_top_level_buckets=True,
+                  bucket_listing_fields=self.bucket_listing_fields))
       plurality = top_level_iterator.HasPlurality()
 
       try:
@@ -363,11 +365,12 @@ class LsHelper(object):
         # Detailed listing on a single object can perform a GetObjectMetadata
         # call, which raises if a matching encryption key isn't found.
         # Re-iterate without requesting encrypted fields.
-        top_level_iterator = PluralityCheckableIterator(self._iterator_func(
-            url.CreatePrefixUrl(wildcard_suffix=None),
-            all_versions=self.all_versions).IterAll(
-                expand_top_level_buckets=True,
-                bucket_listing_fields=UNENCRYPTED_FULL_LISTING_FIELDS))
+        top_level_iterator = PluralityCheckableIterator(
+            self._iterator_func(
+                url.CreatePrefixUrl(wildcard_suffix=None),
+                all_versions=self.all_versions).IterAll(
+                    expand_top_level_buckets=True,
+                    bucket_listing_fields=UNENCRYPTED_FULL_LISTING_FIELDS))
         plurality = top_level_iterator.HasPlurality()
 
       for blr in top_level_iterator:

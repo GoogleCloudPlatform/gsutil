@@ -31,13 +31,12 @@ from __future__ import unicode_literals
 
 import six
 
-
 NO_URLS_MATCHED_GENERIC = 'No URLs matched'
 NO_URLS_MATCHED_TARGET = 'No URLs matched: %s'
 
 if six.PY3:
-    # StandardError was removed, so use the base exception type instead
-    StandardError = Exception
+  # StandardError was removed, so use the base exception type instead
+  StandardError = Exception
 
 
 class AbortException(StandardError):

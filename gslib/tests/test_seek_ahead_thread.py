@@ -69,8 +69,8 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
 
       def __iter__(self):
         while self.iterated_results < self.num_iterations:
-          if (not self.cancel_issued
-              and self.iterated_results >= self.num_iterations_before_cancel):
+          if (not self.cancel_issued and
+              self.iterated_results >= self.num_iterations_before_cancel):
             self.cancel_event.set()
             self.cancel_issued = True
           yield SeekAheadResult()
@@ -79,12 +79,8 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     # We expect to get up to the nearest NUM_OBJECTS_PER_LIST_PAGE results.
     noplp = constants.NUM_OBJECTS_PER_LIST_PAGE
     for num_iterations, num_iterations_before_cancel, expected_iterations in (
-        (noplp, 0, 0),
-        (noplp + 1, 1, noplp),
-        (noplp + 1, noplp, noplp),
-        (noplp * 2 + 1, noplp + 1, noplp * 2),
-        (2, 1, 2),
-        (noplp, 1, noplp),
+        (noplp, 0, 0), (noplp + 1, 1, noplp), (noplp + 1, noplp, noplp),
+        (noplp * 2 + 1, noplp + 1, noplp * 2), (2, 1, 2), (noplp, 1, noplp),
         (noplp * 2, noplp + 1, noplp * 2)):
 
       cancel_event = threading.Event()
@@ -177,8 +173,8 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
 
     num_objects = 5
     object_size = 10
-    seek_ahead_iterator = SeekAheadResultIteratorWithSize(num_objects,
-                                                          object_size)
+    seek_ahead_iterator = SeekAheadResultIteratorWithSize(
+        num_objects, object_size)
     seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
@@ -209,7 +205,8 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
 
     # Create 5 files with sizes 0, 1, 2, 3, 4.
     for i in range(num_files):
-      self.CreateTempFile(tmpdir=tmpdir, file_name='obj%s' % str(i),
+      self.CreateTempFile(tmpdir=tmpdir,
+                          file_name='obj%s' % str(i),
                           contents=b'a' * i)
       total_size += i
 

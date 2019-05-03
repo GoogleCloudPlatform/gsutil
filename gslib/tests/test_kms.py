@@ -43,7 +43,8 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
     # attempts will receive a 409 and be treated as a success). Save the fully
     # qualified name for use with creating keys later.
     self.keyring_fqn = self.kms_api.CreateKeyRing(
-        PopulateProjectId(None), testcase.KmsTestingResources.KEYRING_NAME,
+        PopulateProjectId(None),
+        testcase.KmsTestingResources.KEYRING_NAME,
         location=testcase.KmsTestingResources.KEYRING_LOCATION)
 
   @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -69,13 +70,11 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
     stdout2 = self.RunGsUtil(authorize_cmd, return_stdout=True)
 
     self.assertIn(
-        'Authorized project %s to encrypt and decrypt with key:\n%s' % (
-            PopulateProjectId(None), key_fqn),
-        stdout1)
+        'Authorized project %s to encrypt and decrypt with key:\n%s' %
+        (PopulateProjectId(None), key_fqn), stdout1)
     self.assertIn(
         ('Project %s was already authorized to encrypt and decrypt with '
-         'key:\n%s.' % (PopulateProjectId(None), key_fqn)),
-        stdout2)
+         'key:\n%s.' % (PopulateProjectId(None), key_fqn)), stdout2)
 
   def DoTestServiceaccount(self, specified_project=None):
     serviceaccount_cmd = ['kms', 'serviceaccount']
@@ -84,9 +83,8 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(serviceaccount_cmd, return_stdout=True)
 
-    self.assertRegex(
-        stdout,
-        r'[^@]+@gs-project-accounts\.iam\.gserviceaccount\.com')
+    self.assertRegex(stdout,
+                     r'[^@]+@gs-project-accounts\.iam\.gserviceaccount\.com')
 
   def testKmsAuthorizeWithoutProjectOption(self):
     self.DoTestAuthorize()
@@ -119,7 +117,8 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
     # Test that setting a bucket's default KMS key works and shows up correctly
     # via a follow-up call to display it.
     stdout = self.RunGsUtil(
-        ['kms', 'encryption', '-k', key_fqn, suri(bucket_uri)],
+        ['kms', 'encryption', '-k', key_fqn,
+         suri(bucket_uri)],
         return_stdout=True)
     self.assertIn('Setting default KMS key for bucket %s...' % suri(bucket_uri),
                   stdout)
@@ -131,11 +130,10 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
 
     # Finally, remove the bucket's default KMS key and make sure a follow-up
     # call to display it shows that no default key is set.
-    stdout = self.RunGsUtil(['kms', 'encryption', '-d', suri(bucket_uri)],
-                            return_stdout=True)
+    stdout = self.RunGsUtil(
+        ['kms', 'encryption', '-d', suri(bucket_uri)], return_stdout=True)
     self.assertIn(
-        'Clearing default encryption key for %s...' % suri(bucket_uri),
-        stdout)
+        'Clearing default encryption key for %s...' % suri(bucket_uri), stdout)
 
     stdout = self.RunGsUtil(encryption_get_cmd, return_stdout=True)
     self.assertIn('Bucket %s has no default encryption key' % suri(bucket_uri),
@@ -184,4 +182,3 @@ class TestKmsSubcommandsFailWhenXmlForced(testcase.GsUtilIntegrationTestCase):
   def testAuthorizeFailsWhenXmlForcedFromHmacInBotoConfig(self):
     self.DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(
         ['kms', 'authorize', '-k', self.dummy_keyname, 'gs://dummybucket'])
-

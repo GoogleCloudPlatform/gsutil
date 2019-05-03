@@ -27,7 +27,9 @@ class DiscardMessagesQueue(object):
   thread display information about those ops (e.g. running a test or fetching
   the public gsutil tarball object's metadata to perform a version check).
   """
+
   # pylint: disable=invalid-name, unused-argument
   def put(self, message=None, timeout=None):
     pass
+
   # pylint: enable=invalid-name, unused-argument

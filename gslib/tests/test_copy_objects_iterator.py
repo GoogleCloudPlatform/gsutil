@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.   .
-
 """Unit tests for name_expansion.CopyObjectsIterator class."""
 
 from __future__ import absolute_import
@@ -31,15 +30,16 @@ import gslib.tests.testcase as testcase
 def _ConstructNameExpansionIterator(src_url_strs):
   for src_url_str in src_url_strs:
     storage_url = StorageUrlFromString(src_url_str)
-    yield NameExpansionResult(storage_url,
-                              False,  # is_multi_source_request
-                              False,  # names_container
-                              storage_url,  # expanded_storage_url
-                              None)  # expanded_result
+    yield NameExpansionResult(
+        storage_url,
+        False,  # is_multi_source_request
+        False,  # names_container
+        storage_url,  # expanded_storage_url
+        None)  # expanded_result
 
 
-def _ConstrcutNameExpansionIteratorDestinationTupleIterator(src_url_strs_array,
-                                                            dst_url_strs):
+def _ConstrcutNameExpansionIteratorDestinationTupleIterator(
+    src_url_strs_array, dst_url_strs):
   for src_url_strs, dst_url_str in zip(src_url_strs_array, dst_url_strs):
     name_expansion_iter_dst_tuple = NameExpansionIteratorDestinationTuple(
         _ConstructNameExpansionIterator(src_url_strs),
@@ -61,12 +61,12 @@ class TestCopyObjectsIterator(testcase.GsUtilUnitTestCase):
 
     copy_objects_iterator = CopyObjectsIterator(
         _ConstrcutNameExpansionIteratorDestinationTupleIterator(
-            src_strings_array, dst_strings),
-        False)
+            src_strings_array, dst_strings), False)
 
     # Flatten the src dst arrays
     src_dst_strings = [
-        (src, dst) for src_strings, dst in zip(src_strings_array, dst_strings)
+        (src, dst)
+        for src_strings, dst in zip(src_strings_array, dst_strings)
         for src in src_strings
     ]
 
@@ -85,17 +85,12 @@ class TestCopyObjectsIterator(testcase.GsUtilUnitTestCase):
     self.assertTrue(iterator_ended)
 
   def test_iterator_metadata(self):
-    src_strings_array = [
-        ['gs://bucket1'],
-        ['source'],
-        ['s3://bucket1']
-    ]
+    src_strings_array = [['gs://bucket1'], ['source'], ['s3://bucket1']]
     dst_strings = ['gs://bucket2', 'dest', 'gs://bucket2']
 
     copy_objects_iterator = CopyObjectsIterator(
         _ConstrcutNameExpansionIteratorDestinationTupleIterator(
-            src_strings_array, dst_strings),
-        False)
+            src_strings_array, dst_strings), False)
 
     self.assertFalse(copy_objects_iterator.has_cloud_src)
     self.assertFalse(copy_objects_iterator.has_file_src)

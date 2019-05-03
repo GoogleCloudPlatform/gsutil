@@ -50,15 +50,13 @@ from gslib.utils.unit_util import ONE_MIB
 import httplib2
 from oauth2client.client import HAS_CRYPTO
 
-
 if six.PY3:
   long = int
 
-
 # Globals in this module are set according to values in the boto config.
 BOTO_IS_SECURE = config.get('Boto', 'is_secure', True)
-CERTIFICATE_VALIDATION_ENABLED = config.get(
-    'Boto', 'https_validate_certificates', True)
+CERTIFICATE_VALIDATION_ENABLED = config.get('Boto',
+                                            'https_validate_certificates', True)
 
 configured_certs_file = None  # Single certs file for use across all processes.
 temp_certs_file = None  # Temporary certs file for cleanup upon exit.
@@ -108,23 +106,25 @@ def ConfigureCertsFile():
 def ConfigureNoOpAuthIfNeeded():
   """Sets up no-op auth handler if no boto credentials are configured."""
   if not HasConfiguredCredentials():
-    if (config.has_option('Credentials', 'gs_service_client_id')
-        and not HAS_CRYPTO):
+    if (config.has_option('Credentials', 'gs_service_client_id') and
+        not HAS_CRYPTO):
       if system_util.InvokedViaCloudSdk():
-        raise CommandException('\n'.join(textwrap.wrap(
-            'Your gsutil is configured with an OAuth2 service account, but '
-            'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
-            'Service account authentication requires one of these libraries; '
-            'please reactivate your service account via the gcloud auth '
-            'command and ensure any gcloud packages necessary for '
-            'service accounts are present.')))
+        raise CommandException('\n'.join(
+            textwrap.wrap(
+                'Your gsutil is configured with an OAuth2 service account, but '
+                'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
+                'Service account authentication requires one of these libraries; '
+                'please reactivate your service account via the gcloud auth '
+                'command and ensure any gcloud packages necessary for '
+                'service accounts are present.')))
       else:
-        raise CommandException('\n'.join(textwrap.wrap(
-            'Your gsutil is configured with an OAuth2 service account, but '
-            'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
-            'Service account authentication requires one of these libraries; '
-            'please install either of them to proceed, or configure a '
-            'different type of credentials with "gsutil config".')))
+        raise CommandException('\n'.join(
+            textwrap.wrap(
+                'Your gsutil is configured with an OAuth2 service account, but '
+                'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
+                'Service account authentication requires one of these libraries; '
+                'please install either of them to proceed, or configure a '
+                'different type of credentials with "gsutil config".')))
     else:
       # With no boto config file the user can still access publicly readable
       # buckets and objects.
@@ -213,11 +213,11 @@ def GetGcsJsonApiVersion():
 # in multiples of 256KiB). Overridable for testing.
 def GetJsonResumableChunkSize():
   chunk_size = config.getint('GSUtil', 'json_resumable_chunk_size',
-                             long(1024*1024*100))
+                             long(1024 * 1024 * 100))
   if chunk_size == 0:
-    chunk_size = long(1024*256)
-  elif chunk_size % long(1024*256) != 0:
-    chunk_size += (long(1024*256) - (chunk_size % (long(1024*256))))
+    chunk_size = long(1024 * 256)
+  elif chunk_size % long(1024 * 256) != 0:
+    chunk_size += (long(1024 * 256) - (chunk_size % (long(1024 * 256))))
   return chunk_size
 
 
@@ -235,11 +235,10 @@ def GetMaxConcurrentCompressedUploads():
   upload_chunk_size = GetJsonResumableChunkSize()
   # From apitools compression.py.
   compression_chunk_size = 16 * ONE_MIB
-  total_upload_size = (
-      upload_chunk_size + compression_chunk_size + 17 +
-      5 * (((compression_chunk_size - 1) / 16383) + 1))
-  max_concurrent_uploads = (
-      GetMaxUploadCompressionBufferSize() / total_upload_size)
+  total_upload_size = (upload_chunk_size + compression_chunk_size + 17 + 5 *
+                       (((compression_chunk_size - 1) / 16383) + 1))
+  max_concurrent_uploads = (GetMaxUploadCompressionBufferSize() /
+                            total_upload_size)
   if max_concurrent_uploads <= 0:
     max_concurrent_uploads = 1
   return max_concurrent_uploads
@@ -272,8 +271,7 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
       proxy_port=config.getint('Boto', 'proxy_port', 0),
       proxy_user=config.get('Boto', 'proxy_user', None),
       proxy_pass=config.get('Boto', 'proxy_pass', None),
-      proxy_rdns=config.get('Boto',
-                            'proxy_rdns',
+      proxy_rdns=config.get('Boto', 'proxy_rdns',
                             True if proxy_host else False))
 
   if not (proxy_info.proxy_host and proxy_info.proxy_port):
@@ -320,8 +318,8 @@ def HasConfiguredCredentials():
                     config.has_option('Credentials', 'gs_secret_access_key'))
   has_amzn_creds = (config.has_option('Credentials', 'aws_access_key_id') and
                     config.has_option('Credentials', 'aws_secret_access_key'))
-  has_oauth_creds = (
-      config.has_option('Credentials', 'gs_oauth2_refresh_token'))
+  has_oauth_creds = (config.has_option('Credentials',
+                                       'gs_oauth2_refresh_token'))
   has_service_account_creds = (
       HAS_CRYPTO and
       config.has_option('Credentials', 'gs_service_client_id') and
@@ -333,14 +331,15 @@ def HasConfiguredCredentials():
 
   valid_auth_handler = None
   try:
-    valid_auth_handler = boto.auth.get_auth_handler(
-        GSConnection.DefaultHost, config, Provider('google'),
-        requested_capability=['s3'])
+    valid_auth_handler = boto.auth.get_auth_handler(GSConnection.DefaultHost,
+                                                    config,
+                                                    Provider('google'),
+                                                    requested_capability=['s3'])
     # Exclude the no-op auth handler as indicating credentials are configured.
     # Note we can't use isinstance() here because the no-op module may not be
     # imported so we can't get a reference to the class type.
-    if getattr(getattr(valid_auth_handler, '__class__', None),
-               '__name__', None) == 'NoOpAuth':
+    if getattr(getattr(valid_auth_handler, '__class__', None), '__name__',
+               None) == 'NoOpAuth':
       valid_auth_handler = None
   except NoAuthHandlerFound:
     pass
@@ -349,8 +348,7 @@ def HasConfiguredCredentials():
 
 
 def JsonResumableChunkSizeDefined():
-  chunk_size_defined = config.get('GSUtil', 'json_resumable_chunk_size',
-                                  None)
+  chunk_size_defined = config.get('GSUtil', 'json_resumable_chunk_size', None)
   return chunk_size_defined is not None
 
 
@@ -419,45 +417,46 @@ def MonkeyPatchBoto():
     # The lines below were copied directly from the Boto file, so we don't lint
     # or otherwise alter them.
     if hasattr(self, "timeout"):
-        sock = socket.create_connection((self.host, self.port), self.timeout)
+      sock = socket.create_connection((self.host, self.port), self.timeout)
     else:
-        sock = socket.create_connection((self.host, self.port))
+      sock = socket.create_connection((self.host, self.port))
     msg = "wrapping ssl socket; "
     if self.ca_certs:
-        msg += "CA certificate file=%s" % self.ca_certs
+      msg += "CA certificate file=%s" % self.ca_certs
     else:
-        msg += "using system provided SSL certs"
+      msg += "using system provided SSL certs"
     boto.log.debug(msg)
     if hasattr(ssl, 'SSLContext') and getattr(ssl, 'HAS_SNI', False):
-        # Use SSLContext so we can specify server_hostname for SNI
-        # (Required for connections to storage.googleapis.com)
-        context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-        context.verify_mode = ssl.CERT_REQUIRED
-        if self.ca_certs:
-            context.load_verify_locations(self.ca_certs)
-        if self.cert_file:
-            context.load_cert_chain(self.cert_file, self.key_file)
-        self.sock = context.wrap_socket(sock, server_hostname=self.host)
-        # Add attributes only set in SSLSocket constructor without context:
-        self.sock.keyfile = self.key_file
-        self.sock.certfile = self.cert_file
-        self.sock.cert_reqs = context.verify_mode
-        self.sock.ssl_version = ssl.PROTOCOL_SSLv23
-        self.sock.ca_certs = self.ca_certs
-        self.sock.ciphers = None
+      # Use SSLContext so we can specify server_hostname for SNI
+      # (Required for connections to storage.googleapis.com)
+      context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+      context.verify_mode = ssl.CERT_REQUIRED
+      if self.ca_certs:
+        context.load_verify_locations(self.ca_certs)
+      if self.cert_file:
+        context.load_cert_chain(self.cert_file, self.key_file)
+      self.sock = context.wrap_socket(sock, server_hostname=self.host)
+      # Add attributes only set in SSLSocket constructor without context:
+      self.sock.keyfile = self.key_file
+      self.sock.certfile = self.cert_file
+      self.sock.cert_reqs = context.verify_mode
+      self.sock.ssl_version = ssl.PROTOCOL_SSLv23
+      self.sock.ca_certs = self.ca_certs
+      self.sock.ciphers = None
     else:
-        self.sock = ssl.wrap_socket(sock, keyfile=self.key_file,
-                                    certfile=self.cert_file,
-                                    cert_reqs=ssl.CERT_REQUIRED,
-                                    ca_certs=self.ca_certs)
+      self.sock = ssl.wrap_socket(sock,
+                                  keyfile=self.key_file,
+                                  certfile=self.cert_file,
+                                  cert_reqs=ssl.CERT_REQUIRED,
+                                  ca_certs=self.ca_certs)
     cert = self.sock.getpeercert()
     hostname = self.host.split(':', 0)[0]
     if not ValidateCertificateHostname(cert, hostname):
-        raise InvalidCertificateException(hostname,
-                                          cert,
-                                          'remote hostname "%s" does not match '
-                                          'certificate' % hostname)
+      raise InvalidCertificateException(
+          hostname, cert, 'remote hostname "%s" does not match '
+          'certificate' % hostname)
     # End `_PatchedConnectMethod` declaration.
+
   boto.https_connection.CertValidatingHTTPSConnection.connect = (
       _PatchedConnectMethod)
 
@@ -498,53 +497,49 @@ def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
   provider = self.bucket.connection.provider
 
   if not chunked_transfer:
-      if response.status in [500, 503]:
-          # 500 & 503 can be plain retries.
-          return True
-
-      if response.getheader('location'):
-          # If there's a redirect, plain retry.
-          return True
-
-  if 200 <= response.status <= 299:
-      self.etag = response.getheader('etag')
-      md5 = self.md5
-      if isinstance(md5, bytes):
-          md5 = md5.decode(UTF8)
-
-      # If you use customer-provided encryption keys, the ETag value that
-      # Amazon S3 returns in the response will not be the MD5 of the
-      # object.
-      amz_server_side_encryption_customer_algorithm = response.getheader(
-          'x-amz-server-side-encryption-customer-algorithm', None)
-      # The same is applicable for KMS-encrypted objects in gs buckets.
-      goog_customer_managed_encryption = response.getheader(
-          'x-goog-encryption-kms-key-name', None)
-      if (amz_server_side_encryption_customer_algorithm is None and
-              goog_customer_managed_encryption is None):
-          if self.etag != '"%s"' % md5:
-              raise provider.storage_data_error(
-                  'ETag from S3 did not match computed MD5. '
-                  '%s vs. %s' % (self.etag, self.md5))
-
+    if response.status in [500, 503]:
+      # 500 & 503 can be plain retries.
       return True
 
-  if response.status == 400:
-      # The 400 must be trapped so the retry handler can check to
-      # see if it was a timeout.
-      # If ``RequestTimeout`` is present, we'll retry. Otherwise, bomb
-      # out.
-      body = response.read()
-      err = provider.storage_response_error(
-          response.status,
-          response.reason,
-          body
-      )
+    if response.getheader('location'):
+      # If there's a redirect, plain retry.
+      return True
 
-      if err.error_code in ['RequestTimeout']:
-          raise boto.exception.PleaseRetryException(
-              "Saw %s, retrying" % err.error_code,
-              response=response
-          )
+  if 200 <= response.status <= 299:
+    self.etag = response.getheader('etag')
+    md5 = self.md5
+    if isinstance(md5, bytes):
+      md5 = md5.decode(UTF8)
+
+    # If you use customer-provided encryption keys, the ETag value that
+    # Amazon S3 returns in the response will not be the MD5 of the
+    # object.
+    amz_server_side_encryption_customer_algorithm = response.getheader(
+        'x-amz-server-side-encryption-customer-algorithm', None)
+    # The same is applicable for KMS-encrypted objects in gs buckets.
+    goog_customer_managed_encryption = response.getheader(
+        'x-goog-encryption-kms-key-name', None)
+    if (amz_server_side_encryption_customer_algorithm is None and
+        goog_customer_managed_encryption is None):
+      if self.etag != '"%s"' % md5:
+        raise provider.storage_data_error(
+            'ETag from S3 did not match computed MD5. '
+            '%s vs. %s' % (self.etag, self.md5))
+
+    return True
+
+  if response.status == 400:
+    # The 400 must be trapped so the retry handler can check to
+    # see if it was a timeout.
+    # If ``RequestTimeout`` is present, we'll retry. Otherwise, bomb
+    # out.
+    body = response.read()
+    err = provider.storage_response_error(response.status, response.reason,
+                                          body)
+
+    if err.error_code in ['RequestTimeout']:
+      raise boto.exception.PleaseRetryException("Saw %s, retrying" %
+                                                err.error_code,
+                                                response=response)
 
   return False

@@ -197,7 +197,8 @@ class CommandOptions(HelpProvider):
       help_name='metadata',
       help_name_aliases=[
           'cache-control', 'caching', 'content type', 'mime type', 'mime',
-          'type'],
+          'type'
+      ],
       help_type='additional_help',
       help_one_line_summary='Working With Object Metadata',
       help_text=_DETAILED_HELP_TEXT,

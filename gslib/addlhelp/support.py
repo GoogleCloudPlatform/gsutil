@@ -91,7 +91,8 @@ class CommandOptions(HelpProvider):
       help_name='support',
       help_name_aliases=[
           'techsupport', 'tech support', 'technical support', 'billing', 'faq',
-          'questions'],
+          'questions'
+      ],
       help_type='additional_help',
       help_one_line_summary='Google Cloud Storage Support',
       help_text=_DETAILED_HELP_TEXT,

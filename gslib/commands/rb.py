@@ -28,7 +28,6 @@ from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.storage_url import StorageUrlFromString
 from gslib.utils.constants import NO_MAX
 
-
 _SYNOPSIS = """
   gsutil rb [-f] url...
 """
@@ -62,7 +61,8 @@ class RbCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'rb',
       command_name_aliases=[
-          'deletebucket', 'removebucket', 'removebuckets', 'rmdir'],
+          'deletebucket', 'removebucket', 'removebuckets', 'rmdir'
+      ],
       usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
@@ -74,13 +74,13 @@ class RbCommand(Command):
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
           CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
-      ]
-  )
+      ])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='rb',
       help_name_aliases=[
-          'deletebucket', 'removebucket', 'removebuckets', 'rmdir'],
+          'deletebucket', 'removebucket', 'removebuckets', 'rmdir'
+      ],
       help_type='command_help',
       help_one_line_summary='Remove buckets',
       help_text=_DETAILED_HELP_TEXT,
@@ -144,4 +144,3 @@ class RbCommand(Command):
     if not did_some_work:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(self.args))
     return 1 if some_failed else 0
-

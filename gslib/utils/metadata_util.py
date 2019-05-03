@@ -69,7 +69,8 @@ def CreateCustomMetadata(entries=None, custom_metadata=None):
   return custom_metadata
 
 
-def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
+def GetValueFromObjectCustomMetadata(obj_metadata,
+                                     search_key,
                                      default_value=None):
   """Filters a specific element out of an object's custom metadata.
 
@@ -86,8 +87,8 @@ def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
     exist in the custom metadata).
   """
   try:
-    value = next((attr.value for attr in
-                  obj_metadata.metadata.additionalProperties
+    value = next((attr.value
+                  for attr in obj_metadata.metadata.additionalProperties
                   if attr.key == search_key), None)
     if value is None:
       return False, default_value

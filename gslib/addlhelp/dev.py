@@ -132,7 +132,8 @@ class CommandOptions(HelpProvider):
   help_spec = HelpProvider.HelpSpec(
       help_name='dev',
       help_name_aliases=[
-          'development', 'developer', 'code', 'mods', 'software'],
+          'development', 'developer', 'code', 'mods', 'software'
+      ],
       help_type='additional_help',
       help_one_line_summary='Contributing Code to gsutil',
       help_text=_DETAILED_HELP_TEXT,

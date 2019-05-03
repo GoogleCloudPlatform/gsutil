@@ -34,25 +34,27 @@ import tempfile
 import gslib.exception  # pylint: disable=g-import-not-at-top
 from gslib.utils.version_check import check_python_version_support
 
-
 supported, err = check_python_version_support()
 if not supported:
   raise CommandException(err)
   sys.exit(1)
 
-
 coverage_outfile = os.getenv('GSUTIL_COVERAGE_OUTPUT_FILE', None)
 if coverage_outfile:
   try:
     import coverage  # pylint: disable=g-import-not-at-top
-    coverage_controller = coverage.coverage(
-        data_file=coverage_outfile, data_suffix=True, auto_data=True,
-        source=['gslib'], omit=['gslib/third_party/*', 'gslib/tests/*',
-                                tempfile.gettempdir() + '*'])
+    coverage_controller = coverage.coverage(data_file=coverage_outfile,
+                                            data_suffix=True,
+                                            auto_data=True,
+                                            source=['gslib'],
+                                            omit=[
+                                                'gslib/third_party/*',
+                                                'gslib/tests/*',
+                                                tempfile.gettempdir() + '*'
+                                            ])
     coverage_controller.start()
   except ImportError:
     pass
-
 
 # Directory containing the gslib module.
 GSLIB_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -112,6 +114,7 @@ def _AddVendoredDepsToPythonPath():
   sys.path.append(
       os.path.join(vendored_path, 'boto', 'tests', 'integration', 's3'))
 
+
 _AddVendoredDepsToPythonPath()
 
 
@@ -133,6 +136,7 @@ def _GetFileContents(filename):
     content = pkgutil.get_data('gslib', filename)
     fpath = None
   return (fpath, content.strip())
+
 
 # Get the version file and store it.
 VERSION_FILE, VERSION = _GetFileContents('VERSION')

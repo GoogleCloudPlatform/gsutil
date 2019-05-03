@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Custom importer to handle module load times. Wraps gsutil."""
 
 from __future__ import absolute_import
@@ -56,8 +55,9 @@ def get_sorted_initialization_times(items=10):
   Returns:
     An OrderedDict object, sorting initialization times in increasing order.
   """
-  return OrderedDict(sorted(INITIALIZATION_TIMES.items(),
-                            key=itemgetter(1), reverse=True)[:items])
+  return OrderedDict(
+      sorted(INITIALIZATION_TIMES.items(), key=itemgetter(1),
+             reverse=True)[:items])
 
 
 def print_sorted_initialization_times():
@@ -85,6 +85,7 @@ def timed_importer(name, *args, **kwargs):
   import_end_time = timeit.default_timer()
   INITIALIZATION_TIMES[name] = import_end_time - import_start_time
   return import_value
+
 
 builtin.__import__ = timed_importer
 

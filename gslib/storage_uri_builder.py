@@ -55,6 +55,9 @@ class StorageUriBuilder(object):
       InvalidUriError: if uri_str not valid.
     """
     return boto.storage_uri(
-        uri_str, 'file', debug=self.debug, validate=False,
+        uri_str,
+        'file',
+        debug=self.debug,
+        validate=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         suppress_consec_slashes=False)
