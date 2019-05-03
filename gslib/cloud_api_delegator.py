@@ -73,14 +73,15 @@ class CloudApiDelegator(CloudApi):
       perf_trace_token: Performance trace token to use when making API calls.
       user_project: Project to be billed for this project.
     """
-    super(CloudApiDelegator, self).__init__(bucket_storage_uri_class,
-                                            logger,
-                                            status_queue,
-                                            provider=provider,
-                                            debug=debug,
-                                            trace_token=trace_token,
-                                            perf_trace_token=perf_trace_token,
-                                            user_project=user_project)
+    super(CloudApiDelegator,
+          self).__init__(bucket_storage_uri_class,
+                         logger,
+                         status_queue,
+                         provider=provider,
+                         debug=debug,
+                         trace_token=trace_token,
+                         perf_trace_token=perf_trace_token,
+                         user_project=user_project)
     self.api_map = gsutil_api_map
     self.prefer_api = boto.config.get('GSUtil', 'prefer_api', '').upper()
     self.loaded_apis = {}
@@ -131,7 +132,8 @@ class CloudApiDelegator(CloudApi):
     if api_selector not in self.api_map[ApiMapConstants.API_MAP][provider]:
       raise ArgumentException(
           'gsutil Cloud API map does not support API %s for provider %s.' %
-          (api_selector, provider))
+          (api_selector,
+           provider))
     self.loaded_apis[provider][api_selector] = (
         self.api_map[ApiMapConstants.API_MAP][provider][api_selector](
             self.bucket_storage_uri_class,
@@ -170,17 +172,23 @@ class CloudApiDelegator(CloudApi):
 
     api = self.api_map[ApiMapConstants.DEFAULT_MAP][selected_provider]
 
-    using_gs_hmac = (
-        provider == 'gs' and
-        not config.has_option('Credentials', 'gs_oauth2_refresh_token') and
-        not (config.has_option('Credentials', 'gs_service_client_id') and
-             config.has_option('Credentials', 'gs_service_key_file')) and
-        (config.has_option('Credentials', 'gs_access_key_id') and
-         config.has_option('Credentials', 'gs_secret_access_key')))
+    using_gs_hmac = (provider == 'gs' and
+                     not config.has_option('Credentials',
+                                           'gs_oauth2_refresh_token') and
+                     not (config.has_option('Credentials',
+                                            'gs_service_client_id') and
+                          config.has_option('Credentials',
+                                            'gs_service_key_file')) and
+                     (config.has_option('Credentials',
+                                        'gs_access_key_id') and
+                      config.has_option('Credentials',
+                                        'gs_secret_access_key')))
 
     configured_encryption = (provider == 'gs' and
-                             (config.has_option('GSUtil', 'encryption_key') or
-                              config.has_option('GSUtil', 'decryption_key1')))
+                             (config.has_option('GSUtil',
+                                                'encryption_key') or
+                              config.has_option('GSUtil',
+                                                'decryption_key1')))
 
     if using_gs_hmac and configured_encryption:
       raise CommandException(
@@ -277,8 +285,10 @@ class CloudApiDelegator(CloudApi):
                          policy,
                          generation=None,
                          provider=None):
-    return self._GetApi(provider).SetObjectIamPolicy(bucket_name, object_name,
-                                                     policy, generation)
+    return self._GetApi(provider).SetObjectIamPolicy(bucket_name,
+                                                     object_name,
+                                                     policy,
+                                                     generation)
 
   def ListObjects(self,
                   bucket_name,
@@ -500,12 +510,17 @@ class CloudApiDelegator(CloudApi):
                                object_name_prefix=None,
                                provider=None):
     return self._GetApi(provider).CreateNotificationConfig(
-        bucket_name, pubsub_topic, payload_format, event_types,
-        custom_attributes, object_name_prefix)
+        bucket_name,
+        pubsub_topic,
+        payload_format,
+        event_types,
+        custom_attributes,
+        object_name_prefix)
 
   def DeleteNotificationConfig(self, bucket_name, notification, provider=None):
     return self._GetApi(provider).DeleteNotificationConfig(
-        bucket_name, notification)
+        bucket_name,
+        notification)
 
   def ListNotificationConfigs(self, bucket_name, provider=None):
     return self._GetApi(provider).ListNotificationConfigs(bucket_name)
@@ -515,7 +530,8 @@ class CloudApiDelegator(CloudApi):
 
   def ListObjectAccessControls(self, bucket_name, object_name, provider=None):
     return self._GetApi(provider).ListObjectAccessControls(
-        bucket_name, object_name)
+        bucket_name,
+        object_name)
 
   def XmlPassThroughGetAcl(self, storage_url, def_obj_acl=False, provider=None):
     """XML compatibility function for getting ACLs.
@@ -675,7 +691,8 @@ class CloudApiDelegator(CloudApi):
       None.
     """
     return self._GetApi(provider).XmlPassThroughSetTagging(
-        tags_text, storage_url)
+        tags_text,
+        storage_url)
 
   def XmlPassThroughGetTagging(self, storage_url, provider=None):
     """XML compatibility function for getting tagging configuration on a bucket.

@@ -137,7 +137,11 @@ class CommandOptions(HelpProvider):
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
       help_name='options',
-      help_name_aliases=['arg', 'args', 'cli', 'opt', 'opts'],
+      help_name_aliases=['arg',
+                         'args',
+                         'cli',
+                         'opt',
+                         'opts'],
       help_type='additional_help',
       help_one_line_summary='Top-Level Command-Line Options',
       help_text=_DETAILED_HELP_TEXT,

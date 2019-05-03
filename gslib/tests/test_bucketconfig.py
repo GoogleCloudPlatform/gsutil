@@ -71,7 +71,8 @@ class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(json.loads(cors_out), self.cors_json_obj)
 
     self.RunGsUtil(self._set_lifecycle_command +
-                   [lifecycle_path, suri(bucket_uri)])
+                   [lifecycle_path,
+                    suri(bucket_uri)])
     cors_out = self.RunGsUtil(self._get_cors_command + [suri(bucket_uri)],
                               return_stdout=True)
     lifecycle_out = self.RunGsUtil(self._get_lifecycle_command +
@@ -82,9 +83,9 @@ class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
 
     if not self._ServiceAccountCredentialsPresent():
       # See comments in _ServiceAccountCredentialsPresent
-      self.RunGsUtil(
-          self._set_acl_command +
-          ['authenticated-read', suri(bucket_uri)])
+      self.RunGsUtil(self._set_acl_command +
+                     ['authenticated-read',
+                      suri(bucket_uri)])
 
     cors_out = self.RunGsUtil(self._get_cors_command + [suri(bucket_uri)],
                               return_stdout=True)

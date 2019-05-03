@@ -69,7 +69,8 @@ class KmsApi(object):
     self.certs_file = GetCertsFile()
     self.http = GetNewHttp()
     self.http_base = 'https://'
-    self.host_base = config.get('Credentials', 'gs_kms_host',
+    self.host_base = config.get('Credentials',
+                                'gs_kms_host',
                                 'cloudkms.googleapis.com')
     gs_kms_port = config.get('Credentials', 'gs_kms_port', None)
     self.host_port = (':' + gs_kms_port) if gs_kms_port else ''
@@ -96,7 +97,8 @@ class KmsApi(object):
       # This API key is not secret and is used to identify gsutil during
       # anonymous requests.
       self.api_client.AddGlobalParam(
-          'key', u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
+          'key',
+          u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
 
   def GetKeyIamPolicy(self, key_name):
     request = (apitools_messages.
@@ -112,7 +114,8 @@ class KmsApi(object):
     policy_request = apitools_messages.SetIamPolicyRequest(policy=policy)
     request = (apitools_messages.
                CloudkmsProjectsLocationsKeyRingsCryptoKeysSetIamPolicyRequest(
-                   resource=key_name, setIamPolicyRequest=policy_request))
+                   resource=key_name,
+                   setIamPolicyRequest=policy_request))
     try:
       return (self.api_client.projects_locations_keyRings_cryptoKeys.
               SetIamPolicy(request))
@@ -139,19 +142,22 @@ class KmsApi(object):
       attempting creation, we continue and treat this as a success.
     """
     keyring_msg = apitools_messages.KeyRing(
-        name='projects/%s/locations/%s/keyRings/%s' %
-        (project, location, keyring_name))
+        name='projects/%s/locations/%s/keyRings/%s' % (project,
+                                                       location,
+                                                       keyring_name))
     keyring_create_request = (
         apitools_messages.CloudkmsProjectsLocationsKeyRingsCreateRequest(
             keyRing=keyring_msg,
             keyRingId=keyring_name,
-            parent='projects/%s/locations/%s' % (project, location)))
+            parent='projects/%s/locations/%s' % (project,
+                                                 location)))
     try:
       self.api_client.projects_locations_keyRings.Create(keyring_create_request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       if e.status_code != 409:
         raise
-    return 'projects/%s/locations/%s/keyRings/%s' % (project, location,
+    return 'projects/%s/locations/%s/keyRings/%s' % (project,
+                                                     location,
                                                      keyring_name)
 
   def CreateCryptoKey(self, keyring_fqn, key_name):
@@ -177,7 +183,9 @@ class KmsApi(object):
     cryptokey_create_request = (
         apitools_messages.
         CloudkmsProjectsLocationsKeyRingsCryptoKeysCreateRequest(
-            cryptoKey=cryptokey_msg, cryptoKeyId=key_name, parent=keyring_fqn))
+            cryptoKey=cryptokey_msg,
+            cryptoKeyId=key_name,
+            parent=keyring_fqn))
     try:
       self.api_client.projects_locations_keyRings_cryptoKeys.Create(
           cryptokey_create_request)

@@ -94,14 +94,19 @@ def CreateTrackerDirIfNeeded():
   Returns:
     The pathname to the tracker directory.
   """
-  tracker_dir = config.get('GSUtil', 'resumable_tracker_dir',
-                           os.path.join(GetGsutilStateDir(), 'tracker-files'))
+  tracker_dir = config.get('GSUtil',
+                           'resumable_tracker_dir',
+                           os.path.join(GetGsutilStateDir(),
+                                        'tracker-files'))
   CreateDirIfNeeded(tracker_dir)
   return tracker_dir
 
 
-def GetRewriteTrackerFilePath(src_bucket_name, src_obj_name, dst_bucket_name,
-                              dst_obj_name, api_selector):
+def GetRewriteTrackerFilePath(src_bucket_name,
+                              src_obj_name,
+                              dst_bucket_name,
+                              dst_obj_name,
+                              api_selector):
   """Gets the tracker file name described by the arguments.
 
   Args:
@@ -117,9 +122,13 @@ def GetRewriteTrackerFilePath(src_bucket_name, src_obj_name, dst_bucket_name,
   # Encode the src and dest bucket and object names into the tracker file
   # name.
   res_tracker_file_name = (re.sub(
-      '[/\\\\]', '_', 'rewrite__%s__%s__%s__%s__%s.token' %
-      (src_bucket_name, src_obj_name, dst_bucket_name, dst_obj_name,
-       api_selector)))
+      '[/\\\\]',
+      '_',
+      'rewrite__%s__%s__%s__%s__%s.token' % (src_bucket_name,
+                                             src_obj_name,
+                                             dst_bucket_name,
+                                             dst_obj_name,
+                                             api_selector)))
 
   return _HashAndReturnPath(res_tracker_file_name, TrackerFileType.REWRITE)
 
@@ -144,30 +153,46 @@ def GetTrackerFilePath(dst_url,
   if tracker_file_type == TrackerFileType.UPLOAD:
     # Encode the dest bucket and object name into the tracker file name.
     res_tracker_file_name = (re.sub(
-        '[/\\\\]', '_', 'resumable_upload__%s__%s__%s.url' %
-        (dst_url.bucket_name, dst_url.object_name, api_selector)))
+        '[/\\\\]',
+        '_',
+        'resumable_upload__%s__%s__%s.url' % (dst_url.bucket_name,
+                                              dst_url.object_name,
+                                              api_selector)))
   elif tracker_file_type == TrackerFileType.DOWNLOAD:
     # Encode the fully-qualified dest file name into the tracker file name.
     res_tracker_file_name = (re.sub(
-        '[/\\\\]', '_', 'resumable_download__%s__%s.etag' %
-        (os.path.realpath(dst_url.object_name), api_selector)))
+        '[/\\\\]',
+        '_',
+        'resumable_download__%s__%s.etag' %
+        (os.path.realpath(dst_url.object_name),
+         api_selector)))
   elif tracker_file_type == TrackerFileType.DOWNLOAD_COMPONENT:
     # Encode the fully-qualified dest file name and the component number
     # into the tracker file name.
     res_tracker_file_name = (re.sub(
-        '[/\\\\]', '_', 'resumable_download__%s__%s__%d.etag' %
-        (os.path.realpath(dst_url.object_name), api_selector, component_num)))
+        '[/\\\\]',
+        '_',
+        'resumable_download__%s__%s__%d.etag' %
+        (os.path.realpath(dst_url.object_name),
+         api_selector,
+         component_num)))
   elif tracker_file_type == TrackerFileType.PARALLEL_UPLOAD:
     # Encode the dest bucket and object names as well as the source file name
     # into the tracker file name.
     res_tracker_file_name = (re.sub(
-        '[/\\\\]', '_', 'parallel_upload__%s__%s__%s__%s.url' %
-        (dst_url.bucket_name, dst_url.object_name, src_url, api_selector)))
+        '[/\\\\]',
+        '_',
+        'parallel_upload__%s__%s__%s__%s.url' % (dst_url.bucket_name,
+                                                 dst_url.object_name,
+                                                 src_url,
+                                                 api_selector)))
   elif tracker_file_type == TrackerFileType.SLICED_DOWNLOAD:
     # Encode the fully-qualified dest file name into the tracker file name.
     res_tracker_file_name = (re.sub(
-        '[/\\\\]', '_', 'sliced_download__%s__%s.etag' %
-        (os.path.realpath(dst_url.object_name), api_selector)))
+        '[/\\\\]',
+        '_',
+        'sliced_download__%s__%s.etag' % (os.path.realpath(dst_url.object_name),
+                                          api_selector)))
   elif tracker_file_type == TrackerFileType.REWRITE:
     # Should use GetRewriteTrackerFilePath instead.
     raise NotImplementedError()
@@ -184,7 +209,9 @@ def DeleteDownloadTrackerFiles(dst_url, api_selector):
   """
   # Delete non-sliced download tracker file.
   DeleteTrackerFile(
-      GetTrackerFilePath(dst_url, TrackerFileType.DOWNLOAD, api_selector))
+      GetTrackerFilePath(dst_url,
+                         TrackerFileType.DOWNLOAD,
+                         api_selector))
 
   # Delete all sliced download tracker files.
   tracker_files = GetSlicedDownloadTrackerFilePaths(dst_url, api_selector)
@@ -210,7 +237,9 @@ def GetSlicedDownloadTrackerFilePaths(dst_url,
     File path to tracker file.
   """
   parallel_tracker_file_path = GetTrackerFilePath(
-      dst_url, TrackerFileType.SLICED_DOWNLOAD, api_selector)
+      dst_url,
+      TrackerFileType.SLICED_DOWNLOAD,
+      api_selector)
   tracker_file_paths = [parallel_tracker_file_path]
 
   # If we don't know the number of components, check the tracker file.
@@ -249,7 +278,8 @@ def _HashAndReturnPath(res_tracker_file_name, tracker_file_type):
   hashed_tracker_file_name = _HashFilename(res_tracker_file_name)
   tracker_file_name = '%s_%s' % (str(tracker_file_type).lower(),
                                  hashed_tracker_file_name)
-  tracker_file_path = '%s%s%s' % (resumable_tracker_dir, os.sep,
+  tracker_file_path = '%s%s%s' % (resumable_tracker_dir,
+                                  os.sep,
                                   tracker_file_name)
   assert len(tracker_file_name) < MAX_TRACKER_FILE_NAME_LENGTH
   return tracker_file_path
@@ -307,9 +337,16 @@ def HashRewriteParameters(src_obj_metadata,
       not dst_obj_metadata.name or not projection):
     return
   md5_hash = hashlib.md5()
-  for input_param in (src_obj_metadata, dst_obj_metadata, projection,
-                      src_generation, gen_match, meta_gen_match, canned_acl,
-                      fields, max_bytes_per_call, src_dec_key_sha256,
+  for input_param in (src_obj_metadata,
+                      dst_obj_metadata,
+                      projection,
+                      src_generation,
+                      gen_match,
+                      meta_gen_match,
+                      canned_acl,
+                      fields,
+                      max_bytes_per_call,
+                      src_dec_key_sha256,
                       dst_enc_key_sha256):
     # Tracker file matching changed between gsutil 4.15 -> 4.16 and will cause
     # rewrites to start over from the beginning on a gsutil version upgrade.
@@ -345,13 +382,15 @@ def ReadRewriteTrackerFile(tracker_file_name, rewrite_params_hash):
     if e.errno != errno.ENOENT:
       sys.stderr.write(
           ('Couldn\'t read Copy tracker file (%s): %s. Restarting copy '
-           'from scratch.' % (tracker_file_name, e.strerror)))
+           'from scratch.' % (tracker_file_name,
+                              e.strerror)))
   finally:
     if tracker_file:
       tracker_file.close()
 
 
-def WriteRewriteTrackerFile(tracker_file_name, rewrite_params_hash,
+def WriteRewriteTrackerFile(tracker_file_name,
+                            rewrite_params_hash,
                             rewrite_token):
   """Writes a rewrite tracker file.
 
@@ -362,7 +401,8 @@ def WriteRewriteTrackerFile(tracker_file_name, rewrite_params_hash,
     rewrite_token: Rewrite token string returned by the service.
   """
   _WriteTrackerFile(tracker_file_name,
-                    '%s\n%s\n' % (rewrite_params_hash, rewrite_token))
+                    '%s\n%s\n' % (rewrite_params_hash,
+                                  rewrite_token))
 
 
 def ReadOrCreateDownloadTrackerFile(src_obj_metadata,
@@ -439,7 +479,8 @@ def ReadOrCreateDownloadTrackerFile(src_obj_metadata,
     # is attempted on an object), but warn user for other errors.
     if isinstance(e, ValueError) or e.errno != errno.ENOENT:
       logger.warn('Couldn\'t read download tracker file (%s): %s. Restarting '
-                  'download from scratch.' % (tracker_file_name, str(e)))
+                  'download from scratch.' % (tracker_file_name,
+                                              str(e)))
   finally:
     if tracker_file:
       tracker_file.close()
@@ -449,7 +490,8 @@ def ReadOrCreateDownloadTrackerFile(src_obj_metadata,
   if tracker_file_type is TrackerFileType.DOWNLOAD:
     _WriteTrackerFile(tracker_file_name, '%s\n' % src_obj_metadata.etag)
   elif tracker_file_type is TrackerFileType.DOWNLOAD_COMPONENT:
-    WriteDownloadComponentTrackerFile(tracker_file_name, src_obj_metadata,
+    WriteDownloadComponentTrackerFile(tracker_file_name,
+                                      src_obj_metadata,
                                       start_byte)
   return tracker_file_name, start_byte
 
@@ -524,7 +566,8 @@ def GetDownloadStartByte(src_obj_metadata,
   return start_byte
 
 
-def WriteDownloadComponentTrackerFile(tracker_file_name, src_obj_metadata,
+def WriteDownloadComponentTrackerFile(tracker_file_name,
+                                      src_obj_metadata,
                                       current_file_pos):
   """Updates or creates a download component tracker file on disk.
 
@@ -545,7 +588,9 @@ def WriteDownloadComponentTrackerFile(tracker_file_name, src_obj_metadata,
 def _WriteTrackerFile(tracker_file_name, data):
   """Creates a tracker file, storing the input data."""
   try:
-    with os.fdopen(os.open(tracker_file_name, os.O_WRONLY | os.O_CREAT, 0o600),
+    with os.fdopen(os.open(tracker_file_name,
+                           os.O_WRONLY | os.O_CREAT,
+                           0o600),
                    'w') as tf:
       tf.write(data)
     return False
@@ -590,7 +635,9 @@ def GetUploadTrackerData(tracker_file_name, logger, encryption_key_sha256=None):
     if e.errno != errno.ENOENT:
       logger.warn(
           'Couldn\'t read upload tracker file (%s): %s. Restarting '
-          'upload from scratch.', tracker_file_name, e.strerror)
+          'upload from scratch.',
+          tracker_file_name,
+          e.strerror)
   except (KeyError, ValueError) as e:
     # Old tracker files used a non-JSON format; rewrite it and assume no
     # encryption key.
@@ -607,7 +654,8 @@ def GetUploadTrackerData(tracker_file_name, logger, encryption_key_sha256=None):
       logger.warn(
           'Upload tracker file (%s) does not match current encryption '
           'key. Restarting upload from scratch with a new tracker '
-          'file that uses the current encryption key.', tracker_file_name)
+          'file that uses the current encryption key.',
+          tracker_file_name)
     if remove_tracker_file:
       DeleteTrackerFile(tracker_file_name)
 
@@ -615,4 +663,5 @@ def GetUploadTrackerData(tracker_file_name, logger, encryption_key_sha256=None):
 def RaiseUnwritableTrackerFileException(tracker_file_name, error_str):
   """Raises an exception when unable to write the tracker file."""
   raise CommandException(TRACKER_FILE_UNWRITABLE_EXCEPTION_TEXT %
-                         (tracker_file_name, error_str))
+                         (tracker_file_name,
+                          error_str))

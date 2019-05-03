@@ -169,14 +169,21 @@ class HashCommand(Command):
 
   def RunCommand(self):
     """Command entry point for the hash command."""
-    (calc_crc32c, calc_md5, format_func, cloud_format_func,
-     output_format) = (self._ParseOpts(self.sub_opts, self.logger))
+    (calc_crc32c,
+     calc_md5,
+     format_func,
+     cloud_format_func,
+     output_format) = (self._ParseOpts(self.sub_opts,
+                                       self.logger))
 
     matched_one = False
     for url_str in self.args:
       for file_ref in self.WildcardIterator(url_str).IterObjects(
           bucket_listing_fields=[
-              'crc32c', 'md5Hash', 'customerEncryption', 'size'
+              'crc32c',
+              'md5Hash',
+              'customerEncryption',
+              'size'
           ]):
         matched_one = True
         url = StorageUrlFromString(url_str)
@@ -198,7 +205,9 @@ class HashCommand(Command):
           hash_dict = self._GetHashClassesFromArgs(calc_crc32c, calc_md5)
           with open(file_name, 'rb') as fp:
             hashing_helper.CalculateHashesFromContents(
-                fp, hash_dict, callback_processor=callback_processor)
+                fp,
+                hash_dict,
+                callback_processor=callback_processor)
           self.gsutil_api.status_queue.put(
               FileMessage(url,
                           None,
@@ -219,12 +228,13 @@ class HashCommand(Command):
             hash_dict['md5'] = obj_metadata.md5Hash
           if crc32c_present:
             hash_dict['crc32c'] = obj_metadata.crc32c
-        text_util.print_to_fd('Hashes [%s] for %s:' %
-                              (output_format, file_name))
+        text_util.print_to_fd('Hashes [%s] for %s:' % (output_format,
+                                                       file_name))
         for name, digest in six.iteritems(hash_dict):
           text_util.print_to_fd('\tHash (%s):\t\t%s' %
-                                (name, (format_func(digest) if url.IsFileUrl()
-                                        else cloud_format_func(digest))))
+                                (name,
+                                 (format_func(digest) if url.IsFileUrl() else
+                                  cloud_format_func(digest))))
 
     if not matched_one:
       raise CommandException('No files matched')

@@ -101,7 +101,9 @@ class BucketPolicyOnlyCommand(Command):
               CommandArgument.MakeNCloudURLsArgument(1),
           ],
           'set': [
-              CommandArgument('mode', choices=['on', 'off']),
+              CommandArgument('mode',
+                              choices=['on',
+                                       'off']),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
       })
@@ -161,8 +163,8 @@ class BucketPolicyOnlyCommand(Command):
     bucket_metadata = apitools_messages.Bucket(iamConfiguration=iam_config)
 
     setting_verb = 'Enabling' if setting_arg == 'on' else 'Disabling'
-    print('%s Bucket Policy Only for %s...' %
-          (setting_verb, str(bucket_url).rstrip('/')))
+    print('%s Bucket Policy Only for %s...' % (setting_verb,
+                                               str(bucket_url).rstrip('/')))
 
     self.gsutil_api.PatchBucket(bucket_url.bucket_name,
                                 bucket_metadata,

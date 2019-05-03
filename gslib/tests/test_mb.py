@@ -37,13 +37,17 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
   @SkipForS3('S3 returns success when bucket already exists.')
   def test_mb_bucket_exists(self):
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(['mb', suri(bucket_uri)],
+    stderr = self.RunGsUtil(['mb',
+                             suri(bucket_uri)],
                             expected_status=1,
                             return_stderr=True)
     self.assertIn('already exists', stderr)
 
   def test_non_ascii_project_fails(self):
-    stderr = self.RunGsUtil(['mb', '-p', 'ã', 'gs://fobarbaz'],
+    stderr = self.RunGsUtil(['mb',
+                             '-p',
+                             'ã',
+                             'gs://fobarbaz'],
                             expected_status=1,
                             return_stderr=True)
     self.assertIn('Invalid non-ASCII', stderr)
@@ -64,7 +68,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                                   suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '--retention', '1d', suri(bucket_uri)])
     self.VerifyRetentionPolicy(
-        bucket_uri, expected_retention_period_in_seconds=SECONDS_IN_DAY)
+        bucket_uri,
+        expected_retention_period_in_seconds=SECONDS_IN_DAY)
 
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_create_with_retention_months(self):
@@ -73,7 +78,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                                   suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '--retention', '1m', suri(bucket_uri)])
     self.VerifyRetentionPolicy(
-        bucket_uri, expected_retention_period_in_seconds=SECONDS_IN_MONTH)
+        bucket_uri,
+        expected_retention_period_in_seconds=SECONDS_IN_MONTH)
 
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_create_with_retention_years(self):
@@ -82,14 +88,17 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                                   suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '--retention', '1y', suri(bucket_uri)])
     self.VerifyRetentionPolicy(
-        bucket_uri, expected_retention_period_in_seconds=SECONDS_IN_YEAR)
+        bucket_uri,
+        expected_retention_period_in_seconds=SECONDS_IN_YEAR)
 
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_create_with_retention_invalid_arg(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
-    stderr = self.RunGsUtil(['mb', '--retention', '1second',
+    stderr = self.RunGsUtil(['mb',
+                             '--retention',
+                             '1second',
                              suri(bucket_uri)],
                             expected_status=1,
                             return_stderr=True)
@@ -99,9 +108,12 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('s3://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
-    stderr = self.RunGsUtil(
-        ['mb', '--retention', '1y', suri(bucket_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['mb',
+                             '--retention',
+                             '1y',
+                             suri(bucket_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertRegexpMatches(
-        stderr, r'Retention policy can only be specified for GCS buckets.')
+        stderr,
+        r'Retention policy can only be specified for GCS buckets.')

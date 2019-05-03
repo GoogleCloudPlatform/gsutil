@@ -141,7 +141,8 @@ setup(
             # exclude vendored dependencies (under gslib/vendored), as our
             # vendored versions may differ slightly from the official versions.
             'third_party',
-        ],),
+        ],
+    ),
     include_package_data=True,
     entry_points={
         'console_scripts': [

@@ -177,14 +177,18 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(pi1.proxy_pass, pi2.proxy_pass)
 
   def testMakeMetadataLine(self):
-    test_params = (TestParams(args=('AFairlyShortKey', 'Value'),
+    test_params = (TestParams(args=('AFairlyShortKey',
+                                    'Value'),
                               expected='    AFairlyShortKey:        Value'),
-                   TestParams(args=('', 'Value'),
+                   TestParams(args=('',
+                                    'Value'),
                               expected='    :                       Value'),
-                   TestParams(args=('AnotherKey', 'Value'),
+                   TestParams(args=('AnotherKey',
+                                    'Value'),
                               kwargs={'indent': 2},
                               expected='        AnotherKey:         Value'),
-                   TestParams(args=('AKeyMuchLongerThanTheLast', 'Value'),
+                   TestParams(args=('AKeyMuchLongerThanTheLast',
+                                    'Value'),
                               expected=('    AKeyMuchLongerThanTheLast:Value')))
     for params in test_params:
       line = ls_helper.MakeMetadataLine(*(params.args), **(params.kwargs))
@@ -207,24 +211,31 @@ class TestUtil(testcase.GsUtilUnitTestCase):
             self._AssertProxyInfosEqual(
                 boto_util.ProxyInfoFromEnvironmentVar(env_var),
                 httplib2.ProxyInfo(
-                    httplib2.socks.PROXY_TYPE_HTTP, 'hostname',
+                    httplib2.socks.PROXY_TYPE_HTTP,
+                    'hostname',
                     443 if env_var.lower().startswith('https') else 80))
             # Shouldn't populate info for other variables
             for other_env_var in valid_variables:
               if other_env_var == env_var: continue
               self._AssertProxyInfosEqual(
                   boto_util.ProxyInfoFromEnvironmentVar(other_env_var),
-                  httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0))
+                  httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP,
+                                     None,
+                                     0))
         for url_string in [
-            '1.2.3.4:50', 'http://1.2.3.4:50', 'https://1.2.3.4:50'
+            '1.2.3.4:50',
+            'http://1.2.3.4:50',
+            'https://1.2.3.4:50'
         ]:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
                 boto_util.ProxyInfoFromEnvironmentVar(env_var),
-                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, '1.2.3.4',
+                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP,
+                                   '1.2.3.4',
                                    50))
         for url_string in [
-            'foo:bar@1.2.3.4:50', 'http://foo:bar@1.2.3.4:50',
+            'foo:bar@1.2.3.4:50',
+            'http://foo:bar@1.2.3.4:50',
             'https://foo:bar@1.2.3.4:50'
         ]:
           with SetEnvironmentForTest({env_var: url_string}):
@@ -236,7 +247,9 @@ class TestUtil(testcase.GsUtilUnitTestCase):
                                    proxy_user='foo',
                                    proxy_pass='bar'))
         for url_string in [
-            'bar@1.2.3.4:50', 'http://bar@1.2.3.4:50', 'https://bar@1.2.3.4:50'
+            'bar@1.2.3.4:50',
+            'http://bar@1.2.3.4:50',
+            'https://bar@1.2.3.4:50'
         ]:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
@@ -250,7 +263,9 @@ class TestUtil(testcase.GsUtilUnitTestCase):
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
                 boto_util.ProxyInfoFromEnvironmentVar(env_var),
-                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0))
+                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP,
+                                   None,
+                                   0))
 
   # We want to make sure the wrapped function is called without executing it.
   @mock.patch.object(retry_util.http_wrapper,
@@ -260,9 +275,19 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     # The only ExceptionRetryArgs attributes that the function cares about are
     # num_retries and total_wait_sec; we can pass None for the other values.
     retry_args_over_threshold = retry_util.http_wrapper.ExceptionRetryArgs(
-        None, None, None, 3, None, constants.LONG_RETRY_WARN_SEC + 1)
+        None,
+        None,
+        None,
+        3,
+        None,
+        constants.LONG_RETRY_WARN_SEC + 1)
     retry_args_under_threshold = retry_util.http_wrapper.ExceptionRetryArgs(
-        None, None, None, 2, None, constants.LONG_RETRY_WARN_SEC - 1)
+        None,
+        None,
+        None,
+        2,
+        None,
+        constants.LONG_RETRY_WARN_SEC - 1)
 
     retry_util.LogAndHandleRetries()(retry_args_under_threshold)
     self.assertTrue(mock_wrapped_fn.called)
@@ -296,18 +321,24 @@ class TestUtil(testcase.GsUtilUnitTestCase):
   def testUIHumanReadableWithDecimalPlaces(self):
     """Tests HumanReadableWithDecimalPlaces for UI."""
     self.assertEqual('1.0 GiB',
-                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 10, 1))
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 10,
+                                                    1))
     self.assertEqual('1.0 GiB', HumanReadableWithDecimalPlaces(1024**3), 1)
     self.assertEqual('1.01 GiB',
-                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 10, 2))
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 10,
+                                                    2))
     self.assertEqual('1.000 GiB',
-                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 5, 3))
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 5,
+                                                    3))
     self.assertEqual('1.10 GiB',
-                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 100, 2))
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 100,
+                                                    2))
     self.assertEqual('1.100 GiB',
-                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 100, 3))
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 100,
+                                                    3))
     self.assertEqual('10.00 MiB',
-                     HumanReadableWithDecimalPlaces(1024**2 * 10, 2))
+                     HumanReadableWithDecimalPlaces(1024**2 * 10,
+                                                    2))
     # The test below is good for rounding.
     self.assertEqual('2.01 GiB', HumanReadableWithDecimalPlaces(2157969408, 2))
     self.assertEqual('2.0 GiB', HumanReadableWithDecimalPlaces(2157969408, 1))

@@ -69,30 +69,49 @@ GLOBAL_DIMENSIONS_URL_PARAMS = (
     'cd6=CommandException&cm1=0')
 
 GLOBAL_PARAMETERS = [
-    'a=b', 'c=d', 'cd1=cmd1 action1', 'cd2=x,y,z', 'cd3=opta,optb',
-    'cd6=CommandException', 'cm1=0', 'ev=0', 'el={0}'.format(VERSION)
+    'a=b',
+    'c=d',
+    'cd1=cmd1 action1',
+    'cd2=x,y,z',
+    'cd3=opta,optb',
+    'cd6=CommandException',
+    'cm1=0',
+    'ev=0',
+    'el={0}'.format(VERSION)
 ]
 COMMAND_AND_ERROR_TEST_METRICS = set([
     Metric(
-        'https://example.com', 'POST',
+        'https://example.com',
+        'POST',
         '{0}&cm2=3&ea=cmd1+action1&ec={1}&el={2}&ev=0'.format(
-            GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_COMMANDS_CATEGORY,
-            VERSION), 'user-agent-007'),
+            GLOBAL_DIMENSIONS_URL_PARAMS,
+            metrics._GA_COMMANDS_CATEGORY,
+            VERSION),
+        'user-agent-007'),
     Metric(
-        'https://example.com', 'POST',
+        'https://example.com',
+        'POST',
         '{0}&cm2=2&ea=Exception&ec={1}&el={2}&ev=0'.format(
-            GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORRETRY_CATEGORY,
-            VERSION), 'user-agent-007'),
+            GLOBAL_DIMENSIONS_URL_PARAMS,
+            metrics._GA_ERRORRETRY_CATEGORY,
+            VERSION),
+        'user-agent-007'),
     Metric(
-        'https://example.com', 'POST',
+        'https://example.com',
+        'POST',
         '{0}&cm2=1&ea=ValueError&ec={1}&el={2}&ev=0'.format(
-            GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORRETRY_CATEGORY,
-            VERSION), 'user-agent-007'),
+            GLOBAL_DIMENSIONS_URL_PARAMS,
+            metrics._GA_ERRORRETRY_CATEGORY,
+            VERSION),
+        'user-agent-007'),
     Metric(
-        'https://example.com', 'POST',
+        'https://example.com',
+        'POST',
         '{0}&ea=CommandException&ec={1}&el={2}&ev=0'.format(
-            GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_ERRORFATAL_CATEGORY,
-            VERSION), 'user-agent-007')
+            GLOBAL_DIMENSIONS_URL_PARAMS,
+            metrics._GA_ERRORFATAL_CATEGORY,
+            VERSION),
+        'user-agent-007')
 ])
 
 # A regex to find the list of metrics in log output.
@@ -120,9 +139,16 @@ def _LogAllTestMetrics():
   """Logs all the common metrics for a test."""
   metrics.LogCommandParams(command_name='cmd1',
                            subcommands=['action1'],
-                           global_opts=[('-y', 'value'), ('-z', ''),
-                                        ('-x', '')],
-                           sub_opts=[('optb', ''), ('opta', '')])
+                           global_opts=[('-y',
+                                         'value'),
+                                        ('-z',
+                                         ''),
+                                        ('-x',
+                                         '')],
+                           sub_opts=[('optb',
+                                      ''),
+                                     ('opta',
+                                      '')])
   retry_msg_1 = RetryableErrorMessage(Exception(), 0)
   retry_msg_2 = RetryableErrorMessage(ValueError(), 0)
   metrics.LogRetryableError(retry_msg_1)
@@ -150,7 +176,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     self.original_collector_instance = MetricsCollector.GetCollector()
 
     # Set dummy attributes for the collector.
-    MetricsCollector.StartTestCollector('https://example.com', 'user-agent-007',
+    MetricsCollector.StartTestCollector('https://example.com',
+                                        'user-agent-007',
                                         {
                                             'a': 'b',
                                             'c': 'd'
@@ -232,21 +259,35 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
   def testConfigValueValidation(self):
     """Tests the validation of potentially PII config values."""
     string_and_bool_categories = [
-        'check_hashes', 'content_language', 'disable_analytics_prompt',
-        'https_validate_certificates', 'json_api_version',
+        'check_hashes',
+        'content_language',
+        'disable_analytics_prompt',
+        'https_validate_certificates',
+        'json_api_version',
         'parallel_composite_upload_component_size',
-        'parallel_composite_upload_threshold', 'prefer_api',
+        'parallel_composite_upload_threshold',
+        'prefer_api',
         'sliced_object_download_component_size',
-        'sliced_object_download_threshold', 'tab_completion_time_logs',
-        'token_cache', 'use_magicfile'
+        'sliced_object_download_threshold',
+        'tab_completion_time_logs',
+        'token_cache',
+        'use_magicfile'
     ]
     int_categories = [
-        'debug', 'default_api_version', 'http_socket_timeout',
-        'max_retry_delay', 'num_retries', 'oauth2_refresh_retries',
-        'parallel_process_count', 'parallel_thread_count',
-        'resumable_threshold', 'rsync_buffer_lines',
-        'sliced_object_download_max_components', 'software_update_check_period',
-        'tab_completion_timeout', 'task_estimation_threshold'
+        'debug',
+        'default_api_version',
+        'http_socket_timeout',
+        'max_retry_delay',
+        'num_retries',
+        'oauth2_refresh_retries',
+        'parallel_process_count',
+        'parallel_thread_count',
+        'resumable_threshold',
+        'rsync_buffer_lines',
+        'sliced_object_download_max_components',
+        'software_update_check_period',
+        'tab_completion_timeout',
+        'task_estimation_threshold'
     ]
     all_categories = sorted(string_and_bool_categories + int_categories)
 
@@ -276,7 +317,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
           return 'v3'
         if category == 'prefer_api':
           return 'xml'
-        if category in ('disable_analytics_prompt', 'use_magicfile',
+        if category in ('disable_analytics_prompt',
+                        'use_magicfile',
                         'tab_completion_time_logs'):
           return 'True'
       if section == 'OAuth2' and category == 'token_cache':
@@ -377,7 +419,12 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     # GetDiskCounters is called at initialization of _PerformanceSummaryParams,
     # which occurs during the first call to LogPerformanceSummaryParams.
     with mock.patch('gslib.metrics.system_util.GetDiskCounters',
-                    return_value={'fake-disk': (0, 0, 0, 0, 0, 0)}):
+                    return_value={'fake-disk': (0,
+                                                0,
+                                                0,
+                                                0,
+                                                0,
+                                                0)}):
       metrics.LogPerformanceSummaryParams(uses_fan=True,
                                           uses_slice=True,
                                           avg_throughput=10,
@@ -397,7 +444,8 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
     # Log a retryable service error and two retryable network errors.
     service_retry_msg = RetryableErrorMessage(
-        apitools_exceptions.CommunicationError(), 0)
+        apitools_exceptions.CommunicationError(),
+        0)
     network_retry_msg = RetryableErrorMessage(socket.error(), 0)
     metrics.LogRetryableError(service_retry_msg)
     metrics.LogRetryableError(network_retry_msg)
@@ -417,39 +465,63 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
     # GetDiskCounters is called a second time during collection.
     with mock.patch('gslib.metrics.system_util.GetDiskCounters',
-                    return_value={'fake-disk': (0, 0, 0, 0, 10, 10)}):
+                    return_value={'fake-disk': (0,
+                                                0,
+                                                0,
+                                                0,
+                                                10,
+                                                10)}):
       self.collector._CollectPerformanceSummaryMetric()
 
     # Check for all the expected parameters.
     metric_body = self.collector._metrics[0].body
     label_and_value_pairs = [
-        ('Event Category', metrics._GA_PERFSUM_CATEGORY),
-        ('Event Action', 'CloudToCloud%2CDaisyChain'),
-        ('Execution Time', '10'),
-        ('Parallelism Strategy', 'both'),
-        ('Source URL Type', 'cloud'),
-        ('Provider Types', 'gs'),
-        ('Num Processes', '2'),
-        ('Num Threads', '3'),
-        ('Number of Files/Objects Transferred', '3'),
-        ('Size of Files/Objects Transferred', '100'),
-        ('Average Overall Throughput', '10'),
-        ('Num Retryable Service Errors', '1'),
-        ('Num Retryable Network Errors', '2'),
-        ('Thread Idle Time Percent', '0.8'),
-        ('Slowest Thread Throughput', '10'),
-        ('Fastest Thread Throughput', '10'),
+        ('Event Category',
+         metrics._GA_PERFSUM_CATEGORY),
+        ('Event Action',
+         'CloudToCloud%2CDaisyChain'),
+        ('Execution Time',
+         '10'),
+        ('Parallelism Strategy',
+         'both'),
+        ('Source URL Type',
+         'cloud'),
+        ('Provider Types',
+         'gs'),
+        ('Num Processes',
+         '2'),
+        ('Num Threads',
+         '3'),
+        ('Number of Files/Objects Transferred',
+         '3'),
+        ('Size of Files/Objects Transferred',
+         '100'),
+        ('Average Overall Throughput',
+         '10'),
+        ('Num Retryable Service Errors',
+         '1'),
+        ('Num Retryable Network Errors',
+         '2'),
+        ('Thread Idle Time Percent',
+         '0.8'),
+        ('Slowest Thread Throughput',
+         '10'),
+        ('Fastest Thread Throughput',
+         '10'),
     ]
     if IS_LINUX:  # Disk I/O time is only available on Linux.
       label_and_value_pairs.append(('Disk I/O Time', '20'))
     for label, exp_value in label_and_value_pairs:
-      self.assertIn('{0}={1}'.format(metrics._GA_LABEL_MAP[label], exp_value),
+      self.assertIn('{0}={1}'.format(metrics._GA_LABEL_MAP[label],
+                                     exp_value),
                     metric_body)
 
   def testCommandCollection(self):
     """Tests the collection of command parameters."""
     _TryExceptAndPass(self.command_runner.RunNamedCommand,
-                      'acl', ['set', '-a'],
+                      'acl',
+                      ['set',
+                       '-a'],
                       collect_analytics=True)
     self.assertEqual(
         'acl set',
@@ -472,7 +544,9 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
     self.collector.ga_params.clear()
     _TryExceptAndPass(self.command_runner.RunNamedCommand,
-                      'iam', ['get', 'dummy_bucket'],
+                      'iam',
+                      ['get',
+                       'dummy_bucket'],
                       collect_analytics=True)
     self.assertEqual(
         'iam get',
@@ -486,9 +560,19 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
     # UIThread and the MainThreadUIQueue.
     mock_queue = RetryableErrorsQueue()
     value_error_retry_args = http_wrapper.ExceptionRetryArgs(
-        None, None, ValueError(), None, None, None)
+        None,
+        None,
+        ValueError(),
+        None,
+        None,
+        None)
     socket_error_retry_args = http_wrapper.ExceptionRetryArgs(
-        None, None, socket.error(), None, None, None)
+        None,
+        None,
+        socket.error(),
+        None,
+        None,
+        None)
     metadata_retry_func = LogAndHandleRetries(is_data_transfer=False,
                                               status_queue=mock_queue)
     media_retry_func = LogAndHandleRetries(is_data_transfer=True,
@@ -555,8 +639,11 @@ class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
 
       debug_messages = self.log_handler.messages['debug']
       message_index = 0
-      for func_name in ('Shutdown', 'LogCommandParams', 'LogRetryableError',
-                        'LogFatalError', 'LogPerformanceSummaryParams',
+      for func_name in ('Shutdown',
+                        'LogCommandParams',
+                        'LogRetryableError',
+                        'LogFatalError',
+                        'LogPerformanceSummaryParams',
                         'CheckAndMaybePromptForAnalyticsEnabling'):
         self.assertIn(
             'Exception captured in %s during metrics collection' % func_name,
@@ -583,13 +670,17 @@ class _JSONForceHTTPErrorCopyCallbackHandler(object):
         not self.started_over_once):
       self.started_over_once = True
       raise apitools_exceptions.HttpError({'status': self._http_error_num},
-                                          None, None)
+                                          None,
+                                          None)
 
 
 class _ResumableUploadRetryHandler(object):
   """Test callback handler for causing retries during a resumable transfer."""
 
-  def __init__(self, retry_at_byte, exception_to_raise, exc_args,
+  def __init__(self,
+               retry_at_byte,
+               exception_to_raise,
+               exc_args,
                num_retries=1):
     self._retry_at_byte = retry_at_byte
     self._exception_to_raise = exception_to_raise
@@ -617,7 +708,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     self.original_collector_instance = MetricsCollector.GetCollector()
 
     # Set dummy attributes for the collector.
-    MetricsCollector.StartTestCollector('https://example.com', 'user-agent-007',
+    MetricsCollector.StartTestCollector('https://example.com',
+                                        'user-agent-007',
                                         {
                                             'a': 'b',
                                             'c': 'd'
@@ -671,7 +763,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
   def _CheckParameterValue(self, param_name, exp_value, metrics_to_search):
     """Checks for a correct key=value pair in a log output string."""
     self.assertIn(
-        '{0}={1}'.format(metrics._GA_LABEL_MAP[param_name], exp_value),
+        '{0}={1}'.format(metrics._GA_LABEL_MAP[param_name],
+                         exp_value),
         metrics_to_search)
 
   @mock.patch('time.time', new=mock.MagicMock(return_value=0))
@@ -734,7 +827,10 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     def CollectMetricAndSetLogLevel(log_level, log_file_path):
       metrics.LogCommandParams(command_name='cmd1',
                                subcommands=['action1'],
-                               sub_opts=[('optb', ''), ('opta', '')])
+                               sub_opts=[('optb',
+                                          ''),
+                                         ('opta',
+                                          '')])
       metrics.LogFatalError(gslib.exception.CommandException('test'))
 
       # Wait for report to make sure the log is written before we check it.
@@ -743,8 +839,12 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
                                    log_file_path=log_file_path)
       self.assertEqual([], self.collector._metrics)
 
-    metrics.LogCommandParams(global_opts=[('-y', 'value'), ('-z', ''), ('-x',
-                                                                        '')])
+    metrics.LogCommandParams(global_opts=[('-y',
+                                           'value'),
+                                          ('-z',
+                                           ''),
+                                          ('-x',
+                                           '')])
 
     # The log file should be empty unless the debug option is specified.
     CollectMetricAndSetLogLevel(logging.DEBUG, metrics_file.name)
@@ -755,7 +855,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
           b'Metric(endpoint=u\'https://example.com\', method=u\'POST\', '
           b'body=\'{0}&cm2=0&ea=cmd1+action1&ec={1}&el={2}&ev=0\', '
           b'user_agent=u\'user-agent-007\')'.format(
-              GLOBAL_DIMENSIONS_URL_PARAMS, metrics._GA_COMMANDS_CATEGORY,
+              GLOBAL_DIMENSIONS_URL_PARAMS,
+              metrics._GA_COMMANDS_CATEGORY,
               VERSION))
     else:
       expected_response = (
@@ -791,8 +892,13 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
   def testCommandCollection(self):
     """Tests the collection of commands."""
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
-        ['-m', 'acl', 'set', '-a'], expected_status=1)
-    self._CheckParameterValue('Event Category', metrics._GA_COMMANDS_CATEGORY,
+        ['-m',
+         'acl',
+         'set',
+         '-a'],
+        expected_status=1)
+    self._CheckParameterValue('Event Category',
+                              metrics._GA_COMMANDS_CATEGORY,
                               metrics_list)
     self._CheckParameterValue('Event Action', 'acl+set', metrics_list)
     # Check that the options were collected.
@@ -800,7 +906,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     self._CheckParameterValue('Command-Level Options', 'a', metrics_list)
 
     metrics_list = self._RunGsUtilWithAnalyticsOutput(['ver'])
-    self._CheckParameterValue('Event Category', metrics._GA_COMMANDS_CATEGORY,
+    self._CheckParameterValue('Event Category',
+                              metrics._GA_COMMANDS_CATEGORY,
                               metrics_list)
     self._CheckParameterValue('Event Action', 'version', metrics_list)
     # Check the recording of the command alias.
@@ -820,8 +927,10 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     self.collector.ga_params[metrics._GA_LABEL_MAP['Command Name']] = 'rsync'
     # Generate a JSON API instance to test with, because the RunGsUtil method
     # may use the XML API.
-    gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            RetryableErrorsQueue(), self.default_provider)
+    gsutil_api = GcsJsonApi(BucketStorageUri,
+                            logging.getLogger(),
+                            RetryableErrorsQueue(),
+                            self.default_provider)
     # Don't wait for too many retries or for long periods between retries to
     # avoid long tests.
     gsutil_api.api_client.num_retries = 2
@@ -839,7 +948,8 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     with mock.patch.object(http_wrapper,
                            '_MakeRequestNoRetry',
                            side_effect=socket.error()):
-      _TryExceptAndPass(gsutil_api.CopyObject, src_obj_metadata,
+      _TryExceptAndPass(gsutil_api.CopyObject,
+                        src_obj_metadata,
                         dst_obj_metadata)
     if six.PY2:
       self.assertEqual(self.collector.retryable_errors['SocketError'], 1)
@@ -851,16 +961,21 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     with mock.patch.object(http_wrapper,
                            '_MakeRequestNoRetry',
                            side_effect=apitools_exceptions.HttpError(
-                               'unused', 'unused', 'unused')):
-      _TryExceptAndPass(gsutil_api.DeleteObject, bucket_uri.bucket_name,
+                               'unused',
+                               'unused',
+                               'unused')):
+      _TryExceptAndPass(gsutil_api.DeleteObject,
+                        bucket_uri.bucket_name,
                         object_uri.object_name)
     self.assertEqual(self.collector.retryable_errors['HttpError'], 1)
 
     # Check that the number of each kind of retryable error was logged.
     self.assertEqual(
-        self.collector.perf_sum_params.num_retryable_network_errors, 1)
+        self.collector.perf_sum_params.num_retryable_network_errors,
+        1)
     self.assertEqual(
-        self.collector.perf_sum_params.num_retryable_service_errors, 1)
+        self.collector.perf_sum_params.num_retryable_service_errors,
+        1)
 
   def testRetryableErrorMediaCollection(self):
     """Tests that retryable errors are collected on JSON media operations."""
@@ -877,53 +992,75 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     # Test that the retry function for data transfers catches and logs an error.
     test_callback_file = self.CreateTempFile(contents=pickle.dumps(
-        _ResumableUploadRetryHandler(5, apitools_exceptions.BadStatusCodeError,
-                                     ('unused', 'unused', 'unused'))))
+        _ResumableUploadRetryHandler(5,
+                                     apitools_exceptions.BadStatusCodeError,
+                                     ('unused',
+                                      'unused',
+                                      'unused'))))
     with SetBotoConfigForTest(boto_config_for_test):
       metrics_list = self._RunGsUtilWithAnalyticsOutput([
-          'cp', '--testcallbackfile', test_callback_file, fpath,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ])
       self._CheckParameterValue('Event Category',
-                                metrics._GA_ERRORRETRY_CATEGORY, metrics_list)
-      self._CheckParameterValue('Event Action', 'BadStatusCodeError',
+                                metrics._GA_ERRORRETRY_CATEGORY,
+                                metrics_list)
+      self._CheckParameterValue('Event Action',
+                                'BadStatusCodeError',
                                 metrics_list)
       self._CheckParameterValue('Retryable Errors', '1', metrics_list)
-      self._CheckParameterValue('Num Retryable Service Errors', '1',
+      self._CheckParameterValue('Num Retryable Service Errors',
+                                '1',
                                 metrics_list)
 
     # Test that the ResumableUploadStartOverException in copy_helper is caught.
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(_JSONForceHTTPErrorCopyCallbackHandler(5, 404)))
+        contents=pickle.dumps(_JSONForceHTTPErrorCopyCallbackHandler(5,
+                                                                     404)))
     with SetBotoConfigForTest(boto_config_for_test):
       metrics_list = self._RunGsUtilWithAnalyticsOutput([
-          'cp', '--testcallbackfile', test_callback_file, fpath,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ])
       self._CheckParameterValue('Event Category',
-                                metrics._GA_ERRORRETRY_CATEGORY, metrics_list)
+                                metrics._GA_ERRORRETRY_CATEGORY,
+                                metrics_list)
       self._CheckParameterValue('Event Action',
                                 'ResumableUploadStartOverException',
                                 metrics_list)
       self._CheckParameterValue('Retryable Errors', '1', metrics_list)
-      self._CheckParameterValue('Num Retryable Service Errors', '1',
+      self._CheckParameterValue('Num Retryable Service Errors',
+                                '1',
                                 metrics_list)
 
     # Test retryable error collection in a multithread/multiprocess situation.
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(_JSONForceHTTPErrorCopyCallbackHandler(5, 404)))
+        contents=pickle.dumps(_JSONForceHTTPErrorCopyCallbackHandler(5,
+                                                                     404)))
     with SetBotoConfigForTest(boto_config_for_test):
       metrics_list = self._RunGsUtilWithAnalyticsOutput([
-          '-m', 'cp', '--testcallbackfile', test_callback_file, fpath,
+          '-m',
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ])
       self._CheckParameterValue('Event Category',
-                                metrics._GA_ERRORRETRY_CATEGORY, metrics_list)
+                                metrics._GA_ERRORRETRY_CATEGORY,
+                                metrics_list)
       self._CheckParameterValue('Event Action',
                                 'ResumableUploadStartOverException',
                                 metrics_list)
       self._CheckParameterValue('Retryable Errors', '1', metrics_list)
-      self._CheckParameterValue('Num Retryable Service Errors', '1',
+      self._CheckParameterValue('Num Retryable Service Errors',
+                                '1',
                                 metrics_list)
 
   def testFatalErrorCollection(self):
@@ -931,20 +1068,25 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     def CheckForCommandException(log_output):
       self._CheckParameterValue('Event Category',
-                                metrics._GA_ERRORFATAL_CATEGORY, log_output)
+                                metrics._GA_ERRORFATAL_CATEGORY,
+                                log_output)
       self._CheckParameterValue('Event Action', 'CommandException', log_output)
 
     metrics_list = self._RunGsUtilWithAnalyticsOutput(['invalid-command'],
                                                       expected_status=1)
     CheckForCommandException(metrics_list)
 
-    metrics_list = self._RunGsUtilWithAnalyticsOutput(['mb', '-invalid-option'],
+    metrics_list = self._RunGsUtilWithAnalyticsOutput(['mb',
+                                                       '-invalid-option'],
                                                       expected_status=1)
     CheckForCommandException(metrics_list)
 
     bucket_uri = self.CreateBucket()
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
-        ['cp', suri(bucket_uri), suri(bucket_uri)], expected_status=1)
+        ['cp',
+         suri(bucket_uri),
+         suri(bucket_uri)],
+        expected_status=1)
     CheckForCommandException(metrics_list)
 
   def _GetAndCheckAllNumberMetrics(self, metrics_to_search, multithread=True):
@@ -964,9 +1106,10 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
           metrics._GA_LABEL_MAP[param_name] + r'=(\d+\.?\d*)&',
           metrics_to_search)
       if not extracted_match:
-        self.fail(
-            'Could not find %s (%s) in metrics string %s' %
-            (metrics._GA_LABEL_MAP[param_name], param_name, metrics_to_search))
+        self.fail('Could not find %s (%s) in metrics string %s' %
+                  (metrics._GA_LABEL_MAP[param_name],
+                   param_name,
+                   metrics_to_search))
       return float(extracted_match.group(1))
 
     # Thread idle time will only be recorded in a multithread situation.
@@ -1003,23 +1146,33 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     # Run an rsync file-to-file command with fan parallelism, without slice
     # parallelism.
     process_count = 1 if IS_WINDOWS else 6
-    with SetBotoConfigForTest([('GSUtil', 'parallel_process_count',
+    with SetBotoConfigForTest([('GSUtil',
+                                'parallel_process_count',
                                 str(process_count)),
-                               ('GSUtil', 'parallel_thread_count', '7')]):
+                               ('GSUtil',
+                                'parallel_thread_count',
+                                '7')]):
       metrics_list = self._RunGsUtilWithAnalyticsOutput(
-          ['-m', 'rsync', tmpdir1, tmpdir2])
-      self._CheckParameterValue('Event Category', metrics._GA_PERFSUM_CATEGORY,
+          ['-m',
+           'rsync',
+           tmpdir1,
+           tmpdir2])
+      self._CheckParameterValue('Event Category',
+                                metrics._GA_PERFSUM_CATEGORY,
                                 metrics_list)
       self._CheckParameterValue('Event Action', 'FileToFile', metrics_list)
       self._CheckParameterValue('Parallelism Strategy', 'fan', metrics_list)
       self._CheckParameterValue('Source URL Type', 'file', metrics_list)
-      self._CheckParameterValue('Num Processes', str(process_count),
+      self._CheckParameterValue('Num Processes',
+                                str(process_count),
                                 metrics_list)
       self._CheckParameterValue('Num Threads', '7', metrics_list)
       self._CheckParameterValue('Provider Types', 'file', metrics_list)
-      self._CheckParameterValue('Size of Files/Objects Transferred', file_size,
+      self._CheckParameterValue('Size of Files/Objects Transferred',
+                                file_size,
                                 metrics_list)
-      self._CheckParameterValue('Number of Files/Objects Transferred', 1,
+      self._CheckParameterValue('Number of Files/Objects Transferred',
+                                1,
                                 metrics_list)
 
       (_, _, io_time) = self._GetAndCheckAllNumberMetrics(metrics_list)
@@ -1039,25 +1192,36 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     process_count = 1 if IS_WINDOWS else 2
     # Run a parallel composite upload without fan parallelism.
-    with SetBotoConfigForTest([
-        ('GSUtil', 'parallel_process_count', str(process_count)),
-        ('GSUtil', 'parallel_thread_count', '3'),
-        ('GSUtil', 'parallel_composite_upload_threshold', '1')
-    ]):
+    with SetBotoConfigForTest([('GSUtil',
+                                'parallel_process_count',
+                                str(process_count)),
+                               ('GSUtil',
+                                'parallel_thread_count',
+                                '3'),
+                               ('GSUtil',
+                                'parallel_composite_upload_threshold',
+                                '1')]):
       metrics_list = self._RunGsUtilWithAnalyticsOutput(
-          ['rsync', tmpdir, suri(bucket_uri)])
-      self._CheckParameterValue('Event Category', metrics._GA_PERFSUM_CATEGORY,
+          ['rsync',
+           tmpdir,
+           suri(bucket_uri)])
+      self._CheckParameterValue('Event Category',
+                                metrics._GA_PERFSUM_CATEGORY,
                                 metrics_list)
       self._CheckParameterValue('Event Action', 'FileToCloud', metrics_list)
       self._CheckParameterValue('Parallelism Strategy', 'slice', metrics_list)
-      self._CheckParameterValue('Num Processes', str(process_count),
+      self._CheckParameterValue('Num Processes',
+                                str(process_count),
                                 metrics_list)
       self._CheckParameterValue('Num Threads', '3', metrics_list)
-      self._CheckParameterValue('Provider Types', 'file%2C' + bucket_uri.scheme,
+      self._CheckParameterValue('Provider Types',
+                                'file%2C' + bucket_uri.scheme,
                                 metrics_list)
       self._CheckParameterValue('Size of Files/Objects Transferred',
-                                2 * file_size, metrics_list)
-      self._CheckParameterValue('Number of Files/Objects Transferred', 2,
+                                2 * file_size,
+                                metrics_list)
+      self._CheckParameterValue('Number of Files/Objects Transferred',
+                                2,
                                 metrics_list)
       (_, _, io_time) = self._GetAndCheckAllNumberMetrics(metrics_list)
       if IS_LINUX:  # io_time will be None on other platforms.
@@ -1076,26 +1240,40 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile()
     # Run a sliced object download with fan parallelism.
     process_count = 1 if IS_WINDOWS else 4
-    with SetBotoConfigForTest([
-        ('GSUtil', 'parallel_process_count', str(process_count)),
-        ('GSUtil', 'parallel_thread_count', '5'),
-        ('GSUtil', 'sliced_object_download_threshold', '1'),
-        ('GSUtil', 'test_assume_fast_crcmod', 'True')
-    ]):
+    with SetBotoConfigForTest([('GSUtil',
+                                'parallel_process_count',
+                                str(process_count)),
+                               ('GSUtil',
+                                'parallel_thread_count',
+                                '5'),
+                               ('GSUtil',
+                                'sliced_object_download_threshold',
+                                '1'),
+                               ('GSUtil',
+                                'test_assume_fast_crcmod',
+                                'True')]):
       metrics_list = self._RunGsUtilWithAnalyticsOutput(
-          ['-m', 'cp', suri(object_uri), fpath])
-      self._CheckParameterValue('Event Category', metrics._GA_PERFSUM_CATEGORY,
+          ['-m',
+           'cp',
+           suri(object_uri),
+           fpath])
+      self._CheckParameterValue('Event Category',
+                                metrics._GA_PERFSUM_CATEGORY,
                                 metrics_list)
       self._CheckParameterValue('Event Action', 'CloudToFile', metrics_list)
       self._CheckParameterValue('Parallelism Strategy', 'both', metrics_list)
-      self._CheckParameterValue('Num Processes', str(process_count),
+      self._CheckParameterValue('Num Processes',
+                                str(process_count),
                                 metrics_list)
       self._CheckParameterValue('Num Threads', '5', metrics_list)
-      self._CheckParameterValue('Provider Types', 'file%2C' + bucket_uri.scheme,
+      self._CheckParameterValue('Provider Types',
+                                'file%2C' + bucket_uri.scheme,
                                 metrics_list)
-      self._CheckParameterValue('Number of Files/Objects Transferred', '1',
+      self._CheckParameterValue('Number of Files/Objects Transferred',
+                                '1',
                                 metrics_list)
-      self._CheckParameterValue('Size of Files/Objects Transferred', file_size,
+      self._CheckParameterValue('Size of Files/Objects Transferred',
+                                file_size,
                                 metrics_list)
       (_, _, io_time) = self._GetAndCheckAllNumberMetrics(metrics_list)
       if IS_LINUX:  # io_time will be None on other platforms.
@@ -1113,27 +1291,36 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
 
     # Run a daisy-chain cloud-to-cloud copy without parallelism.
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
-        ['cp', '-D', suri(key_uri),
+        ['cp',
+         '-D',
+         suri(key_uri),
          suri(bucket2_uri)])
 
-    (slowest_throughput, fastest_throughput,
-     _) = self._GetAndCheckAllNumberMetrics(metrics_list, multithread=False)
+    (slowest_throughput,
+     fastest_throughput,
+     _) = self._GetAndCheckAllNumberMetrics(metrics_list,
+                                            multithread=False)
     # Since there's a single thread, this must be the case.
     self.assertEqual(slowest_throughput, fastest_throughput)
 
-    self._CheckParameterValue('Event Category', metrics._GA_PERFSUM_CATEGORY,
+    self._CheckParameterValue('Event Category',
+                              metrics._GA_PERFSUM_CATEGORY,
                               metrics_list)
-    self._CheckParameterValue('Event Action', 'CloudToCloud%2CDaisyChain',
+    self._CheckParameterValue('Event Action',
+                              'CloudToCloud%2CDaisyChain',
                               metrics_list)
     self._CheckParameterValue('Parallelism Strategy', 'none', metrics_list)
     self._CheckParameterValue('Source URL Type', 'cloud', metrics_list)
     self._CheckParameterValue('Num Processes', '1', metrics_list)
     self._CheckParameterValue('Num Threads', '1', metrics_list)
-    self._CheckParameterValue('Provider Types', bucket1_uri.scheme,
+    self._CheckParameterValue('Provider Types',
+                              bucket1_uri.scheme,
                               metrics_list)
-    self._CheckParameterValue('Number of Files/Objects Transferred', '1',
+    self._CheckParameterValue('Number of Files/Objects Transferred',
+                              '1',
                               metrics_list)
-    self._CheckParameterValue('Size of Files/Objects Transferred', file_size,
+    self._CheckParameterValue('Size of Files/Objects Transferred',
+                              file_size,
                               metrics_list)
 
   @unittest.skipUnless(HAS_S3_CREDS, 'Test requires both S3 and GS credentials')
@@ -1145,13 +1332,19 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
     gs_key = self.CreateObject(bucket_uri=gs_bucket, contents=b'bar')
 
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
-        ['rsync', suri(s3_bucket), suri(gs_bucket)])
-    self._CheckParameterValue('Event Action', 'CloudToCloud%2CDaisyChain',
+        ['rsync',
+         suri(s3_bucket),
+         suri(gs_bucket)])
+    self._CheckParameterValue('Event Action',
+                              'CloudToCloud%2CDaisyChain',
                               metrics_list)
     self._CheckParameterValue('Provider Types', 'gs%2Cs3', metrics_list)
 
     metrics_list = self._RunGsUtilWithAnalyticsOutput(
-        ['cp', suri(gs_key), suri(s3_bucket)])
-    self._CheckParameterValue('Event Action', 'CloudToCloud%2CDaisyChain',
+        ['cp',
+         suri(gs_key),
+         suri(s3_bucket)])
+    self._CheckParameterValue('Event Action',
+                              'CloudToCloud%2CDaisyChain',
                               metrics_list)
     self._CheckParameterValue('Provider Types', 'gs%2Cs3', metrics_list)

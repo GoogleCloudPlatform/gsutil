@@ -86,7 +86,8 @@ class HelpCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'help',
-      command_name_aliases=['?', 'man'],
+      command_name_aliases=['?',
+                            'man'],
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=2,
@@ -140,18 +141,22 @@ class HelpCommand(Command):
             if not subcommand_map:
               output.append(
                   ('The "%s" command has no subcommands. You can ask for the '
-                   'full help by running:\n\n\tgsutil help %s\n') % (arg, arg))
+                   'full help by running:\n\n\tgsutil help %s\n') % (arg,
+                                                                     arg))
             else:
               subcommand_examples = []
               for subcommand in subcommand_map:
-                subcommand_examples.append('\tgsutil help %s %s' %
-                                           (arg, subcommand))
+                subcommand_examples.append('\tgsutil help %s %s' % (arg,
+                                                                    subcommand))
               output.append(
                   ('Subcommand "%s" does not exist for command "%s".\n'
                    'You can either ask for the full help about the command by '
                    'running:\n\n\tgsutil help %s\n\n'
                    'Or you can ask for help about one of the subcommands:\n\n%s'
-                  ) % (self.args[1], arg, arg, '\n'.join(subcommand_examples)))
+                  ) % (self.args[1],
+                       arg,
+                       arg,
+                       '\n'.join(subcommand_examples)))
         if not invalid_subcommand:
           if not help_name:  # No subcommand or invalid subcommand.
             help_name = help_prov.help_spec.help_name
@@ -159,14 +164,16 @@ class HelpCommand(Command):
 
           output.append('<B>NAME</B>\n')
           output.append('  %s - %s\n' %
-                        (help_name, help_prov.help_spec.help_one_line_summary))
+                        (help_name,
+                         help_prov.help_spec.help_one_line_summary))
           output.append('\n\n')
           output.append(help_text.strip('\n'))
           new_alias = OLD_ALIAS_MAP.get(arg, [None])[0]
           if new_alias:
             deprecation_warning = """
   The "%s" alias is deprecated, and will eventually be removed completely.
-  Please use the "%s" command instead.""" % (arg, new_alias)
+  Please use the "%s" command instead.""" % (arg,
+                                             new_alias)
 
             output.append('\n\n\n<B>DEPRECATION WARNING</B>\n')
             output.append(deprecation_warning)
@@ -201,7 +208,8 @@ class HelpCommand(Command):
         Popen(pager, stdin=PIPE).communicate(input=help_str)
       except OSError as e:
         raise CommandException('Unable to open pager (%s): %s' %
-                               (' '.join(pager), e))
+                               (' '.join(pager),
+                                e))
     else:
       text_util.print_to_fd(help_str)
 

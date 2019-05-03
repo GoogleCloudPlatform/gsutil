@@ -90,7 +90,8 @@ def ReadParallelUploadTrackerFile(tracker_file_name, logger):
     if e.errno != errno.ENOENT:
       logger.warn(
           'Couldn\'t read upload tracker file (%s): %s. Restarting '
-          'parallel composite upload from scratch.', tracker_file_name,
+          'parallel composite upload from scratch.',
+          tracker_file_name,
           e.strerror)
   except (KeyError, ValueError) as e:
     # Legacy format did not support user-supplied encryption.
@@ -134,10 +135,15 @@ def _ParseLegacyTrackerData(tracker_data):
   return (prefix, existing_components)
 
 
-def ValidateParallelCompositeTrackerData(tracker_file_name, existing_enc_sha256,
-                                         existing_prefix, existing_components,
-                                         current_enc_key_sha256, bucket_url,
-                                         command_obj, logger, delete_func,
+def ValidateParallelCompositeTrackerData(tracker_file_name,
+                                         existing_enc_sha256,
+                                         existing_prefix,
+                                         existing_components,
+                                         current_enc_key_sha256,
+                                         bucket_url,
+                                         command_obj,
+                                         logger,
+                                         delete_func,
                                          delete_exc_handler):
   """Validates that tracker data matches the current encryption key.
 
@@ -176,7 +182,8 @@ def ValidateParallelCompositeTrackerData(tracker_file_name, existing_enc_sha256,
           'Upload tracker file (%s) does not match current encryption '
           'key. Deleting old components and restarting upload from '
           'scratch with a new tracker file that uses the current '
-          'encryption key.', tracker_file_name)
+          'encryption key.',
+          tracker_file_name)
       components_to_delete = []
       for component in existing_components:
         url = bucket_url.Clone()
@@ -219,7 +226,8 @@ def GenerateComponentObjectPrefix(encryption_key_sha256=None):
     String prefix for use in the composite upload.
   """
   return str(
-      (random.randint(1, (10**10) - 1) + hash(encryption_key_sha256)) % 10**10)
+      (random.randint(1,
+                      (10**10) - 1) + hash(encryption_key_sha256)) % 10**10)
 
 
 def WriteComponentToParallelUploadTrackerFile(tracker_file_name,
@@ -239,14 +247,17 @@ def WriteComponentToParallelUploadTrackerFile(tracker_file_name,
     encryption_key_sha256: Encryption key SHA256 for use in this upload, if any.
   """
   with tracker_file_lock:
-    (existing_enc_key_sha256, prefix,
+    (existing_enc_key_sha256,
+     prefix,
      existing_components) = (ReadParallelUploadTrackerFile(
-         tracker_file_name, logger))
+         tracker_file_name,
+         logger))
     if existing_enc_key_sha256 != encryption_key_sha256:
       raise CommandException(
           'gsutil client error: encryption key SHA256 (%s) in tracker file '
           'does not match encryption key SHA256 (%s) of component %s' %
-          (existing_enc_key_sha256, encryption_key_sha256,
+          (existing_enc_key_sha256,
+           encryption_key_sha256,
            component.object_name))
     newly_completed_components = [component]
     completed_components = existing_components + newly_completed_components

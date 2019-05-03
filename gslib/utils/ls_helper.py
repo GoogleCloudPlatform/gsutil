@@ -38,11 +38,27 @@ from gslib.wildcard_iterator import StorageUrlFromString
 
 ENCRYPTED_FIELDS = ['md5Hash', 'crc32c']
 UNENCRYPTED_FULL_LISTING_FIELDS = [
-    'acl', 'cacheControl', 'componentCount', 'contentDisposition',
-    'contentEncoding', 'contentLanguage', 'contentType', 'kmsKeyName',
-    'customerEncryption', 'etag', 'eventBasedHold', 'generation', 'metadata',
-    'metageneration', 'retentionExpirationTime', 'size', 'storageClass',
-    'temporaryHold', 'timeCreated', 'timeDeleted', 'timeStorageClassUpdated',
+    'acl',
+    'cacheControl',
+    'componentCount',
+    'contentDisposition',
+    'contentEncoding',
+    'contentLanguage',
+    'contentType',
+    'kmsKeyName',
+    'customerEncryption',
+    'etag',
+    'eventBasedHold',
+    'generation',
+    'metadata',
+    'metageneration',
+    'retentionExpirationTime',
+    'size',
+    'storageClass',
+    'temporaryHold',
+    'timeCreated',
+    'timeDeleted',
+    'timeStorageClassUpdated',
     'updated'
 ]
 
@@ -178,18 +194,22 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     text_util.print_to_fd(MakeMetadataLine('Cache-Control', obj.cacheControl))
   if obj.contentDisposition:
     text_util.print_to_fd(
-        MakeMetadataLine('Content-Disposition', obj.contentDisposition))
+        MakeMetadataLine('Content-Disposition',
+                         obj.contentDisposition))
   if obj.contentEncoding:
     text_util.print_to_fd(
-        MakeMetadataLine('Content-Encoding', obj.contentEncoding))
+        MakeMetadataLine('Content-Encoding',
+                         obj.contentEncoding))
   if obj.contentLanguage:
     text_util.print_to_fd(
-        MakeMetadataLine('Content-Language', obj.contentLanguage))
+        MakeMetadataLine('Content-Language',
+                         obj.contentLanguage))
   text_util.print_to_fd(MakeMetadataLine('Content-Length', obj.size))
   text_util.print_to_fd(MakeMetadataLine('Content-Type', obj.contentType))
   if obj.componentCount:
     text_util.print_to_fd(
-        MakeMetadataLine('Component-Count', obj.componentCount))
+        MakeMetadataLine('Component-Count',
+                         obj.componentCount))
   if obj.timeDeleted:
     text_util.print_to_fd(
         MakeMetadataLine('Archived time',
@@ -236,10 +256,12 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
     # full control scope
     if obj.acl:
       text_util.print_to_fd(
-          MakeMetadataLine('ACL', AclTranslation.JsonFromMessage(obj.acl)))
+          MakeMetadataLine('ACL',
+                           AclTranslation.JsonFromMessage(obj.acl)))
     elif S3_ACL_MARKER_GUID in marker_props:
       text_util.print_to_fd(
-          MakeMetadataLine('ACL', marker_props[S3_ACL_MARKER_GUID]))
+          MakeMetadataLine('ACL',
+                           marker_props[S3_ACL_MARKER_GUID]))
     else:
       # Empty ACLs are possible with Bucket Policy Only and no longer imply
       # ACCESS DENIED anymore.
@@ -282,7 +304,8 @@ class LsHelper(object):
                all_versions=False,
                should_recurse=False,
                exclude_patterns=None,
-               fields=('name',),
+               fields=('name',
+                      ),
                list_subdir_contents=True):
     """Initializes the helper class to prepare for listing.
 
@@ -419,7 +442,8 @@ class LsHelper(object):
     num_dirs = 0
     num_bytes = 0
     for blr in self._iterator_func(
-        '%s' % url_str, all_versions=self.all_versions).IterAll(
+        '%s' % url_str,
+        all_versions=self.all_versions).IterAll(
             expand_top_level_buckets=True,
             bucket_listing_fields=self.bucket_listing_fields):
       if self._MatchesExcludedPattern(blr):

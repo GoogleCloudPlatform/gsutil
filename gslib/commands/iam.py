@@ -207,7 +207,9 @@ _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
 
 _DESCRIPTION = """
   The iam command has three sub-commands:
-""" + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION])
+""" + '\n'.join([_GET_DESCRIPTION,
+                 _SET_DESCRIPTION,
+                 _CH_DESCRIPTION])
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
@@ -237,7 +239,8 @@ def _SetIamWrapper(cls, iter_result, thread_state):
   return cls.SetIamHelper(
       expansion_result.expanded_storage_url,
       # Deserialize the JSON object passed from Command.Apply.
-      protojson.decode_message(apitools_messages.Policy, serialized_policy),
+      protojson.decode_message(apitools_messages.Policy,
+                               serialized_policy),
       thread_state=thread_state)
 
 
@@ -308,7 +311,8 @@ class IamCommand(Command):
       policy = gsutil_api.GetBucketIamPolicy(
           storage_url.bucket_name,
           provider=storage_url.scheme,
-          fields=['bindings', 'etag'],
+          fields=['bindings',
+                  'etag'],
       )
     else:
       policy = gsutil_api.GetObjectIamPolicy(
@@ -316,7 +320,8 @@ class IamCommand(Command):
           storage_url.object_name,
           generation=storage_url.generation,
           provider=storage_url.scheme,
-          fields=['bindings', 'etag'],
+          fields=['bindings',
+                  'etag'],
       )
     return policy
 
@@ -332,7 +337,8 @@ class IamCommand(Command):
     if matches.HasPlurality():
       raise CommandException(
           '%s matched more than one URL, which is not allowed by the %s '
-          'command' % (pattern, self.command_name))
+          'command' % (pattern,
+                       self.command_name))
 
     storage_url = StorageUrlFromString(list(matches)[0].url_string)
     policy = self.GetIamHelper(storage_url, thread_state=thread_state)
@@ -541,7 +547,8 @@ class IamCommand(Command):
       serialized_bindings_tuples_it = itertools.repeat(
           [SerializeBindingsTuple(t) for t in patch_bindings_tuples])
       self.Apply(_PatchIamWrapper,
-                 zip(serialized_bindings_tuples_it, name_expansion_iterator),
+                 zip(serialized_bindings_tuples_it,
+                     name_expansion_iterator),
                  _PatchIamExceptionHandler,
                  fail_on_error=not self.continue_on_error,
                  seek_ahead_iterator=seek_ahead_iterator)
@@ -608,7 +615,8 @@ class IamCommand(Command):
       policy = protojson.decode_message(apitools_messages.Policy, policy_json)
     except DecodeError:
       raise ArgumentException('Invalid IAM policy file "%s" or etag "%s".' %
-                              (file_url, etag))
+                              (file_url,
+                               etag))
 
     self.everything_set_okay = True
 
@@ -654,7 +662,8 @@ class IamCommand(Command):
 
       policy_it = itertools.repeat(protojson.encode_message(policy))
       self.Apply(_SetIamWrapper,
-                 zip(policy_it, name_expansion_iterator),
+                 zip(policy_it,
+                     name_expansion_iterator),
                  _SetIamExceptionHandler,
                  fail_on_error=not self.continue_on_error,
                  seek_ahead_iterator=seek_ahead_iterator)
@@ -684,7 +693,7 @@ class IamCommand(Command):
       self._PatchIam()
     else:
       raise CommandException('Invalid subcommand "%s" for the %s command.\n'
-                             'See "gsutil help iam".' %
-                             (action_subcommand, self.command_name))
+                             'See "gsutil help iam".' % (action_subcommand,
+                                                         self.command_name))
 
     return 0

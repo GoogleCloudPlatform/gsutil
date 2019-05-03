@@ -62,7 +62,9 @@ class CommandOptions(HelpProvider):
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
       help_name='retries',
-      help_name_aliases=['retry', 'backoff', 'reliability'],
+      help_name_aliases=['retry',
+                         'backoff',
+                         'reliability'],
       help_type='additional_help',
       help_one_line_summary='Retry Handling Strategy',
       help_text=_DETAILED_HELP_TEXT,

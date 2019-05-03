@@ -212,7 +212,8 @@ class MetricsCollector(object):
       GetAndValidateConfigValue(
           section=section,
           category=bool_category,
-          validation_fn=lambda val: str(val).lower() in ('true', 'false'))
+          validation_fn=lambda val: str(val).lower() in ('true',
+                                                         'false'))
 
     # Define a threshold for some config values which should be reasonably low.
     small_int_threshold = 2000
@@ -261,8 +262,10 @@ class MetricsCollector(object):
     GetAndValidateConfigValue(
         section='GSUtil',
         category='check_hashes',
-        validation_fn=lambda val: val in (
-            'if_fast_else_fail', 'if_fast_else_skip', 'always', 'never'))
+        validation_fn=lambda val: val in ('if_fast_else_fail',
+                                          'if_fast_else_skip',
+                                          'always',
+                                          'never'))
     # pylint: enable=g-long-lambda
     GetAndValidateConfigValue(
         section='GSUtil',
@@ -274,15 +277,17 @@ class MetricsCollector(object):
         validation_fn=lambda val: val[0].lower() == 'v' and val[1:].isdigit())
     GetAndValidateConfigValue(section='GSUtil',
                               category='prefer_api',
-                              validation_fn=lambda val: val in ('json', 'xml'))
-    GetAndValidateConfigValue(
-        section='OAuth2',
-        category='token_cache',
-        validation_fn=lambda val: val in ('file_system', 'in_memory'))
+                              validation_fn=lambda val: val in ('json',
+                                                                'xml'))
+    GetAndValidateConfigValue(section='OAuth2',
+                              category='token_cache',
+                              validation_fn=lambda val: val in ('file_system',
+                                                                'in_memory'))
 
     return ','.join(
         sorted([
-            '{0}:{1}'.format(config[0], config[1]) for config in config_values
+            '{0}:{1}'.format(config[0],
+                             config[1]) for config in config_values
         ]))
 
   @staticmethod
@@ -421,14 +426,22 @@ class MetricsCollector(object):
       **custom_params: A dictionary of key, value pairs containing custom
           metrics and dimensions to send with the GA Event.
     """
-    params = [('ec', category), ('ea', action), ('el', label), ('ev', value),
-              (_GA_LABEL_MAP['Timestamp'], _GetTimeInMillis())]
-    params.extend([
-        (k, v) for k, v in six.iteritems(custom_params) if v is not None
-    ])
-    params.extend([
-        (k, v) for k, v in six.iteritems(self.ga_params) if v is not None
-    ])
+    params = [('ec',
+               category),
+              ('ea',
+               action),
+              ('el',
+               label),
+              ('ev',
+               value),
+              (_GA_LABEL_MAP['Timestamp'],
+               _GetTimeInMillis())]
+    params.extend([(k,
+                    v) for k,
+                   v in six.iteritems(custom_params) if v is not None])
+    params.extend([(k,
+                    v) for k,
+                   v in six.iteritems(self.ga_params) if v is not None])
 
     # Log how long after the start of the program this event happened.
     if execution_time is None:
@@ -560,16 +573,24 @@ class MetricsCollector(object):
     for param_name, param in six.iteritems(params):
       # These parameters start in 0 or False state and can be updated to a
       # non-zero value or True.
-      if param_name in ('uses_fan', 'uses_slice', 'avg_throughput',
-                        'is_daisy_chain', 'has_file_dst', 'has_cloud_dst',
-                        'has_file_src', 'has_cloud_src', 'total_elapsed_time',
-                        'total_bytes_transferred', 'num_objects_transferred'):
+      if param_name in ('uses_fan',
+                        'uses_slice',
+                        'avg_throughput',
+                        'is_daisy_chain',
+                        'has_file_dst',
+                        'has_cloud_dst',
+                        'has_file_src',
+                        'has_cloud_src',
+                        'total_elapsed_time',
+                        'total_bytes_transferred',
+                        'num_objects_transferred'):
         cur_value = getattr(self.perf_sum_params, param_name)
         if not cur_value:
           setattr(self.perf_sum_params, param_name, param)
 
       # These parameters need to be incremented.
-      if param_name in ('thread_idle_time', 'thread_execution_time',
+      if param_name in ('thread_idle_time',
+                        'thread_execution_time',
                         'num_retryable_service_errors',
                         'num_retryable_network_errors'):
         cur_value = getattr(self.perf_sum_params, param_name)
@@ -597,7 +618,8 @@ class MetricsCollector(object):
       file_message: The FileMessage to process.
     """
     thread_info = (self.perf_sum_params.thread_throughputs[(
-        file_message.process_id, file_message.thread_id)])
+        file_message.process_id,
+        file_message.thread_id)])
     if file_message.finished:
       # If this operation doesn't use parallelism, we manually update the
       # number of objects transferred rather than relying on
@@ -718,9 +740,8 @@ class MetricsCollector(object):
     }
     action = ','.join(
         sorted([
-            transfer_type
-            for transfer_type, cond in six.iteritems(transfer_types)
-            if cond
+            transfer_type for transfer_type,
+            cond in six.iteritems(transfer_types) if cond
         ]))
 
     # Use the time spent on Apply rather than the total command execution time
@@ -779,7 +800,9 @@ class MetricsCollector(object):
     reporting_code = six.ensure_str(
         'from gslib.metrics_reporter import ReportMetrics; '
         'ReportMetrics(r"{0}", {1}, log_file_path={2})'.format(
-            temp_metrics_file_name, log_level, log_file_path))
+            temp_metrics_file_name,
+            log_level,
+            log_file_path))
     execution_args = [sys.executable, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
@@ -831,7 +854,8 @@ def CaptureAndLogException(func):
     except Exception as e:  # pylint:disable=broad-except
       logger = logging.getLogger('metrics')
       logger.debug('Exception captured in %s during metrics collection: %s',
-                   func.__name__, e)
+                   func.__name__,
+                   e)
 
   return Wrapper
 

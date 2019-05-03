@@ -55,15 +55,19 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(cmd, return_stderr=True)
     # Rewrite API may output an additional 'Copying' progress notification.
     self.assertGreaterEqual(
-        stderr.count('Copying'), 2,
+        stderr.count('Copying'),
+        2,
         'stderr did not contain 2 "Copying" lines:\n%s' % stderr)
     self.assertLessEqual(
-        stderr.count('Copying'), 4,
+        stderr.count('Copying'),
+        4,
         'stderr did not contain <= 4 "Copying" lines:\n%s' % stderr)
     self.assertEqual(
-        stderr.count('Copying') % 2, 0,
+        stderr.count('Copying') % 2,
+        0,
         'stderr did not contain even number of "Copying" lines:\n%s' % stderr)
-    self.assertEqual(stderr.count('Removing'), 2,
+    self.assertEqual(stderr.count('Removing'),
+                     2,
                      'stderr did not contain 2 "Removing" lines:\n%s' % stderr)
 
     self.AssertNObjectsInBucket(bucket1_uri, 0)
@@ -89,10 +93,12 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(cmd, return_stderr=True)
     # Rewrite API may output an additional 'Copying' progress notification.
     self.assertGreaterEqual(
-        stderr.count('Copying'), 1,
+        stderr.count('Copying'),
+        1,
         'stderr did not contain >= 1 "Copying" lines:\n%s' % stderr)
     self.assertLessEqual(
-        stderr.count('Copying'), 2,
+        stderr.count('Copying'),
+        2,
         'stderr did not contain <= 2 "Copying" lines:\n%s' % stderr)
     self.assertEqual(stderr.count('Removing'), 1)
 
@@ -126,8 +132,11 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents=b'data1')
     fpath2 = self.CreateTempFile(tmpdir=tmpdir, contents=b'data2')
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['mv', '-I', suri(bucket_uri)],
-                   stdin='\n'.join((fpath1, fpath2)))
+    self.RunGsUtil(['mv',
+                    '-I',
+                    suri(bucket_uri)],
+                   stdin='\n'.join((fpath1,
+                                    fpath2)))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -144,8 +153,11 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     fpath1 = self.CreateTempFile(contents=b'data1')
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'data2')
-    stderr = self.RunGsUtil(
-        ['mv', '-n', fpath1, suri(object_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['mv',
+                             '-n',
+                             fpath1,
+                             suri(object_uri)],
+                            return_stderr=True)
     # Copy should be skipped and source file should not be removed.
     self.assertIn('Skipping existing item: %s' % suri(object_uri), stderr)
     self.assertNotIn('Removing %s' % suri(fpath1), stderr)
@@ -195,10 +207,13 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
     bucket_uri = self.CreateBucket(storage_class='NEARLINE')
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'obj')
-    stderr = self.RunGsUtil(
-        ['mv', suri(object_uri),
-         suri(bucket_uri, 'foo')], return_stderr=True)
+    stderr = self.RunGsUtil(['mv',
+                             suri(object_uri),
+                             suri(bucket_uri,
+                                  'foo')],
+                            return_stderr=True)
     self.assertIn(
         'Warning: moving nearline object %s may incur an early deletion '
         'charge, because the original object is less than 30 days old '
-        'according to the local system time.' % suri(object_uri), stderr)
+        'according to the local system time.' % suri(object_uri),
+        stderr)

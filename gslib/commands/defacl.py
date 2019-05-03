@@ -158,7 +158,9 @@ class DefAclCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'defacl',
-      command_name_aliases=['setdefacl', 'getdefacl', 'chdefacl'],
+      command_name_aliases=['setdefacl',
+                            'getdefacl',
+                            'chdefacl'],
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
@@ -166,7 +168,8 @@ class DefAclCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML,
+                      ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
@@ -179,7 +182,10 @@ class DefAclCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='defacl',
-      help_name_aliases=['default acl', 'setdefacl', 'getdefacl', 'chdefacl'],
+      help_name_aliases=['default acl',
+                         'setdefacl',
+                         'getdefacl',
+                         'chdefacl'],
       help_type='command_help',
       help_one_line_summary='Get, set, or change default ACL on buckets',
       help_text=_DETAILED_HELP_TEXT,
@@ -224,13 +230,16 @@ class DefAclCommand(Command):
       for o, a in self.sub_opts:
         if o == '-g':
           self.changes.append(
-              acl_helper.AclChange(a, scope_type=acl_helper.ChangeType.GROUP))
+              acl_helper.AclChange(a,
+                                   scope_type=acl_helper.ChangeType.GROUP))
         if o == '-u':
           self.changes.append(
-              acl_helper.AclChange(a, scope_type=acl_helper.ChangeType.USER))
+              acl_helper.AclChange(a,
+                                   scope_type=acl_helper.ChangeType.USER))
         if o == '-p':
           self.changes.append(
-              acl_helper.AclChange(a, scope_type=acl_helper.ChangeType.PROJECT))
+              acl_helper.AclChange(a,
+                                   scope_type=acl_helper.ChangeType.PROJECT))
         if o == '-d':
           self.changes.append(acl_helper.AclDel(a))
 
@@ -261,7 +270,8 @@ class DefAclCommand(Command):
     bucket = self.gsutil_api.GetBucket(
         url.bucket_name,
         provider=url.scheme,
-        fields=['defaultObjectAcl', 'metageneration'])
+        fields=['defaultObjectAcl',
+                'metageneration'])
 
     # Default object ACLs can be blank if the ACL was set to private, or
     # if the user doesn't have permission. We warn about this with defacl get,
@@ -298,8 +308,10 @@ class DefAclCommand(Command):
   def _ApplyAclChangesAndReturnChangeCount(self, storage_url, defacl_message):
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(storage_url, defacl_message,
-                                           'defacl', self.logger)
+      modification_count += change.Execute(storage_url,
+                                           defacl_message,
+                                           'defacl',
+                                           self.logger)
     return modification_count
 
   def RunCommand(self):
@@ -315,9 +327,10 @@ class DefAclCommand(Command):
     elif action_subcommand in ('ch', 'change'):
       func = self._ChDefAcl
     else:
-      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
-                              'See "gsutil help defacl".') %
-                             (action_subcommand, self.command_name))
+      raise CommandException(
+          ('Invalid subcommand "%s" for the %s command.\n'
+           'See "gsutil help defacl".') % (action_subcommand,
+                                           self.command_name))
     # Commands with both suboptions and subcommands need to reparse for
     # suboptions, so we log again.
     metrics.LogCommandParams(subcommands=[action_subcommand],

@@ -937,9 +937,10 @@ class BucketNotFoundException(NotFoundException):
   """Exception raised when a bucket resource is not found (404)."""
 
   def __init__(self, reason, bucket_name, status=None, body=None):
-    super(BucketNotFoundException, self).__init__(reason,
-                                                  status=status,
-                                                  body=body)
+    super(BucketNotFoundException,
+          self).__init__(reason,
+                         status=status,
+                         body=body)
     self.bucket_name = bucket_name
 
 

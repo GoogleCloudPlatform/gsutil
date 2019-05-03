@@ -51,7 +51,12 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
   def DoTestAuthorize(self, specified_project=None):
     # Randomly pick 1 of 1000 key names.
     key_name = testcase.KmsTestingResources.MUTABLE_KEY_NAME_TEMPLATE % (
-        randint(0, 9), randint(0, 9), randint(0, 9))
+        randint(0,
+                9),
+        randint(0,
+                9),
+        randint(0,
+                9))
     # Make sure the key with that name has been created.
     key_fqn = self.kms_api.CreateCryptoKey(self.keyring_fqn, key_name)
     # They key may have already been created and used in a previous test
@@ -71,10 +76,14 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
 
     self.assertIn(
         'Authorized project %s to encrypt and decrypt with key:\n%s' %
-        (PopulateProjectId(None), key_fqn), stdout1)
+        (PopulateProjectId(None),
+         key_fqn),
+        stdout1)
     self.assertIn(
         ('Project %s was already authorized to encrypt and decrypt with '
-         'key:\n%s.' % (PopulateProjectId(None), key_fqn)), stdout2)
+         'key:\n%s.' % (PopulateProjectId(None),
+                        key_fqn)),
+        stdout2)
 
   def DoTestServiceaccount(self, specified_project=None):
     serviceaccount_cmd = ['kms', 'serviceaccount']
@@ -106,7 +115,8 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     # Make sure our key exists.
     key_fqn = self.kms_api.CreateCryptoKey(
-        self.keyring_fqn, testcase.KmsTestingResources.CONSTANT_KEY_NAME)
+        self.keyring_fqn,
+        testcase.KmsTestingResources.CONSTANT_KEY_NAME)
     encryption_get_cmd = ['kms', 'encryption', suri(bucket_uri)]
 
     # Test output for bucket with no default KMS key set.
@@ -117,7 +127,10 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
     # Test that setting a bucket's default KMS key works and shows up correctly
     # via a follow-up call to display it.
     stdout = self.RunGsUtil(
-        ['kms', 'encryption', '-k', key_fqn,
+        ['kms',
+         'encryption',
+         '-k',
+         key_fqn,
          suri(bucket_uri)],
         return_stdout=True)
     self.assertIn('Setting default KMS key for bucket %s...' % suri(bucket_uri),
@@ -125,15 +138,20 @@ class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(encryption_get_cmd, return_stdout=True)
     self.assertIn(
-        'Default encryption key for %s:\n%s' % (suri(bucket_uri), key_fqn),
+        'Default encryption key for %s:\n%s' % (suri(bucket_uri),
+                                                key_fqn),
         stdout)
 
     # Finally, remove the bucket's default KMS key and make sure a follow-up
     # call to display it shows that no default key is set.
-    stdout = self.RunGsUtil(
-        ['kms', 'encryption', '-d', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['kms',
+                             'encryption',
+                             '-d',
+                             suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(
-        'Clearing default encryption key for %s...' % suri(bucket_uri), stdout)
+        'Clearing default encryption key for %s...' % suri(bucket_uri),
+        stdout)
 
     stdout = self.RunGsUtil(encryption_get_cmd, return_stdout=True)
     self.assertIn('Bucket %s has no default encryption key' % suri(bucket_uri),
@@ -147,13 +165,25 @@ class TestKmsSubcommandsFailWhenXmlForced(testcase.GsUtilIntegrationTestCase):
 
   boto_config_hmac_auth_only = [
       # Overwrite other credential types.
-      ('Credentials', 'gs_oauth2_refresh_token', None),
-      ('Credentials', 'gs_service_client_id', None),
-      ('Credentials', 'gs_service_key_file', None),
-      ('Credentials', 'gs_service_key_file_password', None),
+      ('Credentials',
+       'gs_oauth2_refresh_token',
+       None),
+      ('Credentials',
+       'gs_service_client_id',
+       None),
+      ('Credentials',
+       'gs_service_key_file',
+       None),
+      ('Credentials',
+       'gs_service_key_file_password',
+       None),
       # Add hmac credentials.
-      ('Credentials', 'gs_access_key_id', 'dummykey'),
-      ('Credentials', 'gs_secret_access_key', 'dummysecret'),
+      ('Credentials',
+       'gs_access_key_id',
+       'dummykey'),
+      ('Credentials',
+       'gs_secret_access_key',
+       'dummysecret'),
   ]
   dummy_keyname = ('projects/my-project/locations/global/'
                    'keyRings/my-keyring/cryptoKeys/my-key')
@@ -165,20 +195,35 @@ class TestKmsSubcommandsFailWhenXmlForced(testcase.GsUtilIntegrationTestCase):
 
   def testEncryptionFailsWhenXmlForcedFromHmacInBotoConfig(self):
     self.DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(
-        ['kms', 'encryption', 'gs://dummybucket'])
+        ['kms',
+         'encryption',
+         'gs://dummybucket'])
 
   def testEncryptionDashKFailsWhenXmlForcedFromHmacInBotoConfig(self):
     self.DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(
-        ['kms', 'encryption', '-k', self.dummy_keyname, 'gs://dummybucket'])
+        ['kms',
+         'encryption',
+         '-k',
+         self.dummy_keyname,
+         'gs://dummybucket'])
 
   def testEncryptionDashDFailsWhenXmlForcedFromHmacInBotoConfig(self):
     self.DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(
-        ['kms', 'encryption', '-d', 'gs://dummybucket'])
+        ['kms',
+         'encryption',
+         '-d',
+         'gs://dummybucket'])
 
   def testServiceaccountFailsWhenXmlForcedFromHmacInBotoConfig(self):
     self.DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(
-        ['kms', 'serviceaccount', 'gs://dummybucket'])
+        ['kms',
+         'serviceaccount',
+         'gs://dummybucket'])
 
   def testAuthorizeFailsWhenXmlForcedFromHmacInBotoConfig(self):
     self.DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(
-        ['kms', 'authorize', '-k', self.dummy_keyname, 'gs://dummybucket'])
+        ['kms',
+         'authorize',
+         '-k',
+         self.dummy_keyname,
+         'gs://dummybucket'])

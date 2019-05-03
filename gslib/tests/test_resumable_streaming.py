@@ -46,9 +46,11 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
   def _GetTestFile(self):
     if not self._temp_test_file:
       self._temp_test_file_contents = pkgutil.get_data(
-          'gslib', 'tests/test_data/%s' % _TEST_FILE)
+          'gslib',
+          'tests/test_data/%s' % _TEST_FILE)
       self._temp_test_file = self.CreateTempFile(
-          file_name=_TEST_FILE, contents=self._temp_test_file_contents)
+          file_name=_TEST_FILE,
+          contents=self._temp_test_file_contents)
       self._temp_test_file_len = len(self._temp_test_file_contents)
     return self._temp_test_file
 
@@ -68,14 +70,20 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
   def testReadInChunksWithSeekToBeginning(self):
     """Reads one buffer, then seeks to 0 and reads chunks until the end."""
     tmp_file = self._GetTestFile()
-    for initial_read in (TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE,
-                         TRANSFER_BUFFER_SIZE + 1, TRANSFER_BUFFER_SIZE * 2 - 1,
-                         TRANSFER_BUFFER_SIZE * 2, TRANSFER_BUFFER_SIZE * 2 + 1,
-                         TRANSFER_BUFFER_SIZE * 3 - 1, TRANSFER_BUFFER_SIZE * 3,
+    for initial_read in (TRANSFER_BUFFER_SIZE - 1,
+                         TRANSFER_BUFFER_SIZE,
+                         TRANSFER_BUFFER_SIZE + 1,
+                         TRANSFER_BUFFER_SIZE * 2 - 1,
+                         TRANSFER_BUFFER_SIZE * 2,
+                         TRANSFER_BUFFER_SIZE * 2 + 1,
+                         TRANSFER_BUFFER_SIZE * 3 - 1,
+                         TRANSFER_BUFFER_SIZE * 3,
                          TRANSFER_BUFFER_SIZE * 3 + 1):
-      for buffer_size in (TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE,
-                          TRANSFER_BUFFER_SIZE + 1, self._temp_test_file_len -
-                          1, self._temp_test_file_len,
+      for buffer_size in (TRANSFER_BUFFER_SIZE - 1,
+                          TRANSFER_BUFFER_SIZE,
+                          TRANSFER_BUFFER_SIZE + 1,
+                          self._temp_test_file_len - 1,
+                          self._temp_test_file_len,
                           self._temp_test_file_len + 1):
         # Can't seek to 0 if the buffer is too small, so we expect an
         # exception.
@@ -91,20 +99,23 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
             hex_digest = CalculateMd5FromContents(wrapper)
             if expect_exception:
               self.fail('Did not get expected CommandException for '
-                        'initial read size %s, buffer size %s' %
-                        (initial_read, buffer_size))
+                        'initial read size %s, buffer size %s' % (initial_read,
+                                                                  buffer_size))
           except CommandException as e:
             if not expect_exception:
               self.fail('Got unexpected CommandException "%s" for '
-                        'initial read size %s, buffer size %s' %
-                        (str(e), initial_read, buffer_size))
+                        'initial read size %s, buffer size %s' % (str(e),
+                                                                  initial_read,
+                                                                  buffer_size))
         if not expect_exception:
           with open(tmp_file, 'rb') as stream:
             actual = CalculateMd5FromContents(stream)
           self.assertEqual(
-              actual, hex_digest,
+              actual,
+              hex_digest,
               'Digests not equal for initial read size %s, buffer size %s' %
-              (initial_read, buffer_size))
+              (initial_read,
+               buffer_size))
 
   def _testSeekBack(self, initial_reads, buffer_size, seek_back_amount):
     """Tests reading then seeking backwards.
@@ -129,13 +140,17 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
     for read_size in initial_reads:
       initial_position += read_size
     self.assertGreaterEqual(
-        buffer_size, seek_back_amount,
+        buffer_size,
+        seek_back_amount,
         'seek_back_amount must be less than initial position %s '
-        '(but was actually: %s)' % (buffer_size, seek_back_amount))
+        '(but was actually: %s)' % (buffer_size,
+                                    seek_back_amount))
     self.assertLess(
-        initial_position, self._temp_test_file_len,
+        initial_position,
+        self._temp_test_file_len,
         'initial_position must be less than test file size %s '
-        '(but was actually: %s)' % (self._temp_test_file_len, initial_position))
+        '(but was actually: %s)' % (self._temp_test_file_len,
+                                    initial_position))
 
     with open(tmp_file, 'rb') as stream:
       wrapper = ResumableStreamingJsonUploadWrapper(stream,
@@ -145,9 +160,11 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
       for read_size in initial_reads:
         data = wrapper.read(read_size)
         self.assertEqual(
-            self._temp_test_file_contents[position:position + read_size], data,
+            self._temp_test_file_contents[position:position + read_size],
+            data,
             'Data from position %s to %s did not match file contents.' %
-            (position, position + read_size))
+            (position,
+             position + read_size))
         position += len(data)
       wrapper.seek(initial_position - seek_back_amount)
       self.assertEqual(wrapper.tell(), initial_position - seek_back_amount)
@@ -156,45 +173,69 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
           self._temp_test_file_len - (initial_position - seek_back_amount),
           len(data),
           'Unexpected data length with initial pos %s seek_back_amount %s. '
-          'Expected: %s, actual: %s.' %
-          (initial_position, seek_back_amount, self._temp_test_file_len -
-           (initial_position - seek_back_amount), len(data)))
+          'Expected: %s, actual: %s.' % (initial_position,
+                                         seek_back_amount,
+                                         self._temp_test_file_len -
+                                         (initial_position - seek_back_amount),
+                                         len(data)))
       self.assertEqual(
-          self._temp_test_file_contents[-len(data):], data,
+          self._temp_test_file_contents[-len(data):],
+          data,
           'Data from position %s to EOF did not match file contents.' %
           position)
 
   def testReadSeekAndReadToEOF(self):
     """Tests performing reads on the wrapper, seeking, then reading to EOF."""
-    for initial_reads in ([1], [TRANSFER_BUFFER_SIZE - 1], [
-        TRANSFER_BUFFER_SIZE
-    ], [TRANSFER_BUFFER_SIZE + 1], [1, TRANSFER_BUFFER_SIZE - 1], [
-        1, TRANSFER_BUFFER_SIZE
-    ], [1, TRANSFER_BUFFER_SIZE + 1
-       ], [TRANSFER_BUFFER_SIZE - 1,
-           1], [TRANSFER_BUFFER_SIZE,
-                1], [TRANSFER_BUFFER_SIZE + 1,
-                     1], [TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE - 1
-                         ], [TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE],
-                          [TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE + 1
-                          ], [TRANSFER_BUFFER_SIZE, TRANSFER_BUFFER_SIZE - 1
-                             ], [TRANSFER_BUFFER_SIZE, TRANSFER_BUFFER_SIZE],
-                          [TRANSFER_BUFFER_SIZE, TRANSFER_BUFFER_SIZE + 1],
-                          [TRANSFER_BUFFER_SIZE + 1, TRANSFER_BUFFER_SIZE - 1
-                          ], [TRANSFER_BUFFER_SIZE + 1, TRANSFER_BUFFER_SIZE],
+    for initial_reads in ([1],
+                          [TRANSFER_BUFFER_SIZE - 1],
+                          [TRANSFER_BUFFER_SIZE],
+                          [TRANSFER_BUFFER_SIZE + 1],
+                          [1,
+                           TRANSFER_BUFFER_SIZE - 1],
+                          [1,
+                           TRANSFER_BUFFER_SIZE],
+                          [1,
+                           TRANSFER_BUFFER_SIZE + 1],
+                          [TRANSFER_BUFFER_SIZE - 1,
+                           1],
+                          [TRANSFER_BUFFER_SIZE,
+                           1],
                           [TRANSFER_BUFFER_SIZE + 1,
-                           TRANSFER_BUFFER_SIZE + 1], [
-                               TRANSFER_BUFFER_SIZE, TRANSFER_BUFFER_SIZE,
-                               TRANSFER_BUFFER_SIZE
-                           ]):
+                           1],
+                          [TRANSFER_BUFFER_SIZE - 1,
+                           TRANSFER_BUFFER_SIZE - 1],
+                          [TRANSFER_BUFFER_SIZE - 1,
+                           TRANSFER_BUFFER_SIZE],
+                          [TRANSFER_BUFFER_SIZE - 1,
+                           TRANSFER_BUFFER_SIZE + 1],
+                          [TRANSFER_BUFFER_SIZE,
+                           TRANSFER_BUFFER_SIZE - 1],
+                          [TRANSFER_BUFFER_SIZE,
+                           TRANSFER_BUFFER_SIZE],
+                          [TRANSFER_BUFFER_SIZE,
+                           TRANSFER_BUFFER_SIZE + 1],
+                          [TRANSFER_BUFFER_SIZE + 1,
+                           TRANSFER_BUFFER_SIZE - 1],
+                          [TRANSFER_BUFFER_SIZE + 1,
+                           TRANSFER_BUFFER_SIZE],
+                          [TRANSFER_BUFFER_SIZE + 1,
+                           TRANSFER_BUFFER_SIZE + 1],
+                          [
+                              TRANSFER_BUFFER_SIZE,
+                              TRANSFER_BUFFER_SIZE,
+                              TRANSFER_BUFFER_SIZE
+                          ]):
       initial_position = 0
       for read_size in initial_reads:
         initial_position += read_size
-      for buffer_size in (initial_position, initial_position + 1,
-                          initial_position * 2 - 1, initial_position * 2):
+      for buffer_size in (initial_position,
+                          initial_position + 1,
+                          initial_position * 2 - 1,
+                          initial_position * 2):
         for seek_back_amount in (min(TRANSFER_BUFFER_SIZE - 1,
                                      initial_position),
-                                 min(TRANSFER_BUFFER_SIZE, initial_position),
+                                 min(TRANSFER_BUFFER_SIZE,
+                                     initial_position),
                                  min(TRANSFER_BUFFER_SIZE + 1,
                                      initial_position),
                                  min(TRANSFER_BUFFER_SIZE * 2 - 1,
@@ -225,9 +266,11 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
       for _ in range(3):
         data = wrapper.read(read_size)
         self.assertEqual(
-            self._temp_test_file_contents[position:position + read_size], data,
+            self._temp_test_file_contents[position:position + read_size],
+            data,
             'Data from position %s to %s did not match file contents.' %
-            (position, position + read_size))
+            (position,
+             position + read_size))
         position += len(data)
 
       data = wrapper.read(read_size // 2)
@@ -237,15 +280,18 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
       wrapper.seek(position)
       data = wrapper.read()
       self.assertEqual(
-          self._temp_test_file_contents[-len(data):], data,
+          self._temp_test_file_contents[-len(data):],
+          data,
           'Data from position %s to EOF did not match file contents.' %
           position)
 
   def testSeekEnd(self):
     tmp_file = self._GetTestFile()
-    for buffer_size in (TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE,
+    for buffer_size in (TRANSFER_BUFFER_SIZE - 1,
+                        TRANSFER_BUFFER_SIZE,
                         TRANSFER_BUFFER_SIZE + 1):
-      for seek_back in (TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE,
+      for seek_back in (TRANSFER_BUFFER_SIZE - 1,
+                        TRANSFER_BUFFER_SIZE,
                         TRANSFER_BUFFER_SIZE + 1):
         expect_exception = seek_back > buffer_size
         with open(tmp_file, 'rb') as stream:
@@ -259,10 +305,11 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
             wrapper.seek(seek_back, whence=os.SEEK_END)
             if expect_exception:
               self.fail('Did not get expected CommandException for '
-                        'seek_back size %s, buffer size %s' %
-                        (seek_back, buffer_size))
+                        'seek_back size %s, buffer size %s' % (seek_back,
+                                                               buffer_size))
           except CommandException as e:
             if not expect_exception:
               self.fail('Got unexpected CommandException "%s" for '
-                        'seek_back size %s, buffer size %s' %
-                        (str(e), seek_back, buffer_size))
+                        'seek_back size %s, buffer size %s' % (str(e),
+                                                               seek_back,
+                                                               buffer_size))

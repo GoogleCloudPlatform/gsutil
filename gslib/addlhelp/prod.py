@@ -144,8 +144,13 @@ class CommandOptions(HelpProvider):
   help_spec = HelpProvider.HelpSpec(
       help_name='prod',
       help_name_aliases=[
-          'production', 'resumable', 'resumable upload', 'resumable transfer',
-          'resumable download', 'scripts', 'scripting'
+          'production',
+          'resumable',
+          'resumable upload',
+          'resumable transfer',
+          'resumable download',
+          'scripts',
+          'scripting'
       ],
       help_type='additional_help',
       help_one_line_summary='Scripting Production Transfers',

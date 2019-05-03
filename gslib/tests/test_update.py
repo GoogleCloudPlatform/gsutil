@@ -84,9 +84,18 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     # working files left in top-level directory by gsutil developers (like tags,
     # .git*, etc.)
     os.makedirs(gsutil_dst)
-    for comp in ('CHANGES.md', 'CHECKSUM', 'gslib', 'gsutil', 'gsutil.py',
-                 'LICENSE', 'MANIFEST.in', 'README.md', 'setup.py', 'test',
-                 'third_party', 'VERSION'):
+    for comp in ('CHANGES.md',
+                 'CHECKSUM',
+                 'gslib',
+                 'gsutil',
+                 'gsutil.py',
+                 'LICENSE',
+                 'MANIFEST.in',
+                 'README.md',
+                 'setup.py',
+                 'test',
+                 'third_party',
+                 'VERSION'):
       cp_src_path = os.path.join(GSUTIL_DIR, comp)
       cp_dst_path = os.path.join(gsutil_dst, comp)
       func = shutil.copytree if os.path.isdir(cp_src_path) else shutil.copyfile
@@ -118,7 +127,9 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     prefix = [sys.executable] if sys.executable else []
 
     # Run with an invalid gs:// URI.
-    p = subprocess.Popen(prefix + ['gsutil', 'update', 'gs://pub'],
+    p = subprocess.Popen(prefix + ['gsutil',
+                                   'update',
+                                   'gs://pub'],
                          cwd=gsutil_dst,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
@@ -130,7 +141,9 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
 
     # Run with non-existent gs:// URI.
     p = subprocess.Popen(prefix +
-                         ['gsutil', 'update', 'gs://pub/Jdjh38)(;.tar.gz'],
+                         ['gsutil',
+                          'update',
+                          'gs://pub/Jdjh38)(;.tar.gz'],
                          cwd=gsutil_dst,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
@@ -141,11 +154,12 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     self.assertIn(b'NotFoundException', stderr)
 
     # Run with file:// URI wihout -f option.
-    p = subprocess.Popen(
-        prefix + ['gsutil', 'update', suri(src_tarball)],
-        cwd=gsutil_dst,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+    p = subprocess.Popen(prefix + ['gsutil',
+                                   'update',
+                                   suri(src_tarball)],
+                         cwd=gsutil_dst,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
     (_, stderr) = p.communicate()
     p.stdout.close()
     p.stderr.close()
@@ -155,13 +169,14 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     # Run with a file present that was not distributed with gsutil.
     with open(os.path.join(gsutil_dst, 'userdata.txt'), 'w') as fp:
       fp.write('important data\n')
-    p = subprocess.Popen(
-        prefix +
-        ['gsutil', 'update', '-f', suri(src_tarball)],
-        cwd=gsutil_dst,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=subprocess.PIPE)
+    p = subprocess.Popen(prefix + ['gsutil',
+                                   'update',
+                                   '-f',
+                                   suri(src_tarball)],
+                         cwd=gsutil_dst,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         stdin=subprocess.PIPE)
     (_, stderr) = p.communicate()
     p.stdout.close()
     p.stderr.close()
@@ -188,7 +203,9 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
 
     # Now do the real update, which should succeed.
     p = subprocess.Popen(
-        prefix + [gsutil_relative_dst, 'update', '-f',
+        prefix + [gsutil_relative_dst,
+                  'update',
+                  '-f',
                   suri(src_tarball)],
         cwd=tmpdir_dst,
         stdout=subprocess.PIPE,
@@ -201,7 +218,8 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
         p.returncode,
         0,
         msg=('Non-zero return code (%d) from gsutil update. stderr = \n%s' %
-             (p.returncode, stderr.decode(UTF8))))
+             (p.returncode,
+              stderr.decode(UTF8))))
 
     # Verify that version file was updated.
     dst_version_file = os.path.join(tmpdir_dst, 'gsutil', 'VERSION')

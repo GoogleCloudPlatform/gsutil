@@ -99,7 +99,9 @@ class FakeCommandWithInvalidCompleter(Command):
   """Command with an invalid completer on an argument."""
 
   command_spec = Command.CreateCommandSpec(
-      'fake1', argparse_arguments=[CommandArgument('arg', completer='BAD')])
+      'fake1',
+      argparse_arguments=[CommandArgument('arg',
+                                          completer='BAD')])
 
   help_spec = Command.HelpSpec(help_name='fake1',
                                help_name_aliases=[],
@@ -221,14 +223,16 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_interactive(self):
     """Tests that update is not triggered if not running interactively."""
-    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')
-                              ]):
+    with SetBotoConfigForTest([('GSUtil',
+                                'software_update_check_period',
+                                '1')]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       self.running_interactively = False
       self.assertEqual(
           False,
-          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls',
+                                                                  0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_no_tracker_file_version_recent(self):
@@ -238,7 +242,9 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     self.assertFalse(os.path.exists(self.timestamp_file_path))
     self.version_mod_time = time.time()
     self.assertEqual(
-        False, self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        False,
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls',
+                                                                0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_no_tracker_file_version_old(self):
@@ -250,14 +256,16 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     expected = not self._IsPackageOrCloudSDKInstall()
     self.assertEqual(
         expected,
-        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls',
+                                                                0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_invalid_commands(self):
     """Tests that update is not triggered for certain commands."""
     self.assertEqual(
         False,
-        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('update', 0))
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('update',
+                                                                0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_invalid_file_contents(self):
@@ -265,54 +273,64 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     with open(self.timestamp_file_path, 'w') as f:
       f.write('NaN')
     self.assertEqual(
-        False, self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        False,
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls',
+                                                                0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_update_should_trigger(self):
     """Tests update should be triggered if time is up."""
-    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')
-                              ]):
+    with SetBotoConfigForTest([('GSUtil',
+                                'software_update_check_period',
+                                '1')]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       expected = not self._IsPackageOrCloudSDKInstall()
       self.assertEqual(
           expected,
-          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls',
+                                                                  0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_time_for_update_yet(self):
     """Tests update not triggered if not time yet."""
-    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '3')
-                              ]):
+    with SetBotoConfigForTest([('GSUtil',
+                                'software_update_check_period',
+                                '3')]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       self.assertEqual(
           False,
-          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls',
+                                                                  0))
 
   def test_user_says_no_to_update(self):
     """Tests no update triggered if user says no at the prompt."""
-    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')
-                              ]):
+    with SetBotoConfigForTest([('GSUtil',
+                                'software_update_check_period',
+                                '1')]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       command_runner.input = lambda p: 'n'
       self.assertEqual(
           False,
-          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls',
+                                                                  0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_update_check_skipped_with_quiet_mode(self):
     """Tests that update isn't triggered when loglevel is in quiet mode."""
-    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')
-                              ]):
+    with SetBotoConfigForTest([('GSUtil',
+                                'software_update_check_period',
+                                '1')]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
 
       expected = not self._IsPackageOrCloudSDKInstall()
       self.assertEqual(
           expected,
-          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+          self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls',
+                                                                  0))
 
       prev_loglevel = logging.getLogger().getEffectiveLevel()
       try:
@@ -320,7 +338,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
         # With reduced loglevel, should return False.
         self.assertEqual(
             False,
-            self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+            self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls',
+                                                                    0))
       finally:
         logging.getLogger().setLevel(prev_loglevel)
 
@@ -465,7 +484,9 @@ class TestCommandRunnerIntegrationTests(testcase.GsUtilIntegrationTestCase):
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_lookup_version_without_credentials(self):
     """Tests that gsutil tarball version lookup works without credentials."""
-    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')],
+    with SetBotoConfigForTest([('GSUtil',
+                                'software_update_check_period',
+                                '1')],
                               use_existing_config=False):
       self.command_runner = command_runner.CommandRunner()
       # Looking up software version shouldn't get auth failure exception.

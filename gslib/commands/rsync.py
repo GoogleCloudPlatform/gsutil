@@ -556,7 +556,8 @@ def CleanUpTempFiles():
       except Exception as e:  # pylint: disable=broad-except
         logging.debug(
             'Failed to close and delete temp file "%s". Got an error:\n%s',
-            fileobj.name, e)
+            fileobj.name,
+            e)
 
 
 def _DiffToApplyArgChecker(command_instance, diff_to_apply):
@@ -572,8 +573,14 @@ def _DiffToApplyArgChecker(command_instance, diff_to_apply):
   return True
 
 
-def _ComputeNeededFileChecksums(logger, src_url_str, src_size, src_crc32c,
-                                src_md5, dst_url_str, dst_size, dst_crc32c,
+def _ComputeNeededFileChecksums(logger,
+                                src_url_str,
+                                src_size,
+                                src_crc32c,
+                                src_md5,
+                                dst_url_str,
+                                dst_size,
+                                dst_crc32c,
                                 dst_md5):
   """Computes any file checksums needed by _CompareObjects.
 
@@ -639,7 +646,10 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
   # sorting with collecting the listing.
   out_file = io.open(out_filename, mode='w', encoding=constants.UTF8)
   try:
-    _BatchSort(_FieldedListingIterator(cls, gsutil_api, base_url_str, desc),
+    _BatchSort(_FieldedListingIterator(cls,
+                                       gsutil_api,
+                                       base_url_str,
+                                       desc),
                out_file)
   except Exception as e:  # pylint: disable=broad-except
     # Abandon rsync if an exception percolates up to this layer - retryable
@@ -649,7 +659,8 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
     #     gsutil rsync -d gs://non-existent-bucket ./localdir
     # would delete files from localdir.
     cls.logger.error('Caught non-retryable exception while listing %s: %s' %
-                     (base_url_str, e))
+                     (base_url_str,
+                      e))
     # Also print the full stack trace in debugging mode. This makes debugging
     # a bit easier.
     cls.logger.debug(traceback.format_exc())
@@ -698,7 +709,11 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
     else:
       wildcard = '%s/*' % base_url_str.rstrip('/\\')
     fields = [
-        'crc32c', 'md5Hash', 'name', 'size', 'timeCreated',
+        'crc32c',
+        'md5Hash',
+        'name',
+        'size',
+        'timeCreated',
         'metadata/%s' % MTIME_ATTR
     ]
     if cls.preserve_posix_attrs:
@@ -798,7 +813,8 @@ def _BuildTmpOutputLine(blr):
         WarnInvalidValue('mtime', url.url_string)
         mtime = NA_TIME
       posix_attrs = DeserializeFileAttributesFromObjectMetadata(
-          blr.root_object, url.url_string)
+          blr.root_object,
+          url.url_string)
       mode = posix_attrs.mode.permissions
       atime = posix_attrs.atime
       uid = posix_attrs.uid
@@ -886,7 +902,8 @@ def _BatchSort(in_iter, out_file):
       current_chunk = sorted(islice(in_iter, buffer_size))
       if not current_chunk:
         break
-      output_chunk = io.open('%s-%06i' % (out_file.name, len(chunk_files)),
+      output_chunk = io.open('%s-%06i' % (out_file.name,
+                                          len(chunk_files)),
                              mode='w+',
                              encoding=constants.UTF8)
       chunk_files.append(output_chunk)
@@ -911,7 +928,8 @@ def _BatchSort(in_iter, out_file):
       except Exception as e:  # pylint: disable=broad-except
         logging.debug(
             'Failed to remove rsync chunk file "%s". Got an error:\n%s',
-            chunk_file.name, e)
+            chunk_file.name,
+            e)
 
 
 class _DiffIterator(object):
@@ -954,9 +972,11 @@ class _DiffIterator(object):
     # args to _ListUrlRootFunc as tuple (base_url_str, out_filename, desc)
     # where base_url_str is the starting URL string for listing.
     args_iter = iter([(self.base_src_url.url_string,
-                       self.sorted_list_src_file_name, 'source'),
+                       self.sorted_list_src_file_name,
+                       'source'),
                       (self.base_dst_url.url_string,
-                       self.sorted_list_dst_file_name, 'destination')])
+                       self.sorted_list_dst_file_name,
+                       'destination')])
 
     # Contains error message from non-retryable listing failure.
     command_obj.non_retryable_listing_failures = 0
@@ -1004,7 +1024,15 @@ class _DiffIterator(object):
     """
     errors = collections.deque()
     for src_url in self.sorted_src_urls_it:
-      (src_url_str, _, _, _, _, src_mode, src_uid, src_gid, _,
+      (src_url_str,
+       _,
+       _,
+       _,
+       _,
+       src_mode,
+       src_uid,
+       src_gid,
+       _,
        _) = (self._ParseTmpFileLine(src_url))
       valid, err = ValidateFilePermissionAccess(src_url_str,
                                                 uid=src_uid,
@@ -1033,10 +1061,26 @@ class _DiffIterator(object):
       Parsed tuple: (url, size, time_created, atime, mtime, mode, uid, gid,
                      crc32c, md5)
     """
-    (encoded_url, size, time_created, atime, mtime, mode, uid, gid, crc32c,
+    (encoded_url,
+     size,
+     time_created,
+     atime,
+     mtime,
+     mode,
+     uid,
+     gid,
+     crc32c,
      md5) = line.split()
-    return (_DecodeUrl(encoded_url), int(size), long(time_created), long(atime),
-            long(mtime), int(mode), int(uid), int(gid), crc32c, md5.strip())
+    return (_DecodeUrl(encoded_url),
+            int(size),
+            long(time_created),
+            long(atime),
+            long(mtime),
+            int(mode),
+            int(uid),
+            int(gid),
+            crc32c,
+            md5.strip())
 
   def _WarnIfMissingCloudHash(self, url_str, crc32c, md5):
     """Warns if given url_str is a cloud URL and is missing both crc32c and md5.
@@ -1055,12 +1099,21 @@ class _DiffIterator(object):
         md5 == _NA):
       self.logger.warn(
           'Found no hashes to validate %s. Integrity cannot be assured without '
-          'hashes.', url_str)
+          'hashes.',
+          url_str)
       return True
     return False
 
-  def _CompareObjects(self, src_url_str, src_size, src_mtime, src_crc32c,
-                      src_md5, dst_url_str, dst_size, dst_mtime, dst_crc32c,
+  def _CompareObjects(self,
+                      src_url_str,
+                      src_size,
+                      src_mtime,
+                      src_crc32c,
+                      src_md5,
+                      dst_url_str,
+                      dst_size,
+                      dst_mtime,
+                      dst_crc32c,
                       dst_md5):
     """Returns whether src should replace dst object, and if mtime is present.
 
@@ -1100,19 +1153,29 @@ class _DiffIterator(object):
         src_mtime < dst_mtime):
       return False, has_src_mtime, has_dst_mtime
     if not use_hashes and has_src_mtime and has_dst_mtime:
-      return (src_mtime != dst_mtime or
-              src_size != dst_size, has_src_mtime, has_dst_mtime)
+      return (src_mtime != dst_mtime or src_size != dst_size,
+              has_src_mtime,
+              has_dst_mtime)
     if src_size != dst_size:
       return True, has_src_mtime, has_dst_mtime
-    (src_crc32c, src_md5, dst_crc32c,
-     dst_md5) = _ComputeNeededFileChecksums(self.logger, src_url_str, src_size,
-                                            src_crc32c, src_md5, dst_url_str,
-                                            dst_size, dst_crc32c, dst_md5)
+    (src_crc32c,
+     src_md5,
+     dst_crc32c,
+     dst_md5) = _ComputeNeededFileChecksums(self.logger,
+                                            src_url_str,
+                                            src_size,
+                                            src_crc32c,
+                                            src_md5,
+                                            dst_url_str,
+                                            dst_size,
+                                            dst_crc32c,
+                                            dst_md5)
     if src_md5 != _NA and dst_md5 != _NA:
       self.logger.debug('Comparing md5 for %s and %s', src_url_str, dst_url_str)
       return src_md5 != dst_md5, has_src_mtime, has_dst_mtime
     if src_crc32c != _NA and dst_crc32c != _NA:
-      self.logger.debug('Comparing crc32c for %s and %s', src_url_str,
+      self.logger.debug('Comparing crc32c for %s and %s',
+                        src_url_str,
                         dst_url_str)
       return src_crc32c != dst_crc32c, has_src_mtime, has_dst_mtime
     if not self._WarnIfMissingCloudHash(src_url_str, src_crc32c, src_md5):
@@ -1144,8 +1207,15 @@ class _DiffIterator(object):
         if self.sorted_src_urls_it.IsEmpty():
           out_of_src_items = True
         else:
-          (src_url_str, src_size, src_time_created, src_atime, src_mtime,
-           src_mode, src_uid, src_gid, src_crc32c,
+          (src_url_str,
+           src_size,
+           src_time_created,
+           src_atime,
+           src_mtime,
+           src_mode,
+           src_uid,
+           src_gid,
+           src_crc32c,
            src_md5) = (self._ParseTmpFileLine(next(self.sorted_src_urls_it)))
           posix_attrs = POSIXAttributes(atime=src_atime,
                                         mtime=src_mtime,
@@ -1155,20 +1225,34 @@ class _DiffIterator(object):
           # Skip past base URL and normalize slashes so we can compare across
           # clouds/file systems (including Windows).
           src_url_str_to_check = _EncodeUrl(
-              src_url_str[base_src_url_len:].replace('\\', '/'))
+              src_url_str[base_src_url_len:].replace('\\',
+                                                     '/'))
           dst_url_str_would_copy_to = copy_helper.ConstructDstUrl(
-              self.base_src_url, StorageUrlFromString(src_url_str), True, True,
-              self.base_dst_url, False, self.recursion_requested).url_string
+              self.base_src_url,
+              StorageUrlFromString(src_url_str),
+              True,
+              True,
+              self.base_dst_url,
+              False,
+              self.recursion_requested).url_string
       if dst_url_str is None:
         if not self.sorted_dst_urls_it.IsEmpty():
           # We don't need time created at the destination.
-          (dst_url_str, dst_size, _, dst_atime, dst_mtime, dst_mode, dst_uid,
-           dst_gid, dst_crc32c,
+          (dst_url_str,
+           dst_size,
+           _,
+           dst_atime,
+           dst_mtime,
+           dst_mode,
+           dst_uid,
+           dst_gid,
+           dst_crc32c,
            dst_md5) = self._ParseTmpFileLine(next(self.sorted_dst_urls_it))
           # Skip past base URL and normalize slashes so we can compare across
           # clouds/file systems (including Windows).
           dst_url_str_to_check = _EncodeUrl(
-              dst_url_str[base_dst_url_len:].replace('\\', '/'))
+              dst_url_str[base_dst_url_len:].replace('\\',
+                                                     '/'))
       # Only break once we've attempted to populate {str,dst}_url_to_check and
       # we know we're out of src objects.
       if out_of_src_items:
@@ -1178,15 +1262,21 @@ class _DiffIterator(object):
       # be out of dst objects.
       if (dst_url_str is None or src_url_str_to_check < dst_url_str_to_check):
         # There's no dst object corresponding to src object, so copy src to dst.
-        yield RsyncDiffToApply(src_url_str, dst_url_str_would_copy_to,
-                               posix_attrs, DiffAction.COPY, src_size)
+        yield RsyncDiffToApply(src_url_str,
+                               dst_url_str_would_copy_to,
+                               posix_attrs,
+                               DiffAction.COPY,
+                               src_size)
         src_url_str = None
       elif src_url_str_to_check > dst_url_str_to_check:
         # dst object without a corresponding src object, so remove dst if -d
         # option was specified.
         if self.delete_extras:
-          yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
-                                 DiffAction.REMOVE, None)
+          yield RsyncDiffToApply(None,
+                                 dst_url_str,
+                                 POSIXAttributes(),
+                                 DiffAction.REMOVE,
+                                 None)
         dst_url_str = None
       else:
         # There is a dst object corresponding to src object, so check if objects
@@ -1199,20 +1289,29 @@ class _DiffIterator(object):
             src_url_str, src_size, src_mtime, src_crc32c, src_md5, dst_url_str,
             dst_size, dst_mtime, dst_crc32c, dst_md5))
         if should_replace:
-          yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
-                                 DiffAction.COPY, src_size)
+          yield RsyncDiffToApply(src_url_str,
+                                 dst_url_str,
+                                 posix_attrs,
+                                 DiffAction.COPY,
+                                 src_size)
         elif self.preserve_posix:
           posix_attrs, needs_update = NeedsPOSIXAttributeUpdate(
               src_atime, dst_atime, src_mtime, dst_mtime, src_uid, dst_uid,
               src_gid, dst_gid, src_mode, dst_mode)
           if needs_update:
-            yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
-                                   DiffAction.POSIX_SRC_TO_DST, src_size)
+            yield RsyncDiffToApply(src_url_str,
+                                   dst_url_str,
+                                   posix_attrs,
+                                   DiffAction.POSIX_SRC_TO_DST,
+                                   src_size)
         elif has_src_mtime and not has_dst_mtime:
           # File/object at destination matches source but is missing mtime
           # attribute at destination.
-          yield RsyncDiffToApply(src_url_str, dst_url_str, posix_attrs,
-                                 DiffAction.MTIME_SRC_TO_DST, src_size)
+          yield RsyncDiffToApply(src_url_str,
+                                 dst_url_str,
+                                 posix_attrs,
+                                 DiffAction.MTIME_SRC_TO_DST,
+                                 src_size)
         # else: we don't need to copy the file from src to dst since they're
         # the same files.
         # Advance to the next two objects.
@@ -1224,12 +1323,18 @@ class _DiffIterator(object):
     # If -d option was specified any files/objects left in dst iteration should
     # be removed.
     if dst_url_str:
-      yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
-                             DiffAction.REMOVE, None)
+      yield RsyncDiffToApply(None,
+                             dst_url_str,
+                             POSIXAttributes(),
+                             DiffAction.REMOVE,
+                             None)
     for line in self.sorted_dst_urls_it:
       (dst_url_str, _, _, _, _, _, _, _, _, _) = self._ParseTmpFileLine(line)
-      yield RsyncDiffToApply(None, dst_url_str, POSIXAttributes(),
-                             DiffAction.REMOVE, None)
+      yield RsyncDiffToApply(None,
+                             dst_url_str,
+                             POSIXAttributes(),
+                             DiffAction.REMOVE,
+                             None)
 
 
 class _SeekAheadDiffIterator(object):
@@ -1285,9 +1390,11 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
     # global list to be closed (if not closed in the calling scope) and deleted
     # at exit time.
     self.sorted_list_src_file = open(
-        initialized_diff_iterator.sorted_list_src_file_name, 'r')
+        initialized_diff_iterator.sorted_list_src_file_name,
+        'r')
     self.sorted_list_dst_file = open(
-        initialized_diff_iterator.sorted_list_dst_file_name, 'r')
+        initialized_diff_iterator.sorted_list_dst_file_name,
+        'r')
     _tmp_files.append(self.sorted_list_src_file)
     _tmp_files.append(self.sorted_list_dst_file)
 
@@ -1395,7 +1502,8 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
             cls.total_bytes_transferred += bytes_transferred
       except SkipUnsupportedObjectError as e:
         cls.logger.info('Skipping item %s with unsupported object type %s',
-                        src_url, e.unsupported_type)
+                        src_url,
+                        e.unsupported_type)
   elif diff_to_apply.diff_action == DiffAction.MTIME_SRC_TO_DST:
     # If the destination is an object in a bucket, this will not blow away other
     # metadata. This behavior is unlike if the file/object actually needed to be
@@ -1430,11 +1538,14 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           cls.logger.info(
               'Copying whole file/object for %s instead of patching'
               ' because you don\'t have owner permission on the '
-              'object.', dst_url.url_string)
+              'object.',
+              dst_url.url_string)
           _RsyncFunc(cls,
                      RsyncDiffToApply(diff_to_apply.src_url_str,
-                                      diff_to_apply.dst_url_str, posix_attrs,
-                                      DiffAction.COPY, diff_to_apply.copy_size),
+                                      diff_to_apply.dst_url_str,
+                                      posix_attrs,
+                                      DiffAction.COPY,
+                                      diff_to_apply.copy_size),
                      thread_state=thread_state)
       else:
         ParseAndSetPOSIXAttributes(dst_url.object_name,
@@ -1476,11 +1587,14 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           cls.logger.info(
               'Copying whole file/object for %s instead of patching'
               ' because you don\'t have owner permission on the '
-              'object.', dst_url.url_string)
+              'object.',
+              dst_url.url_string)
           _RsyncFunc(cls,
                      RsyncDiffToApply(diff_to_apply.src_url_str,
-                                      diff_to_apply.dst_url_str, posix_attrs,
-                                      DiffAction.COPY, diff_to_apply.copy_size),
+                                      diff_to_apply.dst_url_str,
+                                      posix_attrs,
+                                      DiffAction.COPY,
+                                      diff_to_apply.copy_size),
                      thread_state=thread_state)
   else:
     raise CommandException('Got unexpected DiffAction (%d)' %
@@ -1514,13 +1628,15 @@ class RsyncCommand(Command):
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML,
+                      ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[CommandArgument.MakeNCloudOrFileURLsArgument(2)])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='rsync',
-      help_name_aliases=['sync', 'synchronize'],
+      help_name_aliases=['sync',
+                         'synchronize'],
       help_type='command_help',
       help_one_line_summary='Synchronize content of two buckets/directories',
       help_text=_DETAILED_HELP_TEXT,
@@ -1541,12 +1657,13 @@ class RsyncCommand(Command):
     Raises:
       CommandException if url_str doesn't name an existing container.
     """
-    (url, have_existing_container) = copy_helper.ExpandUrlToSingleBlr(
-        url_str,
-        self.gsutil_api,
-        self.project_id,
-        treat_nonexistent_object_as_subdir,
-        logger=self.logger)
+    (url,
+     have_existing_container) = copy_helper.ExpandUrlToSingleBlr(
+         url_str,
+         self.gsutil_api,
+         self.project_id,
+         treat_nonexistent_object_as_subdir,
+         logger=self.logger)
     if not have_existing_container:
       raise CommandException(
           'arg (%s) does not name a directory, bucket, or bucket subdir.' %
@@ -1577,7 +1694,8 @@ class RsyncCommand(Command):
                                 has_cloud_dst=dst_url.IsCloudUrl(),
                                 is_daisy_chain=is_daisy_chain,
                                 uses_fan=self.parallel_operations,
-                                provider_types=[src_url.scheme, dst_url.scheme])
+                                provider_types=[src_url.scheme,
+                                                dst_url.scheme])
 
     self.source_metadata_fields = GetSourceFieldsNeededForCopy(
         dst_url.IsCloudUrl(),
@@ -1623,7 +1741,8 @@ class RsyncCommand(Command):
     end_time = time.time()
     self.total_elapsed_time = end_time - start_time
     self.total_bytes_per_second = CalculateThroughput(
-        self.total_bytes_transferred, self.total_elapsed_time)
+        self.total_bytes_transferred,
+        self.total_elapsed_time)
     LogPerformanceSummaryParams(
         avg_throughput=self.total_bytes_per_second,
         total_elapsed_time=self.total_elapsed_time,
@@ -1632,7 +1751,9 @@ class RsyncCommand(Command):
     if self.op_failure_count:
       plural_str = 's' if self.op_failure_count else ''
       raise CommandException('%d file%s/object%s could not be copied/removed.' %
-                             (self.op_failure_count, plural_str, plural_str))
+                             (self.op_failure_count,
+                              plural_str,
+                              plural_str))
 
   def _ParseOpts(self):
     # exclude_symlinks is handled by Command parent class, so save in Command

@@ -44,7 +44,8 @@ class AclChange(object):
   public_entity_all_users = 'allUsers'
   public_entity_all_auth_users = 'allAuthenticatedUsers'
   public_entity_types = (public_entity_all_users, public_entity_all_auth_users)
-  project_entity_prefixes = ('project-editors-', 'project-owners-',
+  project_entity_prefixes = ('project-editors-',
+                             'project-owners-',
                              'project-viewers-')
   group_entity_prefix = 'group-'
   user_entity_prefix = 'user-'
@@ -77,7 +78,8 @@ class AclChange(object):
     self._Validate()
 
   def __str__(self):
-    return 'AclChange<{0}|{1}|{2}>'.format(self.scope_type, self.perm,
+    return 'AclChange<{0}|{1}|{2}>'.format(self.scope_type,
+                                           self.perm,
                                            self.identifier)
 
   def _Parse(self, change_descriptor, scope_type):
@@ -134,7 +136,8 @@ class AclChange(object):
 
     def _ThrowError(msg):
       raise CommandException('{0} is not a valid ACL change\n{1}'.format(
-          self.raw_descriptor, msg))
+          self.raw_descriptor,
+          msg))
 
     if self.scope_type not in self.scope_types:
       _ThrowError('{0} is not a valid scope type'.format(self.scope_type))
@@ -167,18 +170,20 @@ class AclChange(object):
       An apitools_messages.BucketAccessControl or ObjectAccessControl.
     """
     for entry in current_acl:
-      if (self.scope_type in ('UserById', 'GroupById') and entry.entityId and
+      if (self.scope_type in ('UserById',
+                              'GroupById') and entry.entityId and
           self.identifier == entry.entityId):
         yield entry
-      elif (self.scope_type in ('UserByEmail', 'GroupByEmail') and
-            entry.email and self.identifier == entry.email):
+      elif (self.scope_type in ('UserByEmail',
+                                'GroupByEmail') and entry.email and
+            self.identifier == entry.email):
         yield entry
       elif (self.scope_type == 'GroupByDomain' and entry.domain and
             self.identifier == entry.domain):
         yield entry
       elif (self.scope_type == 'Project' and entry.projectTeam and
-            self.identifier == '%s-%s' %
-            (entry.projectTeam.team, entry.projectTeam.projectNumber)):
+            self.identifier == '%s-%s' % (entry.projectTeam.team,
+                                          entry.projectTeam.projectNumber)):
         yield entry
       elif (self.scope_type == 'AllUsers' and
             entry.entity.lower() == self.public_entity_all_users.lower()):
@@ -244,13 +249,16 @@ class AclChange(object):
     Returns:
       The number of changes that were made.
     """
-    logger.debug('Executing %s %s on %s', command_name, self.raw_descriptor,
+    logger.debug('Executing %s %s on %s',
+                 command_name,
+                 self.raw_descriptor,
                  storage_url)
 
     if self.perm == 'WRITER':
       if command_name == 'acl' and storage_url.IsObject():
         logger.warning('Skipping %s on %s, as WRITER does not apply to objects',
-                       self.raw_descriptor, storage_url)
+                       self.raw_descriptor,
+                       storage_url)
         return 0
       elif command_name == 'defacl':
         raise CommandException('WRITER cannot be set as a default object ACL '
@@ -307,7 +315,8 @@ class AclDel(object):
       elif entry.domain and self.identifier.lower() == entry.domain.lower():
         yield entry
       elif (entry.projectTeam and self.identifier.lower() == '%s-%s'.lower() %
-            (entry.projectTeam.team, entry.projectTeam.projectNumber)):
+            (entry.projectTeam.team,
+             entry.projectTeam.projectNumber)):
         yield entry
       elif entry.entity.lower() == 'allusers' and self.identifier == 'AllUsers':
         yield entry
@@ -316,7 +325,9 @@ class AclDel(object):
         yield entry
 
   def Execute(self, storage_url, current_acl, command_name, logger):
-    logger.debug('Executing %s %s on %s', command_name, self.raw_descriptor,
+    logger.debug('Executing %s %s on %s',
+                 command_name,
+                 self.raw_descriptor,
                  storage_url)
     matching_entries = list(self._YieldMatchingEntries(current_acl))
     for entry in matching_entries:

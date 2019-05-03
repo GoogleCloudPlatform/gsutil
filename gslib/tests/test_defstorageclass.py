@@ -38,22 +38,23 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     # Set the storage class to nearline.
     new_storage_class = 'nearline'
-    stderr = self.RunGsUtil(
-        self._set_dsc_cmd +
-        [new_storage_class, suri(bucket_uri)],
-        return_stderr=True)
+    stderr = self.RunGsUtil(self._set_dsc_cmd +
+                            [new_storage_class,
+                             suri(bucket_uri)],
+                            return_stderr=True)
     self.assertRegexpMatchesWithFlags(
         stderr,
         r'Setting default storage class to "%s" for bucket %s' %
-        (new_storage_class, suri(bucket_uri)),
+        (new_storage_class,
+         suri(bucket_uri)),
         flags=re.IGNORECASE)
 
     # Make sure the storage class shows up as nearline from defstorageclass get.
     stdout = self.RunGsUtil(self._get_dsc_cmd + [suri(bucket_uri)],
                             return_stdout=True)
     self.assertRegexpMatchesWithFlags(stdout,
-                                      r'%s:\s+%s' %
-                                      (suri(bucket_uri), new_storage_class),
+                                      r'%s:\s+%s' % (suri(bucket_uri),
+                                                     new_storage_class),
                                       flags=re.IGNORECASE)
 
   def test_set_and_get_for_multiple_buckets(self):
@@ -71,24 +72,26 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
       self.assertRegexpMatchesWithFlags(
           stderr,
           r'Setting default storage class to "%s" for bucket %s' %
-          (new_storage_class, bucket_uri),
+          (new_storage_class,
+           bucket_uri),
           flags=re.IGNORECASE)
 
     # Make sure the storage class shows up as nearline from defstorageclass get.
-    stdout = self.RunGsUtil(
-        self._get_dsc_cmd +
-        [suri(bucket1_uri), suri(bucket2_uri)],
-        return_stdout=True)
+    stdout = self.RunGsUtil(self._get_dsc_cmd +
+                            [suri(bucket1_uri),
+                             suri(bucket2_uri)],
+                            return_stdout=True)
     for bucket_uri in (suri(bucket1_uri), suri(bucket2_uri)):
       self.assertRegexpMatchesWithFlags(stdout,
-                                        r'%s:\s+%s' %
-                                        (bucket_uri, new_storage_class),
+                                        r'%s:\s+%s' % (bucket_uri,
+                                                       new_storage_class),
                                         flags=re.IGNORECASE)
 
   def test_set_invalid_storage_class_fails(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(self._set_dsc_cmd +
-                            ['invalidclass', suri(bucket_uri)],
+                            ['invalidclass',
+                             suri(bucket_uri)],
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('BadRequestException: 400', stderr)
@@ -120,7 +123,8 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn(failure_msg, stderr)
 
-    stderr = self.RunGsUtil(self._set_dsc_cmd + ['ClassFoo', s3_bucket_url],
+    stderr = self.RunGsUtil(self._set_dsc_cmd + ['ClassFoo',
+                                                 s3_bucket_url],
                             return_stderr=True,
                             expected_status=1)
     self.assertIn(failure_msg, stderr)

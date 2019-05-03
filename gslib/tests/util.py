@@ -206,8 +206,12 @@ def TailSet(start_point, listing):
   return set(l[len(start_point):] for l in listing.strip().split('\n'))
 
 
-HAS_S3_CREDS = (boto.config.get('Credentials', 'aws_access_key_id', None) and
-                boto.config.get('Credentials', 'aws_secret_access_key', None))
+HAS_S3_CREDS = (boto.config.get('Credentials',
+                                'aws_access_key_id',
+                                None) and
+                boto.config.get('Credentials',
+                                'aws_secret_access_key',
+                                None))
 
 _GS_HOST = boto.config.get('Credentials', 'gs_host', None)
 _DEFAULT_HOST = six.ensure_str(boto.gs.connection.GSConnection.DefaultHost)
@@ -221,7 +225,8 @@ HAS_GS_HOST = _GS_HOST is not None
 
 HAS_GS_PORT = boto.config.get('Credentials', 'gs_port', None) is not None
 
-USING_JSON_API = boto.config.get('GSUtil', 'prefer_api',
+USING_JSON_API = boto.config.get('GSUtil',
+                                 'prefer_api',
                                  'json').upper() != 'XML'
 
 
@@ -405,12 +410,18 @@ def SequentialAndParallelTransfer(func):
 
     if not RUN_S3_TESTS and UsingCrcmodExtension(crcmod):
       # Try again, forcing parallel upload and sliced download.
-      with SetBotoConfigForTest([
-          ('GSUtil', 'parallel_composite_upload_threshold', '1'),
-          ('GSUtil', 'sliced_object_download_threshold', '1'),
-          ('GSUtil', 'sliced_object_download_max_components', '3'),
-          ('GSUtil', 'check_hashes', 'always')
-      ]):
+      with SetBotoConfigForTest([('GSUtil',
+                                  'parallel_composite_upload_threshold',
+                                  '1'),
+                                 ('GSUtil',
+                                  'sliced_object_download_threshold',
+                                  '1'),
+                                 ('GSUtil',
+                                  'sliced_object_download_max_components',
+                                  '3'),
+                                 ('GSUtil',
+                                  'check_hashes',
+                                  'always')]):
         func(*args, **kwargs)
 
   return Wrapper
@@ -487,7 +498,9 @@ def SetBotoConfigForTest(boto_config_list, use_existing_config=True):
         if six.PY3:
           if isinstance(boto_value, bytes):
             boto_value = boto_value.decode(UTF8)
-        _SetBotoConfig(boto_config[0], boto_config[1], boto_value,
+        _SetBotoConfig(boto_config[0],
+                       boto_config[1],
+                       boto_value,
                        revert_configs)
       with open(tmp_filename, 'w') as tmp_file:
         boto.config.write(tmp_file)
@@ -646,7 +659,8 @@ class HaltingCopyCallbackHandler(object):
     if total_bytes_transferred >= self._halt_at_byte:
       sys.stderr.write(
           'Halting transfer after byte %s. %s/%s transferred.\r\n' %
-          (self._halt_at_byte, MakeHumanReadable(total_bytes_transferred),
+          (self._halt_at_byte,
+           MakeHumanReadable(total_bytes_transferred),
            MakeHumanReadable(total_size)))
       if self._is_upload:
         raise ResumableUploadException('Artifically halting upload.')

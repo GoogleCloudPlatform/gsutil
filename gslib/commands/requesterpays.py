@@ -87,7 +87,9 @@ class RequesterPaysCommand(Command):
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
-              CommandArgument('mode', choices=['on', 'off']),
+              CommandArgument('mode',
+                              choices=['on',
+                                       'off']),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
           'get': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()]
@@ -177,11 +179,12 @@ class RequesterPaysCommand(Command):
       requesterpays_arg = self.args[0].lower()
       if requesterpays_arg in ('on', 'off'):
         metrics.LogCommandParams(
-            subcommands=[action_subcommand, requesterpays_arg])
+            subcommands=[action_subcommand,
+                         requesterpays_arg])
     else:
-      raise CommandException(
-          ('Invalid subcommand "%s" for the %s command.\n'
-           'See "gsutil help %s".') %
-          (action_subcommand, self.command_name, self.command_name))
+      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
+                              'See "gsutil help %s".') % (action_subcommand,
+                                                          self.command_name,
+                                                          self.command_name))
     func()
     return 0

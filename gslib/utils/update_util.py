@@ -67,7 +67,8 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
   except IOError:
     logging.getLogger().warn(
         'MANIFEST.in not found in %s.\nSkipping user data '
-        'check.\n', directory)
+        'check.\n',
+        directory)
     return
 
   # Look just at top-level directory. We don't try to catch data dropped into
@@ -85,7 +86,8 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
               'A file (%s) that is not distributed with gsutil was found in '
               'the gsutil directory. The update command cannot run with user '
               'data in the gsutil directory.' %
-              os.path.join(gslib.GSUTIL_DIR, filename))))
+              os.path.join(gslib.GSUTIL_DIR,
+                           filename))))
 
 
 def LookUpGsutilVersion(gsutil_api, url_str):

@@ -74,7 +74,8 @@ class VersioningCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'versioning',
-      command_name_aliases=['setversioning', 'getversioning'],
+      command_name_aliases=['setversioning',
+                            'getversioning'],
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
@@ -82,11 +83,14 @@ class VersioningCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=2,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML,
+                      ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
-              CommandArgument('mode', choices=['on', 'off']),
+              CommandArgument('mode',
+                              choices=['on',
+                                       'off']),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
           'get': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()]
@@ -94,7 +98,8 @@ class VersioningCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='versioning',
-      help_name_aliases=['getversioning', 'setversioning'],
+      help_name_aliases=['getversioning',
+                         'setversioning'],
       help_type='command_help',
       help_one_line_summary=(
           'Enable or suspend versioning for one or more buckets'),
@@ -176,11 +181,12 @@ class VersioningCommand(Command):
       versioning_arg = self.args[0].lower()
       if versioning_arg in ('on', 'off'):
         metrics.LogCommandParams(
-            subcommands=[action_subcommand, versioning_arg])
+            subcommands=[action_subcommand,
+                         versioning_arg])
     else:
-      raise CommandException(
-          ('Invalid subcommand "%s" for the %s command.\n'
-           'See "gsutil help %s".') %
-          (action_subcommand, self.command_name, self.command_name))
+      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
+                              'See "gsutil help %s".') % (action_subcommand,
+                                                          self.command_name,
+                                                          self.command_name))
     func()
     return 0

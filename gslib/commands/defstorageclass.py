@@ -82,7 +82,8 @@ class DefStorageClassCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=2,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML,
+                      ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
@@ -109,7 +110,8 @@ class DefStorageClassCommand(Command):
     if not url_str.startswith('gs://'):
       raise CommandException(
           '"%s" does not support the URL "%s". Did you mean to use a gs:// '
-          'URL?' % (self.command_name, url_str))
+          'URL?' % (self.command_name,
+                    url_str))
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
@@ -136,7 +138,8 @@ class DefStorageClassCommand(Command):
         some_matched = True
         bucket_metadata = apitools_messages.Bucket()
         self.logger.info('Setting default storage class to "%s" for bucket %s' %
-                         (normalized_storage_class, blr.url_string.rstrip('/')))
+                         (normalized_storage_class,
+                          blr.url_string.rstrip('/')))
         bucket_metadata.storageClass = normalized_storage_class
         self.gsutil_api.PatchBucket(blr.storage_url.bucket_name,
                                     bucket_metadata,
@@ -156,8 +159,8 @@ class DefStorageClassCommand(Command):
                                                  bucket_fields=['storageClass'])
       for blr in bucket_iter:
         some_matched = True
-        print('%s: %s' %
-              (blr.url_string.rstrip('/'), blr.root_object.storageClass))
+        print('%s: %s' % (blr.url_string.rstrip('/'),
+                          blr.root_object.storageClass))
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 
@@ -172,10 +175,10 @@ class DefStorageClassCommand(Command):
       normalized_storage_class = NormalizeStorageClass(self.args[0])
       subcommand_args.append(normalized_storage_class)
     else:
-      raise CommandException(
-          ('Invalid subcommand "%s" for the %s command.\n'
-           'See "gsutil help %s".') %
-          (action_subcommand, self.command_name, self.command_name))
+      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
+                              'See "gsutil help %s".') % (action_subcommand,
+                                                          self.command_name,
+                                                          self.command_name))
     metrics.LogCommandParams(subcommands=subcommand_args)
     func()
     return 0

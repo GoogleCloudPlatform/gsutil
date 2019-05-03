@@ -229,7 +229,8 @@ class RewriteCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='rewrite',
-      help_name_aliases=['rekey', 'rotate'],
+      help_name_aliases=['rekey',
+                         'rotate'],
       help_type='command_help',
       help_one_line_summary='Rewrite objects',
       help_text=_DETAILED_HELP_TEXT,
@@ -309,7 +310,8 @@ class RewriteCommand(Command):
         self.recursion_requested,
         project_id=self.project_id,
         continue_on_error=self.continue_on_error or self.parallel_operations,
-        bucket_listing_fields=['name', 'size'])
+        bucket_listing_fields=['name',
+                               'size'])
 
     seek_ahead_iterator = None
     # Cannot seek ahead with stdin args, since we can only iterate them
@@ -332,7 +334,9 @@ class RewriteCommand(Command):
     for i in range(0, MAX_DECRYPTION_KEYS):
       key_number = i + 1
       keywrapper = CryptoKeyWrapperFromKey(
-          config.get('GSUtil', 'decryption_key%s' % str(key_number), None))
+          config.get('GSUtil',
+                     'decryption_key%s' % str(key_number),
+                     None))
       if keywrapper is None:
         # Stop at first attribute absence in lexicographical iteration.
         break
@@ -366,7 +370,9 @@ class RewriteCommand(Command):
     if self.op_failure_count:
       plural_str = 's' if self.op_failure_count else ''
       raise CommandException('%d file%s/object%s could not be rewritten.' %
-                             (self.op_failure_count, plural_str, plural_str))
+                             (self.op_failure_count,
+                              plural_str,
+                              plural_str))
 
     return 0
 
@@ -437,7 +443,8 @@ class RewriteCommand(Command):
           'encryption_key value in your boto config file did not match the key '
           'used to encrypt the object "%s" (hash: %s). To encrypt the object '
           'using a different key, you must specify the "-k" flag.' %
-          (transform_url, src_encryption_sha256))
+          (transform_url,
+           src_encryption_sha256))
 
     # Determine if we can skip this rewrite operation (this should only be done
     # when ALL of the specified transformations are redundant).
@@ -466,13 +473,15 @@ class RewriteCommand(Command):
 
     if len(redundant_transforms) == len(self.transform_types):
       self.logger.info('Skipping %s, all transformations were redundant: %s' %
-                       (transform_url, redundant_transforms))
+                       (transform_url,
+                        redundant_transforms))
       return
 
     # First make a deep copy of the source metadata, then overwrite any
     # requested attributes (e.g. if a storage class change was specified).
     dest_metadata = encoding.PyValueToMessage(
-        apitools_messages.Object, encoding.MessageToPyValue(src_metadata))
+        apitools_messages.Object,
+        encoding.MessageToPyValue(src_metadata))
 
     # Remove some unnecessary/invalid fields.
     dest_metadata.generation = None
@@ -503,7 +512,8 @@ class RewriteCommand(Command):
       else:
         raise EncryptionException(
             'Missing decryption key with SHA256 hash %s. No decryption key '
-            'matches object %s' % (src_encryption_sha256, transform_url))
+            'matches object %s' % (src_encryption_sha256,
+                                   transform_url))
 
     operation_name = 'Rewriting'
     if _TransformTypes.CRYPTO_KEY in self.transform_types:
@@ -521,7 +531,8 @@ class RewriteCommand(Command):
     # TODO: Remove this call (used to verify tests) and make it processed by
     # the UIThread.
     sys.stderr.write(
-        _ConstructAnnounceText(operation_name, transform_url.url_string))
+        _ConstructAnnounceText(operation_name,
+                               transform_url.url_string))
     sys.stderr.flush()
 
     # Message indicating beginning of operation.

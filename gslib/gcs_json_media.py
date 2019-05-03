@@ -240,7 +240,8 @@ class UploadCallbackConnectionClassFactory(object):
           self.processed_initial_bytes = True
           if outer_progress_callback:
             self.callback_processor = ProgressCallbackWithTimeout(
-                outer_total_size, outer_progress_callback)
+                outer_total_size,
+                outer_progress_callback)
             self.callback_processor.Progress(
                 self.bytes_uploaded_container.bytes_transferred)
         # httplib.HTTPConnection.send accepts either a string or a file-like
@@ -260,7 +261,8 @@ class UploadCallbackConnectionClassFactory(object):
               httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
             else:
               httplib2.HTTPSConnectionWithTimeout.send(
-                  self, partial_buffer.encode(UTF8))
+                  self,
+                  partial_buffer.encode(UTF8))
           sent_data_bytes = len(partial_buffer)
           if num_metadata_bytes:
             if num_metadata_bytes <= sent_data_bytes:
@@ -388,7 +390,8 @@ class DownloadCallbackConnectionClassFactory(object):
           if not amt or amt > TRANSFER_BUFFER_SIZE:
             raise BadRequestException(
                 'Invalid HTTP read size %s during download, expected %s.' %
-                (amt, TRANSFER_BUFFER_SIZE))
+                (amt,
+                 TRANSFER_BUFFER_SIZE))
           else:
             amt = amt or TRANSFER_BUFFER_SIZE
 
@@ -396,7 +399,8 @@ class DownloadCallbackConnectionClassFactory(object):
             self.processed_initial_bytes = True
             if self.outer_progress_callback:
               self.callback_processor = ProgressCallbackWithTimeout(
-                  self.outer_total_size, self.outer_progress_callback)
+                  self.outer_total_size,
+                  self.outer_progress_callback)
               self.callback_processor.Progress(
                   self.outer_bytes_downloaded_container.bytes_transferred)
 
@@ -436,42 +440,68 @@ def WrapDownloadHttpRequest(download_http):
   # pylint: disable=g-equals-none,g-doc-return-or-yield
   # pylint: disable=g-short-docstring-punctuation,g-doc-args
   # pylint: disable=too-many-statements
-  def OverrideRequest(self, conn, host, absolute_uri, request_uri, method, body,
-                      headers, redirections, cachekey):
+  def OverrideRequest(self,
+                      conn,
+                      host,
+                      absolute_uri,
+                      request_uri,
+                      method,
+                      body,
+                      headers,
+                      redirections,
+                      cachekey):
     """Do the actual request using the connection object.
 
     Also follow one level of redirects if necessary.
     """
 
-    auths = ([(auth.depth(request_uri), auth)
+    auths = ([(auth.depth(request_uri),
+               auth)
               for auth in self.authorizations
-              if auth.inscope(host, request_uri)])
+              if auth.inscope(host,
+                              request_uri)])
     auth = auths and sorted(auths)[0][1] or None
     if auth:
       auth.request(method, request_uri, headers, body)
 
-    (response, content) = self._conn_request(conn, request_uri, method, body,
-                                             headers)
+    (response,
+     content) = self._conn_request(conn,
+                                   request_uri,
+                                   method,
+                                   body,
+                                   headers)
 
     if auth:
       if auth.response(response, body):
         auth.request(method, request_uri, headers, body)
-        (response, content) = self._conn_request(conn, request_uri, method,
-                                                 body, headers)
+        (response,
+         content) = self._conn_request(conn,
+                                       request_uri,
+                                       method,
+                                       body,
+                                       headers)
         response._stale_digest = 1
 
     if response.status == 401:
-      for authorization in self._auth_from_challenge(host, request_uri, headers,
-                                                     response, content):
+      for authorization in self._auth_from_challenge(host,
+                                                     request_uri,
+                                                     headers,
+                                                     response,
+                                                     content):
         authorization.request(method, request_uri, headers, body)
-        (response, content) = self._conn_request(conn, request_uri, method,
-                                                 body, headers)
+        (response,
+         content) = self._conn_request(conn,
+                                       request_uri,
+                                       method,
+                                       body,
+                                       headers)
         if response.status != 401:
           self.authorizations.append(authorization)
           authorization.response(response, body)
           break
 
-    if (self.follow_all_redirects or (method in ["GET", "HEAD"]) or
+    if (self.follow_all_redirects or (method in ["GET",
+                                                 "HEAD"]) or
         response.status == 303):
       if self.follow_redirects and response.status in [300, 301, 302, 303, 307]:
         # Pick out the location header and basically start from the beginning
@@ -480,19 +510,24 @@ def WrapDownloadHttpRequest(download_http):
           if 'location' not in response and response.status != 300:
             raise httplib2.RedirectMissingLocation(
                 "Redirected but the response is missing a Location: header.",
-                response, content)
+                response,
+                content)
           # Fix-up relative redirects (which violate an RFC 2616 MUST)
           if 'location' in response:
             location = response['location']
             (scheme, authority, path, query, fragment) = parse_uri(location)
             if authority is None:
               response['location'] = urllib.parse.urljoin(
-                  absolute_uri, location)
+                  absolute_uri,
+                  location)
           if response.status == 301 and method in ["GET", "HEAD"]:
             response['-x-permanent-redirect-url'] = response['location']
             if 'content-location' not in response:
               response['content-location'] = absolute_uri
-            httplib2._updateCache(headers, response, content, self.cache,
+            httplib2._updateCache(headers,
+                                  response,
+                                  content,
+                                  self.cache,
                                   cachekey)
           if 'if-none-match' in headers:
             del headers['if-none-match']
@@ -510,18 +545,20 @@ def WrapDownloadHttpRequest(download_http):
             if response.status in [302, 303]:
               redirect_method = "GET"
               body = None
-            (response, content) = self.request(
-                location,
-                redirect_method,
-                body=body,
-                headers=headers,
-                redirections=redirections - 1,
-                # BUGFIX (see comments at the top of this function):
-                connection_type=conn.__class__)
+            (response,
+             content) = self.request(
+                 location,
+                 redirect_method,
+                 body=body,
+                 headers=headers,
+                 redirections=redirections - 1,
+                 # BUGFIX (see comments at the top of this function):
+                 connection_type=conn.__class__)
             response.previous = old_response
         else:
           raise httplib2.RedirectLimit(
-              "Redirected more times than redirection_limit allows.", response,
+              "Redirected more times than redirection_limit allows.",
+              response,
               content)
       elif response.status in [200, 203] and method in ["GET", "HEAD"]:
         # Don't cache 206's since we aren't going to handle byte range
@@ -711,9 +748,13 @@ class HttpWithDownloadStream(httplib2.Http):
           # entire contents, possibly due to a network condition. Set
           # content-length to indicate how many bytes we actually read.
           self._logger.log(
-              logging.DEBUG, 'Only got %s bytes out of content-length %s '
+              logging.DEBUG,
+              'Only got %s bytes out of content-length %s '
               'for request URI %s. Resetting content-length to match '
-              'bytes read.', bytes_read, content_length, request_uri)
+              'bytes read.',
+              bytes_read,
+              content_length,
+              request_uri)
           response.msg['content-length'] = str(bytes_read)
         response = httplib2.Response(response)
       else:

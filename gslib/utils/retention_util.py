@@ -108,7 +108,9 @@ def RetentionPolicyToString(retention_policy, bucket_url):
     retention_effective_time = '    Effective Time: {}'.format(
         retention_policy.effectiveTime.strftime('%a, %d %b %Y %H:%M:%S GMT'))
     retention_policy_str = '  Retention Policy {}:\n{}\n{}'.format(
-        locked_string, retention_period, retention_effective_time)
+        locked_string,
+        retention_period,
+        retention_effective_time)
   else:
     retention_policy_str = '{} has no Retention Policy.'.format(bucket_url)
 

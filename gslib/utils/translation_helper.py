@@ -165,10 +165,11 @@ def ObjectMetadataFromHeaders(headers):
           obj_metadata.metadata.additionalProperties = []
         obj_metadata.metadata.additionalProperties.append(
             apitools_messages.Object.MetadataValue.AdditionalProperty(
-                key=header_key, value=value))
+                key=header_key,
+                value=value))
       else:
-        raise ArgumentException('Invalid header specified: %s:%s' %
-                                (header, value))
+        raise ArgumentException('Invalid header specified: %s:%s' % (header,
+                                                                     value))
   return obj_metadata
 
 
@@ -370,13 +371,15 @@ def CreateNotFoundExceptionForObjectWrite(dst_provider,
   """
   dst_url_string = '%s://%s' % (dst_provider, dst_bucket_name)
   if src_bucket_name and src_object_name:
-    src_url_string = '%s://%s/%s' % (src_provider, src_bucket_name,
+    src_url_string = '%s://%s/%s' % (src_provider,
+                                     src_bucket_name,
                                      src_object_name)
     if src_generation:
       src_url_string += '#%s' % str(src_generation)
     return NotFoundException(
         'The source object %s or the destination bucket %s does not exist.' %
-        (src_url_string, dst_url_string))
+        (src_url_string,
+         dst_url_string))
 
   return NotFoundException(
       'The destination bucket %s does not exist or the write to the '
@@ -385,7 +388,8 @@ def CreateNotFoundExceptionForObjectWrite(dst_provider,
 
 def CreateBucketNotFoundException(code, provider, bucket_name):
   return BucketNotFoundException('%s://%s bucket does not exist.' %
-                                 (provider, bucket_name),
+                                 (provider,
+                                  bucket_name),
                                  bucket_name,
                                  status=code)
 
@@ -412,11 +416,13 @@ def CheckForXmlConfigurationAndRaise(config_type_string, json_txt):
             'ACL using \'gsutil {1} set ...\' with gsutil version 3.x. Then '
             'use \'gsutil {1} get ...\' with gsutil version 4 or greater to '
             'get the corresponding JSON {0}.'.format(
-                config_type_string, config_type_string.lower()))))
+                config_type_string,
+                config_type_string.lower()))))
   except XmlParseError:
     pass
   raise ArgumentException('JSON %s data could not be loaded '
-                          'from: %s' % (config_type_string, json_txt))
+                          'from: %s' % (config_type_string,
+                                        json_txt))
 
 
 class LifecycleTranslation(object):
@@ -529,7 +535,8 @@ class LifecycleTranslation(object):
         deserialized_lifecycle = deserialized_lifecycle['lifecycle']
 
       lifecycle = encoding.DictToMessage(
-          deserialized_lifecycle or {}, apitools_messages.Bucket.LifecycleValue)
+          deserialized_lifecycle or {},
+          apitools_messages.Bucket.LifecycleValue)
       return lifecycle
     except ValueError:
       CheckForXmlConfigurationAndRaise('lifecycle', json_txt)
@@ -555,8 +562,8 @@ class CorsTranslation(object):
     for collection_message in cors_message:
       collection_elements = []
       if collection_message.maxAgeSeconds:
-        collection_elements.append(
-            (boto.gs.cors.MAXAGESEC, str(collection_message.maxAgeSeconds)))
+        collection_elements.append((boto.gs.cors.MAXAGESEC,
+                                    str(collection_message.maxAgeSeconds)))
       if collection_message.method:
         method_elements = []
         for method in collection_message.method:
@@ -677,7 +684,8 @@ def AddS3MarkerAclToObjectMetadata(object_metadata, acl_text):
 
   object_metadata.metadata.additionalProperties.append(
       apitools_messages.Object.MetadataValue.AdditionalProperty(
-          key=S3_ACL_MARKER_GUID, value=acl_text))
+          key=S3_ACL_MARKER_GUID,
+          value=acl_text))
 
 
 def UnaryDictToXml(message):
@@ -738,7 +746,8 @@ class LabelTranslation(object):
       return json.dumps(json.loads(json_str),
                         sort_keys=True,
                         indent=2,
-                        separators=(',', ': '))
+                        separators=(',',
+                                    ': '))
     return json_str
 
   @classmethod
@@ -937,4 +946,5 @@ class AclTranslation(object):
     return json.dumps(serializable_acl,
                       sort_keys=True,
                       indent=2,
-                      separators=(',', ': '))
+                      separators=(',',
+                                  ': '))

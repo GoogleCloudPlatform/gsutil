@@ -407,7 +407,9 @@ class NotificationCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='notification',
-      help_name_aliases=['watchbucket', 'stopchannel', 'notifyconfig'],
+      help_name_aliases=['watchbucket',
+                         'stopchannel',
+                         'notifyconfig'],
       help_type='command_help',
       help_one_line_summary='Configure object change notification',
       help_text=_DETAILED_HELP_TEXT,
@@ -449,7 +451,8 @@ class NotificationCommand(Command):
                              self.command_name)
 
     self.logger.info('Watching bucket %s with application URL %s ...',
-                     bucket_url, watch_url)
+                     bucket_url,
+                     watch_url)
 
     try:
       channel = self.gsutil_api.WatchBucket(bucket_url.bucket_name,
@@ -478,7 +481,8 @@ class NotificationCommand(Command):
     resource_id = self.args[1]
 
     self.logger.info('Removing channel %s with resource identifier %s ...',
-                     channel_id, resource_id)
+                     channel_id,
+                     resource_id)
     self.gsutil_api.StopChannel(channel_id, resource_id, provider='gs')
     self.logger.info('Succesfully removed channel.')
 
@@ -551,9 +555,10 @@ class NotificationCommand(Command):
 
     bucket_url = StorageUrlFromString(bucket_arg)
     if not bucket_url.IsCloudUrl() or not bucket_url.IsBucket():
-      raise CommandException(
-          "%s %s requires a GCS bucket name, but got '%s'" %
-          (self.command_name, self.subcommand_name, bucket_arg))
+      raise CommandException("%s %s requires a GCS bucket name, but got '%s'" %
+                             (self.command_name,
+                              self.subcommand_name,
+                              bucket_arg))
     if bucket_url.scheme != 'gs':
       raise CommandException(
           'The %s command can only be used with gs:// bucket URLs.' %
@@ -584,11 +589,14 @@ class NotificationCommand(Command):
       # Ask GCS for the email address that represents GCS's permission to
       # publish to a Cloud Pub/Sub topic from this project.
       service_account = self.gsutil_api.GetProjectServiceAccount(
-          bucket_project_number, provider=bucket_url.scheme).email_address
+          bucket_project_number,
+          provider=bucket_url.scheme).email_address
       self.logger.debug('Service account for project %d: %s',
-                        bucket_project_number, service_account)
+                        bucket_project_number,
+                        service_account)
       just_modified_topic_permissions = self._CreateTopic(
-          pubsub_topic, service_account)
+          pubsub_topic,
+          service_account)
 
     for attempt_number in range(0, 2):
       try:
@@ -613,7 +621,8 @@ class NotificationCommand(Command):
           raise
 
     notification_name = 'projects/_/buckets/%s/notificationConfigs/%s' % (
-        bucket_name, create_response.id)
+        bucket_name,
+        create_response.id)
     self.logger.info('Created notification config %s', notification_name)
 
     return 0
@@ -683,12 +692,15 @@ class NotificationCommand(Command):
         if not accept_notification_configs:
           raise CommandException(
               '%s %s accepts only bucket names, but you provided %s' %
-              (self.command_name, self.subcommand_name, list_entry))
+              (self.command_name,
+               self.subcommand_name,
+               list_entry))
         bucket_name = match.group('bucket')
         notification_id = match.group('notification')
         found = False
         for notification in self.gsutil_api.ListNotificationConfigs(
-            bucket_name, provider='gs'):
+            bucket_name,
+            provider='gs'):
           if notification.id == notification_id:
             yield (bucket_name, notification)
             found = True
@@ -715,7 +727,8 @@ class NotificationCommand(Command):
         for blr in self.WildcardIterator(path).IterBuckets(
             bucket_fields=['id']):
           for notification in self.gsutil_api.ListNotificationConfigs(
-              blr.storage_url.bucket_name, provider='gs'):
+              blr.storage_url.bucket_name,
+              provider='gs'):
             yield (blr.storage_url.bucket_name, notification)
 
   def _List(self):
@@ -793,4 +806,5 @@ class NotificationCommand(Command):
           NotificationCommand.SUBCOMMANDS[self.subcommand_name])
     else:
       raise CommandException('Invalid subcommand "%s" for the %s command.' %
-                             (self.subcommand_name, self.command_name))
+                             (self.subcommand_name,
+                              self.command_name))

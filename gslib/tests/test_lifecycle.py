@@ -88,24 +88,30 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
 
   def test_default_lifecycle(self):
     bucket_uri = self.CreateBucket()
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(self.no_lifecycle_config, stdout)
 
   def test_set_empty_lifecycle1(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.empty_doc1.encode('ascii'))
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(self.no_lifecycle_config, stdout)
 
   def test_valid_lifecycle(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.lifecycle_doc.encode('ascii'))
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
   def test_valid_lifecycle_bucket_style(self):
@@ -113,8 +119,10 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(
         contents=self.lifecycle_doc_bucket_style.encode('ascii'))
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
   def test_created_before_lifecycle(self):
@@ -122,26 +130,32 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(
         contents=self.lifecycle_created_before_doc.encode('ascii'))
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_created_before_json_obj)
 
   def test_bad_lifecycle(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.bad_doc.encode('ascii'))
-    stderr = self.RunGsUtil(
-        ['lifecycle', 'set', fpath, suri(bucket_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['lifecycle',
+                             'set',
+                             fpath,
+                             suri(bucket_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertNotIn('XML lifecycle data provided', stderr)
 
   def test_bad_xml_lifecycle(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.xml_doc.encode('ascii'))
-    stderr = self.RunGsUtil(
-        ['lifecycle', 'set', fpath, suri(bucket_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['lifecycle',
+                             'set',
+                             fpath,
+                             suri(bucket_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertIn('XML lifecycle data provided', stderr)
 
   def test_translation_for_falsy_values_works_correctly(self):
@@ -150,8 +164,10 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
         contents=self.lifecycle_with_falsy_condition_values.encode('ascii'))
 
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
 
     # The lifecycle policy we fetch should include all the False- and 0-valued
     # attributes that we just set.
@@ -166,15 +182,19 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(tmpdir=tmpdir,
                                 contents=self.lifecycle_doc.encode('ascii'))
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
     fpath = self.CreateTempFile(tmpdir=tmpdir,
                                 contents=self.empty_doc1.encode('ascii'))
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
     self.assertIn(self.no_lifecycle_config, stdout)
 
   def test_set_lifecycle_multi_buckets(self):
@@ -183,14 +203,20 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     bucket2_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=self.lifecycle_doc.encode('ascii'))
     self.RunGsUtil(
-        ['lifecycle', 'set', fpath,
+        ['lifecycle',
+         'set',
+         fpath,
          suri(bucket1_uri),
          suri(bucket2_uri)])
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket1_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket1_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket2_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket2_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
   def test_set_lifecycle_wildcard(self):
@@ -215,7 +241,8 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     # We want to be careful when setting a wildcard on buckets to make sure we
     # don't step outside the test buckets to affect other buckets.
     common_prefix = posixpath.commonprefix(
-        [suri(bucket1_uri), suri(bucket2_uri)])
+        [suri(bucket1_uri),
+         suri(bucket2_uri)])
     self.assertTrue(
         common_prefix.startswith(
             'gs://%sgsutil-test-test-set-lifecycle-wildcard-' % random_prefix))
@@ -232,7 +259,10 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
 
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stderr = self.RunGsUtil(['lifecycle', 'set', fpath, wildcard],
+      stderr = self.RunGsUtil(['lifecycle',
+                               'set',
+                               fpath,
+                               wildcard],
                               return_stderr=True)
       actual.update(stderr.splitlines())
       self.assertEqual(expected, actual)
@@ -240,9 +270,13 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
 
     _Check1()
 
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket1_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket1_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
-    stdout = self.RunGsUtil(
-        ['lifecycle', 'get', suri(bucket2_uri)], return_stdout=True)
+    stdout = self.RunGsUtil(['lifecycle',
+                             'get',
+                             suri(bucket2_uri)],
+                            return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)

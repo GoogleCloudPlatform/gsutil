@@ -46,8 +46,9 @@ def check_python_version_support():
   minor = sys.version_info.minor
 
   if major not in MIN_SUPPORTED_PYTHON_VERSION:
-    return (False, 'Gsutil does not support running under Python{major}'.format(
-        major=major))
+    return (False,
+            'Gsutil does not support running under Python{major}'.format(
+                major=major))
   if minor < MIN_SUPPORTED_PYTHON_VERSION[major]:
     lowest_minor = MIN_SUPPORTED_MINOR_FOR_MAJOR_PY_VERSION[major]
     return (

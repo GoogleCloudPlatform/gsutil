@@ -282,7 +282,9 @@ _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
 
 _DESCRIPTION = ("""
   The acl command has three sub-commands:
-""" + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION]))
+""" + '\n'.join([_GET_DESCRIPTION,
+                 _SET_DESCRIPTION,
+                 _CH_DESCRIPTION]))
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
@@ -306,7 +308,9 @@ class AclCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'acl',
-      command_name_aliases=['getacl', 'setacl', 'chacl'],
+      command_name_aliases=['getacl',
+                            'setacl',
+                            'chacl'],
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
@@ -314,7 +318,8 @@ class AclCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML,
+                      ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
@@ -327,7 +332,10 @@ class AclCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='acl',
-      help_name_aliases=['getacl', 'setacl', 'chmod', 'chacl'],
+      help_name_aliases=['getacl',
+                         'setacl',
+                         'chmod',
+                         'chacl'],
       help_type='command_help',
       help_one_line_summary='Get, set, or change bucket and/or object ACLs',
       help_text=_DETAILED_HELP_TEXT,
@@ -383,13 +391,16 @@ class AclCommand(Command):
                 'Service accounts are considered users, not groups; please use '
                 '"gsutil acl ch -u" instead of "gsutil acl ch -g"')
           self.changes.append(
-              acl_helper.AclChange(a, scope_type=acl_helper.ChangeType.GROUP))
+              acl_helper.AclChange(a,
+                                   scope_type=acl_helper.ChangeType.GROUP))
         elif o == '-p':
           self.changes.append(
-              acl_helper.AclChange(a, scope_type=acl_helper.ChangeType.PROJECT))
+              acl_helper.AclChange(a,
+                                   scope_type=acl_helper.ChangeType.PROJECT))
         elif o == '-u':
           self.changes.append(
-              acl_helper.AclChange(a, scope_type=acl_helper.ChangeType.USER))
+              acl_helper.AclChange(a,
+                                   scope_type=acl_helper.ChangeType.USER))
         elif o == '-d':
           self.changes.append(acl_helper.AclDel(a))
         elif o == '-r' or o == '-R':
@@ -411,7 +422,9 @@ class AclCommand(Command):
     self.ApplyAclFunc(_ApplyAclChangesWrapper,
                       _ApplyExceptionHandler,
                       self.args,
-                      object_fields=['acl', 'generation', 'metageneration'])
+                      object_fields=['acl',
+                                     'generation',
+                                     'metageneration'])
     if not self.everything_set_okay:
       raise CommandException('ACLs for some objects could not be set.')
 
@@ -437,7 +450,8 @@ class AclCommand(Command):
     if url.IsBucket():
       bucket = gsutil_api.GetBucket(url.bucket_name,
                                     provider=url.scheme,
-                                    fields=['acl', 'metageneration'])
+                                    fields=['acl',
+                                            'metageneration'])
       current_acl = bucket.acl
     elif url.IsObject():
       gcs_object = encoding.JsonToMessage(apitools_messages.Object,
@@ -497,7 +511,9 @@ class AclCommand(Command):
         url.bucket_name,
         url.object_name,
         provider=url.scheme,
-        fields=['acl', 'generation', 'metageneration'])
+        fields=['acl',
+                'generation',
+                'metageneration'])
     current_acl = gcs_object.acl
 
     if self._ApplyAclChangesAndReturnChangeCount(url, current_acl) == 0:
@@ -518,7 +534,9 @@ class AclCommand(Command):
   def _ApplyAclChangesAndReturnChangeCount(self, storage_url, acl_message):
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(storage_url, acl_message, 'acl',
+      modification_count += change.Execute(storage_url,
+                                           acl_message,
+                                           'acl',
                                            self.logger)
     return modification_count
 
@@ -541,8 +559,8 @@ class AclCommand(Command):
       metrics.LogCommandParams(subcommands=[action_subcommand])
       self._ChAcl()
     else:
-      raise CommandException(
-          ('Invalid subcommand "%s" for the %s command.\n'
-           'See "gsutil help acl".') % (action_subcommand, self.command_name))
+      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
+                              'See "gsutil help acl".') % (action_subcommand,
+                                                           self.command_name))
 
     return 0

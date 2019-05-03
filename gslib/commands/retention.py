@@ -364,7 +364,10 @@ class RetentionCommand(Command):
                              sub_opts=self.sub_opts)
     return func()
 
-  def BucketUpdateFunc(self, url_args, bucket_metadata_update, fields,
+  def BucketUpdateFunc(self,
+                       url_args,
+                       bucket_metadata_update,
+                       fields,
                        log_msg_template):
     preconditions = Preconditions(
         meta_gen_match=self.preconditions.meta_gen_match)
@@ -406,7 +409,8 @@ class RetentionCommand(Command):
     self.logger.info(log_template, exp_src_url)
 
     cloud_obj_metadata = encoding.JsonToMessage(
-        apitools_messages.Object, name_expansion_result.expanded_result)
+        apitools_messages.Object,
+        name_expansion_result.expanded_result)
 
     preconditions = Preconditions(
         gen_match=self.preconditions.gen_match,
@@ -436,7 +440,8 @@ class RetentionCommand(Command):
         self.recursion_requested,
         all_versions=self.all_versions,
         continue_on_error=self.parallel_operations,
-        bucket_listing_fields=['generation', 'metageneration'])
+        bucket_listing_fields=['generation',
+                               'metageneration'])
 
   def _GetSeekAheadNameExpansionIterator(self, url_args):
     return SeekAheadNameExpansionIterator(self.command_name,
@@ -460,7 +465,8 @@ class RetentionCommand(Command):
     url_args = self.args[1:]
     self.BucketUpdateFunc(url_args,
                           bucket_metadata_update,
-                          fields=['id', 'retentionPolicy'],
+                          fields=['id',
+                                  'retentionPolicy'],
                           log_msg_template=log_msg_template)
     return 0
 
@@ -474,7 +480,8 @@ class RetentionCommand(Command):
     url_args = self.args
     self.BucketUpdateFunc(url_args,
                           bucket_metadata_update,
-                          fields=['id', 'retentionPolicy'],
+                          fields=['id',
+                                  'retentionPolicy'],
                           log_msg_template=log_msg_template)
     return 0
 
@@ -500,7 +507,9 @@ class RetentionCommand(Command):
         bucket_metadata = self.gsutil_api.GetBucket(
             url.bucket_name,
             provider=url.scheme,
-            fields=['id', 'metageneration', 'retentionPolicy'])
+            fields=['id',
+                    'metageneration',
+                    'retentionPolicy'])
         if (not (bucket_metadata.retentionPolicy and
                  bucket_metadata.retentionPolicy.retentionPeriod)):
           # TODO: implement '-c' flag to continue_on_error
@@ -543,7 +552,8 @@ class RetentionCommand(Command):
     url_args = self.args[1:]
     self.BucketUpdateFunc(url_args,
                           bucket_metadata_update,
-                          fields=['id', 'defaultEventBasedHold'],
+                          fields=['id',
+                                  'defaultEventBasedHold'],
                           log_msg_template=log_msg_template)
     return 0
 
@@ -592,7 +602,9 @@ class RetentionCommand(Command):
                                                      sub_command_name))
     return hold
 
-  def _SetHold(self, obj_metadata_update_wrapper, url_args,
+  def _SetHold(self,
+               obj_metadata_update_wrapper,
+               url_args,
                sub_command_full_name):
     """Common logic to set or unset Event-Based/Temporary Hold on objects.
 

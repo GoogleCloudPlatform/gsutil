@@ -245,20 +245,27 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
                          gid=gid,
                          mode=mode)
     stderr = cls.RunGsUtil([
-        'cp' if is_cp else 'mv', '-P',
-        suri(bucket_uri, obj.object_name), tmpdir
+        'cp' if is_cp else 'mv',
+        '-P',
+        suri(bucket_uri,
+             obj.object_name),
+        tmpdir
     ],
                            expected_status=1,
                            return_stderr=True)
     cls.assertIn(
-        ORPHANED_FILE, stderr,
-        'Error during test "%s": %s not found in stderr:\n%s' %
-        (test_name, ORPHANED_FILE, stderr))
+        ORPHANED_FILE,
+        stderr,
+        'Error during test "%s": %s not found in stderr:\n%s' % (test_name,
+                                                                 ORPHANED_FILE,
+                                                                 stderr))
     error_regex = BuildErrorRegex(obj, attrs_dict.get(error))
     cls.assertTrue(
         error_regex.search(stderr),
         'Test %s did not match expected error; could not find a match for '
-        '%s\n\nin stderr:\n%s' % (test_name, error_regex.pattern, stderr))
+        '%s\n\nin stderr:\n%s' % (test_name,
+                                  error_regex.pattern,
+                                  stderr))
     listing1 = TailSet(suri(bucket_uri), cls.FlatListBucket(bucket_uri))
     listing2 = TailSet(tmpdir, cls.FlatListDir(tmpdir))
     # Bucket should have un-altered content.
@@ -332,48 +339,69 @@ def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
   for obj_name in six.iterkeys(test_params):
     # Move objects one at a time to avoid listing consistency.
     cls.RunGsUtil(
-        ['cp' if is_cp else 'mv', '-P',
-         suri(bucket_uri, obj_name), tmpdir])
+        ['cp' if is_cp else 'mv',
+         '-P',
+         suri(bucket_uri,
+              obj_name),
+         tmpdir])
   listing = TailSet(tmpdir, cls.FlatListDir(tmpdir))
   cls.assertEquals(
       listing,
       set([
-          '/obj1', '/obj2', '/obj3', '/obj4', '/obj5', '/obj6', '/obj7',
-          '/obj8', '/obj9', '/obj10'
+          '/obj1',
+          '/obj2',
+          '/obj3',
+          '/obj4',
+          '/obj5',
+          '/obj6',
+          '/obj7',
+          '/obj8',
+          '/obj9',
+          '/obj10'
       ]))
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj1'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj1'),
                                   gid=primary_gid,
                                   mode=DEFAULT_MODE)
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj2'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj2'),
                                   gid=non_primary_gid,
                                   mode=DEFAULT_MODE)
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj3'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj3'),
                                   gid=primary_gid,
                                   mode=0o440)
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj4'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj4'),
                                   gid=non_primary_gid,
                                   mode=0o444)
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj5'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj5'),
                                   uid=USER_ID,
                                   gid=primary_gid,
                                   mode=DEFAULT_MODE)
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj6'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj6'),
                                   uid=USER_ID,
                                   gid=primary_gid,
                                   mode=0o420)
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj7'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj7'),
                                   uid=USER_ID,
                                   gid=primary_gid,
                                   mode=DEFAULT_MODE)
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj8'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj8'),
                                   uid=USER_ID,
                                   gid=non_primary_gid,
                                   mode=DEFAULT_MODE)
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj9'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj9'),
                                   uid=USER_ID,
                                   gid=primary_gid,
                                   mode=0o433)
-  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir, 'obj10'),
+  cls.VerifyLocalPOSIXPermissions(os.path.join(tmpdir,
+                                               'obj10'),
                                   uid=USER_ID,
                                   gid=non_primary_gid,
                                   mode=0o442)
@@ -436,17 +464,26 @@ def TestCpMvPOSIXLocalToBucketNoErrors(cls, bucket_uri, is_cp=True):
                                  mode=int(mode))
     fpath = cls.CreateTempFile(contents=b'foo', uid=uid, gid=gid, mode=mode)
     cls.RunGsUtil(
-        ['cp' if is_cp else 'mv', '-P', fpath,
-         suri(bucket_uri, obj_name)])
+        ['cp' if is_cp else 'mv',
+         '-P',
+         fpath,
+         suri(bucket_uri,
+              obj_name)])
     if uid != NA_ID:
-      cls.VerifyObjectCustomAttribute(bucket_uri.bucket_name, obj_name,
-                                      UID_ATTR, str(uid))
+      cls.VerifyObjectCustomAttribute(bucket_uri.bucket_name,
+                                      obj_name,
+                                      UID_ATTR,
+                                      str(uid))
     if gid != NA_ID:
-      cls.VerifyObjectCustomAttribute(bucket_uri.bucket_name, obj_name,
-                                      GID_ATTR, str(gid))
+      cls.VerifyObjectCustomAttribute(bucket_uri.bucket_name,
+                                      obj_name,
+                                      GID_ATTR,
+                                      str(gid))
     if mode != NA_MODE:
-      cls.VerifyObjectCustomAttribute(bucket_uri.bucket_name, obj_name,
-                                      MODE_ATTR, str(mode))
+      cls.VerifyObjectCustomAttribute(bucket_uri.bucket_name,
+                                      obj_name,
+                                      MODE_ATTR,
+                                      str(mode))
 
 
 def _ReadContentsFromFifo(fifo_path, list_for_output):
@@ -474,12 +511,14 @@ class _JSONForceHTTPErrorCopyCallbackHandler(object):
         not self.started_over_once):
       sys.stderr.write('Forcing HTTP error %s after byte %s. '
                        '%s/%s transferred.\r\n' %
-                       (self._http_error_num, self._startover_at_byte,
+                       (self._http_error_num,
+                        self._startover_at_byte,
                         MakeHumanReadable(total_bytes_transferred),
                         MakeHumanReadable(total_size)))
       self.started_over_once = True
       raise apitools_exceptions.HttpError({'status': self._http_error_num},
-                                          None, None)
+                                          None,
+                                          None)
 
 
 class _XMLResumableUploadStartOverCopyCallbackHandler(object):
@@ -497,11 +536,13 @@ class _XMLResumableUploadStartOverCopyCallbackHandler(object):
       sys.stderr.write(
           'Forcing ResumableUpload start over error after byte %s. '
           '%s/%s transferred.\r\n' %
-          (self._startover_at_byte, MakeHumanReadable(total_bytes_transferred),
+          (self._startover_at_byte,
+           MakeHumanReadable(total_bytes_transferred),
            MakeHumanReadable(total_size)))
       self.started_over_once = True
       raise boto.exception.ResumableUploadException(
-          'Forcing upload start over', ResumableTransferDisposition.START_OVER)
+          'Forcing upload start over',
+          ResumableTransferDisposition.START_OVER)
 
 
 class _DeleteBucketThenStartOverCopyCallbackHandler(object):
@@ -531,7 +572,8 @@ class _DeleteBucketThenStartOverCopyCallbackHandler(object):
       sys.stderr.write(
           'Forcing ResumableUpload start over error after byte %s. '
           '%s/%s transferred.\r\n' %
-          (self._startover_at_byte, MakeHumanReadable(total_bytes_transferred),
+          (self._startover_at_byte,
+           MakeHumanReadable(total_bytes_transferred),
            MakeHumanReadable(total_size)))
       self.started_over_once = True
       raise ResumableUploadStartOverException('Artificially forcing start-over')
@@ -540,7 +582,10 @@ class _DeleteBucketThenStartOverCopyCallbackHandler(object):
 class _ResumableUploadRetryHandler(object):
   """Test callback handler for causing retries during a resumable transfer."""
 
-  def __init__(self, retry_at_byte, exception_to_raise, exc_args,
+  def __init__(self,
+               retry_at_byte,
+               exception_to_raise,
+               exc_args,
                num_retries=1):
     self._retry_at_byte = retry_at_byte
     self._exception_to_raise = exception_to_raise
@@ -569,7 +614,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     contents = pkgutil.get_data('gslib', 'tests/test_data/%s' % name)
     return self.CreateTempFile(file_name=name, contents=contents)
 
-  def _CpWithFifoViaGsUtilAndAppendOutputToList(self, src_path_tuple, dst_path,
+  def _CpWithFifoViaGsUtilAndAppendOutputToList(self,
+                                                src_path_tuple,
+                                                dst_path,
                                                 list_for_return_value,
                                                 **kwargs):
     arg_list = ['cp']
@@ -583,11 +630,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_noclobber(self):
     key_uri = self.CreateObject(contents=b'foo')
     fpath = self.CreateTempFile(contents=b'bar')
-    stderr = self.RunGsUtil(
-        ['cp', '-n', fpath, suri(key_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             '-n',
+                             fpath,
+                             suri(key_uri)],
+                            return_stderr=True)
     self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
     self.assertEqual(key_uri.get_contents_as_string(), b'foo')
-    stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
+    stderr = self.RunGsUtil(['cp',
+                             '-n',
+                             suri(key_uri),
+                             fpath],
                             return_stderr=True)
     with open(fpath, 'rb') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
@@ -597,11 +650,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_noclobber_different_size(self):
     key_uri = self.CreateObject(contents=b'foo')
     fpath = self.CreateTempFile(contents=b'quux')
-    stderr = self.RunGsUtil(
-        ['cp', '-n', fpath, suri(key_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             '-n',
+                             fpath,
+                             suri(key_uri)],
+                            return_stderr=True)
     self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
     self.assertEqual(key_uri.get_contents_as_string(), b'foo')
-    stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
+    stderr = self.RunGsUtil(['cp',
+                             '-n',
+                             suri(key_uri),
+                             fpath],
                             return_stderr=True)
     with open(fpath, 'rb') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
@@ -611,11 +670,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_noclobber_different_size(self):
     key_uri = self.CreateObject(contents='foo')
     fpath = self.CreateTempFile(contents='quux')
-    stderr = self.RunGsUtil(
-        ['cp', '-n', fpath, suri(key_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             '-n',
+                             fpath,
+                             suri(key_uri)],
+                            return_stderr=True)
     self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
     self.assertEqual(key_uri.get_contents_as_string(), b'foo')
-    stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
+    stderr = self.RunGsUtil(['cp',
+                             '-n',
+                             suri(key_uri),
+                             fpath],
                             return_stderr=True)
     with open(fpath, 'r') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
@@ -623,9 +688,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents=b'foo')
-    invalid_bucket_uri = ('%s://%s' %
-                          (self.default_provider, self.nonexistent_bucket_name))
-    stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
+    invalid_bucket_uri = ('%s://%s' % (self.default_provider,
+                                       self.nonexistent_bucket_name))
+    stderr = self.RunGsUtil(['cp',
+                             fpath,
+                             invalid_bucket_uri],
                             expected_status=1,
                             return_stderr=True)
     self.assertIn('does not exist', stderr)
@@ -634,16 +701,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents=b'foo')
-    stderr = self.RunGsUtil(
-        ['cp', suri(key_uri), suri(bucket2_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             suri(key_uri),
+                             suri(bucket2_uri)],
+                            return_stderr=True)
     # Rewrite API may output an additional 'Copying' progress notification.
     self.assertGreaterEqual(stderr.count('Copying'), 1)
     self.assertLessEqual(stderr.count('Copying'), 2)
-    stderr = self.RunGsUtil(
-        ['cp', '-n', suri(key_uri),
-         suri(bucket2_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             '-n',
+                             suri(key_uri),
+                             suri(bucket2_uri)],
+                            return_stderr=True)
     self.assertIn(
-        'Skipping existing item: %s' % suri(bucket2_uri, key_uri.object_name),
+        'Skipping existing item: %s' % suri(bucket2_uri,
+                                            key_uri.object_name),
         stderr)
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
@@ -655,11 +727,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     list_for_output = []
 
     read_thread = threading.Thread(target=_ReadContentsFromFifo,
-                                   args=(fifo_path, list_for_output))
+                                   args=(fifo_path,
+                                         list_for_output))
     read_thread.start()
     write_thread = threading.Thread(
         target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
-        args=((file_path,), fifo_path, []))
+        args=((file_path,
+              ),
+              fifo_path,
+              []))
     write_thread.start()
     write_thread.join(120)
     read_thread.join(120)
@@ -677,11 +753,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     list_for_output = []
 
     read_thread = threading.Thread(target=_ReadContentsFromFifo,
-                                   args=(fifo_path, list_for_output))
+                                   args=(fifo_path,
+                                         list_for_output))
     read_thread.start()
     write_thread = threading.Thread(
         target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
-        args=((suri(obj_uri),), fifo_path, []))
+        args=((suri(obj_uri),
+              ),
+              fifo_path,
+              []))
     write_thread.start()
     write_thread.join(120)
     read_thread.join(120)
@@ -701,11 +781,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     list_for_output = []
 
     read_thread = threading.Thread(target=_ReadContentsFromFifo,
-                                   args=(fifo_path, list_for_output))
+                                   args=(fifo_path,
+                                         list_for_output))
     read_thread.start()
     write_thread = threading.Thread(
         target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
-        args=((suri(obj1_uri), suri(obj2_uri)), fifo_path, []))
+        args=((suri(obj1_uri),
+               suri(obj2_uri)),
+              fifo_path,
+              []))
     write_thread.start()
     write_thread.join(120)
     read_thread.join(120)
@@ -717,10 +801,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @SequentialAndParallelTransfer
   def test_streaming(self):
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(
-        ['cp', '-', '%s' % suri(bucket_uri, 'foo')],
-        stdin='bar',
-        return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             '-',
+                             '%s' % suri(bucket_uri,
+                                         'foo')],
+                            stdin='bar',
+                            return_stderr=True)
     self.assertIn('Copying from <STDIN>', stderr)
     key_uri = bucket_uri.clone_replace_name('foo')
     self.assertEqual(key_uri.get_contents_as_string(), b'bar')
@@ -737,7 +823,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Start writer in the background, which won't finish until a corresponding
     # read operation is performed on the fifo.
     write_thread = threading.Thread(target=_WriteContentsToFifo,
-                                    args=(object_contents, fifo_path))
+                                    args=(object_contents,
+                                          fifo_path))
     write_thread.start()
     # The fifo requires both a pending read and write before either operation
     # will complete. Regardless of which operation occurs first, the
@@ -746,7 +833,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # if the write thread fails.
     read_thread = threading.Thread(
         target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
-        args=((fifo_path,), suri(bucket_uri, object_name), list_for_output),
+        args=((fifo_path,
+              ),
+              suri(bucket_uri,
+                   object_name),
+              list_for_output),
         kwargs={'return_stderr': True})
     read_thread.start()
 
@@ -767,11 +858,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     list_for_output = []
 
     write_thread = threading.Thread(target=_WriteContentsToFifo,
-                                    args=(contents, fifo_path))
+                                    args=(contents,
+                                          fifo_path))
     write_thread.start()
     read_thread = threading.Thread(
         target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
-        args=((fifo_path,), '-', list_for_output),
+        args=((fifo_path,
+              ),
+              '-',
+              list_for_output),
         kwargs={'return_stdout': True})
     read_thread.start()
     read_thread.join(120)
@@ -789,11 +884,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     list_for_gsutil_output = []
 
     read_thread = threading.Thread(target=_ReadContentsFromFifo,
-                                   args=(fifo_path, list_for_output))
+                                   args=(fifo_path,
+                                         list_for_output))
     read_thread.start()
     write_thread = threading.Thread(
         target=self._CpWithFifoViaGsUtilAndAppendOutputToList,
-        args=(('-',), fifo_path, list_for_gsutil_output),
+        args=(('-',
+              ),
+              fifo_path,
+              list_for_gsutil_output),
         kwargs={
             'return_stderr': True,
             'stdin': contents
@@ -807,7 +906,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def test_streaming_multiple_arguments(self):
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(['cp', '-', '-', suri(bucket_uri)],
+    stderr = self.RunGsUtil(['cp',
+                             '-',
+                             '-',
+                             suri(bucket_uri)],
                             stdin='bar',
                             return_stderr=True,
                             expected_status=1)
@@ -830,8 +932,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['ls', '-L', dsturi], return_stdout=True)
       if IS_WINDOWS:
         self.assertTrue(
-            re.search(r'Content-Type:\s+audio/x-mpg', stdout) or
-            re.search(r'Content-Type:\s+audio/mpeg', stdout))
+            re.search(r'Content-Type:\s+audio/x-mpg',
+                      stdout) or re.search(r'Content-Type:\s+audio/mpeg',
+                                           stdout))
       else:
         self.assertRegex(stdout, r'Content-Type:\s+audio/mpeg')
 
@@ -853,8 +956,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dsturi = suri(bucket_uri, 'foo')
 
     self.RunGsUtil(
-        ['-h', 'Content-Type:', 'cp',
-         self._get_test_file('test.mp3'), dsturi])
+        ['-h',
+         'Content-Type:',
+         'cp',
+         self._get_test_file('test.mp3'),
+         dsturi])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -865,8 +971,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
     self.RunGsUtil(
-        ['-h', 'Content-Type:', 'cp',
-         self._get_test_file('test.gif'), dsturi])
+        ['-h',
+         'Content-Type:',
+         'cp',
+         self._get_test_file('test.gif'),
+         dsturi])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -882,8 +991,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dsturi = suri(bucket_uri, 'foo')
 
     self.RunGsUtil([
-        '-h', 'Content-Type:text/plain', 'cp',
-        self._get_test_file('test.mp3'), dsturi
+        '-h',
+        'Content-Type:text/plain',
+        'cp',
+        self._get_test_file('test.mp3'),
+        dsturi
     ])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -895,8 +1007,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
     self.RunGsUtil([
-        '-h', 'Content-Type:text/plain', 'cp',
-        self._get_test_file('test.gif'), dsturi
+        '-h',
+        'Content-Type:text/plain',
+        'cp',
+        self._get_test_file('test.gif'),
+        dsturi
     ])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -935,8 +1050,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'foo/bar\n')
 
     self.RunGsUtil([
-        '-h', 'Content-Type:image/gif', 'cp',
-        self._get_test_file('test.mp3'), dsturi
+        '-h',
+        'Content-Type:image/gif',
+        'cp',
+        self._get_test_file('test.mp3'),
+        dsturi
     ])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -948,8 +1066,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
     self.RunGsUtil([
-        '-h', 'Content-Type:image/gif', 'cp',
-        self._get_test_file('test.gif'), dsturi
+        '-h',
+        'Content-Type:image/gif',
+        'cp',
+        self._get_test_file('test.gif'),
+        dsturi
     ])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -989,8 +1110,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
     self.RunGsUtil([
-        '-h', 'CONTENT-TYPE:image/gif', '-h', 'content-type:image/gif', 'cp',
-        fpath, dsturi
+        '-h',
+        'CONTENT-TYPE:image/gif',
+        '-h',
+        'content-type:image/gif',
+        'cp',
+        fpath,
+        dsturi
     ])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -1010,8 +1136,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self._get_test_file('test.gif')
 
     self.RunGsUtil([
-        '-h', 'Cache-Control:public,max-age=12', '-h',
-        'x-%s-meta-1:abcd' % self.provider_custom_meta, 'cp', fpath, dst_uri
+        '-h',
+        'Cache-Control:public,max-age=12',
+        '-h',
+        'x-%s-meta-1:abcd' % self.provider_custom_meta,
+        'cp',
+        fpath,
+        dst_uri
     ])
 
     stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
@@ -1059,13 +1190,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Copy first version to current and verify.
     self.RunGsUtil(
         ['cp',
-         '%s#%s' % (k2_uri.versionless_uri, g1), k2_uri.versionless_uri])
+         '%s#%s' % (k2_uri.versionless_uri,
+                    g1),
+         k2_uri.versionless_uri])
     self.RunGsUtil(['cp', k2_uri.versionless_uri, fpath])
     with open(fpath, 'rb') as f:
       self.assertEqual(f.read(), b'data1')
 
     # Attempt to specify a version-specific URI for destination.
-    stderr = self.RunGsUtil(['cp', fpath, k2_uri.uri],
+    stderr = self.RunGsUtil(['cp',
+                             fpath,
+                             k2_uri.uri],
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('cannot be the destination for gsutil cp', stderr)
@@ -1073,9 +1208,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_versioning_no_parallelism(self):
     """Tests that copy all-versions errors when parallelism is enabled."""
     stderr = self.RunGsUtil([
-        '-m', 'cp', '-A',
-        suri(self.nonexistent_bucket_name, 'foo'),
-        suri(self.nonexistent_bucket_name, 'bar')
+        '-m',
+        'cp',
+        '-A',
+        suri(self.nonexistent_bucket_name,
+             'foo'),
+        suri(self.nonexistent_bucket_name,
+             'bar')
     ],
                             expected_status=1,
                             return_stderr=True)
@@ -1104,17 +1243,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Recursively copy to second versioned bucket.
     # -A flag should copy all versions in order.
     self.RunGsUtil(
-        ['cp', '-R', '-A',
-         suri(bucket1_uri, '*'),
+        ['cp',
+         '-R',
+         '-A',
+         suri(bucket1_uri,
+              '*'),
          suri(bucket2_uri)])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       """Validates the results of the cp -R."""
-      listing1 = self.RunGsUtil(['ls', '-la', suri(bucket1_uri)],
+      listing1 = self.RunGsUtil(['ls',
+                                 '-la',
+                                 suri(bucket1_uri)],
                                 return_stdout=True).split('\n')
-      listing2 = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)],
+      listing2 = self.RunGsUtil(['ls',
+                                 '-la',
+                                 suri(bucket2_uri)],
                                 return_stdout=True).split('\n')
       # 2 lines of listing output, 1 summary line, 1 empty line from \n split.
       self.assertEquals(len(listing1), 4)
@@ -1146,9 +1292,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check3():
       """Validates the results of the cp -R."""
-      listing1 = self.RunGsUtil(['ls', '-la', suri(bucket1_uri)],
+      listing1 = self.RunGsUtil(['ls',
+                                 '-la',
+                                 suri(bucket1_uri)],
                                 return_stdout=True).split('\n')
-      listing2 = self.RunGsUtil(['ls', '-la', suri(bucket3_uri)],
+      listing2 = self.RunGsUtil(['ls',
+                                 '-la',
+                                 suri(bucket3_uri)],
                                 return_stdout=True).split('\n')
       # 2 lines of listing output, 1 summary line, 1 empty line from \n split.
       self.assertEquals(len(listing1), 4)
@@ -1179,7 +1329,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     # Second copy should fail with a precondition error.
     stderr = self.RunGsUtil(
-        ['-h', gen_match_header, 'cp', fpath1,
+        ['-h',
+         gen_match_header,
+         'cp',
+         fpath1,
          suri(bucket_uri)],
         return_stderr=True,
         expected_status=1)
@@ -1202,7 +1355,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     # Second copy should fail the precondition.
     stderr = self.RunGsUtil(
-        ['-h', gen_match_header, 'cp', fpath1,
+        ['-h',
+         gen_match_header,
+         'cp',
+         fpath1,
          suri(k1_uri)],
         return_stderr=True,
         expected_status=1)
@@ -1212,7 +1368,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Specifiying a generation with -n should fail before the request hits the
     # server.
     stderr = self.RunGsUtil(
-        ['-h', gen_match_header, 'cp', '-n', fpath1,
+        ['-h',
+         gen_match_header,
+         'cp',
+         '-n',
+         fpath1,
          suri(k1_uri)],
         return_stderr=True,
         expected_status=1)
@@ -1220,7 +1380,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn('ArgumentException', stderr)
     self.assertIn(
         'Specifying x-goog-if-generation-match is not supported '
-        'with cp -n', stderr)
+        'with cp -n',
+        stderr)
 
   @SequentialAndParallelTransfer
   def test_cp_nv(self):
@@ -1235,8 +1396,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', '-nv', fpath1, suri(k1_uri)])
 
     # Second copy should skip copying.
-    stderr = self.RunGsUtil(
-        ['cp', '-nv', fpath1, suri(k1_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             '-nv',
+                             fpath1,
+                             suri(k1_uri)],
+                            return_stderr=True)
     self.assertIn('Skipping existing item:', stderr)
 
   @SequentialAndParallelTransfer
@@ -1254,7 +1418,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     # Case 2: Upload file to object using resumable upload.
     size_threshold = ONE_KIB
-    boto_config_for_test = ('GSUtil', 'resumable_threshold',
+    boto_config_for_test = ('GSUtil',
+                            'resumable_threshold',
                             str(size_threshold))
     with SetBotoConfigForTest([boto_config_for_test]):
       file_as_string = os.urandom(size_threshold)
@@ -1270,8 +1435,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     tmpdir = self.CreateTempDir()
     fpath1 = self.CreateTempFile(tmpdir=tmpdir)
     dst_uri = storage_uri(fpath1)
-    stderr = self.RunGsUtil(
-        ['cp', '-v', suri(k1_uri), suri(dst_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             '-v',
+                             suri(k1_uri),
+                             suri(dst_uri)],
+                            return_stderr=True)
     # TODO: Add ordering assertion (should be in stderr.split('\n)[-2]) back
     # once both the creation and status messages are handled by the UI thread.
     self.assertIn('Created: %s\n' % dst_uri.uri, stderr)
@@ -1308,8 +1476,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath1 = self.CreateTempFile(tmpdir=tmpdir, contents=b'data1')
     fpath2 = self.CreateTempFile(tmpdir=tmpdir, contents=b'data2')
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(['cp', '-I', suri(bucket_uri)],
-                   stdin='\n'.join((fpath1, fpath2)))
+    self.RunGsUtil(['cp',
+                    '-I',
+                    suri(bucket_uri)],
+                   stdin='\n'.join((fpath1,
+                                    fpath2)))
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1350,8 +1521,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                contents=b'b' * 1024 * 1024)
     self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
     self.RunGsUtil(['cp', suri(gs_key), suri(s3_bucket)])
-    with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                               ('GSUtil', 'json_resumable_chunk_size',
+    with SetBotoConfigForTest([('GSUtil',
+                                'resumable_threshold',
+                                str(ONE_KIB)),
+                               ('GSUtil',
+                                'json_resumable_chunk_size',
                                 str(ONE_KIB * 256))]):
       # Ensure copy also works across json upload chunk boundaries.
       self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
@@ -1373,8 +1547,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.AssertNObjectsInBucket(bucket_uri, exponent_cap * 3)
     self.RunGsUtil(
-        ['-m', 'cp', '-D',
-         suri(bucket_uri, '**'),
+        ['-m',
+         'cp',
+         '-D',
+         suri(bucket_uri,
+              '**'),
          suri(bucket2_uri)])
 
     self.AssertNObjectsInBucket(bucket2_uri, exponent_cap * 3)
@@ -1388,8 +1565,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Set some headers on source object so we can verify that headers are
     # presereved by daisy-chain copy.
     self.RunGsUtil([
-        'setmeta', '-h', 'Cache-Control:public,max-age=12', '-h',
-        'Content-Type:image/gif', '-h',
+        'setmeta',
+        '-h',
+        'Cache-Control:public,max-age=12',
+        '-h',
+        'Content-Type:image/gif',
+        '-h',
         'x-%s-meta-1:abcd' % self.provider_custom_meta,
         suri(key_uri)
     ])
@@ -1400,9 +1581,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # were preserved. Also specify -n option to test that gsutil correctly
     # removes the x-goog-if-generation-match:0 header that was set at uploading
     # time when updating the ACL.
-    stderr = self.RunGsUtil(
-        ['cp', '-Dpn', suri(key_uri),
-         suri(bucket2_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             '-Dpn',
+                             suri(key_uri),
+                             suri(bucket2_uri)],
+                            return_stderr=True)
     self.assertNotIn('Copy-in-the-cloud disallowed', stderr)
 
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1418,7 +1601,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     _Check()
 
   @unittest.skipUnless(
-      not HAS_GS_PORT, 'gs_port is defined in config which can cause '
+      not HAS_GS_PORT,
+      'gs_port is defined in config which can cause '
       'problems when uploading and downloading to the same local host port')
   def test_daisy_chain_cp_download_failure(self):
     """Tests cp with the -D option when the download thread dies."""
@@ -1428,10 +1612,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                 contents=b'a' * self.halt_size)
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, '-D',
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          '-D',
           suri(key_uri),
           suri(bucket2_uri)
       ],
@@ -1442,16 +1630,20 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # _OutputAndExit).
       self.assertEqual(
           stderr.count(
-              'ResumableDownloadException: Artifically halting download'), 3)
+              'ResumableDownloadException: Artifically halting download'),
+          3)
 
   def test_streaming_gzip_upload(self):
     """Tests error when compression flag is requested on a streaming source."""
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(
-        ['cp', '-Z', '-', suri(bucket_uri, 'foo')],
-        return_stderr=True,
-        expected_status=1,
-        stdin='streaming data')
+    stderr = self.RunGsUtil(['cp',
+                             '-Z',
+                             '-',
+                             suri(bucket_uri,
+                                  'foo')],
+                            return_stderr=True,
+                            expected_status=1,
+                            stdin='streaming data')
     self.assertIn(
         'gzip compression is not currently supported on streaming uploads',
         stderr)
@@ -1461,17 +1653,34 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     tmpdir = self.CreateTempDir(test_files=3)
     bucket_uri = self.CreateBucket()
 
-    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
-                               ('GSUtil', 'task_estimation_force', 'True')]):
-      stderr = self.RunGsUtil(
-          ['-m', 'cp', '-r', tmpdir, suri(bucket_uri)], return_stderr=True)
+    with SetBotoConfigForTest([('GSUtil',
+                                'task_estimation_threshold',
+                                '1'),
+                               ('GSUtil',
+                                'task_estimation_force',
+                                'True')]):
+      stderr = self.RunGsUtil(['-m',
+                               'cp',
+                               '-r',
+                               tmpdir,
+                               suri(bucket_uri)],
+                              return_stderr=True)
       self.assertIn(
-          'Estimated work for this command: objects: 3, total size: 18', stderr)
+          'Estimated work for this command: objects: 3, total size: 18',
+          stderr)
 
-    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '0'),
-                               ('GSUtil', 'task_estimation_force', 'True')]):
-      stderr = self.RunGsUtil(
-          ['-m', 'cp', '-r', tmpdir, suri(bucket_uri)], return_stderr=True)
+    with SetBotoConfigForTest([('GSUtil',
+                                'task_estimation_threshold',
+                                '0'),
+                               ('GSUtil',
+                                'task_estimation_force',
+                                'True')]):
+      stderr = self.RunGsUtil(['-m',
+                               'cp',
+                               '-r',
+                               tmpdir,
+                               suri(bucket_uri)],
+                              return_stderr=True)
       self.assertNotIn('Estimated work', stderr)
 
   def test_seek_ahead_download_cp(self):
@@ -1479,17 +1688,34 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket(test_objects=3)
     self.AssertNObjectsInBucket(bucket_uri, 3)
 
-    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
-                               ('GSUtil', 'task_estimation_force', 'True')]):
-      stderr = self.RunGsUtil(
-          ['-m', 'cp', '-r', suri(bucket_uri), tmpdir], return_stderr=True)
+    with SetBotoConfigForTest([('GSUtil',
+                                'task_estimation_threshold',
+                                '1'),
+                               ('GSUtil',
+                                'task_estimation_force',
+                                'True')]):
+      stderr = self.RunGsUtil(['-m',
+                               'cp',
+                               '-r',
+                               suri(bucket_uri),
+                               tmpdir],
+                              return_stderr=True)
       self.assertIn(
-          'Estimated work for this command: objects: 3, total size: 18', stderr)
+          'Estimated work for this command: objects: 3, total size: 18',
+          stderr)
 
-    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '0'),
-                               ('GSUtil', 'task_estimation_force', 'True')]):
-      stderr = self.RunGsUtil(
-          ['-m', 'cp', '-r', suri(bucket_uri), tmpdir], return_stderr=True)
+    with SetBotoConfigForTest([('GSUtil',
+                                'task_estimation_threshold',
+                                '0'),
+                               ('GSUtil',
+                                'task_estimation_force',
+                                'True')]):
+      stderr = self.RunGsUtil(['-m',
+                               'cp',
+                               '-r',
+                               suri(bucket_uri),
+                               tmpdir],
+                              return_stderr=True)
       self.assertNotIn('Estimated work', stderr)
 
   def test_canned_acl_cp(self):
@@ -1498,13 +1724,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket2_uri = self.CreateBucket()
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents=b'foo')
     self.RunGsUtil(
-        ['cp', '-a', 'public-read',
+        ['cp',
+         '-a',
+         'public-read',
          suri(key_uri),
          suri(bucket2_uri)])
     # Set public-read on the original key after the copy so we can compare
     # the ACLs.
     self.RunGsUtil(['acl', 'set', 'public-read', suri(key_uri)])
-    public_read_acl = self.RunGsUtil(['acl', 'get', suri(key_uri)],
+    public_read_acl = self.RunGsUtil(['acl',
+                                      'get',
+                                      suri(key_uri)],
                                      return_stdout=True)
 
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1522,18 +1752,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     key_uri = self.CreateObject(bucket_uri=bucket1_uri, contents=b'foo')
     # Set public-read on the object so we can compare the ACLs.
     self.RunGsUtil(['acl', 'set', 'public-read', suri(key_uri)])
-    public_read_acl = self.RunGsUtil(['acl', 'get', suri(key_uri)],
+    public_read_acl = self.RunGsUtil(['acl',
+                                      'get',
+                                      suri(key_uri)],
                                      return_stdout=True)
 
     file_name = 'bar'
     fpath = self.CreateTempFile(file_name=file_name, contents=b'foo')
     self.RunGsUtil(['cp', '-a', 'public-read', fpath, suri(bucket1_uri)])
-    new_acl_json = self.RunGsUtil(
-        ['acl', 'get', suri(bucket1_uri, file_name)], return_stdout=True)
+    new_acl_json = self.RunGsUtil(['acl',
+                                   'get',
+                                   suri(bucket1_uri,
+                                        file_name)],
+                                  return_stdout=True)
     self.assertEqual(public_read_acl, new_acl_json)
 
     resumable_size = ONE_KIB
-    boto_config_for_test = ('GSUtil', 'resumable_threshold',
+    boto_config_for_test = ('GSUtil',
+                            'resumable_threshold',
                             str(resumable_size))
     with SetBotoConfigForTest([boto_config_for_test]):
       resumable_file_name = 'resumable_bar'
@@ -1541,10 +1777,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       resumable_fpath = self.CreateTempFile(file_name=resumable_file_name,
                                             contents=resumable_contents)
       self.RunGsUtil(
-          ['cp', '-a', 'public-read', resumable_fpath,
+          ['cp',
+           '-a',
+           'public-read',
+           resumable_fpath,
            suri(bucket1_uri)])
       new_resumable_acl_json = self.RunGsUtil(
-          ['acl', 'get', suri(bucket1_uri, resumable_file_name)],
+          ['acl',
+           'get',
+           suri(bucket1_uri,
+                resumable_file_name)],
           return_stdout=True)
       self.assertEqual(public_read_acl, new_resumable_acl_json)
 
@@ -1600,12 +1842,18 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _CopyAndCheck():
       self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), suri(dst_bucket_uri)])
-      stdout = self.RunGsUtil(['ls', '-R', dst_bucket_uri.uri],
+      stdout = self.RunGsUtil(['ls',
+                               '-R',
+                               dst_bucket_uri.uri],
                               return_stdout=True)
       self.assertIn(
-          '%s%s/obj0\n' % (dst_bucket_uri, src_bucket_uri.bucket_name), stdout)
+          '%s%s/obj0\n' % (dst_bucket_uri,
+                           src_bucket_uri.bucket_name),
+          stdout)
       self.assertIn(
-          '%s%s/obj1\n' % (dst_bucket_uri, src_bucket_uri.bucket_name), stdout)
+          '%s%s/obj1\n' % (dst_bucket_uri,
+                           src_bucket_uri.bucket_name),
+          stdout)
 
     _CopyAndCheck()
 
@@ -1636,10 +1884,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       dir_list = sorted(dir_list)
       self.assertEqual(len(dir_list), 2)
       self.assertEqual(
-          os.path.join(dst_dir, src_bucket_uri.bucket_name, 'obj0'),
+          os.path.join(dst_dir,
+                       src_bucket_uri.bucket_name,
+                       'obj0'),
           dir_list[0])
       self.assertEqual(
-          os.path.join(dst_dir, src_bucket_uri.bucket_name, 'obj1'),
+          os.path.join(dst_dir,
+                       src_bucket_uri.bucket_name,
+                       'obj1'),
           dir_list[1])
 
     _CopyAndCheck()
@@ -1667,16 +1919,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         dir_list.append(os.path.join(dirname, filename))
     dir_list = sorted(dir_list)
     self.assertEqual(len(dir_list), 2)
-    self.assertEqual(os.path.join(dst_dir, src_bucket_uri.bucket_name, 'obj0'),
+    self.assertEqual(os.path.join(dst_dir,
+                                  src_bucket_uri.bucket_name,
+                                  'obj0'),
                      dir_list[0])
-    self.assertEqual(os.path.join(dst_dir, src_bucket_uri.bucket_name, 'obj1'),
+    self.assertEqual(os.path.join(dst_dir,
+                                  src_bucket_uri.bucket_name,
+                                  'obj1'),
                      dir_list[1])
 
   def test_copy_quiet(self):
     bucket_uri = self.CreateBucket()
     key_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     stderr = self.RunGsUtil(
-        ['-q', 'cp',
+        ['-q',
+         'cp',
          suri(key_uri),
          suri(bucket_uri.clone_replace_name('o2'))],
         return_stderr=True)
@@ -1699,10 +1956,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['ls', '-L', suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls',
+                               '-L',
+                               suri(bucket_uri)],
                               return_stdout=True)
       self.assertRegex(
-          stdout, r'Hash\s+\(md5\):\s+%s' % re.escape(file_md5.decode('ascii')))
+          stdout,
+          r'Hash\s+\(md5\):\s+%s' % re.escape(file_md5.decode('ascii')))
 
     _Check1()
 
@@ -1738,8 +1998,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(len(lines), 2)
 
     expected_headers = [
-        'Source', 'Destination', 'Start', 'End', 'Md5', 'UploadId',
-        'Source Size', 'Bytes Transferred', 'Result', 'Description'
+        'Source',
+        'Destination',
+        'Start',
+        'End',
+        'Md5',
+        'UploadId',
+        'Source Size',
+        'Bytes Transferred',
+        'Result',
+        'Description'
     ]
     self.assertEqual(expected_headers, lines[0].strip().split(','))
     results = lines[1].strip().split(',')
@@ -1778,8 +2046,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     logpath = self.CreateTempFile(contents=b'')
     # Ensure the file is empty.
     open(logpath, 'w').close()
-    self.RunGsUtil(
-        ['cp', '-L', logpath, suri(key_uri), fpath], return_stdout=True)
+    self.RunGsUtil(['cp',
+                    '-L',
+                    logpath,
+                    suri(key_uri),
+                    fpath],
+                   return_stdout=True)
     with open(logpath, 'r') as f:
       lines = f.readlines()
     if six.PY3:
@@ -1800,8 +2072,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(len(lines), 2)
 
     expected_headers = [
-        'Source', 'Destination', 'Start', 'End', 'Md5', 'UploadId',
-        'Source Size', 'Bytes Transferred', 'Result', 'Description'
+        'Source',
+        'Destination',
+        'Start',
+        'End',
+        'Md5',
+        'UploadId',
+        'Source Size',
+        'Bytes Transferred',
+        'Result',
+        'Description'
     ]
     self.assertEqual(expected_headers, lines[0].strip().split(','))
     results = lines[1].strip().split(',')
@@ -1830,7 +2110,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
       stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
       self.assertEquals(stdout.encode('ascii'), file_contents)
-    with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
+    with SetBotoConfigForTest([('GSUtil',
+                                'resumable_threshold',
                                 str(START_CALLBACK_PER_BYTES * 3))]):
       self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
       stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
@@ -1853,8 +2134,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Test that copying specifying only 2 of the 3 prefixes gzips the correct
     # files, and test that including whitespace in the extension list works.
     self.RunGsUtil([
-        'cp', '-z', 'js, html',
-        os.path.join(tmpdir, 'test.*'),
+        'cp',
+        '-z',
+        'js, html',
+        os.path.join(tmpdir,
+                     'test.*'),
         suri(bucket_uri)
     ])
     self.AssertNObjectsInBucket(bucket_uri, 3)
@@ -1901,8 +2185,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       local_uris = [
           self.CreateTempFile(file_name=filename,
                               tmpdir=tmpdir,
-                              contents=contents)
-          for filename in ('test.html', 'test.js', 'test.txt')
+                              contents=contents) for filename in ('test.html',
+                                                                  'test.js',
+                                                                  'test.txt')
       ]
 
       return (bucket_uri, tmpdir, local_uris)
@@ -1918,8 +2203,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           stderr: String output from running the gsutil command to upload mock data.
       """
       stderr = self.RunGsUtil([
-          '-D', 'cp', '-j', 'js, html',
-          os.path.join(tmpdir, 'test*'),
+          '-D',
+          'cp',
+          '-j',
+          'js, html',
+          os.path.join(tmpdir,
+                       'test*'),
           suri(bucket_uri)
       ],
                               return_stderr=True)
@@ -1980,10 +2269,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     contents = b'x' * 100
     tmpdir = self.CreateTempDir(test_files=10, contents=contents)
     # Upload the data.
-    with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', str(ONE_KIB))
-                              ]):
+    with SetBotoConfigForTest([('GSUtil',
+                                'resumable_threshold',
+                                str(ONE_KIB))]):
       stderr = self.RunGsUtil(
-          ['-D', '-m', 'cp', '-J', '-r', tmpdir,
+          ['-D',
+           '-m',
+           'cp',
+           '-J',
+           '-r',
+           tmpdir,
            suri(bucket_uri)],
           return_stderr=True)
       # Ensure all objects are uploaded.
@@ -2007,10 +2302,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     contents = get_random_ascii_chars(size=self.halt_size)
     tmpdir = self.CreateTempDir(test_files=10, contents=contents)
     # Upload the data.
-    with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', str(ONE_KIB))
-                              ]):
+    with SetBotoConfigForTest([('GSUtil',
+                                'resumable_threshold',
+                                str(ONE_KIB))]):
       stderr = self.RunGsUtil(
-          ['-D', '-m', 'cp', '-J', '-r', tmpdir,
+          ['-D',
+           '-m',
+           'cp',
+           '-J',
+           '-r',
+           tmpdir,
            suri(bucket_uri)],
           return_stderr=True)
       # Ensure all objects are uploaded.
@@ -2030,8 +2331,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.CreateTempFile(file_name='test', tmpdir=tmpdir, contents=contents)
     # Test that all files are compressed.
     self.RunGsUtil(
-        ['cp', '-Z',
-         os.path.join(tmpdir, 'test*'),
+        ['cp',
+         '-Z',
+         os.path.join(tmpdir,
+                      'test*'),
          suri(bucket_uri)])
     self.AssertNObjectsInBucket(bucket_uri, 4)
     uri1 = suri(bucket_uri, 'test.html')
@@ -2074,8 +2377,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                      contents=contents)
     # Upload the data.
     stderr = self.RunGsUtil(
-        ['-D', 'cp', '-J',
-         os.path.join(tmpdir, 'test*'),
+        ['-D',
+         'cp',
+         '-J',
+         os.path.join(tmpdir,
+                      'test*'),
          suri(bucket_uri)],
         return_stderr=True)
     self.AssertNObjectsInBucket(bucket_uri, 2)
@@ -2105,36 +2411,78 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Test that mixing compression flags error."""
     cases = (
         # Test with -Z and -z
-        ['cp', '-Z', '-z', 'html, js', 'a.js', 'b.js'],
+        ['cp',
+         '-Z',
+         '-z',
+         'html, js',
+         'a.js',
+         'b.js'],
         # Same test, but with arguments in the opposite order.
-        ['cp', '-z', 'html, js', '-Z', 'a.js', 'b.js'])
+        ['cp',
+         '-z',
+         'html, js',
+         '-Z',
+         'a.js',
+         'b.js'])
 
     for case in cases:
       stderr = self.RunGsUtil(case, return_stderr=True, expected_status=1)
       self.assertIn('CommandException', stderr)
       self.assertIn(
-          'Specifying both the -z and -Z options together is invalid.', stderr)
+          'Specifying both the -z and -Z options together is invalid.',
+          stderr)
 
   def test_both_gzip_transport_encoding_options_error(self):
     """Test that mixing transport encoding flags error."""
     cases = (
         # Test with -J and -j
-        ['cp', '-J', '-j', 'html, js', 'a.js', 'b.js'],
+        ['cp',
+         '-J',
+         '-j',
+         'html, js',
+         'a.js',
+         'b.js'],
         # Same test, but with arguments in the opposite order.
-        ['cp', '-j', 'html, js', '-J', 'a.js', 'b.js'])
+        ['cp',
+         '-j',
+         'html, js',
+         '-J',
+         'a.js',
+         'b.js'])
 
     for case in cases:
       stderr = self.RunGsUtil(case, return_stderr=True, expected_status=1)
       self.assertIn('CommandException', stderr)
       self.assertIn(
-          'Specifying both the -j and -J options together is invalid.', stderr)
+          'Specifying both the -j and -J options together is invalid.',
+          stderr)
 
   def test_combined_gzip_options_error(self):
     """Test that mixing transport encoding and compression flags error."""
-    cases = (['cp', '-Z', '-j', 'html, js', 'a.js',
-              'b.js'], ['cp', '-J', '-z', 'html, js', 'a.js',
-                        'b.js'], ['cp', '-j', 'html, js', '-Z', 'a.js', 'b.js'],
-             ['cp', '-z', 'html, js', '-J', 'a.js', 'b.js'])
+    cases = (['cp',
+              '-Z',
+              '-j',
+              'html, js',
+              'a.js',
+              'b.js'],
+             ['cp',
+              '-J',
+              '-z',
+              'html, js',
+              'a.js',
+              'b.js'],
+             ['cp',
+              '-j',
+              'html, js',
+              '-Z',
+              'a.js',
+              'b.js'],
+             ['cp',
+              '-z',
+              'html, js',
+              '-J',
+              'a.js',
+              'b.js'])
 
     for case in cases:
       stderr = self.RunGsUtil(case, return_stderr=True, expected_status=1)
@@ -2147,8 +2495,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath1 = self.CreateTempFile(file_name=('tmp', 'x', 'y', 'z'))
     bucket_uri = self.CreateBucket()
     wildcard_uri = '%s*' % fpath1[:-5]
-    stderr = self.RunGsUtil(
-        ['cp', '-R', wildcard_uri, suri(bucket_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             '-R',
+                             wildcard_uri,
+                             suri(bucket_uri)],
+                            return_stderr=True)
     self.assertIn('Copying file:', stderr)
     self.AssertNObjectsInBucket(bucket_uri, 1)
 
@@ -2187,7 +2538,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       expected_error_regex = r'Anonymous \S+ do(es)? not have'
 
     with self.SetAnonymousBotoCreds():
-      stderr = self.RunGsUtil(['cp', suri(object_uri), 'foo'],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               'foo'],
                               return_stderr=True,
                               expected_status=1)
     self.assertRegex(stderr, expected_error_regex)
@@ -2221,9 +2574,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # no valid (non-symlinked) files could be found at that path; we don't want
     # the command to terminate if that's the first file we attempt to copy.
     stderr = self.RunGsUtil([
-        'cp', '-e', '-c',
-        '%s%s*' % (fpath_dir, os.path.sep),
-        suri(bucket_uri, 'files')
+        'cp',
+        '-e',
+        '-c',
+        '%s%s*' % (fpath_dir,
+                   os.path.sep),
+        suri(bucket_uri,
+             'files')
     ],
                             return_stderr=True)
     self.assertIn('Copying file', stderr)
@@ -2233,8 +2590,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # at fpath1 should be successfully copied, then copying the symlink at
     # fpath2 should fail.
     stderr = self.RunGsUtil(
-        ['cp', '-e', '-r', fpath1, fpath2,
-         suri(bucket_uri, 'files')],
+        ['cp',
+         '-e',
+         '-r',
+         fpath1,
+         fpath2,
+         suri(bucket_uri,
+              'files')],
         return_stderr=True,
         expected_status=1)
     self.assertIn('Copying file', stderr)
@@ -2283,11 +2645,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     # If multiple keys are supplied and one is correct, download should succeed.
     fpath2 = self.CreateTempFile()
-    boto_config_for_test2 = [
-        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY3),
-        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY2),
-        ('GSUtil', 'decryption_key2', TEST_ENCRYPTION_KEY1)
-    ]
+    boto_config_for_test2 = [('GSUtil',
+                              'encryption_key',
+                              TEST_ENCRYPTION_KEY3),
+                             ('GSUtil',
+                              'decryption_key1',
+                              TEST_ENCRYPTION_KEY2),
+                             ('GSUtil',
+                              'decryption_key2',
+                              TEST_ENCRYPTION_KEY1)]
 
     with SetBotoConfigForTest(boto_config_for_test2):
       self.RunGsUtil(['cp', suri(object_uri), suri(fpath2)])
@@ -2307,13 +2673,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    encryption_key=TEST_ENCRYPTION_KEY1)
     fpath = self.CreateTempFile()
 
-    stderr = self.RunGsUtil(
-        ['cp', suri(object_uri), suri(fpath)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['cp',
+                             suri(object_uri),
+                             suri(fpath)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertIn(
         'Missing decryption key with SHA256 hash %s' %
-        TEST_ENCRYPTION_KEY1_SHA256_B64, stderr)
+        TEST_ENCRYPTION_KEY1_SHA256_B64,
+        stderr)
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
   @SequentialAndParallelTransfer
@@ -2351,14 +2719,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     object_uri_str = suri(bucket_uri, 'foo')
     fpath = self.CreateTempFile(contents=b'a' * self.halt_size)
-    boto_config_for_test = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                            ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(ONE_KIB)),
+                            ('GSUtil',
+                             'encryption_key',
+                             TEST_ENCRYPTION_KEY1)]
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(True, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(True,
+                                                         5)))
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, fpath, object_uri_str
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
+          object_uri_str
       ],
                               expected_status=1,
                               return_stderr=True)
@@ -2381,24 +2758,38 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri_str = suri(bucket_uri, 'foo')
     file_contents = b'a' * self.halt_size
     fpath = self.CreateTempFile(contents=file_contents)
-    boto_config_for_test = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                            ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(ONE_KIB)),
+                            ('GSUtil',
+                             'encryption_key',
+                             TEST_ENCRYPTION_KEY1)]
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(True, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(True,
+                                                         5)))
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, fpath, object_uri_str
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
+          object_uri_str
       ],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
 
     # Resume the upload with multiple keys, including the original.
-    boto_config_for_test2 = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                             ('GSUtil', 'decryption_key1',
+    boto_config_for_test2 = [('GSUtil',
+                              'resumable_threshold',
+                              str(ONE_KIB)),
+                             ('GSUtil',
+                              'decryption_key1',
                               TEST_ENCRYPTION_KEY2),
-                             ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
+                             ('GSUtil',
+                              'encryption_key',
+                              TEST_ENCRYPTION_KEY1)]
 
     with SetBotoConfigForTest(boto_config_for_test2):
       stderr = self.RunGsUtil(['cp', fpath, object_uri_str], return_stderr=True)
@@ -2417,22 +2808,35 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri_str = suri(bucket_uri, 'foo')
     file_contents = b'a' * self.halt_size
     fpath = self.CreateTempFile(contents=file_contents)
-    boto_config_for_test = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                            ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(ONE_KIB)),
+                            ('GSUtil',
+                             'encryption_key',
+                             TEST_ENCRYPTION_KEY1)]
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(True, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(True,
+                                                         5)))
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, fpath, object_uri_str
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
+          object_uri_str
       ],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
 
     # Resume the upload without the original key.
-    boto_config_for_test2 = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                             ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2)]
+    boto_config_for_test2 = [('GSUtil',
+                              'resumable_threshold',
+                              str(ONE_KIB)),
+                             ('GSUtil',
+                              'encryption_key',
+                              TEST_ENCRYPTION_KEY2)]
 
     with SetBotoConfigForTest(boto_config_for_test2):
       stderr = self.RunGsUtil(['cp', fpath, object_uri_str], return_stderr=True)
@@ -2455,17 +2859,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'a' * self.halt_size)
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(True, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(True,
+                                                         5)))
 
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, fpath,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
-      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp',
+                               fpath,
+                               suri(bucket_uri)],
                               return_stderr=True)
       self.assertIn('Resuming upload', stderr)
 
@@ -2482,11 +2892,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Configure boto
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(True, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(True,
+                                                         5)))
 
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          '-D', 'cp', '-J', '--testcallbackfile', test_callback_file, local_uri,
+          '-D',
+          'cp',
+          '-J',
+          '--testcallbackfile',
+          test_callback_file,
+          local_uri,
           suri(bucket_uri)
       ],
                               expected_status=1,
@@ -2495,7 +2911,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('send: Using gzip transport encoding for the request.',
                     stderr)
       self.assertIn('Artifically halting upload', stderr)
-      stderr = self.RunGsUtil(['-D', 'cp', '-J', local_uri,
+      stderr = self.RunGsUtil(['-D',
+                               'cp',
+                               '-J',
+                               local_uri,
                                suri(bucket_uri)],
                               return_stderr=True)
       self.assertIn('Resuming upload', stderr)
@@ -2522,17 +2941,25 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # until then, raise an apitools retryable exception.
     if self.test_api == ApiSelector.XML:
       test_callback_file = self.CreateTempFile(contents=pickle.dumps(
-          _ResumableUploadRetryHandler(5, http_client.BadStatusLine, (
-              'unused',))))
+          _ResumableUploadRetryHandler(5,
+                                       http_client.BadStatusLine,
+                                       ('unused',
+                                       ))))
     else:
       test_callback_file = self.CreateTempFile(contents=pickle.dumps(
-          _ResumableUploadRetryHandler(
-              5, apitools_exceptions.BadStatusCodeError, ('unused', 'unused',
-                                                          'unused'))))
+          _ResumableUploadRetryHandler(5,
+                                       apitools_exceptions.BadStatusCodeError,
+                                       ('unused',
+                                        'unused',
+                                        'unused'))))
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          '-D', 'cp', '--testcallbackfile', test_callback_file, fpath,
+          '-D',
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ],
                               return_stderr=1)
@@ -2549,16 +2976,28 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
 
     test_callback_file = self.CreateTempFile(contents=pickle.dumps(
-        _ResumableUploadRetryHandler(5, apitools_exceptions.BadStatusCodeError,
-                                     ('unused', 'unused', 'unused'))))
+        _ResumableUploadRetryHandler(5,
+                                     apitools_exceptions.BadStatusCodeError,
+                                     ('unused',
+                                      'unused',
+                                      'unused'))))
     # Need to reduce the JSON chunk size since streaming uploads buffer a
     # full chunk.
-    boto_configs_for_test = [('GSUtil', 'json_resumable_chunk_size',
-                              str(256 * ONE_KIB)), ('Boto', 'num_retries', '2')]
+    boto_configs_for_test = [('GSUtil',
+                              'json_resumable_chunk_size',
+                              str(256 * ONE_KIB)),
+                             ('Boto',
+                              'num_retries',
+                              '2')]
     with SetBotoConfigForTest(boto_configs_for_test):
       stderr = self.RunGsUtil([
-          '-D', 'cp', '--testcallbackfile', test_callback_file, '-',
-          suri(bucket_uri, 'foo')
+          '-D',
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          '-',
+          suri(bucket_uri,
+               'foo')
       ],
                               stdin='a' * 512 * ONE_KIB,
                               return_stderr=1)
@@ -2574,8 +3013,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['acl', 'ch', '-u', 'AllUsers:W', suri(bucket_uri)])
     with self.SetAnonymousBotoCreds():
       stderr = self.RunGsUtil(
-          ['cp', '-p', suri(object_uri),
-           suri(bucket_uri, 'foo')],
+          ['cp',
+           '-p',
+           suri(object_uri),
+           suri(bucket_uri,
+                'foo')],
           return_stderr=True,
           expected_status=1)
       self.assertIn('OWNER permission is required for preserving ACLs', stderr)
@@ -2588,15 +3030,22 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'a' * ONE_MIB, file_name='foo')
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
-      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp',
+                               fpath,
+                               suri(bucket_uri)],
                               return_stderr=True)
       self.assertEquals(1, stderr.count(final_progress_callback))
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(2 * ONE_MIB))
     with SetBotoConfigForTest([boto_config_for_test]):
-      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp',
+                               fpath,
+                               suri(bucket_uri)],
                               return_stderr=True)
       self.assertEquals(1, stderr.count(final_progress_callback))
-    stderr = self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath],
+    stderr = self.RunGsUtil(['cp',
+                             suri(bucket_uri,
+                                  'foo'),
+                             fpath],
                             return_stderr=True)
     self.assertEquals(1, stderr.count(final_progress_callback))
 
@@ -2617,14 +3066,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       tracker_filename = GetTrackerFilePath(
-          StorageUrlFromString(suri(bucket_uri, 'foo')), TrackerFileType.UPLOAD,
+          StorageUrlFromString(suri(bucket_uri,
+                                    'foo')),
+          TrackerFileType.UPLOAD,
           self.test_api)
       test_callback_file = self.CreateTempFile(
-          contents=pickle.dumps(HaltingCopyCallbackHandler(True, 5)))
+          contents=pickle.dumps(HaltingCopyCallbackHandler(True,
+                                                           5)))
       try:
         stderr = self.RunGsUtil([
-            'cp', '--testcallbackfile', test_callback_file, fpath,
-            suri(bucket_uri, 'foo')
+            'cp',
+            '--testcallbackfile',
+            test_callback_file,
+            fpath,
+            suri(bucket_uri,
+                 'foo')
         ],
                                 expected_status=1,
                                 return_stderr=True)
@@ -2646,12 +3102,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                 tmpdir=tmp_dir,
                                 contents=b'a' * self.halt_size)
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(True, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(True,
+                                                         5)))
 
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, fpath,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ],
                               expected_status=1,
@@ -2660,7 +3120,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       fpath = self.CreateTempFile(file_name='foo',
                                   tmpdir=tmp_dir,
                                   contents=b'a' * self.halt_size * 2)
-      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp',
+                               fpath,
+                               suri(bucket_uri)],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('ResumableUploadAbortException', stderr)
@@ -2681,14 +3143,20 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     test_callback_file = self.CreateTempFile(contents=pickle.dumps(
         HaltingCopyCallbackHandler(True,
                                    int(ONE_KIB) * 384)))
-    resumable_threshold_for_test = ('GSUtil', 'resumable_threshold',
+    resumable_threshold_for_test = ('GSUtil',
+                                    'resumable_threshold',
                                     str(ONE_KIB))
-    resumable_chunk_size_for_test = ('GSUtil', 'json_resumable_chunk_size',
+    resumable_chunk_size_for_test = ('GSUtil',
+                                     'json_resumable_chunk_size',
                                      str(ONE_KIB * 256))
     with SetBotoConfigForTest(
-        [resumable_threshold_for_test, resumable_chunk_size_for_test]):
+        [resumable_threshold_for_test,
+         resumable_chunk_size_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, fpath,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ],
                               expected_status=1,
@@ -2697,7 +3165,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       fpath = self.CreateTempFile(file_name='foo',
                                   tmpdir=tmp_dir,
                                   contents=b'b' * ONE_KIB * 512)
-      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp',
+                               fpath,
+                               suri(bucket_uri)],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('doesn\'t match cloud-supplied digest', stderr)
@@ -2716,14 +3186,20 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     test_callback_file = self.CreateTempFile(contents=pickle.dumps(
         HaltingCopyCallbackHandler(True,
                                    int(ONE_KIB) * 384)))
-    resumable_threshold_for_test = ('GSUtil', 'resumable_threshold',
+    resumable_threshold_for_test = ('GSUtil',
+                                    'resumable_threshold',
                                     str(ONE_KIB))
-    resumable_chunk_size_for_test = ('GSUtil', 'json_resumable_chunk_size',
+    resumable_chunk_size_for_test = ('GSUtil',
+                                     'json_resumable_chunk_size',
                                      str(ONE_KIB * 256))
     with SetBotoConfigForTest(
-        [resumable_threshold_for_test, resumable_chunk_size_for_test]):
+        [resumable_threshold_for_test,
+         resumable_chunk_size_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, fpath,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ],
                               expected_status=1,
@@ -2732,7 +3208,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       fpath = self.CreateTempFile(file_name='foo',
                                   tmpdir=tmp_dir,
                                   contents=b'a' * ONE_KIB)
-      stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+      stderr = self.RunGsUtil(['cp',
+                               fpath,
+                               suri(bucket_uri)],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('ResumableUploadAbortException', stderr)
@@ -2756,7 +3234,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # that points to a previously uploaded component.
     tracker_file_name = GetTrackerFilePath(dst_url,
                                            TrackerFileType.PARALLEL_UPLOAD,
-                                           self.test_api, src_url)
+                                           self.test_api,
+                                           src_url)
     tracker_prefix = '123'
 
     # Create component 0 to be used in the resume; it must match the name
@@ -2785,19 +3264,27 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     try:
       # Now "resume" the upload using the original encryption key.
-      with SetBotoConfigForTest([
-          ('GSUtil', 'parallel_composite_upload_threshold', '1'),
-          ('GSUtil', 'parallel_composite_upload_component_size',
-           str(component_size)),
-          ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)
-      ]):
-        stderr = self.RunGsUtil(
-            ['cp', source_file, suri(bucket_uri, 'foo')], return_stderr=True)
+      with SetBotoConfigForTest([('GSUtil',
+                                  'parallel_composite_upload_threshold',
+                                  '1'),
+                                 ('GSUtil',
+                                  'parallel_composite_upload_component_size',
+                                  str(component_size)),
+                                 ('GSUtil',
+                                  'encryption_key',
+                                  TEST_ENCRYPTION_KEY1)]):
+        stderr = self.RunGsUtil(['cp',
+                                 source_file,
+                                 suri(bucket_uri,
+                                      'foo')],
+                                return_stderr=True)
         self.assertIn('Found 1 existing temporary components to reuse.', stderr)
         self.assertFalse(
             os.path.exists(tracker_file_name),
             'Tracker file %s should have been deleted.' % tracker_file_name)
-        read_contents = self.RunGsUtil(['cat', suri(bucket_uri, 'foo')],
+        read_contents = self.RunGsUtil(['cat',
+                                        suri(bucket_uri,
+                                             'foo')],
                                        return_stdout=True)
         self.assertEqual(read_contents.encode('ascii'), file_contents)
     finally:
@@ -2820,7 +3307,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Simulate an upload that had occurred by writing a tracker file.
     tracker_file_name = GetTrackerFilePath(dst_url,
                                            TrackerFileType.PARALLEL_UPLOAD,
-                                           self.test_api, src_url)
+                                           self.test_api,
+                                           src_url)
     tracker_prefix = '123'
     existing_component_name = 'foo_1'
     object_uri = self.CreateObject(bucket_uri=bucket_uri,
@@ -2831,27 +3319,38 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                            str(object_uri.generation))
     existing_components = [existing_component]
     enc_key_sha256 = TEST_ENCRYPTION_KEY1_SHA256_B64
-    WriteParallelUploadTrackerFile(tracker_file_name, tracker_prefix,
+    WriteParallelUploadTrackerFile(tracker_file_name,
+                                   tracker_prefix,
                                    existing_components,
                                    enc_key_sha256.decode('ascii'))
 
     try:
       # Now "resume" the upload using the original encryption key.
-      with SetBotoConfigForTest([
-          ('GSUtil', 'parallel_composite_upload_threshold', '1'),
-          ('GSUtil', 'parallel_composite_upload_component_size', '3'),
-          ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2)
-      ]):
-        stderr = self.RunGsUtil(
-            ['cp', source_file, suri(bucket_uri, 'foo')], return_stderr=True)
+      with SetBotoConfigForTest([('GSUtil',
+                                  'parallel_composite_upload_threshold',
+                                  '1'),
+                                 ('GSUtil',
+                                  'parallel_composite_upload_component_size',
+                                  '3'),
+                                 ('GSUtil',
+                                  'encryption_key',
+                                  TEST_ENCRYPTION_KEY2)]):
+        stderr = self.RunGsUtil(['cp',
+                                 source_file,
+                                 suri(bucket_uri,
+                                      'foo')],
+                                return_stderr=True)
         self.assertIn(
             'does not match current encryption key. '
-            'Deleting old components and restarting upload', stderr)
+            'Deleting old components and restarting upload',
+            stderr)
         self.assertNotIn('existing temporary components to reuse.', stderr)
         self.assertFalse(
             os.path.exists(tracker_file_name),
             'Tracker file %s should have been deleted.' % tracker_file_name)
-        read_contents = self.RunGsUtil(['cat', suri(bucket_uri, 'foo')],
+        read_contents = self.RunGsUtil(['cat',
+                                        suri(bucket_uri,
+                                             'foo')],
                                        return_stdout=True)
         self.assertEqual(read_contents.encode('ascii'), file_contents)
     finally:
@@ -2868,7 +3367,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Tests a resumable upload with an unwritable tracker file."""
     bucket_uri = self.CreateBucket()
     tracker_filename = GetTrackerFilePath(
-        StorageUrlFromString(suri(bucket_uri, 'foo')), TrackerFileType.UPLOAD,
+        StorageUrlFromString(suri(bucket_uri,
+                                  'foo')),
+        TrackerFileType.UPLOAD,
         self.test_api)
     tracker_dir = os.path.dirname(tracker_filename)
     fpath = self.CreateTempFile(file_name='foo', contents=b'a' * ONE_KIB)
@@ -2878,7 +3379,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     try:
       os.chmod(tracker_dir, 0)
       with SetBotoConfigForTest([boto_config_for_test]):
-        stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
+        stderr = self.RunGsUtil(['cp',
+                                 fpath,
+                                 suri(bucket_uri)],
                                 expected_status=1,
                                 return_stderr=True)
         self.assertIn('Couldn\'t write tracker file', stderr)
@@ -2896,7 +3399,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Tests downloads with an unwritable tracker file."""
     object_uri = self.CreateObject(contents=b'foo' * ONE_KIB)
     tracker_filename = GetTrackerFilePath(
-        StorageUrlFromString(suri(object_uri)), TrackerFileType.DOWNLOAD,
+        StorageUrlFromString(suri(object_uri)),
+        TrackerFileType.DOWNLOAD,
         self.test_api)
     tracker_dir = os.path.dirname(tracker_filename)
     fpath = self.CreateTempFile()
@@ -2910,7 +3414,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.RunGsUtil(['cp', suri(object_uri), fpath])
       boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
       with SetBotoConfigForTest([boto_config_for_test]):
-        stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+        stderr = self.RunGsUtil(['cp',
+                                 suri(object_uri),
+                                 fpath],
                                 expected_status=1,
                                 return_stderr=True)
         self.assertIn('Couldn\'t write tracker file', stderr)
@@ -2937,12 +3443,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    encryption_key=encryption_key)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
     with SetBotoConfigForTest(boto_config):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
-          suri(object_uri), fpath
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          suri(object_uri),
+          fpath
       ],
                               expected_status=1,
                               return_stderr=True)
@@ -2951,7 +3461,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                             TrackerFileType.DOWNLOAD,
                                             self.test_api)
       self.assertTrue(os.path.isfile(tracker_filename))
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               return_stderr=True)
       self.assertIn('Resuming download', stderr)
     with open(fpath, 'rb') as f:
@@ -2959,9 +3471,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def test_cp_resumable_download_break(self):
     """Tests that a download can be resumed after a connection break."""
-    self._test_cp_resumable_download_break_helper([
-        ('GSUtil', 'resumable_threshold', str(ONE_KIB))
-    ])
+    self._test_cp_resumable_download_break_helper([('GSUtil',
+                                                    'resumable_threshold',
+                                                    str(ONE_KIB))])
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
   def test_cp_resumable_encrypted_download_break(self):
@@ -2970,8 +3482,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       return unittest.skip(
           'gsutil does not support encryption with the XML API')
     self._test_cp_resumable_download_break_helper(
-        [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-         ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)],
+        [('GSUtil',
+          'resumable_threshold',
+          str(ONE_KIB)),
+         ('GSUtil',
+          'encryption_key',
+          TEST_ENCRYPTION_KEY1)],
         encryption_key=TEST_ENCRYPTION_KEY1)
 
   @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
@@ -2988,15 +3504,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    encryption_key=TEST_ENCRYPTION_KEY1)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
-    boto_config_for_test = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                            ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(ONE_KIB)),
+                            ('GSUtil',
+                             'encryption_key',
+                             TEST_ENCRYPTION_KEY1)]
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
-          suri(object_uri), fpath
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          suri(object_uri),
+          fpath
       ],
                               expected_status=1,
                               return_stderr=True)
@@ -3007,19 +3531,30 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertTrue(os.path.isfile(tracker_filename))
 
     # After simulated connection break, rotate the key on the object.
-    boto_config_for_test2 = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                             ('GSUtil', 'decryption_key1',
+    boto_config_for_test2 = [('GSUtil',
+                              'resumable_threshold',
+                              str(ONE_KIB)),
+                             ('GSUtil',
+                              'decryption_key1',
                               TEST_ENCRYPTION_KEY1),
-                             ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2)]
+                             ('GSUtil',
+                              'encryption_key',
+                              TEST_ENCRYPTION_KEY2)]
     with SetBotoConfigForTest(boto_config_for_test2):
       self.RunGsUtil(['rewrite', '-k', suri(object_uri)])
 
     # Now resume the download using only the new encryption key. Since its
     # generation changed, we must restart it.
-    boto_config_for_test3 = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                             ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2)]
+    boto_config_for_test3 = [('GSUtil',
+                              'resumable_threshold',
+                              str(ONE_KIB)),
+                             ('GSUtil',
+                              'encryption_key',
+                              TEST_ENCRYPTION_KEY2)]
     with SetBotoConfigForTest(boto_config_for_test3):
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               return_stderr=True)
       self.assertIn('Restarting download', stderr)
     with open(fpath, 'rb') as f:
@@ -3037,13 +3572,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=b'abc' * self.halt_size)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       # This will create a tracker file with an ETag.
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
-          suri(object_uri), fpath
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          suri(object_uri),
+          fpath
       ],
                               expected_status=1,
                               return_stderr=True)
@@ -3055,7 +3594,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           object_name='foo',
           contents=b'b' * self.halt_size,
           gs_idempotent_generation=object_uri.generation)
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               return_stderr=True)
       self.assertNotIn('Resuming download', stderr)
 
@@ -3074,17 +3615,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile()
 
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_max_components', '3')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '3')]
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
           suri(object_uri),
           suri(fpath)
       ],
@@ -3097,8 +3645,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       identical_file = self.CreateTempFile(contents=file_contents)
       self.RunGsUtil(['cp', suri(identical_file), suri(object_uri)])
 
-      stderr = self.RunGsUtil(
-          ['cp', suri(object_uri), suri(fpath)], return_stderr=True)
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               suri(fpath)],
+                              return_stderr=True)
       self.assertIn('Restarting download from scratch', stderr)
       with open(fpath, 'rb') as f:
         self.assertEqual(f.read(), file_contents, 'File contents differ')
@@ -3111,12 +3661,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    object_name='foo',
                                    contents=b'a' * self.halt_size)
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
-          suri(object_uri), fpath
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          suri(object_uri),
+          fpath
       ],
                               expected_status=1,
                               return_stderr=True)
@@ -3124,7 +3678,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       with open(fpath + '_.gstmp', 'w') as larger_file:
         for _ in range(self.halt_size * 2):
           larger_file.write('a')
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               expected_status=1,
                               return_stderr=True)
       self.assertNotIn('Resuming download', stderr)
@@ -3151,7 +3707,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
     etag_match = re.search(r'\s*ETag:\s*(.*)', stdout)
     self.assertIsNotNone(etag_match, 'Could not get object ETag')
-    self.assertEqual(len(etag_match.groups()), 1,
+    self.assertEqual(len(etag_match.groups()),
+                     1,
                      'Did not match expected single ETag')
     etag = etag_match.group(1)
 
@@ -3163,7 +3720,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         tracker_fp.write(etag)
       boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
       with SetBotoConfigForTest([boto_config_for_test]):
-        stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+        stderr = self.RunGsUtil(['cp',
+                                 suri(object_uri),
+                                 fpath],
                                 return_stderr=True,
                                 expected_status=1)
         self.assertIn('Download already complete', stderr)
@@ -3193,7 +3752,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
     etag_match = re.search(r'\s*ETag:\s*(.*)', stdout)
     self.assertIsNotNone(etag_match, 'Could not get object ETag')
-    self.assertEqual(len(etag_match.groups()), 1,
+    self.assertEqual(len(etag_match.groups()),
+                     1,
                      'Did not match expected single ETag')
     etag = etag_match.group(1)
     tracker_filename = GetTrackerFilePath(StorageUrlFromString(fpath),
@@ -3204,7 +3764,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     try:
       boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
       with SetBotoConfigForTest([boto_config_for_test]):
-        stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+        stderr = self.RunGsUtil(['cp',
+                                 suri(object_uri),
+                                 fpath],
                                 return_stderr=True)
         self.assertIn('Download already complete', stderr)
         # Tracker file should be removed after successful hash validation.
@@ -3224,7 +3786,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
     etag_match = re.search(r'\s*ETag:\s*(.*)', stdout)
     self.assertIsNotNone(etag_match, 'Could not get object ETag')
-    self.assertEqual(len(etag_match.groups()), 1,
+    self.assertEqual(len(etag_match.groups()),
+                     1,
                      'Did not match regex for exactly one object ETag')
     etag = etag_match.group(1)
     etag += 'nonmatching'
@@ -3236,14 +3799,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     try:
       boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
       with SetBotoConfigForTest([boto_config_for_test]):
-        stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+        stderr = self.RunGsUtil(['cp',
+                                 suri(object_uri),
+                                 fpath],
                                 return_stderr=True)
         self.assertNotIn('Resuming download', stderr)
         # Ensure the file was overwritten.
         with open(fpath, 'r') as in_fp:
           contents = in_fp.read()
           self.assertEqual(
-              contents, 'efgh' * ONE_KIB,
+              contents,
+              'efgh' * ONE_KIB,
               'File not overwritten when it should have been '
               'due to a non-matching tracker file.')
         self.assertFalse(os.path.isfile(tracker_filename))
@@ -3256,9 +3822,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(file_name='looks-zipped.gz', contents=b'foo')
     self.RunGsUtil([
-        '-h', 'content-type:application/gzip', 'cp', '-Z',
+        '-h',
+        'content-type:application/gzip',
+        'cp',
+        '-Z',
         suri(fpath),
-        suri(bucket_uri, 'foo')
+        suri(bucket_uri,
+             'foo')
     ])
     self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath])
 
@@ -3270,9 +3840,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(file_name='looks-zipped.gz', contents=b'foo')
     stderr = self.RunGsUtil([
-        '-D', '-h', 'content-type:application/gzip', 'cp', '-J',
+        '-D',
+        '-h',
+        'content-type:application/gzip',
+        'cp',
+        '-J',
         suri(fpath),
-        suri(bucket_uri, 'foo')
+        suri(bucket_uri,
+             'foo')
     ],
                             return_stderr=True)
     # Ensure the progress logger sees a gzip encoding.
@@ -3302,25 +3877,30 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['du', suri(object_uri)], return_stdout=True)
       size_match = re.search(r'(\d+)\s+.*', stdout)
       self.assertIsNotNone(size_match, 'Could not get object size')
-      self.assertEqual(len(size_match.groups()), 1,
+      self.assertEqual(len(size_match.groups()),
+                       1,
                        'Did not match regex for exactly one object size.')
       return long(size_match.group(1))
 
     object_size = _GetObjectSize()
     self.assertGreaterEqual(
-        object_size, self.halt_size,
+        object_size,
+        self.halt_size,
         'Compresed object size was not large enough to '
         'allow for a halted download, so the test results '
         'would be invalid. Please increase the compressed '
         'object size in the test.')
     fpath2 = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
           suri(object_uri),
           suri(fpath2)
       ],
@@ -3332,7 +3912,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Tracker files will have different names depending on if we are
       # downloading sequentially or in parallel.
       sliced_download_threshold = HumanReadableToBytes(
-          boto.config.get('GSUtil', 'sliced_object_download_threshold',
+          boto.config.get('GSUtil',
+                          'sliced_object_download_threshold',
                           DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD))
       sliced_download = (len(contents) > sliced_download_threshold and
                          sliced_download_threshold > 0 and
@@ -3342,14 +3923,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       else:
         trackerfile_type = TrackerFileType.DOWNLOAD
       tracker_filename = GetTrackerFilePath(StorageUrlFromString(fpath2),
-                                            trackerfile_type, self.test_api)
+                                            trackerfile_type,
+                                            self.test_api)
 
       # We should have a temporary gzipped file, a tracker file, and no
       # final file yet.
       self.assertTrue(os.path.isfile(tracker_filename))
       self.assertTrue(os.path.isfile('%s_.gztmp' % fpath2))
-      stderr = self.RunGsUtil(
-          ['cp', suri(object_uri), suri(fpath2)], return_stderr=True)
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               suri(fpath2)],
+                              return_stderr=True)
       self.assertIn('Resuming download', stderr)
       with open(fpath2, 'rb') as f:
         self.assertEqual(f.read(), contents, 'File contents did not match.')
@@ -3381,7 +3965,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo')
     input_filename = self._GetFaviconFile()
     self.RunGsUtil([
-        '-h', 'Content-Encoding:gzip', '-h', 'Content-Type:image/x-icon', 'cp',
+        '-h',
+        'Content-Encoding:gzip',
+        '-h',
+        'Content-Type:image/x-icon',
+        'cp',
         suri(input_filename),
         suri(object_uri)
     ])
@@ -3411,19 +3999,29 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=contents)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
-    boto_config_for_test = [('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-                            ('GSUtil', 'check_hashes', 'never')]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(ONE_KIB)),
+                            ('GSUtil',
+                             'check_hashes',
+                             'never')]
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
-          suri(object_uri), fpath
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          suri(object_uri),
+          fpath
       ],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('Artifically halting download.', stderr)
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               return_stderr=True)
       self.assertIn('Resuming download', stderr)
       self.assertIn('Found no hashes to validate object downloaded', stderr)
@@ -3437,11 +4035,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'a' * 2 * ONE_KIB)
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     test_callback_file = self.CreateTempFile(contents=pickle.dumps(
-        _DeleteBucketThenStartOverCopyCallbackHandler(5, bucket_uri)))
+        _DeleteBucketThenStartOverCopyCallbackHandler(5,
+                                                      bucket_uri)))
 
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, fpath,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ],
                               return_stderr=True,
@@ -3460,19 +4062,26 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     # Force fast crcmod to return True to test the basic sliced download
     # scenario, ensuring that if the user installs crcmod, it will work.
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-        ('GSUtil', 'test_assume_fast_crcmod', 'True'),
-        ('GSUtil', 'sliced_object_download_threshold', str(ONE_KIB)),
-        ('GSUtil', 'sliced_object_download_max_components', '3')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(ONE_KIB)),
+                            ('GSUtil',
+                             'test_assume_fast_crcmod',
+                             'True'),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(ONE_KIB)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '3')]
 
     with SetBotoConfigForTest(boto_config_for_test):
       self.RunGsUtil(['cp', suri(object_uri), fpath])
 
       # Each tracker file should have been deleted.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
-          StorageUrlFromString(fpath), self.test_api)
+          StorageUrlFromString(fpath),
+          self.test_api)
       for tracker_filename in tracker_filenames:
         self.assertFalse(os.path.isfile(tracker_filename))
 
@@ -3490,17 +4099,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=b'abcd' * self.halt_size)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(self.halt_size * 5)),
-        ('GSUtil', 'sliced_object_download_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_max_components', '4')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(self.halt_size * 5)),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '4')]
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
           suri(object_uri),
           suri(fpath)
       ],
@@ -3512,19 +4128,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
       # No tracker files should exist.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
-          StorageUrlFromString(fpath), self.test_api)
+          StorageUrlFromString(fpath),
+          self.test_api)
       for tracker_filename in tracker_filenames:
         self.assertFalse(os.path.isfile(tracker_filename))
 
     # Perform the entire download, without resuming.
     with SetBotoConfigForTest(boto_config_for_test):
-      stderr = self.RunGsUtil(
-          ['cp', suri(object_uri), suri(fpath)], return_stderr=True)
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               suri(fpath)],
+                              return_stderr=True)
       self.assertNotIn('Resuming download', stderr)
       # Temporary download file should have been deleted.
       self.assertFalse(os.path.isfile(fpath + '_.gstmp'))
       with open(fpath, 'rb') as f:
-        self.assertEqual(f.read(), b'abcd' * self.halt_size,
+        self.assertEqual(f.read(),
+                         b'abcd' * self.halt_size,
                          'File contents differ')
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
@@ -3538,17 +4158,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=b'abc' * self.halt_size)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_max_components', '3')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '3')]
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
           suri(object_uri),
           suri(fpath)
       ],
@@ -3558,22 +4185,27 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
       # Each tracker file should exist.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
-          StorageUrlFromString(fpath), self.test_api)
+          StorageUrlFromString(fpath),
+          self.test_api)
       for tracker_filename in tracker_filenames:
         self.assertTrue(os.path.isfile(tracker_filename))
 
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               return_stderr=True)
       self.assertIn('Resuming download', stderr)
 
       # Each tracker file should have been deleted.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
-          StorageUrlFromString(fpath), self.test_api)
+          StorageUrlFromString(fpath),
+          self.test_api)
       for tracker_filename in tracker_filenames:
         self.assertFalse(os.path.isfile(tracker_filename))
 
       with open(fpath, 'rb') as f:
-        self.assertEqual(f.read(), b'abc' * self.halt_size,
+        self.assertEqual(f.read(),
+                         b'abc' * self.halt_size,
                          'File contents differ')
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
@@ -3589,15 +4221,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(HaltOneComponentCopyCallbackHandler(5)))
 
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_max_components', '3')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '3')]
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
           suri(object_uri),
           suri(fpath)
       ],
@@ -3607,23 +4245,28 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
       # Each tracker file should exist.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
-          StorageUrlFromString(fpath), self.test_api)
+          StorageUrlFromString(fpath),
+          self.test_api)
       for tracker_filename in tracker_filenames:
         self.assertTrue(os.path.isfile(tracker_filename))
 
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               return_stderr=True)
       self.assertIn('Resuming download', stderr)
       self.assertIn('Download already complete', stderr)
 
       # Each tracker file should have been deleted.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
-          StorageUrlFromString(fpath), self.test_api)
+          StorageUrlFromString(fpath),
+          self.test_api)
       for tracker_filename in tracker_filenames:
         self.assertFalse(os.path.isfile(tracker_filename))
 
       with open(fpath, 'rb') as f:
-        self.assertEqual(f.read(), b'abc' * self.halt_size,
+        self.assertEqual(f.read(),
+                         b'abc' * self.halt_size,
                          'File contents differ')
 
   @unittest.skipUnless(UsingCrcmodExtension(crcmod),
@@ -3637,17 +4280,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=b'abc' * self.halt_size)
     fpath = self.CreateTempFile(contents=b'')
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_max_components', '3')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '3')]
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
           suri(object_uri),
           suri(fpath)
       ],
@@ -3660,14 +4310,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
       # Each tracker file should exist.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
-          StorageUrlFromString(fpath), self.test_api)
+          StorageUrlFromString(fpath),
+          self.test_api)
       for tracker_filename in tracker_filenames:
         self.assertTrue(os.path.isfile(tracker_filename))
 
       with open(fpath + '_.gstmp', 'r+b') as f:
         f.write(b'altered file contents')
 
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               return_stderr=True,
                               expected_status=1)
       self.assertIn('Resuming download', stderr)
@@ -3676,7 +4329,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
       # Each tracker file should have been deleted.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
-          StorageUrlFromString(fpath), self.test_api)
+          StorageUrlFromString(fpath),
+          self.test_api)
       for tracker_filename in tracker_filenames:
         self.assertFalse(os.path.isfile(tracker_filename))
 
@@ -3700,19 +4354,27 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=b'abcd' * self.halt_size)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_component_size',
-         str(self.halt_size // 4)),
-        ('GSUtil', 'sliced_object_download_max_components', '4')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_component_size',
+                             str(self.halt_size // 4)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '4')]
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
           suri(object_uri),
           suri(fpath)
       ],
@@ -3720,16 +4382,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               expected_status=1)
       self.assertIn('not downloaded successfully', stderr)
 
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_component_size',
-         str(self.halt_size // 2)),
-        ('GSUtil', 'sliced_object_download_max_components', '2')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_component_size',
+                             str(self.halt_size // 2)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '2')]
 
     with SetBotoConfigForTest(boto_config_for_test):
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               return_stderr=True)
       self.assertIn('Sliced download tracker file doesn\'t match ', stderr)
       self.assertIn('Restarting download from scratch', stderr)
@@ -3750,17 +4419,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    contents=b'abcd' * self.halt_size)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
-        contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
+        contents=pickle.dumps(HaltingCopyCallbackHandler(False,
+                                                         5)))
 
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_max_components', '4')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '4')]
 
     with SetBotoConfigForTest(boto_config_for_test):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
           suri(object_uri),
           suri(fpath)
       ],
@@ -3772,19 +4448,26 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
       # Each tracker file should exist.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
-          StorageUrlFromString(fpath), self.test_api)
+          StorageUrlFromString(fpath),
+          self.test_api)
       for tracker_filename in tracker_filenames:
         self.assertTrue(os.path.isfile(tracker_filename))
 
     # Disable sliced downloads by increasing the threshold
-    boto_config_for_test = [
-        ('GSUtil', 'resumable_threshold', str(self.halt_size)),
-        ('GSUtil', 'sliced_object_download_threshold', str(self.halt_size * 5)),
-        ('GSUtil', 'sliced_object_download_max_components', '4')
-    ]
+    boto_config_for_test = [('GSUtil',
+                             'resumable_threshold',
+                             str(self.halt_size)),
+                            ('GSUtil',
+                             'sliced_object_download_threshold',
+                             str(self.halt_size * 5)),
+                            ('GSUtil',
+                             'sliced_object_download_max_components',
+                             '4')]
 
     with SetBotoConfigForTest(boto_config_for_test):
-      stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
+      stderr = self.RunGsUtil(['cp',
+                               suri(object_uri),
+                               fpath],
                               return_stderr=True)
       self.assertNotIn('Resuming download', stderr)
       # Temporary download file should have been deleted.
@@ -3810,14 +4493,18 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     if self.test_api == ApiSelector.JSON:
       test_callback_file = self.CreateTempFile(
-          contents=pickle.dumps(_JSONForceHTTPErrorCopyCallbackHandler(5, 404)))
+          contents=pickle.dumps(_JSONForceHTTPErrorCopyCallbackHandler(5,
+                                                                       404)))
     elif self.test_api == ApiSelector.XML:
       test_callback_file = self.CreateTempFile(contents=pickle.dumps(
           _XMLResumableUploadStartOverCopyCallbackHandler(5)))
 
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file, fpath,
+          'cp',
+          '--testcallbackfile',
+          test_callback_file,
+          fpath,
           suri(bucket_uri)
       ],
                               return_stderr=True)
@@ -3829,7 +4516,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    object_name='foo',
                                    contents=b'foo')
     self.RunGsUtil([
-        'cp', '-c',
+        'cp',
+        '-c',
         suri(bucket_uri) + '/foo2',
         suri(object_uri),
         suri(bucket_uri) + '/dir/'
@@ -3845,8 +4533,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(bucket_uri=bucket_uri,
                                    object_name='foo',
                                    contents=b'bar')
-    gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            DiscardMessagesQueue(), self.default_provider)
+    gsutil_api = GcsJsonApi(BucketStorageUri,
+                            logging.getLogger(),
+                            DiscardMessagesQueue(),
+                            self.default_provider)
     key = object_uri.get_key()
     src_obj_metadata = apitools_messages.Object(name=key.name,
                                                 bucket=key.bucket.name,
@@ -3883,8 +4573,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    object_name='foo',
                                    contents=(b'12' * ONE_MIB) + b'bar',
                                    prefer_json_api=True)
-    gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            DiscardMessagesQueue(), self.default_provider)
+    gsutil_api = GcsJsonApi(BucketStorageUri,
+                            logging.getLogger(),
+                            DiscardMessagesQueue(),
+                            self.default_provider)
     key = object_uri.get_key()
     src_obj_metadata = apitools_messages.Object(name=key.name,
                                                 bucket=key.bucket.name,
@@ -3955,8 +4647,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    object_name='foo',
                                    contents=(b'12' * ONE_MIB) + b'bar',
                                    prefer_json_api=True)
-    gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            DiscardMessagesQueue(), self.default_provider)
+    gsutil_api = GcsJsonApi(BucketStorageUri,
+                            logging.getLogger(),
+                            DiscardMessagesQueue(),
+                            self.default_provider)
     key = object_uri.get_key()
     src_obj_metadata = apitools_messages.Object(name=key.name,
                                                 bucket=key.bucket.name,
@@ -4035,8 +4729,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                    object_name='foo',
                                    contents=(b'12' * ONE_MIB) + b'bar',
                                    prefer_json_api=True)
-    gsutil_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
-                            DiscardMessagesQueue(), self.default_provider)
+    gsutil_api = GcsJsonApi(BucketStorageUri,
+                            logging.getLogger(),
+                            DiscardMessagesQueue(),
+                            self.default_provider)
     key = object_uri.get_key()
     src_obj_metadata = apitools_messages.Object(name=key.name,
                                                 bucket=key.bucket.name,
@@ -4079,7 +4775,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       new_obj_metadata = gsutil_api.GetObjectMetadata(
           dst_obj_metadata.bucket,
           dst_obj_metadata.name,
-          fields=['acl', 'customerEncryption', 'md5Hash'])
+          fields=['acl',
+                  'customerEncryption',
+                  'md5Hash'])
       self.assertEqual(
           gsutil_api.GetObjectMetadata(src_obj_metadata.bucket,
                                        src_obj_metadata.name,
@@ -4136,7 +4834,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Test that cp -s operations to a non-cloud destination are prevented."""
     local_file = self.CreateTempFile(contents=b'foo')
     dest_dir = self.CreateTempDir()
-    stderr = self.RunGsUtil(['cp', '-s', 'standard', local_file, dest_dir],
+    stderr = self.RunGsUtil(['cp',
+                             '-s',
+                             'standard',
+                             local_file,
+                             dest_dir],
                             expected_status=1,
                             return_stderr=True)
     self.assertIn('Cannot specify storage class for a non-cloud destination:',
@@ -4204,7 +4906,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                       flags=re.IGNORECASE)
 
   def authorize_project_to_use_testing_kms_key(
-      self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
+      self,
+      key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
     # Make sure our keyRing and cryptoKey exist.
     keyring_fqn = self.kms_api.CreateKeyRing(
         PopulateProjectId(None),
@@ -4230,12 +4933,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                 contents=b'foo')
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
       self.RunGsUtil(
-          ['cp', suri(obj_uri),
-           '%s/%s' % (suri(bucket_uri), obj2_name)])
+          ['cp',
+           suri(obj_uri),
+           '%s/%s' % (suri(bucket_uri),
+                      obj2_name)])
 
     # Make sure the new object is encrypted with the specified KMS key.
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
-      self.AssertObjectUsesCMEK('%s/%s' % (suri(bucket_uri), obj2_name),
+      self.AssertObjectUsesCMEK('%s/%s' % (suri(bucket_uri),
+                                           obj2_name),
                                 key_fqn)
 
   @SkipForS3('Test uses gs-specific KMS encryption')
@@ -4315,7 +5021,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def test_cp_minus_m_streaming_upload(self):
     """Tests that cp -m - anything is disallowed."""
-    stderr = self.RunGsUtil(['-m', 'cp', '-', 'file'],
+    stderr = self.RunGsUtil(['-m',
+                             'cp',
+                             '-',
+                             'file'],
                             return_stderr=True,
                             expected_status=1)
     self.assertIn(
@@ -4334,12 +5043,15 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     object_uri.get_key().etag = '12345'  # Not an MD5
     dst_dir = self.CreateTempDir()
 
-    log_handler = self.RunCommand('cp', [suri(object_uri), dst_dir],
+    log_handler = self.RunCommand('cp',
+                                  [suri(object_uri),
+                                   dst_dir],
                                   return_log_handler=True)
     warning_messages = log_handler.messages['warning']
     self.assertEquals(2, len(warning_messages))
     self.assertRegex(
-        warning_messages[0], r'Non-MD5 etag \(12345\) present for key .*, '
+        warning_messages[0],
+        r'Non-MD5 etag \(12345\) present for key .*, '
         r'data integrity checks are not possible')
     self.assertIn('Integrity cannot be assured', warning_messages[1])
 
@@ -4362,7 +5074,9 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=b'abcd')
     with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
-      log_handler = self.RunCommand('cp', [fpath, suri(bucket_uri)],
+      log_handler = self.RunCommand('cp',
+                                    [fpath,
+                                     suri(bucket_uri)],
                                     return_log_handler=True)
     warning_messages = log_handler.messages['warning']
     self.assertEquals(1, len(warning_messages))

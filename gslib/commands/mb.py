@@ -174,7 +174,10 @@ class MbCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'mb',
-      command_name_aliases=['makebucket', 'createbucket', 'md', 'mkdir'],
+      command_name_aliases=['makebucket',
+                            'createbucket',
+                            'md',
+                            'mkdir'],
       usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
@@ -183,7 +186,8 @@ class MbCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML,
+                      ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
           CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
@@ -192,9 +196,21 @@ class MbCommand(Command):
   help_spec = Command.HelpSpec(
       help_name='mb',
       help_name_aliases=[
-          'createbucket', 'makebucket', 'md', 'mkdir', 'location', 'dra',
-          'dras', 'reduced_availability', 'durable_reduced_availability', 'rr',
-          'reduced_redundancy', 'standard', 'storage class', 'nearline', 'nl'
+          'createbucket',
+          'makebucket',
+          'md',
+          'mkdir',
+          'location',
+          'dra',
+          'dras',
+          'reduced_availability',
+          'durable_reduced_availability',
+          'rr',
+          'reduced_redundancy',
+          'standard',
+          'storage class',
+          'nearline',
+          'nl'
       ],
       help_type='command_help',
       help_one_line_summary='Make buckets',
@@ -271,7 +287,8 @@ class MbCommand(Command):
                   'Buckets with "." in the name must be valid DNS names. The bucket'
                   ' you are attempting to create (%s) is not a valid DNS name,'
                   ' because the final component (%s) is not currently a valid part'
-                  ' of the top-level DNS tree.' % (bucket_name, final_comp))))
+                  ' of the top-level DNS tree.' % (bucket_name,
+                                                   final_comp))))
         else:
           raise
 

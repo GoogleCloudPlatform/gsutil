@@ -39,9 +39,12 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
 
   def test_full(self):
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil(
-        self._set_web_cmd +
-        ['-m', 'main', '-e', '404', suri(bucket_uri)])
+    self.RunGsUtil(self._set_web_cmd +
+                   ['-m',
+                    'main',
+                    '-e',
+                    '404',
+                    suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
                             return_stdout=True)
     self.assertEquals(json.loads(stdout), WEBCFG_FULL)

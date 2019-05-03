@@ -62,7 +62,11 @@ class CommandOptions(HelpProvider):
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
       help_name='apis',
-      help_name_aliases=['XML', 'JSON', 'api', 'force_api', 'prefer_api'],
+      help_name_aliases=['XML',
+                         'JSON',
+                         'api',
+                         'force_api',
+                         'prefer_api'],
       help_type='additional_help',
       help_one_line_summary='Cloud Storage APIs',
       help_text=_DETAILED_HELP_TEXT,

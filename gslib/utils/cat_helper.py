@@ -34,8 +34,14 @@ from gslib.utils.metadata_util import ObjectIsGzipEncoded
 from gslib.utils import text_util
 
 _CAT_BUCKET_LISTING_FIELDS = [
-    'bucket', 'contentEncoding', 'crc32c', 'customerEncryption', 'generation',
-    'md5Hash', 'name', 'size'
+    'bucket',
+    'contentEncoding',
+    'crc32c',
+    'customerEncryption',
+    'generation',
+    'md5Hash',
+    'name',
+    'size'
 ]
 
 
@@ -114,7 +120,8 @@ class CatHelper(object):
             if (blr.root_object and blr.root_object.customerEncryption and
                 blr.root_object.customerEncryption.keySha256):
               decryption_key = FindMatchingCSEKInBotoConfig(
-                  blr.root_object.customerEncryption.keySha256, config)
+                  blr.root_object.customerEncryption.keySha256,
+                  config)
               if not decryption_key:
                 raise EncryptionException(
                     'Missing decryption key with SHA256 hash %s. No decryption '

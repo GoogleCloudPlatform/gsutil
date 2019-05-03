@@ -71,7 +71,8 @@ class PubsubApi(object):
     self.certs_file = GetCertsFile()
     self.http = GetNewHttp()
     self.http_base = 'https://'
-    self.host_base = config.get('Credentials', 'gs_pubsub_host',
+    self.host_base = config.get('Credentials',
+                                'gs_pubsub_host',
                                 'pubsub.googleapis.com')
     gs_pubsub_port = config.get('Credentials', 'gs_pubsub_port', None)
     self.host_port = (':' + gs_pubsub_port) if gs_pubsub_port else ''
@@ -134,7 +135,8 @@ class PubsubApi(object):
   def SetTopicIamPolicy(self, topic_name, policy):
     policy_request = apitools_messages.SetIamPolicyRequest(policy=policy)
     request = apitools_messages.PubsubProjectsTopicsSetIamPolicyRequest(
-        resource=topic_name, setIamPolicyRequest=policy_request)
+        resource=topic_name,
+        setIamPolicyRequest=policy_request)
     try:
       return self.api_client.projects_topics.SetIamPolicy(request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
@@ -155,7 +157,8 @@ class PubsubApi(object):
       self.logger.debug('TranslateExceptionAndRaise: %s',
                         traceback.format_exc())
     translated_exception = self._TranslateApitoolsException(
-        e, topic_name=topic_name)
+        e,
+        topic_name=topic_name)
     if translated_exception:
       raise translated_exception
     else:

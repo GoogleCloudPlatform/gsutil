@@ -69,7 +69,8 @@ def RegisterSignalHandler(signal_num, handler, is_final_handler=False):
   """
   if signal_num not in GetCaughtSignals():
     raise RuntimeError('Attempt to register handler (%s) for signal %d, which '
-                       'is not in GetCaughtSignals' % (handler, signal_num))
+                       'is not in GetCaughtSignals' % (handler,
+                                                       signal_num))
   if is_final_handler:
     _final_signal_handlers[signal_num] = handler
   else:
@@ -140,7 +141,10 @@ def MultithreadedMainSignalHandler(signal_num, cur_stack_frame):
     if logging.getLogger().isEnabledFor(logging.DEBUG):
       stack_trace = ''.join(traceback.format_list(traceback.extract_stack()))
       err = ('DEBUG: Caught CTRL-C (signal %d) - Exception stack trace:\n'
-             '    %s' % (signal_num, re.sub('\\n', '\n    ', stack_trace)))
+             '    %s' % (signal_num,
+                         re.sub('\\n',
+                                '\n    ',
+                                stack_trace)))
       try:
         sys.stderr.write(err.encode(UTF8))
       except UnicodeDecodeError:

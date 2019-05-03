@@ -79,8 +79,10 @@ PROGRAM_FILES_DIR = GSLIB_DIR
 
 # The gslib directory will be underneath the gsutil directory when installed
 # from a tarball, but somewhere else on the machine if installed via setup.py.
-if (not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, 'VERSION')) and
-    os.path.commonprefix((GSUTIL_DIR, GSLIB_DIR)) == GSUTIL_DIR):
+if (not os.path.isfile(os.path.join(PROGRAM_FILES_DIR,
+                                    'VERSION')) and os.path.commonprefix(
+                                        (GSUTIL_DIR,
+                                         GSLIB_DIR)) == GSUTIL_DIR):
   IS_PACKAGE_INSTALL = False
   PROGRAM_FILES_DIR = GSUTIL_DIR
 
@@ -96,7 +98,8 @@ def _AddVendoredDepsToPythonPath():
   vendored_path = os.path.join(GSLIB_DIR, 'vendored')
   # Similar structure to the THIRD_PARTY_LIBS list in gsutil.py:
   vendored_lib_dirs = [
-      ('boto', ''),
+      ('boto',
+       ''),
   ]
 
   # Prepend our vendored libraries to be in the front of the Python path so that
@@ -112,7 +115,11 @@ def _AddVendoredDepsToPythonPath():
   # modules in this directory have the same name as something in our library,
   # we find our version first.
   sys.path.append(
-      os.path.join(vendored_path, 'boto', 'tests', 'integration', 's3'))
+      os.path.join(vendored_path,
+                   'boto',
+                   'tests',
+                   'integration',
+                   's3'))
 
 
 _AddVendoredDepsToPythonPath()

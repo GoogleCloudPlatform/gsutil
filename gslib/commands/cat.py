@@ -104,7 +104,8 @@ class CatCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML,
+                      ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.

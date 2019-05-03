@@ -185,7 +185,8 @@ class CloudListingRequestThread(threading.Thread):
         self._wildcard_url_str,
         self._gsutil_api).IterAll(bucket_listing_fields=['name'])
     self.results = [
-        str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)
+        str(c) for c in itertools.islice(it,
+                                         _TAB_COMPLETE_MAX_RESULTS)
     ]
 
 
@@ -275,8 +276,11 @@ class CloudObjectCompleter(object):
     elapsed_seconds = end_time - start_time
     _WriteTimingLog(
         '%s results%s in %.2fs, %.2f results/second for prefix: %s\n' %
-        (num_results, timing_log_entry_type, elapsed_seconds,
-         num_results / elapsed_seconds, prefix))
+        (num_results,
+         timing_log_entry_type,
+         elapsed_seconds,
+         num_results / elapsed_seconds,
+         prefix))
 
     return results
 

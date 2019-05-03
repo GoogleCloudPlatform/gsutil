@@ -47,13 +47,20 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
     """Tests creating a notification channel on a bucket."""
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(
-        ['notification', 'watchbucket', NOTIFICATION_URL,
+        ['notification',
+         'watchbucket',
+         NOTIFICATION_URL,
          suri(bucket_uri)])
 
     identifier = str(uuid.uuid4())
     token = str(uuid.uuid4())
     stderr = self.RunGsUtil([
-        'notification', 'watchbucket', '-i', identifier, '-t', token,
+        'notification',
+        'watchbucket',
+        '-i',
+        identifier,
+        '-t',
+        token,
         NOTIFICATION_URL,
         suri(bucket_uri)
     ],
@@ -67,7 +74,9 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
     """Tests stopping a notification channel on a bucket."""
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(
-        ['notification', 'watchbucket', NOTIFICATION_URL,
+        ['notification',
+         'watchbucket',
+         NOTIFICATION_URL,
          suri(bucket_uri)],
         return_stderr=True)
 
@@ -89,7 +98,9 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
 
     # Set up an OCN (object change notification) on the newly created bucket.
     self.RunGsUtil(
-        ['notification', 'watchbucket', NOTIFICATION_URL,
+        ['notification',
+         'watchbucket',
+         NOTIFICATION_URL,
          suri(bucket_uri)],
         return_stderr=False)
     # The OCN listing in the service is eventually consistent. In initial
@@ -100,7 +111,9 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
     # as an AssertionError due to the exit status not being 0).
     @Retry(AssertionError, tries=3, timeout_secs=5)
     def _ListObjectChangeNotifications():
-      stderr = self.RunGsUtil(['notification', 'list', '-o',
+      stderr = self.RunGsUtil(['notification',
+                               'list',
+                               '-o',
                                suri(bucket_uri)],
                               return_stderr=True)
       return stderr
@@ -120,7 +133,10 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(len(creation_time), 1)
 
   def test_invalid_subcommand(self):
-    stderr = self.RunGsUtil(['notification', 'foo', 'bar', 'baz'],
+    stderr = self.RunGsUtil(['notification',
+                             'foo',
+                             'bar',
+                             'baz'],
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('Invalid subcommand', stderr)

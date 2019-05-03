@@ -133,13 +133,17 @@ def DiffBindings(old, new):
     granted[role].update(members.difference(tmp_old[role]))
 
   granted = [
-      apitools_messages.Policy.BindingsValueListEntry(role=r, members=list(m))
-      for (r, m) in six.iteritems(granted)
+      apitools_messages.Policy.BindingsValueListEntry(role=r,
+                                                      members=list(m))
+      for (r,
+           m) in six.iteritems(granted)
       if m
   ]
   removed = [
-      apitools_messages.Policy.BindingsValueListEntry(role=r, members=list(m))
-      for (r, m) in six.iteritems(removed)
+      apitools_messages.Policy.BindingsValueListEntry(role=r,
+                                                      members=list(m))
+      for (r,
+           m) in six.iteritems(removed)
       if m
   ]
 
@@ -178,8 +182,10 @@ def PatchBindings(base, diff):
 
   # Construct the BindingsValueListEntry list
   bindings = [
-      apitools_messages.Policy.BindingsValueListEntry(role=r, members=list(m))
-      for (r, m) in six.iteritems(tmp_base)
+      apitools_messages.Policy.BindingsValueListEntry(role=r,
+                                                      members=list(m))
+      for (r,
+           m) in six.iteritems(tmp_base)
       if m
   ]
 
@@ -232,7 +238,8 @@ def BindingStringToTuple(is_grant, input_str):
   roles = [ResolveRole(r) for r in roles.split(',')]
 
   bindings = [
-      apitools_messages.Policy.BindingsValueListEntry(members=[member], role=r)
+      apitools_messages.Policy.BindingsValueListEntry(members=[member],
+                                                      role=r)
       for r in set(roles)
   ]
   return BindingsTuple(is_grant=is_grant, bindings=bindings)

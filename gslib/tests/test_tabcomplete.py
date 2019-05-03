@@ -53,7 +53,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_result = '//%s/' % bucket_name
 
-    self.RunGsUtilTabCompletion(['ls', request],
+    self.RunGsUtilTabCompletion(['ls',
+                                 request],
                                 expected_results=[expected_result])
 
   def test_bucket_only_single_bucket(self):
@@ -66,7 +67,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     request = '%s://%s' % (self.default_provider, bucket_name[:-2])
     expected_result = '//%s ' % bucket_name
 
-    self.RunGsUtilTabCompletion(['rb', request],
+    self.RunGsUtilTabCompletion(['rb',
+                                 request],
                                 expected_results=[expected_result])
 
   def test_bucket_only_no_objects(self):
@@ -75,7 +77,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     object_name = self.MakeTempName('obj')
     object_uri = self.CreateObject(object_name=object_name, contents=b'data')
 
-    request = '%s://%s/%s' % (self.default_provider, object_uri.bucket_name,
+    request = '%s://%s/%s' % (self.default_provider,
+                              object_uri.bucket_name,
                               object_name[:-2])
 
     self.RunGsUtilTabCompletion(['rb', request], expected_results=[])
@@ -90,7 +93,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     request = '%s://%s/' % (self.default_provider, object_uri.bucket_name)
     expected_result = '//%s/%s/' % (object_uri.bucket_name, object_base_name)
 
-    self.RunGsUtilTabCompletion(['ls', request],
+    self.RunGsUtilTabCompletion(['ls',
+                                 request],
                                 expected_results=[expected_result])
 
   def test_multiple_buckets(self):
@@ -111,7 +115,10 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     expected_result2 = '//%s/' % ''.join([prefix, base_name, '2'])
 
     self.RunGsUtilTabCompletion(
-        ['ls', request], expected_results=[expected_result1, expected_result2])
+        ['ls',
+         request],
+        expected_results=[expected_result1,
+                          expected_result2])
 
   def test_single_object(self):
     """Tests tab completion matching a single object."""
@@ -119,11 +126,13 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     object_name = self.MakeTempName('obj')
     object_uri = self.CreateObject(object_name=object_name, contents=b'data')
 
-    request = '%s://%s/%s' % (self.default_provider, object_uri.bucket_name,
+    request = '%s://%s/%s' % (self.default_provider,
+                              object_uri.bucket_name,
                               object_name[:-2])
     expected_result = '//%s/%s ' % (object_uri.bucket_name, object_name)
 
-    self.RunGsUtilTabCompletion(['ls', request],
+    self.RunGsUtilTabCompletion(['ls',
+                                 request],
                                 expected_results=[expected_result])
 
   def test_multiple_objects(self):
@@ -141,13 +150,17 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
                       object_name=object2_name,
                       contents=b'data')
 
-    request = '%s://%s/%s' % (self.default_provider, bucket_uri.bucket_name,
+    request = '%s://%s/%s' % (self.default_provider,
+                              bucket_uri.bucket_name,
                               object_base_name)
     expected_result1 = '//%s/%s' % (bucket_uri.bucket_name, object1_name)
     expected_result2 = '//%s/%s' % (bucket_uri.bucket_name, object2_name)
 
     self.RunGsUtilTabCompletion(
-        ['ls', request], expected_results=[expected_result1, expected_result2])
+        ['ls',
+         request],
+        expected_results=[expected_result1,
+                          expected_result2])
 
   def test_subcommands(self):
     """Tests tab completion for commands with subcommands."""
@@ -165,15 +178,22 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     expected_local_file_result = '%s ' % os.path.join(local_dir, local_file)
 
     # Should invoke Cloud bucket URL completer.
-    self.RunGsUtilTabCompletion(['cors', 'get', bucket_request],
+    self.RunGsUtilTabCompletion(['cors',
+                                 'get',
+                                 bucket_request],
                                 expected_results=[expected_bucket_result])
 
     # Should invoke File URL completer which should match the local file.
-    self.RunGsUtilTabCompletion(['cors', 'set', local_file_request],
+    self.RunGsUtilTabCompletion(['cors',
+                                 'set',
+                                 local_file_request],
                                 expected_results=[expected_local_file_result])
 
     # Should invoke Cloud bucket URL completer.
-    self.RunGsUtilTabCompletion(['cors', 'set', 'some_file', bucket_request],
+    self.RunGsUtilTabCompletion(['cors',
+                                 'set',
+                                 'some_file',
+                                 bucket_request],
                                 expected_results=[expected_bucket_result])
 
   def test_invalid_partial_bucket_name(self):
@@ -190,7 +210,8 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     request = '%s://%s-' % (self.default_provider, bucket_base_name)
     expected_result = '//%s/' % bucket_name
 
-    self.RunGsUtilTabCompletion(['ls', request],
+    self.RunGsUtilTabCompletion(['ls',
+                                 request],
                                 expected_results=[expected_result])
 
   def test_acl_argument(self):
@@ -203,11 +224,15 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     expected_local_file_result = '%s ' % os.path.join(local_dir, local_file)
 
     # Should invoke File URL completer which should match the local file.
-    self.RunGsUtilTabCompletion(['acl', 'set', local_file_request],
+    self.RunGsUtilTabCompletion(['acl',
+                                 'set',
+                                 local_file_request],
                                 expected_results=[expected_local_file_result])
 
     # Should match canned ACL name.
-    self.RunGsUtilTabCompletion(['acl', 'set', 'priv'],
+    self.RunGsUtilTabCompletion(['acl',
+                                 'set',
+                                 'priv'],
                                 expected_results=['private '])
 
     local_file = 'priv_file'
@@ -215,8 +240,11 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     with WorkingDirectory(local_dir):
       # Should match both a file and a canned ACL since argument takes
       # either one.
-      self.RunGsUtilTabCompletion(['acl', 'set', 'priv'],
-                                  expected_results=[local_file, 'private'])
+      self.RunGsUtilTabCompletion(['acl',
+                                   'set',
+                                   'priv'],
+                                  expected_results=[local_file,
+                                                    'private'])
 
 
 def _WriteTabCompletionCache(prefix,
@@ -261,7 +289,8 @@ class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
       cached_results = ['//%s1' % bucket_name, '//%s2' % bucket_name]
 
-      _WriteTabCompletionCache(request, cached_results,
+      _WriteTabCompletionCache(request,
+                               cached_results,
                                time.time() - TAB_COMPLETE_CACHE_TTL)
 
       completer = CloudObjectCompleter(self.MakeGsUtilApi())
@@ -302,7 +331,8 @@ class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
       cached_prefix = '%s://%s/' % (self.default_provider,
                                     object_uri.bucket_name)
       cached_results = [
-          '%s://%s/subdir' % (self.default_provider, object_uri.bucket_name)
+          '%s://%s/subdir' % (self.default_provider,
+                              object_uri.bucket_name)
       ]
       _WriteTabCompletionCache(cached_prefix, cached_results)
 

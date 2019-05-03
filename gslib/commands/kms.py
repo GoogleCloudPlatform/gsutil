@@ -204,7 +204,8 @@ class KmsCommand(Command):
     # Request the Cloud Storage-owned service account for project_id, creating
     # it if it does not exist.
     service_account = self.gsutil_api.GetProjectServiceAccount(
-        project_id, provider='gs').email_address
+        project_id,
+        provider='gs').email_address
 
     kms_api = KmsApi(logger=self.logger)
     self.logger.debug('Getting IAM policy for %s', kms_key)
@@ -226,15 +227,18 @@ class KmsCommand(Command):
     self._GatherSubOptions()
     if not self.kms_key:
       raise CommandException('%s %s requires a key to be specified with -k' %
-                             (self.command_name, self.subcommand_name))
+                             (self.command_name,
+                              self.subcommand_name))
 
     _, newly_authorized = self._AuthorizeProject(self.project_id, self.kms_key)
     if newly_authorized:
       print('Authorized project %s to encrypt and decrypt with key:\n%s' %
-            (self.project_id, self.kms_key))
+            (self.project_id,
+             self.kms_key))
     else:
       print('Project %s was already authorized to encrypt and decrypt with '
-            'key:\n%s.' % (self.project_id, self.kms_key))
+            'key:\n%s.' % (self.project_id,
+                           self.kms_key))
     return 0
 
   def _EncryptionClearKey(self, bucket_metadata, bucket_url):
@@ -252,7 +256,9 @@ class KmsCommand(Command):
                                 fields=['encryption'],
                                 provider=bucket_url.scheme)
 
-  def _EncryptionSetKey(self, bucket_metadata, bucket_url,
+  def _EncryptionSetKey(self,
+                        bucket_metadata,
+                        bucket_url,
                         svc_acct_for_project_num):
     """Sets defaultKmsKeyName on a Cloud Storage bucket.
 
@@ -273,8 +279,8 @@ class KmsCommand(Command):
           bucket_project_number, self.kms_key)
       svc_acct_for_project_num[bucket_project_number] = service_account
     if newly_authorized:
-      print('Authorized service account %s to use key:\n%s' %
-            (service_account, self.kms_key))
+      print('Authorized service account %s to use key:\n%s' % (service_account,
+                                                               self.kms_key))
 
     bucket_metadata.encryption = apitools_messages.Bucket.EncryptionValue(
         defaultKmsKeyName=self.kms_key)
@@ -304,7 +310,8 @@ class KmsCommand(Command):
       # Determine the project from the provided bucket.
       bucket_metadata = self.gsutil_api.GetBucket(
           bucket_url.bucket_name,
-          fields=['encryption', 'projectNumber'],
+          fields=['encryption',
+                  'projectNumber'],
           provider=bucket_url.scheme)
 
       # "-d" flag was specified, so clear the default KMS key and return.
@@ -313,7 +320,8 @@ class KmsCommand(Command):
         return 0
       # "-k" flag was specified, so set the default KMS key and return.
       if self.kms_key:
-        self._EncryptionSetKey(bucket_metadata, bucket_url,
+        self._EncryptionSetKey(bucket_metadata,
+                               bucket_url,
                                svc_acct_for_project_num)
         return 0
       # Neither "-d" nor "-k" was specified, so emit the default KMS key and
@@ -322,7 +330,8 @@ class KmsCommand(Command):
       if (bucket_metadata.encryption and
           bucket_metadata.encryption.defaultKmsKeyName):
         print('Default encryption key for %s:\n%s' %
-              (bucket_url_string, bucket_metadata.encryption.defaultKmsKeyName))
+              (bucket_url_string,
+               bucket_metadata.encryption.defaultKmsKeyName))
       else:
         print('Bucket %s has no default encryption key' % bucket_url_string)
       return 0
@@ -362,7 +371,8 @@ class KmsCommand(Command):
                       self.project_id)
 
     service_account = self.gsutil_api.GetProjectServiceAccount(
-        self.project_id, provider='gs').email_address
+        self.project_id,
+        provider='gs').email_address
 
     print(service_account)
 
@@ -417,4 +427,5 @@ class KmsCommand(Command):
       return self._RunSubCommand(method_for_subcommand[self.subcommand_name])
     else:
       raise CommandException('Invalid subcommand "%s" for the %s command.' %
-                             (self.subcommand_name, self.command_name))
+                             (self.subcommand_name,
+                              self.command_name))
