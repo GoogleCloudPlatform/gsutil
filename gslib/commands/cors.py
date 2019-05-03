@@ -83,8 +83,7 @@ _DESCRIPTION = ("""
   []
 
   The cors command has two sub-commands:
-""" + '\n'.join([_GET_DESCRIPTION,
-                 _SET_DESCRIPTION]) + """
+""" + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION]) + """
 For more info about CORS generally, see https://www.w3.org/TR/cors/.
 For more info about CORS in Cloud Storage, see the 
 `CORS concept page <https://cloud.google.com/storage/docs/configuring-cors>`_.
@@ -102,8 +101,7 @@ class CorsCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'cors',
-      command_name_aliases=['getcors',
-                            'setcors'],
+      command_name_aliases=['getcors', 'setcors'],
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
@@ -111,8 +109,7 @@ class CorsCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
@@ -124,9 +121,7 @@ class CorsCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='cors',
-      help_name_aliases=['getcors',
-                         'setcors',
-                         'cross-origin'],
+      help_name_aliases=['getcors', 'setcors', 'cross-origin'],
       help_type='command_help',
       help_one_line_summary=(
           'Get or set a CORS JSON document for one or more buckets'),
@@ -212,8 +207,8 @@ class CorsCommand(Command):
     elif action_subcommand == 'set':
       func = self._SetCors
     else:
-      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
-                              'See "gsutil help cors".') % (action_subcommand,
-                                                            self.command_name))
+      raise CommandException(
+          ('Invalid subcommand "%s" for the %s command.\n'
+           'See "gsutil help cors".') % (action_subcommand, self.command_name))
     metrics.LogCommandParams(subcommands=[action_subcommand])
     return func()

@@ -106,9 +106,7 @@ def FindMatchingCSEKInBotoConfig(key_sha256, boto_config):
     if not isinstance(key_sha256, bytes):
       key_sha256 = key_sha256.encode('ascii')
   keywrapper = CryptoKeyWrapperFromKey(
-      boto_config.get('GSUtil',
-                      'encryption_key',
-                      None))
+      boto_config.get('GSUtil', 'encryption_key', None))
   if (keywrapper is not None and
       keywrapper.crypto_type == CryptoKeyType.CSEK and
       keywrapper.crypto_key_sha256 == key_sha256):
@@ -117,9 +115,7 @@ def FindMatchingCSEKInBotoConfig(key_sha256, boto_config):
   for i in range(MAX_DECRYPTION_KEYS):
     key_number = i + 1
     keywrapper = CryptoKeyWrapperFromKey(
-        boto_config.get('GSUtil',
-                        'decryption_key%s' % str(key_number),
-                        None))
+        boto_config.get('GSUtil', 'decryption_key%s' % str(key_number), None))
     if keywrapper is None:
       # Reading 100 config values can take ~1ms in testing. To avoid adding
       # this tax, stop reading keys as soon as we encounter a non-existent

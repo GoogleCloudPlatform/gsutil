@@ -119,11 +119,8 @@ _DETAILED_HELP_TEXT = ("""
 # of doing things. This list comes from functionality that was supported by
 # gsutil3 at the time gsutil4 was released.
 SETTABLE_FIELDS = [
-    'cache-control',
-    'content-disposition',
-    'content-encoding',
-    'content-language',
-    'content-type'
+    'cache-control', 'content-disposition', 'content-encoding',
+    'content-language', 'content-type'
 ]
 
 
@@ -151,8 +148,7 @@ class SetMetaCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
@@ -202,9 +198,7 @@ class SetMetaCommand(Command):
         self.recursion_requested,
         all_versions=self.all_versions,
         continue_on_error=self.parallel_operations,
-        bucket_listing_fields=['generation',
-                               'metadata',
-                               'metageneration'])
+        bucket_listing_fields=['generation', 'metadata', 'metageneration'])
 
     seek_ahead_iterator = SeekAheadNameExpansionIterator(
         self.command_name,
@@ -248,8 +242,7 @@ class SetMetaCommand(Command):
     self.logger.info('Setting metadata on %s...', exp_src_url)
 
     cloud_obj_metadata = encoding.JsonToMessage(
-        apitools_messages.Object,
-        name_expansion_result.expanded_result)
+        apitools_messages.Object, name_expansion_result.expanded_result)
 
     preconditions = Preconditions(
         gen_match=self.preconditions.gen_match,
@@ -326,8 +319,7 @@ class SetMetaCommand(Command):
         raise CommandException(
             'Invalid or disallowed header (%s).\nOnly these fields (plus '
             'x-goog-meta-* fields) can be set or unset:\n%s' %
-            (header,
-             sorted(list(SETTABLE_FIELDS))))
+            (header, sorted(list(SETTABLE_FIELDS))))
 
       if value:
         if is_custom_meta:

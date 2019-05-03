@@ -357,8 +357,8 @@ class StatusMessageManager(object):
                           HumanReadableWithDecimalPlaces(self.total_size))
     remaining_width = self.console_width - len(string_to_print)
     if not self.quiet_mode:
-      stream.write(('\n' + string_to_print + '.' + (max(remaining_width,
-                                                        0) * ' ') + '\n'))
+      stream.write(('\n' + string_to_print + '.' +
+                    (max(remaining_width, 0) * ' ') + '\n'))
 
 
 class MetadataManager(StatusMessageManager):
@@ -441,8 +441,7 @@ class MetadataManager(StatusMessageManager):
     elif isinstance(status_message, PerformanceSummaryMessage):
       self._HandlePerformanceSummaryMessage(status_message)
     self.old_progress.append(
-        self._ThroughputInformation(self.objects_finished,
-                                    status_message.time))
+        self._ThroughputInformation(self.objects_finished, status_message.time))
 
   def PrintProgress(self, stream=sys.stderr):
     """Prints progress and throughput/time estimation.
@@ -472,8 +471,7 @@ class MetadataManager(StatusMessageManager):
       else:
         percentage = (
             '%3d' %
-            min(99,
-                int(100 * float(self.objects_finished) / self.num_objects)))
+            min(99, int(100 * float(self.objects_finished) / self.num_objects)))
       percentage_completed = percentage + '% Done'
     else:
       # An example of objects_completed here would be ' [2 objects]'.
@@ -518,13 +516,10 @@ class MetadataManager(StatusMessageManager):
       True if this message can be properly handled by this manager,
       False otherwise.
     """
-    if isinstance(status_message,
-                  (SeekAheadMessage,
-                   ProducerThreadMessage,
-                   MetadataMessage,
-                   FinalMessage,
-                   RetryableErrorMessage,
-                   PerformanceSummaryMessage)):
+    if isinstance(
+        status_message,
+        (SeekAheadMessage, ProducerThreadMessage, MetadataMessage, FinalMessage,
+         RetryableErrorMessage, PerformanceSummaryMessage)):
       return True
     return False
 
@@ -732,8 +727,7 @@ class DataManager(StatusMessageManager):
 
         key = (status_message.component_num, status_message.dst_url)
         last_update = (file_progress.dict[key] if key in file_progress.dict else
-                       (0,
-                        0))
+                       (0, 0))
         self.total_progress += status_message.size - sum(last_update)
         self.new_progress += status_message.size - sum(last_update)
         self.last_progress_time = status_message.time
@@ -757,8 +751,7 @@ class DataManager(StatusMessageManager):
     # we use a (component_num, dst_url) tuple as our key.
     key = (status_message.component_num, status_message.dst_url)
     last_update = (file_progress.dict[key] if key in file_progress.dict else
-                   (0,
-                    0))
+                   (0, 0))
     status_message.processed_bytes -= last_update[1]
     file_progress.new_progress_sum += (status_message.processed_bytes -
                                        last_update[0])
@@ -805,8 +798,7 @@ class DataManager(StatusMessageManager):
       self._HandlePerformanceSummaryMessage(status_message)
 
     self.old_progress.append(
-        self._ThroughputInformation(self.new_progress,
-                                    status_message.time))
+        self._ThroughputInformation(self.new_progress, status_message.time))
 
   def PrintProgress(self, stream=sys.stderr):
     """Prints progress and throughput/time estimation.
@@ -848,8 +840,8 @@ class DataManager(StatusMessageManager):
       objects_completed = '[' + DecimalShort(self.objects_finished) + ' files]'
 
     # An example of bytes_progress would be '[101.0 MiB/1.0 GiB]'.
-    bytes_progress = ('[%s/%s]' % (BytesToFixedWidthString(self.total_progress),
-                                   BytesToFixedWidthString(self.total_size)))
+    bytes_progress = ('[%s/%s]' % (BytesToFixedWidthString(
+        self.total_progress), BytesToFixedWidthString(self.total_size)))
 
     if self.total_size_source <= EstimationSource.SEEK_AHEAD_THREAD:
       if self.num_objects == self.objects_finished:
@@ -857,8 +849,7 @@ class DataManager(StatusMessageManager):
       else:
         percentage = (
             '%3d' %
-            min(99,
-                int(100 * float(self.total_progress) / self.total_size)))
+            min(99, int(100 * float(self.total_progress) / self.total_size)))
       percentage_completed = percentage + '% Done'
     else:
       percentage_completed = ''
@@ -902,14 +893,10 @@ class DataManager(StatusMessageManager):
       True if this message can be properly handled by this manager,
       False otherwise.
     """
-    if isinstance(status_message,
-                  (SeekAheadMessage,
-                   ProducerThreadMessage,
-                   FileMessage,
-                   ProgressMessage,
-                   FinalMessage,
-                   RetryableErrorMessage,
-                   PerformanceSummaryMessage)):
+    if isinstance(
+        status_message,
+        (SeekAheadMessage, ProducerThreadMessage, FileMessage, ProgressMessage,
+         FinalMessage, RetryableErrorMessage, PerformanceSummaryMessage)):
       return True
     return False
 
@@ -991,9 +978,8 @@ class UIController(object):
     if self.manager.ShouldPrintSpinner(cur_time):
       self.manager.PrintSpinner(stream)
       self.manager.refresh_spinner_time = cur_time
-    if ((isinstance(status_message,
-                    FinalMessage) or self.manager.final_message) and
-        self.manager.num_objects and not self.printed_final_message):
+    if ((isinstance(status_message, FinalMessage) or self.manager.final_message)
+        and self.manager.num_objects and not self.printed_final_message):
       self.printed_final_message = True
       LogPerformanceSummaryParams(
           num_objects_transferred=self.manager.num_objects)
@@ -1036,9 +1022,8 @@ class UIController(object):
     if not cur_time:
       cur_time = status_message.time
     if not self.manager:
-      if (isinstance(status_message,
-                     SeekAheadMessage) or isinstance(status_message,
-                                                     ProducerThreadMessage)):
+      if (isinstance(status_message, SeekAheadMessage) or
+          isinstance(status_message, ProducerThreadMessage)):
         self.early_estimation_messages.append(status_message)
         return
       elif isinstance(status_message, MetadataMessage):
@@ -1067,9 +1052,8 @@ class UIController(object):
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
     if not self.manager.CanHandleMessage(status_message):
-      if (isinstance(status_message,
-                     FileMessage) or isinstance(status_message,
-                                                ProgressMessage)):
+      if (isinstance(status_message, FileMessage) or
+          isinstance(status_message, ProgressMessage)):
         # We have to create a DataManager to handle this data message. This is
         # to avoid a possible race condition where MetadataMessages are sent
         # before data messages. As such, this means that the DataManager has

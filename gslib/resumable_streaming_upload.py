@@ -55,8 +55,8 @@ class ResumableStreamingJsonUploadWrapper(object):
                              'size %s, JSON resumable upload chunk size %s. '
                              'Buffer size must be >= JSON resumable upload '
                              'chunk size to ensure that uploads can be '
-                             'resumed.' % (max_buffer_size,
-                                           GetJsonResumableChunkSize()))
+                             'resumed.' %
+                             (max_buffer_size, GetJsonResumableChunkSize()))
 
     self._max_buffer_size = max_buffer_size
     self._buffer = collections.deque()
@@ -158,8 +158,8 @@ class ResumableStreamingJsonUploadWrapper(object):
       if six.PY3:
         if buffered_data:
           buffered_data = [
-              bd.encode(UTF8) if isinstance(bd,
-                                            str) else bd for bd in buffered_data
+              bd.encode(UTF8) if isinstance(bd, str) else bd
+              for bd in buffered_data
           ]
       data = b''.join(buffered_data) if buffered_data else b''
 
@@ -188,17 +188,15 @@ class ResumableStreamingJsonUploadWrapper(object):
         raise CommandException('Unable to resume upload because of limited '
                                'buffering available for streaming uploads. '
                                'Offset %s was requested, but only data from '
-                               '%s to %s is buffered.' % (offset,
-                                                          self._buffer_start,
-                                                          self._buffer_end))
+                               '%s to %s is buffered.' %
+                               (offset, self._buffer_start, self._buffer_end))
       # Move to a position within the buffer.
       self._position = offset
     elif whence == os.SEEK_END:
       if offset > self._max_buffer_size:
         raise CommandException('Invalid SEEK_END offset %s on streaming '
                                'upload. Only %s can be buffered.' %
-                               (offset,
-                                self._max_buffer_size))
+                               (offset, self._max_buffer_size))
       # Read to the end and rely on buffering to handle the offset.
       while self.read(self._max_buffer_size):
         pass
@@ -206,8 +204,7 @@ class ResumableStreamingJsonUploadWrapper(object):
       self._position -= offset
     else:
       raise CommandException('Invalid seek mode on streaming upload. '
-                             '(mode %s, offset %s)' % (whence,
-                                                       offset))
+                             '(mode %s, offset %s)' % (whence, offset))
 
   def close(self):  # pylint: disable=invalid-name
     return self._orig_fp.close()

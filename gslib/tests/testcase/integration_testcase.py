@@ -133,19 +133,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     self.bucket_uris = []
 
     # Set up API version and project ID handler.
-    self.api_version = boto.config.get_value('GSUtil',
-                                             'default_api_version',
+    self.api_version = boto.config.get_value('GSUtil', 'default_api_version',
                                              '1')
 
     # Instantiate a JSON API for use by the current integration test.
-    self.json_api = GcsJsonApi(BucketStorageUri,
-                               logging.getLogger(),
-                               DiscardMessagesQueue(),
-                               'gs')
-    self.xml_api = BotoTranslation(BucketStorageUri,
-                                   logging.getLogger(),
-                                   DiscardMessagesQueue,
-                                   self.default_provider)
+    self.json_api = GcsJsonApi(BucketStorageUri, logging.getLogger(),
+                               DiscardMessagesQueue(), 'gs')
+    self.xml_api = BotoTranslation(BucketStorageUri, logging.getLogger(),
+                                   DiscardMessagesQueue, self.default_provider)
     self.kms_api = KmsApi()
 
     self.multiregional_buckets = util.USE_MULTIREGIONAL_BUCKETS
@@ -206,8 +201,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
               # to bucket being non-empty) and retry deleting these objects
               # and their associated buckets.
               self._ClearHoldsOnObjectAndWaitForRetentionDuration(
-                  bucket_uri,
-                  k.name)
+                  bucket_uri, k.name)
             else:
               raise
         if error:
@@ -216,8 +210,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri.delete_bucket()
       self.bucket_uris.pop()
 
-  def _ClearHoldsOnObjectAndWaitForRetentionDuration(self,
-                                                     bucket_uri,
+  def _ClearHoldsOnObjectAndWaitForRetentionDuration(self, bucket_uri,
                                                      object_name):
     """Removes Holds on test objects and waits till retention duration is over.
 
@@ -239,9 +232,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     object_metadata = self.json_api.GetObjectMetadata(
         bucket_uri.bucket_name,
         object_name,
-        fields=['timeCreated',
-                'temporaryHold',
-                'eventBasedHold'])
+        fields=['timeCreated', 'temporaryHold', 'eventBasedHold'])
     object_uri = '{}{}'.format(bucket_uri, object_name)
     if object_metadata.temporaryHold:
       self.RunGsUtil(['retention', 'temp', 'release', object_uri])
@@ -262,12 +253,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                               ' Use shorter durations for Retention duration in'
                               ' tests').format(bucket_uri))
 
-  def _SetObjectCustomMetadataAttribute(self,
-                                        provider,
-                                        bucket_name,
-                                        object_name,
-                                        attr_name,
-                                        attr_value):
+  def _SetObjectCustomMetadataAttribute(self, provider, bucket_name,
+                                        object_name, attr_name, attr_value):
     """Sets a custom metadata attribute for an object.
 
     Args:
@@ -340,22 +327,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     """
     provider_meta_string = 'goog' if obj.scheme == 'gs' else 'amz'
     self.RunGsUtil([
-        'setmeta',
-        '-h',
-        'x-%s-meta-%s' % (provider_meta_string,
-                          ATIME_ATTR),
-        '-h',
-        'x-%s-meta-%s' % (provider_meta_string,
-                          MTIME_ATTR),
-        '-h',
-        'x-%s-meta-%s' % (provider_meta_string,
-                          UID_ATTR),
-        '-h',
-        'x-%s-meta-%s' % (provider_meta_string,
-                          GID_ATTR),
-        '-h',
-        'x-%s-meta-%s' % (provider_meta_string,
-                          MODE_ATTR),
+        'setmeta', '-h',
+        'x-%s-meta-%s' % (provider_meta_string, ATIME_ATTR), '-h',
+        'x-%s-meta-%s' % (provider_meta_string, MTIME_ATTR), '-h',
+        'x-%s-meta-%s' % (provider_meta_string, UID_ATTR), '-h',
+        'x-%s-meta-%s' % (provider_meta_string, GID_ATTR), '-h',
+        'x-%s-meta-%s' % (provider_meta_string, MODE_ATTR),
         suri(obj)
     ])
 
@@ -367,10 +344,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # actually represent a change the bucket would also orphan the service
     # account's access to the bucket. If service accounts can be owners
     # in the future, remove this function and update all callers.
-    return (config.has_option('Credentials',
-                              'gs_service_key_file') or
-            config.has_option('GoogleCompute',
-                              'service_account'))
+    return (config.has_option('Credentials', 'gs_service_key_file') or
+            config.has_option('GoogleCompute', 'service_account'))
 
   def _ListBucket(self, bucket_uri):
     if bucket_uri.scheme == 's3':
@@ -425,11 +400,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
     self.assertIn(
         Base64Sha256FromBase64EncryptionKey(encryption_key).decode('ascii'),
-        stdout,
-        'Object %s did not use expected encryption key with hash %s. '
+        stdout, 'Object %s did not use expected encryption key with hash %s. '
         'Actual object: %s' %
-        (object_uri_str,
-         Base64Sha256FromBase64EncryptionKey(encryption_key),
+        (object_uri_str, Base64Sha256FromBase64EncryptionKey(encryption_key),
          stdout))
 
   def AssertObjectUsesCMEK(self, object_uri_str, encryption_key):
@@ -507,8 +480,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                           locked or not.
     """
     actual_retention_policy = self.json_api.GetBucket(
-        bucket_uri.bucket_name,
-        fields=['retentionPolicy']).retentionPolicy
+        bucket_uri.bucket_name, fields=['retentionPolicy']).retentionPolicy
 
     if expected_retention_period_in_seconds is None:
       self.assertEqual(actual_retention_policy, None)
@@ -572,8 +544,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     else:
       # We default to the "us-central1" location for regional buckets, but allow
       # overriding this value in the Boto config.
-      location = boto.config.get('GSUtil',
-                                 'test_cmd_regional_bucket_location',
+      location = boto.config.get('GSUtil', 'test_cmd_regional_bucket_location',
                                  'us-central1')
 
     bucket_name_prefix = six.ensure_text(bucket_name_prefix)
@@ -581,9 +552,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     if bucket_name:
       bucket_name = ''.join(
-          [bucket_name_prefix,
-           bucket_name,
-           bucket_name_suffix])
+          [bucket_name_prefix, bucket_name, bucket_name_suffix])
       bucket_name = util.MakeBucketNameValid(bucket_name)
     else:
       bucket_name = self.MakeTempName('bucket',
@@ -602,8 +571,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                     suppress_consec_slashes=False)
       return bucket_uri
 
-    bucket_uri = boto.storage_uri('%s://%s' % (provider,
-                                               bucket_name.lower()),
+    bucket_uri = boto.storage_uri('%s://%s' % (provider, bucket_name.lower()),
                                   suppress_consec_slashes=False)
 
     if provider == 'gs':
@@ -905,9 +873,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     except PreconditionException:
       if gs_idempotent_generation is None:
         raise
-      with SetBotoConfigForTest([('GSUtil',
-                                  'decryption_key1',
-                                  encryption_key)]):
+      with SetBotoConfigForTest([('GSUtil', 'decryption_key1', encryption_key)
+                                ]):
         return self.json_api.GetObjectMetadata(bucket_name, object_name)
 
   def VerifyObjectCustomAttribute(self,
@@ -970,9 +937,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       rather than being returned within a 1-tuple.
     """
     cmd = [
-        gslib.GSUTIL_PATH,
-        '--testexceptiontraces',
-        '-o',
+        gslib.GSUTIL_PATH, '--testexceptiontraces', '-o',
         'GSUtil:default_project_id=' + PopulateProjectId()
     ] + cmd
     if stdin is not None:
@@ -1004,8 +969,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       c_out = [six.ensure_text(output) for output in c_out]
     except UnicodeDecodeError:
       c_out = [
-          six.ensure_text(output,
-                          locale.getpreferredencoding(False))
+          six.ensure_text(output, locale.getpreferredencoding(False))
           for output in c_out
       ]
     stdout = c_out[0].replace(os.linesep, '\n')
@@ -1018,10 +982,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           int(status),
           int(expected_status),
           msg='Expected status {}, got {}.\nCommand:\n{}\n\nstderr:\n{}'.format(
-              expected_status,
-              status,
-              ' '.join(cmd),
-              stderr))
+              expected_status, status, ' '.join(cmd), stderr))
 
     toreturn = []
     if return_status:
@@ -1055,8 +1016,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         # argcomplete returns results via the '8' file descriptor so we
         # redirect to a file so we can capture them.
         cmd_str_with_result_redirect = '%s 8>%s' % (
-            cmd_str,
-            tab_complete_result_file.name)
+            cmd_str, tab_complete_result_file.name)
         env = os.environ.copy()
         env['_ARGCOMPLETE'] = '1'
         # Use a sane default for COMP_WORDBREAKS.
@@ -1083,32 +1043,22 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   def SetAnonymousBotoCreds(self):
     # Tell gsutil not to override the real error message with a warning about
     # anonymous access if no credentials are provided in the config file.
-    boto_config_for_test = [('Tests',
-                             'bypass_anonymous_access_warning',
-                             'True')]
+    boto_config_for_test = [('Tests', 'bypass_anonymous_access_warning', 'True')
+                           ]
 
     # Also, maintain any custom host/port/API configuration, since we'll need
     # to contact the same host when operating in a development environment.
-    for creds_config_key in ('gs_host',
-                             'gs_json_host',
-                             'gs_json_host_header',
-                             'gs_post',
-                             'gs_json_port'):
-      boto_config_for_test.append(('Credentials',
-                                   creds_config_key,
+    for creds_config_key in ('gs_host', 'gs_json_host', 'gs_json_host_header',
+                             'gs_post', 'gs_json_port'):
+      boto_config_for_test.append(('Credentials', creds_config_key,
                                    boto.config.get('Credentials',
-                                                   creds_config_key,
-                                                   None)))
-    boto_config_for_test.append(('Boto',
-                                 'https_validate_certificates',
-                                 boto.config.get('Boto',
-                                                 'https_validate_certificates',
-                                                 None)))
+                                                   creds_config_key, None)))
+    boto_config_for_test.append(
+        ('Boto', 'https_validate_certificates',
+         boto.config.get('Boto', 'https_validate_certificates', None)))
     for api_config_key in ('json_api_version', 'prefer_api'):
-      boto_config_for_test.append(('GSUtil',
-                                   api_config_key,
-                                   boto.config.get('GSUtil',
-                                                   api_config_key,
+      boto_config_for_test.append(('GSUtil', api_config_key,
+                                   boto.config.get('GSUtil', api_config_key,
                                                    None)))
 
     with SetBotoConfigForTest(boto_config_for_test, use_existing_config=False):
@@ -1193,9 +1143,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
   def FlatListBucket(self, bucket_url_string):
     """Perform a flat listing over bucket_url_string."""
-    return self.RunGsUtil(['ls',
-                           suri(bucket_url_string,
-                                '**')],
+    return self.RunGsUtil(['ls', suri(bucket_url_string, '**')],
                           return_stdout=True)
 
 

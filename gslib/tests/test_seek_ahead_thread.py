@@ -51,9 +51,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     class TrackingCancellationIterator(object):
       """Yields dummy results and sends cancellation after some # of yields."""
 
-      def __init__(self,
-                   num_iterations,
-                   num_iterations_before_cancel,
+      def __init__(self, num_iterations, num_iterations_before_cancel,
                    cancel_event):
         """Initializes the iterator.
 
@@ -92,11 +90,8 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
       ui_thread = UIThread(status_queue, stream, ui_controller)
 
       seek_ahead_iterator = TrackingCancellationIterator(
-          num_iterations,
-          num_iterations_before_cancel,
-          cancel_event)
-      seek_ahead_thread = SeekAheadThread(seek_ahead_iterator,
-                                          cancel_event,
+          num_iterations, num_iterations_before_cancel, cancel_event)
+      seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                           status_queue)
       seek_ahead_thread.join(self.thread_wait_time)
       status_queue.put(_ZERO_TASKS_TO_DO_ARGUMENT)
@@ -107,12 +102,10 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
             'Cancellation issued after %s iterations, but SeekAheadThread '
             'is still alive.' % num_iterations_before_cancel)
       self.assertEqual(
-          expected_iterations,
-          seek_ahead_iterator.iterated_results,
+          expected_iterations, seek_ahead_iterator.iterated_results,
           'Cancellation issued after %s iterations, SeekAheadThread iterated '
           '%s results, expected: %s results.' %
-          (num_iterations_before_cancel,
-           seek_ahead_iterator.iterated_results,
+          (num_iterations_before_cancel, seek_ahead_iterator.iterated_results,
            expected_iterations))
       message = stream.getvalue()
       if message:
@@ -140,8 +133,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     ui_thread = UIThread(status_queue, stream, ui_controller)
     num_objects = 5
     seek_ahead_iterator = SeekAheadResultIterator(num_objects)
-    seek_ahead_thread = SeekAheadThread(seek_ahead_iterator,
-                                        cancel_event,
+    seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
     status_queue.put(_ZERO_TASKS_TO_DO_ARGUMENT)
@@ -155,8 +147,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
       self.fail('Status queue empty but SeekAheadThread should have posted '
                 'summary message')
     self.assertEqual(
-        message,
-        'Estimated work for this command: objects: %s\n' % num_objects)
+        message, 'Estimated work for this command: objects: %s\n' % num_objects)
 
   def testEstimateWithSize(self):
     """Tests SeekAheadThread providing an object count and total size."""
@@ -183,10 +174,8 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     num_objects = 5
     object_size = 10
     seek_ahead_iterator = SeekAheadResultIteratorWithSize(
-        num_objects,
-        object_size)
-    seek_ahead_thread = SeekAheadThread(seek_ahead_iterator,
-                                        cancel_event,
+        num_objects, object_size)
+    seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
     status_queue.put(_ZERO_TASKS_TO_DO_ARGUMENT)
@@ -206,8 +195,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     self.assertEqual(
         message,
         'Estimated work for this command: objects: %s, total size: %s\n' %
-        (num_objects,
-         unit_util.MakeHumanReadable(total_size)))
+        (num_objects, unit_util.MakeHumanReadable(total_size)))
 
   def testWithLocalFiles(self):
     """Tests SeekAheadThread with an actual directory."""
@@ -224,11 +212,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
 
     # Recursively "copy" tmpdir.
     seek_ahead_iterator = SeekAheadNameExpansionIterator(
-        'cp',
-        0,
-        None,
-        [tmpdir],
-        True)
+        'cp', 0, None, [tmpdir], True)
 
     cancel_event = threading.Event()
     status_queue = Queue.Queue()
@@ -236,8 +220,7 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     ui_controller = UIController()
     ui_thread = UIThread(status_queue, stream, ui_controller)
 
-    seek_ahead_thread = SeekAheadThread(seek_ahead_iterator,
-                                        cancel_event,
+    seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
                                         status_queue)
     seek_ahead_thread.join(self.thread_wait_time)
     status_queue.put(_ZERO_TASKS_TO_DO_ARGUMENT)
@@ -255,5 +238,4 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
     self.assertEqual(
         message,
         'Estimated work for this command: objects: %s, total size: %s\n' %
-        (num_files,
-         unit_util.MakeHumanReadable(total_size)))
+        (num_files, unit_util.MakeHumanReadable(total_size)))

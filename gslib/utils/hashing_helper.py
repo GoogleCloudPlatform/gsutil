@@ -92,37 +92,11 @@ CHECK_HASH_NEVER = 'never'
 # where x^(2^k) and CASTAGNOLI_POLY are both considered polynomials. This is
 # sufficient since x^(2^31) mod CASTAGNOLI_POLY = x.
 X_POW_2K_TABLE = [
-    2,
-    4,
-    16,
-    256,
-    65536,
-    517762881,
-    984302966,
-    408362264,
-    1503875210,
-    2862076957,
-    3884826397,
-    1324787473,
-    621200174,
-    1758783527,
-    1416537776,
-    1180494764,
-    648569364,
-    2521473789,
-    994858823,
-    1728245375,
-    3498467999,
-    4059169852,
-    3345064394,
-    2828422810,
-    2429203150,
-    3336788029,
-    860151998,
-    2102628683,
-    1033187991,
-    4243778976,
-    1123580069
+    2, 4, 16, 256, 65536, 517762881, 984302966, 408362264, 1503875210,
+    2862076957, 3884826397, 1324787473, 621200174, 1758783527, 1416537776,
+    1180494764, 648569364, 2521473789, 994858823, 1728245375, 3498467999,
+    4059169852, 3345064394, 2828422810, 2429203150, 3336788029, 860151998,
+    2102628683, 1033187991, 4243778976, 1123580069
 ]
 # Castagnoli polynomial and its degree.
 CASTAGNOLI_POLY = 4812730177
@@ -329,8 +303,7 @@ def GetUploadHashAlgs():
   Returns:
     dict of (algorithm_name: hash_algorithm)
   """
-  check_hashes_config = config.get('GSUtil',
-                                   'check_hashes',
+  check_hashes_config = config.get('GSUtil', 'check_hashes',
                                    CHECK_HASH_IF_FAST_ELSE_FAIL)
   if check_hashes_config == 'never':
     return {}
@@ -352,8 +325,7 @@ def GetDownloadHashAlgs(logger, consider_md5=False, consider_crc32c=False):
     CommandException if hash algorithms satisfying the boto config file
     cannot be returned.
   """
-  check_hashes_config = config.get('GSUtil',
-                                   'check_hashes',
+  check_hashes_config = config.get('GSUtil', 'check_hashes',
                                    CHECK_HASH_IF_FAST_ELSE_FAIL)
   if check_hashes_config == CHECK_HASH_NEVER:
     return {}
@@ -526,13 +498,11 @@ class HashingFileUploadWrapper(object):
     if self._orig_fp.tell() != self._digesters_current_mark:
       raise CommandException(
           'Invalid mark when catching up hashes. Stream position %s, hash '
-          'position %s' % (self._orig_fp.tell(),
-                           self._digesters_current_mark))
+          'position %s' % (self._orig_fp.tell(), self._digesters_current_mark))
 
     for alg in self._digesters:
       if bytes_to_read >= MIN_SIZE_COMPUTE_LOGGING:
-        self._logger.info('Catching up %s for %s...',
-                          alg,
+        self._logger.info('Catching up %s for %s...', alg,
                           self._src_url.url_string)
       self._digesters_previous[alg] = self._digesters[alg].copy()
 

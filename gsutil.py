@@ -38,11 +38,8 @@ else:
 
 
 def UsingCrcmodExtension(crcmod_module):
-  return (getattr(crcmod_module,
-                  'crcmod',
-                  None) and getattr(crcmod_module.crcmod,
-                                    '_usingExtension',
-                                    None))
+  return (getattr(crcmod_module, 'crcmod', None) and
+          getattr(crcmod_module.crcmod, '_usingExtension', None))
 
 
 def OutputAndExit(message):
@@ -109,8 +106,7 @@ for libdir, subdir in THIRD_PARTY_LIBS:
         'There is no %s library under the gsutil third-party directory (%s).\n'
         'The gsutil command cannot work properly when installed this way.\n'
         'Please re-install gsutil per the installation instructions.' %
-        (libdir,
-         THIRD_PARTY_DIR))
+        (libdir, THIRD_PARTY_DIR))
   sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
 
 CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', submodule_pyvers)

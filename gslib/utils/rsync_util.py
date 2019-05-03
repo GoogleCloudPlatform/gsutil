@@ -31,11 +31,7 @@ class DiffAction(object):
 class RsyncDiffToApply(object):
   """Class that encapsulates info needed to apply diff for one object."""
 
-  def __init__(self,
-               src_url_str,
-               dst_url_str,
-               src_posix_attrs,
-               diff_action,
+  def __init__(self, src_url_str, dst_url_str, src_posix_attrs, diff_action,
                copy_size):
     """Constructor.
 

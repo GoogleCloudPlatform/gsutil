@@ -108,6 +108,5 @@ class PluralityCheckableIterator(six.Iterator):
     """Raises an exception if the first iterated element raised."""
     if self._PopulateHead() and self.head[0][0] == 'exception':
       exception_tuple = self.head[0]
-      raise six.reraise(exception_tuple[1].__class__,
-                        exception_tuple[1],
+      raise six.reraise(exception_tuple[1].__class__, exception_tuple[1],
                         exception_tuple[2])

@@ -56,8 +56,7 @@ if six.PY3:
 # Globals in this module are set according to values in the boto config.
 BOTO_IS_SECURE = config.get('Boto', 'is_secure', True)
 CERTIFICATE_VALIDATION_ENABLED = config.get('Boto',
-                                            'https_validate_certificates',
-                                            True)
+                                            'https_validate_certificates', True)
 
 configured_certs_file = None  # Single certs file for use across all processes.
 temp_certs_file = None  # Temporary certs file for cleanup upon exit.
@@ -83,9 +82,7 @@ def ConfigureCertsFile():
     global configured_certs_file, temp_certs_file
     if not configured_certs_file:
       configured_certs_file = os.path.abspath(
-          os.path.join(gslib.GSLIB_DIR,
-                       'data',
-                       'cacerts.txt'))
+          os.path.join(gslib.GSLIB_DIR, 'data', 'cacerts.txt'))
       if not os.path.exists(configured_certs_file):
         # If the file is not present on disk, this means the gslib module
         # doesn't actually exist on disk anywhere. This can happen if it's
@@ -109,8 +106,8 @@ def ConfigureCertsFile():
 def ConfigureNoOpAuthIfNeeded():
   """Sets up no-op auth handler if no boto credentials are configured."""
   if not HasConfiguredCredentials():
-    if (config.has_option('Credentials',
-                          'gs_service_client_id') and not HAS_CRYPTO):
+    if (config.has_option('Credentials', 'gs_service_client_id') and
+        not HAS_CRYPTO):
       if system_util.InvokedViaCloudSdk():
         raise CommandException('\n'.join(
             textwrap.wrap(
@@ -215,8 +212,7 @@ def GetGcsJsonApiVersion():
 # Resumable downloads and uploads make one HTTP call per chunk (and must be
 # in multiples of 256KiB). Overridable for testing.
 def GetJsonResumableChunkSize():
-  chunk_size = config.getint('GSUtil',
-                             'json_resumable_chunk_size',
+  chunk_size = config.getint('GSUtil', 'json_resumable_chunk_size',
                              long(1024 * 1024 * 100))
   if chunk_size == 0:
     chunk_size = long(1024 * 256)
@@ -255,9 +251,7 @@ def GetMaxRetryDelay():
 def GetMaxUploadCompressionBufferSize():
   """Get the max amount of memory compressed transport uploads may buffer."""
   return HumanReadableToBytes(
-      config.get('GSUtil',
-                 'max_upload_compression_buffer_size',
-                 '2GiB'))
+      config.get('GSUtil', 'max_upload_compression_buffer_size', '2GiB'))
 
 
 def GetNewHttp(http_class=httplib2.Http, **kwargs):
@@ -274,17 +268,10 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
   proxy_info = httplib2.ProxyInfo(
       proxy_type=3,
       proxy_host=proxy_host,
-      proxy_port=config.getint('Boto',
-                               'proxy_port',
-                               0),
-      proxy_user=config.get('Boto',
-                            'proxy_user',
-                            None),
-      proxy_pass=config.get('Boto',
-                            'proxy_pass',
-                            None),
-      proxy_rdns=config.get('Boto',
-                            'proxy_rdns',
+      proxy_port=config.getint('Boto', 'proxy_port', 0),
+      proxy_user=config.get('Boto', 'proxy_user', None),
+      proxy_pass=config.get('Boto', 'proxy_pass', None),
+      proxy_rdns=config.get('Boto', 'proxy_rdns',
                             True if proxy_host else False))
 
   if not (proxy_info.proxy_host and proxy_info.proxy_port):
@@ -303,8 +290,7 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
   kwargs['timeout'] = SSL_TIMEOUT_SEC
   http = http_class(proxy_info=proxy_info, **kwargs)
   http.disable_ssl_certificate_validation = (not config.getbool(
-      'Boto',
-      'https_validate_certificates'))
+      'Boto', 'https_validate_certificates'))
   return http
 
 
@@ -328,21 +314,16 @@ def GetTabCompletionCacheFilename():
 
 def HasConfiguredCredentials():
   """Determines if boto credential/config file exists."""
-  has_goog_creds = (config.has_option('Credentials',
-                                      'gs_access_key_id') and
-                    config.has_option('Credentials',
-                                      'gs_secret_access_key'))
-  has_amzn_creds = (config.has_option('Credentials',
-                                      'aws_access_key_id') and
-                    config.has_option('Credentials',
-                                      'aws_secret_access_key'))
+  has_goog_creds = (config.has_option('Credentials', 'gs_access_key_id') and
+                    config.has_option('Credentials', 'gs_secret_access_key'))
+  has_amzn_creds = (config.has_option('Credentials', 'aws_access_key_id') and
+                    config.has_option('Credentials', 'aws_secret_access_key'))
   has_oauth_creds = (config.has_option('Credentials',
                                        'gs_oauth2_refresh_token'))
-  has_service_account_creds = (HAS_CRYPTO and
-                               config.has_option('Credentials',
-                                                 'gs_service_client_id') and
-                               config.has_option('Credentials',
-                                                 'gs_service_key_file'))
+  has_service_account_creds = (
+      HAS_CRYPTO and
+      config.has_option('Credentials', 'gs_service_client_id') and
+      config.has_option('Credentials', 'gs_service_key_file'))
 
   if (has_goog_creds or has_amzn_creds or has_oauth_creds or
       has_service_account_creds):
@@ -357,10 +338,7 @@ def HasConfiguredCredentials():
     # Exclude the no-op auth handler as indicating credentials are configured.
     # Note we can't use isinstance() here because the no-op module may not be
     # imported so we can't get a reference to the class type.
-    if getattr(getattr(valid_auth_handler,
-                       '__class__',
-                       None),
-               '__name__',
+    if getattr(getattr(valid_auth_handler, '__class__', None), '__name__',
                None) == 'NoOpAuth':
       valid_auth_handler = None
   except NoAuthHandlerFound:
@@ -406,8 +384,7 @@ def MonkeyPatchBoto():
 
   def _PatchedGetPluginMethod(cls, requested_capability=None):
     handler_subclasses = orig_get_plugin_method(
-        cls,
-        requested_capability=requested_capability)
+        cls, requested_capability=requested_capability)
     # In Boto's logic, higher precedence handlers should be closer to the end
     # of the list.  We always want to prefer OAuth2 credentials over HMAC
     # credentials if both are present, so we shuffle OAuth2 handlers to the end
@@ -476,9 +453,7 @@ def MonkeyPatchBoto():
     hostname = self.host.split(':', 0)[0]
     if not ValidateCertificateHostname(cert, hostname):
       raise InvalidCertificateException(
-          hostname,
-          cert,
-          'remote hostname "%s" does not match '
+          hostname, cert, 'remote hostname "%s" does not match '
           'certificate' % hostname)
     # End `_PatchedConnectMethod` declaration.
 
@@ -511,14 +486,9 @@ def ResumableThreshold():
 
 
 def UsingCrcmodExtension(crcmod):
-  return (boto.config.get('GSUtil',
-                          'test_assume_fast_crcmod',
-                          None) or
-          (getattr(crcmod,
-                   'crcmod',
-                   None) and getattr(crcmod.crcmod,
-                                     '_usingExtension',
-                                     None)))
+  return (boto.config.get('GSUtil', 'test_assume_fast_crcmod', None) or
+          (getattr(crcmod, 'crcmod', None) and
+           getattr(crcmod.crcmod, '_usingExtension', None)))
 
 
 # TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
@@ -545,19 +515,16 @@ def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
     # Amazon S3 returns in the response will not be the MD5 of the
     # object.
     amz_server_side_encryption_customer_algorithm = response.getheader(
-        'x-amz-server-side-encryption-customer-algorithm',
-        None)
+        'x-amz-server-side-encryption-customer-algorithm', None)
     # The same is applicable for KMS-encrypted objects in gs buckets.
     goog_customer_managed_encryption = response.getheader(
-        'x-goog-encryption-kms-key-name',
-        None)
+        'x-goog-encryption-kms-key-name', None)
     if (amz_server_side_encryption_customer_algorithm is None and
         goog_customer_managed_encryption is None):
       if self.etag != '"%s"' % md5:
         raise provider.storage_data_error(
             'ETag from S3 did not match computed MD5. '
-            '%s vs. %s' % (self.etag,
-                           self.md5))
+            '%s vs. %s' % (self.etag, self.md5))
 
     return True
 
@@ -567,8 +534,7 @@ def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
     # If ``RequestTimeout`` is present, we'll retry. Otherwise, bomb
     # out.
     body = response.read()
-    err = provider.storage_response_error(response.status,
-                                          response.reason,
+    err = provider.storage_response_error(response.status, response.reason,
                                           body)
 
     if err.error_code in ['RequestTimeout']:

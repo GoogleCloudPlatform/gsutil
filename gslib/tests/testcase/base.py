@@ -108,9 +108,7 @@ class GsUtilTestCase(unittest.TestCase):
       lowercase, etc.).
     """
     name = '{prefix}gsutil-test-{method}-{kind}'.format(
-        prefix=prefix,
-        method=self.GetTestMethodName(),
-        kind=kind)
+        prefix=prefix, method=self.GetTestMethodName(), kind=kind)
     name = name[:MAX_BUCKET_LENGTH - 9]
     name = '{name}-{rand}'.format(name=name, rand=self.MakeRandomTestString())
     total_name_len = len(name) + len(suffix)
@@ -264,7 +262,6 @@ class GsUtilTestCase(unittest.TestCase):
       pattern = re.compile(pattern.pattern, flags=pattern.flags | flags)
     if not pattern.search(text):
       failure_msg = msg or 'Regex didn\'t match'
-      failure_msg = '%s: %r not found in %r' % (failure_msg,
-                                                pattern.pattern,
+      failure_msg = '%s: %r not found in %r' % (failure_msg, pattern.pattern,
                                                 text)
       raise self.failureException(failure_msg)

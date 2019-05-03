@@ -211,15 +211,8 @@ def DeserializeIDAttribute(obj_metadata, attr, url_str, posix_attrs):
   setattr(posix_attrs, attr_name, val)
 
 
-def NeedsPOSIXAttributeUpdate(src_atime,
-                              dst_atime,
-                              src_mtime,
-                              dst_mtime,
-                              src_uid,
-                              dst_uid,
-                              src_gid,
-                              dst_gid,
-                              src_mode,
+def NeedsPOSIXAttributeUpdate(src_atime, dst_atime, src_mtime, dst_mtime,
+                              src_uid, dst_uid, src_gid, dst_gid, src_mode,
                               dst_mode):
   """Checks whether an update for any POSIX attribute is needed.
 
@@ -346,16 +339,14 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
     try:
       pwd.getpwuid(uid)
     except (KeyError, OverflowError):
-      return (False,
-              'UID for %s doesn\'t exist on current system. uid: %d' % (url_str,
-                                                                        uid))
+      return (False, 'UID for %s doesn\'t exist on current system. uid: %d' %
+              (url_str, uid))
   if gid_present:
     try:
       grp.getgrgid(gid)
     except (KeyError, OverflowError):
-      return (False,
-              'GID for %s doesn\'t exist on current system. gid: %d' % (url_str,
-                                                                        gid))
+      return (False, 'GID for %s doesn\'t exist on current system. gid: %d' %
+              (url_str, gid))
 
   # uid at this point must exist, but isn't necessarily the current user.
   # Likewise, gid must also exist at this point.
@@ -372,27 +363,18 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
   # current user wouldn't have read access or better, the file will be orphaned
   # even though they might otherwise have access through the gid or other bytes.
   if not uid_present and gid_present and mode_present and not bool(mode & U_R):
-    return (False,
-            'Insufficient access with uid/gid/mode for %s, gid: %d, '
-            'mode: %s' % (url_str,
-                          gid,
-                          oct(mode)[-3:]))
+    return (False, 'Insufficient access with uid/gid/mode for %s, gid: %d, '
+            'mode: %s' % (url_str, gid, oct(mode)[-3:]))
   if uid_is_current_user:
     valid = bool(mode & U_R)
-    return (valid,
-            '' if valid else
+    return (valid, '' if valid else
             'Insufficient access with uid/gid/mode for %s, uid: %d, '
-            'mode: %s' % (url_str,
-                          uid,
-                          oct(mode)[-3:]))
+            'mode: %s' % (url_str, uid, oct(mode)[-3:]))
   elif int(gid) in USER_GROUPS:
     valid = bool(mode & G_R)
-    return (valid,
-            '' if valid else
+    return (valid, '' if valid else
             'Insufficient access with uid/gid/mode for %s, gid: %d, '
-            'mode: %s' % (url_str,
-                          gid,
-                          oct(mode)[-3:]))
+            'mode: %s' % (url_str, gid, oct(mode)[-3:]))
   elif mode & O_R:
     return True, ''
   elif not uid_present and not gid_present and mode_valid:
@@ -497,8 +479,7 @@ def WarnNegativeAttribute(attr_name, url_str):
     attr_name: The name of the attribute to log.
     url_str: The path of the file for context.
   """
-  logging.getLogger().warn('%s has a negative %s in its metadata',
-                           url_str,
+  logging.getLogger().warn('%s has a negative %s in its metadata', url_str,
                            attr_name)
 
 
@@ -509,8 +490,7 @@ def WarnInvalidValue(attr_name, url_str):
     attr_name: The name of the attribute to log.
     url_str: The path of the file for context.
   """
-  logging.getLogger().warn('%s has an invalid %s in its metadata',
-                           url_str,
+  logging.getLogger().warn('%s has an invalid %s in its metadata', url_str,
                            attr_name)
 
 
@@ -523,9 +503,7 @@ def WarnFutureTimestamp(attr_name, url_str):
   """
   logging.getLogger().warn(
       '%s has an %s more than 1 day from current system'
-      ' time',
-      url_str,
-      attr_name)
+      ' time', url_str, attr_name)
 
 
 def ConvertDatetimeToPOSIX(dt):

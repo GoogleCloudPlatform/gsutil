@@ -83,11 +83,8 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
   query_params.append((param_name, param_value))
   new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
 
-  new_url = urllib.parse.urlunsplit((scheme,
-                                     netloc,
-                                     path,
-                                     new_query_str,
-                                     fragment))
+  new_url = urllib.parse.urlunsplit(
+      (scheme, netloc, path, new_query_str, fragment))
   return new_url
 
 
@@ -249,8 +246,7 @@ def InsistAsciiHeaderValue(header, value):
       value,
       'Invalid non-ASCII value (%s) was provided for header %s.\nOnly ASCII '
       'characters are allowed in headers other than x-goog-meta- and '
-      'x-amz-meta- headers' % (repr(value),
-                               header))
+      'x-amz-meta- headers' % (repr(value), header))
 
 
 def InsistOnOrOff(value, message):
@@ -327,12 +323,8 @@ def print_to_fd(*objects, **kwargs):
 
     Returns the above kwargs of the above types.
     """
-    expected_keywords = collections.OrderedDict([('sep',
-                                                  ' '),
-                                                 ('end',
-                                                  '\n'),
-                                                 ('file',
-                                                  sys.stdout)])
+    expected_keywords = collections.OrderedDict([('sep', ' '), ('end', '\n'),
+                                                 ('file', sys.stdout)])
 
     for key, value in kwargs.items():
       if key not in expected_keywords:

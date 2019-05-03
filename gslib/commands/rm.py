@@ -169,10 +169,8 @@ def _RemoveExceptionHandler(cls, e):
 # pylint: disable=unused-argument
 def _RemoveFoldersExceptionHandler(cls, e):
   """When removing folders, we don't mind if none exist."""
-  if ((isinstance(e,
-                  CommandException) and NO_URLS_MATCHED_GENERIC in e.reason) or
-      isinstance(e,
-                 NotFoundException)):
+  if ((isinstance(e, CommandException) and NO_URLS_MATCHED_GENERIC in e.reason)
+      or isinstance(e, NotFoundException)):
     DecrementFailureCount()
   else:
     raise e
@@ -210,9 +208,7 @@ class RmCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'rm',
-      command_name_aliases=['del',
-                            'delete',
-                            'remove'],
+      command_name_aliases=['del', 'delete', 'remove'],
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=constants.NO_MAX,
@@ -220,16 +216,13 @@ class RmCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='rm',
-      help_name_aliases=['del',
-                         'delete',
-                         'remove'],
+      help_name_aliases=['del', 'delete', 'remove'],
       help_type='command_help',
       help_one_line_summary='Remove objects',
       help_text=_DETAILED_HELP_TEXT,
@@ -320,8 +313,7 @@ class RmCommand(Command):
                  name_expansion_iterator,
                  _RemoveExceptionHandler,
                  fail_on_error=(not self.continue_on_error),
-                 shared_attrs=['op_failure_count',
-                               'bucket_not_found_count'],
+                 shared_attrs=['op_failure_count', 'bucket_not_found_count'],
                  seek_ahead_iterator=seek_ahead_iterator)
 
     # Assuming the bucket has versioning enabled, url's that don't map to
@@ -391,9 +383,7 @@ class RmCommand(Command):
     if self.op_failure_count:
       plural_str = 's' if self.op_failure_count else ''
       raise CommandException('%d file%s/object%s could not be removed.' %
-                             (self.op_failure_count,
-                              plural_str,
-                              plural_str))
+                             (self.op_failure_count, plural_str, plural_str))
 
     return 0
 

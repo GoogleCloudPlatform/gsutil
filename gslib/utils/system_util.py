@@ -62,41 +62,25 @@ def CheckFreeSpace(path):
   if IS_WINDOWS:
     try:
       # pylint: disable=invalid-name
-      get_disk_free_space_ex = WINFUNCTYPE(c_int,
-                                           c_wchar_p,
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64))
-      get_disk_free_space_ex = get_disk_free_space_ex(('GetDiskFreeSpaceExW',
-                                                       windll.kernel32),
-                                                      (
-                                                          (1,
-                                                           'lpszPathName'),
-                                                          (2,
-                                                           'lpFreeUserSpace'),
-                                                          (2,
-                                                           'lpTotalSpace'),
-                                                          (2,
-                                                           'lpFreeSpace'),
-                                                      ))
+      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_wchar_p, POINTER(c_uint64),
+                                           POINTER(c_uint64), POINTER(c_uint64))
+      get_disk_free_space_ex = get_disk_free_space_ex(
+          ('GetDiskFreeSpaceExW', windll.kernel32), (
+              (1, 'lpszPathName'),
+              (2, 'lpFreeUserSpace'),
+              (2, 'lpTotalSpace'),
+              (2, 'lpFreeSpace'),
+          ))
     except AttributeError:
-      get_disk_free_space_ex = WINFUNCTYPE(c_int,
-                                           c_char_p,
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64))
-      get_disk_free_space_ex = get_disk_free_space_ex(('GetDiskFreeSpaceExA',
-                                                       windll.kernel32),
-                                                      (
-                                                          (1,
-                                                           'lpszPathName'),
-                                                          (2,
-                                                           'lpFreeUserSpace'),
-                                                          (2,
-                                                           'lpTotalSpace'),
-                                                          (2,
-                                                           'lpFreeSpace'),
-                                                      ))
+      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_char_p, POINTER(c_uint64),
+                                           POINTER(c_uint64), POINTER(c_uint64))
+      get_disk_free_space_ex = get_disk_free_space_ex(
+          ('GetDiskFreeSpaceExA', windll.kernel32), (
+              (1, 'lpszPathName'),
+              (2, 'lpFreeUserSpace'),
+              (2, 'lpTotalSpace'),
+              (2, 'lpFreeSpace'),
+          ))
 
     def GetDiskFreeSpaceExErrCheck(result, unused_func, args):
       if not result:

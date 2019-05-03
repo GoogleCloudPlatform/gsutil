@@ -61,10 +61,7 @@ class RbCommand(Command):
   command_spec = Command.CreateCommandSpec(
       'rb',
       command_name_aliases=[
-          'deletebucket',
-          'removebucket',
-          'removebuckets',
-          'rmdir'
+          'deletebucket', 'removebucket', 'removebuckets', 'rmdir'
       ],
       usage_synopsis=_SYNOPSIS,
       min_args=1,
@@ -73,8 +70,7 @@ class RbCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
           CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
@@ -83,10 +79,7 @@ class RbCommand(Command):
   help_spec = Command.HelpSpec(
       help_name='rb',
       help_name_aliases=[
-          'deletebucket',
-          'removebucket',
-          'removebuckets',
-          'rmdir'
+          'deletebucket', 'removebucket', 'removebuckets', 'rmdir'
       ],
       help_type='command_help',
       help_one_line_summary='Remove buckets',

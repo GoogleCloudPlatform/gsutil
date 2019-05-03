@@ -259,8 +259,7 @@ def _GenSignedUrl(key,
   canonical_day = signing_time.strftime('%Y%m%d')
   canonical_time = signing_time.strftime('%Y%m%dT%H%M%SZ')
   canonical_scope = '{date}/{region}/storage/goog4_request'.format(
-      date=canonical_day,
-      region=region)
+      date=canonical_day, region=region)
 
   signed_query_params = {
       'x-goog-algorithm': _SIGNING_ALGO,
@@ -272,13 +271,11 @@ def _GenSignedUrl(key,
 
   canonical_resource = '/{}'.format(gcs_path)
   canonical_query_string = '&'.join([
-      '{}={}'.format(param,
-                     urllib.parse.quote_plus(signed_query_params[param]))
+      '{}={}'.format(param, urllib.parse.quote_plus(signed_query_params[param]))
       for param in sorted(signed_query_params.keys())
   ])
   canonical_headers = '\n'.join([
-      '{}:{}'.format(header.lower(),
-                     signed_headers[header])
+      '{}:{}'.format(header.lower(), signed_headers[header])
       for header in sorted(signed_headers.keys())
   ]) + '\n'
   canonical_signed_headers = ';'.join(sorted(signed_headers.keys()))
@@ -319,8 +316,7 @@ def _GenSignedUrl(key,
     # https://github.com/pyca/pyopenssl/issues/741
     digest = 'RSA-SHA256'
 
-  signature = base64.b16encode(sign(key,
-                                    string_to_sign,
+  signature = base64.b16encode(sign(key, string_to_sign,
                                     digest)).lower().decode()
 
   final_url = _SIGNED_URL_FORMAT.format(host=gs_host,
@@ -334,8 +330,7 @@ def _GenSignedUrl(key,
 def _ReadKeystore(ks_contents, passwd):
   ks = load_pkcs12(ks_contents, passwd)
   client_email = (ks.get_certificate().get_subject().CN.replace(
-      '.apps.googleusercontent.com',
-      '@developer.gserviceaccount.com'))
+      '.apps.googleusercontent.com', '@developer.gserviceaccount.com'))
 
   return ks.get_privatekey(), client_email
 
@@ -384,8 +379,7 @@ class UrlSignCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'signurl',
-      command_name_aliases=['signedurl',
-                            'queryauth'],
+      command_name_aliases=['signedurl', 'queryauth'],
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
@@ -393,8 +387,7 @@ class UrlSignCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
           CommandArgument.MakeNFileURLsArgument(1),
@@ -403,8 +396,7 @@ class UrlSignCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='signurl',
-      help_name_aliases=['signedurl',
-                         'queryauth'],
+      help_name_aliases=['signedurl', 'queryauth'],
       help_type='command_help',
       help_one_line_summary='Create a signed url',
       help_text=_DETAILED_HELP_TEXT,
@@ -452,23 +444,14 @@ class UrlSignCommand(Command):
 
     return method, delta, content_type, passwd, region
 
-  def _ProbeObjectAccessWithClient(self,
-                                   key,
-                                   client_email,
-                                   gcs_path,
-                                   logger,
+  def _ProbeObjectAccessWithClient(self, key, client_email, gcs_path, logger,
                                    region):
     """Performs a head request against a signed url to check for read access."""
 
     # Choose a reasonable time in the future; if the user's system clock is
     # 60 or more seconds behind the server's this will generate an error.
-    signed_url = _GenSignedUrl(key,
-                               client_email,
-                               'HEAD',
-                               timedelta(seconds=60),
-                               gcs_path,
-                               logger,
-                               region)
+    signed_url = _GenSignedUrl(key, client_email, 'HEAD', timedelta(seconds=60),
+                               gcs_path, logger, region)
 
     try:
       h = GetNewHttp()
@@ -549,8 +532,7 @@ class UrlSignCommand(Command):
         # Need to url encode the object name as Google Cloud Storage does when
         # computing the string to sign when checking the signature.
         gcs_path = '{0}/{1}'.format(
-            url.bucket_name,
-            urllib.parse.quote(url.object_name.encode(UTF8)))
+            url.bucket_name, urllib.parse.quote(url.object_name.encode(UTF8)))
 
       if region == _AUTO_DETECT_REGION:
         if url.bucket_name in region_cache:
@@ -564,8 +546,7 @@ class UrlSignCommand(Command):
                 '{}: Failed to auto-detect location for bucket \'{}\'. Please '
                 'ensure you have storage.buckets.get permission on the bucket '
                 'or specify the bucket\'s location using the \'-r\' option.'.
-                format(e.__class__.__name__,
-                       url.bucket_name))
+                format(e.__class__.__name__, url.bucket_name))
           bucket_region = bucket.location.lower()
           region_cache[url.bucket_name] = bucket_region
       else:
@@ -588,10 +569,8 @@ class UrlSignCommand(Command):
       if six.PY2:
         time_str = time_str.decode(UTF8)
 
-      url_info_str = '{0}\t{1}\t{2}\t{3}'.format(url.url_string,
-                                                 method,
-                                                 time_str,
-                                                 final_url)
+      url_info_str = '{0}\t{1}\t{2}\t{3}'.format(url.url_string, method,
+                                                 time_str, final_url)
 
       # TODO(PY3-ONLY): Delete this if block.
       if six.PY2:
@@ -599,10 +578,8 @@ class UrlSignCommand(Command):
 
       print(url_info_str)
 
-      response_code = self._ProbeObjectAccessWithClient(key,
-                                                        client_email,
-                                                        gcs_path,
-                                                        self.logger,
+      response_code = self._ProbeObjectAccessWithClient(key, client_email,
+                                                        gcs_path, self.logger,
                                                         bucket_region)
 
       if response_code == 404:
@@ -621,7 +598,6 @@ class UrlSignCommand(Command):
         self.logger.warn(
             '%s does not have permissions on %s, using this link will likely '
             'result in a 403 error until at least READ permissions are granted',
-            client_email,
-            url)
+            client_email, url)
 
     return 0

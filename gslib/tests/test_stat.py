@@ -63,8 +63,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
                       contents=b'z',
                       gs_idempotent_generation=urigen(old_object_uri))
 
-    stdout = self.RunGsUtil(['stat',
-                             old_object_uri.version_specific_uri],
+    stdout = self.RunGsUtil(['stat', old_object_uri.version_specific_uri],
                             return_stdout=True)
 
     self.assertIn('Archived time', stdout)
@@ -105,17 +104,13 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
 
   def test_minus_q_stat(self):
     object_uri = self.CreateObject(contents=b'z')
-    stdout = self.RunGsUtil(['-q',
-                             'stat',
-                             suri(object_uri)],
+    stdout = self.RunGsUtil(['-q', 'stat', suri(object_uri)],
                             return_stdout=True)
     self.assertEquals(0, len(stdout))
-    stdout = self.RunGsUtil(['-q',
-                             'stat',
-                             suri(object_uri,
-                                  'junk')],
-                            return_stdout=True,
-                            expected_status=1)
+    stdout = self.RunGsUtil(
+        ['-q', 'stat', suri(object_uri, 'junk')],
+        return_stdout=True,
+        expected_status=1)
     self.assertEquals(0, len(stdout))
 
   def test_stat_of_non_object_uri(self):
@@ -194,8 +189,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
                                    encryption_key=TEST_ENCRYPTION_KEY1)
 
     # Stat object with key should return unencrypted hashes.
-    with SetBotoConfigForTest([('GSUtil',
-                                'encryption_key',
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key',
                                 TEST_ENCRYPTION_KEY1)]):
       stdout = self.RunGsUtil(['stat', suri(object_uri)], return_stdout=True)
       self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
@@ -232,8 +226,7 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     # Stat 3 objects, two encrypted each with a different key, and one
     # unencrypted. Should result in two unencrypted listing and one encrypted
     # listing.
-    with SetBotoConfigForTest([('GSUtil',
-                                'encryption_key',
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key',
                                 TEST_ENCRYPTION_KEY1)]):
       # Use @Retry as hedge against bucket listing eventual consistency.
       @Retry(AssertionError, tries=3, timeout_secs=1)

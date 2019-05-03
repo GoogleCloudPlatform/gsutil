@@ -65,9 +65,7 @@ _cached_multiprocessing_is_available_message = None
 
 # This must be defined at the module level for pickling across processes.
 MultiprocessingIsAvailableResult = collections.namedtuple(
-    'MultiprocessingIsAvailableResult',
-    ['is_available',
-     'stack_trace'])
+    'MultiprocessingIsAvailableResult', ['is_available', 'stack_trace'])
 
 
 class AtomicDict(object):
@@ -268,8 +266,8 @@ def ShouldProhibitMultiprocessing():
   except IOError as e:
     if e.errno == errno.ENOENT:
       logging.debug('Unable to open /etc/os-release to determine whether OS '
-                    'supports multiprocessing: errno=%d, message=%s' % (e.errno,
-                                                                        str(e)))
+                    'supports multiprocessing: errno=%d, message=%s' %
+                    (e.errno, str(e)))
       return (False, 'Unknown')
     else:
       raise

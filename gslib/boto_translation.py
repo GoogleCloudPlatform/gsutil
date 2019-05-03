@@ -198,14 +198,13 @@ class BotoTranslation(CloudApi):
           ('gs' provider only).
       user_project: Unused in this subclass
     """
-    super(BotoTranslation,
-          self).__init__(bucket_storage_uri_class,
-                         logger,
-                         status_queue,
-                         provider=provider,
-                         debug=debug,
-                         trace_token=trace_token,
-                         perf_trace_token=perf_trace_token)
+    super(BotoTranslation, self).__init__(bucket_storage_uri_class,
+                                          logger,
+                                          status_queue,
+                                          provider=provider,
+                                          debug=debug,
+                                          trace_token=trace_token,
+                                          perf_trace_token=perf_trace_token)
     _ = credentials
     # pylint: disable=global-variable-undefined, global-variable-not-assigned
     global boto_auth_initialized, boto_auth_initialized_lock
@@ -215,8 +214,7 @@ class BotoTranslation(CloudApi):
         boto_auth_initialized = True
       else:
         boto_auth_initialized.value = 1
-    self.api_version = boto.config.get_value('GSUtil',
-                                             'default_api_version',
+    self.api_version = boto.config.get_value('GSUtil', 'default_api_version',
                                              '1')
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
@@ -378,8 +376,7 @@ class BotoTranslation(CloudApi):
       bucket_uri.delete_bucket(headers=headers)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       translated_exception = self._TranslateBotoException(
-          e,
-          bucket_name=bucket_name)
+          e, bucket_name=bucket_name)
       if (translated_exception and
           'BucketNotEmpty' in translated_exception.reason):
         try:
@@ -437,13 +434,8 @@ class BotoTranslation(CloudApi):
 
           # Listed keys are populated with these fields during bucket listing.
           key_http_fields = set([
-              'bucket',
-              'etag',
-              'name',
-              'updated',
-              'generation',
-              'metageneration',
-              'size'
+              'bucket', 'etag', 'name', 'updated', 'generation',
+              'metageneration', 'size'
           ])
 
           # When fields == None, the caller is requesting all possible fields.
@@ -555,8 +547,7 @@ class BotoTranslation(CloudApi):
 
     if total_size:
       num_progress_callbacks = max(
-          int(total_size) / TWO_MIB,
-          XML_PROGRESS_CALLBACKS)
+          int(total_size) / TWO_MIB, XML_PROGRESS_CALLBACKS)
     else:
       num_progress_callbacks = XML_PROGRESS_CALLBACKS
 
@@ -606,10 +597,8 @@ class BotoTranslation(CloudApi):
 
         for alg_name in digesters:
           if ((download_strategy == CloudApi.DownloadStrategy.RESUMABLE and
-               start_byte != 0) or
-              not ((getattr(key,
-                            'local_hashes',
-                            None) and alg_name in key.local_hashes))):
+               start_byte != 0) or not ((getattr(key, 'local_hashes', None) and
+                                         alg_name in key.local_hashes))):
             # For resumable downloads, boto does not provide a mechanism to
             # catch up the hash in the case of a partially complete download.
             # In this case or in the case where no digest was successfully
@@ -672,9 +661,7 @@ class BotoTranslation(CloudApi):
     Raises:
       ResumableDownloadException on error.
     """
-    retryable_exceptions = (http_client.HTTPException,
-                            IOError,
-                            socket.error,
+    retryable_exceptions = (http_client.HTTPException, IOError, socket.error,
                             socket.gaierror)
 
     debug = key.bucket.connection.debug
@@ -736,8 +723,7 @@ class BotoTranslation(CloudApi):
           if debug >= 1:
             self.logger.info(
                 'Caught boto.exception.ResumableDownloadException (%s) - will '
-                'retry',
-                e.message)
+                'retry', e.message)
 
       # At this point we had a re-tryable failure; see if made progress.
       start_byte = fp.tell()
@@ -769,8 +755,7 @@ class BotoTranslation(CloudApi):
       if debug >= 1:
         self.logger.info(
             'Got retryable failure (%d progress-less in a row).\nSleeping %d '
-            'seconds before re-trying',
-            progress_less_iterations,
+            'seconds before re-trying', progress_less_iterations,
             sleep_time_secs)
       time.sleep(sleep_time_secs)
 
@@ -1024,8 +1009,7 @@ class BotoTranslation(CloudApi):
                                           fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
-          self.provider,
-          object_metadata.bucket)
+          self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e,
                                        bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name,
@@ -1058,8 +1042,7 @@ class BotoTranslation(CloudApi):
                                           fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
-          self.provider,
-          object_metadata.bucket)
+          self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e,
                                        bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name,
@@ -1102,8 +1085,7 @@ class BotoTranslation(CloudApi):
                                           fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
-          self.provider,
-          object_metadata.bucket)
+          self.provider, object_metadata.bucket)
       self._TranslateExceptionAndRaise(e,
                                        bucket_name=object_metadata.bucket,
                                        object_name=object_metadata.name,
@@ -1241,8 +1223,7 @@ class BotoTranslation(CloudApi):
                                     dst_obj_name,
                                     fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
-      self._TranslateExceptionAndRaise(e,
-                                       dst_obj_metadata.bucket,
+      self._TranslateExceptionAndRaise(e, dst_obj_metadata.bucket,
                                        dst_obj_metadata.name)
 
   def _AddPreconditionsToHeaders(self, preconditions, headers):
@@ -1287,8 +1268,7 @@ class BotoTranslation(CloudApi):
       Boto storage_uri for the bucket.
     """
     return boto.storage_uri(
-        '%s://%s' % (self.provider,
-                     bucket),
+        '%s://%s' % (self.provider, bucket),
         suppress_consec_slashes=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         debug=self.debug,
@@ -1373,10 +1353,9 @@ class BotoTranslation(CloudApi):
             cloud_api_bucket.acl.append(acl)
         except TRANSLATABLE_BOTO_EXCEPTIONS as e:
           translated_exception = self._TranslateBotoException(
-              e,
-              bucket_name=bucket.name)
-          if (translated_exception and isinstance(translated_exception,
-                                                  AccessDeniedException)):
+              e, bucket_name=bucket.name)
+          if (translated_exception and
+              isinstance(translated_exception, AccessDeniedException)):
             # JSON API doesn't differentiate between a blank ACL list
             # and an access denied, so this is intentionally left blank.
             pass
@@ -1395,10 +1374,9 @@ class BotoTranslation(CloudApi):
             cloud_api_bucket.defaultObjectAcl.append(acl)
         except TRANSLATABLE_BOTO_EXCEPTIONS as e:
           translated_exception = self._TranslateBotoException(
-              e,
-              bucket_name=bucket.name)
-          if (translated_exception and isinstance(translated_exception,
-                                                  AccessDeniedException)):
+              e, bucket_name=bucket.name)
+          if (translated_exception and
+              isinstance(translated_exception, AccessDeniedException)):
             # JSON API doesn't differentiate between a blank ACL list
             # and an access denied, so this is intentionally left blank.
             pass
@@ -1545,17 +1523,14 @@ class BotoTranslation(CloudApi):
         # implementation that is not currently supported by gsutil.
         self.logger.warn(
             'Non-MD5 etag (%s) present for key %s, data integrity checks are '
-            'not possible.',
-            key.etag,
-            key)
+            'not possible.', key.etag, key)
 
     # Serialize the boto key in the media link if it is requested.  This
     # way we can later access the key without adding an HTTP call.
     media_link = None
     if not fields or 'mediaLink' in fields:
       media_link = binascii.b2a_base64(
-          pickle.dumps(key,
-                       pickle.HIGHEST_PROTOCOL))
+          pickle.dumps(key, pickle.HIGHEST_PROTOCOL))
     size = None
     if not fields or 'size' in fields:
       size = key.size or 0
@@ -1598,8 +1573,7 @@ class BotoTranslation(CloudApi):
     self._TranslateDeleteMarker(key, cloud_api_object)
     if not fields or 'acl' in fields:
       generation_str = GenerationFromUrlAndString(
-          StorageUrlFromString(self.provider),
-          generation)
+          StorageUrlFromString(self.provider), generation)
       self._TranslateBotoKeyAcl(key,
                                 cloud_api_object,
                                 generation=generation_str)
@@ -1676,8 +1650,7 @@ class BotoTranslation(CloudApi):
         cloud_api_object.metadata.additionalProperties = []
       cloud_api_object.metadata.additionalProperties.append(
           apitools_messages.Object.MetadataValue.AdditionalProperty(
-              key=S3_DELETE_MARKER_GUID,
-              value=True))
+              key=S3_DELETE_MARKER_GUID, value=True))
 
   def _TranslateBotoKeyAcl(self, key, cloud_api_object, generation=None):
     """Updates cloud_api_object with the ACL from the boto key."""
@@ -1775,8 +1748,7 @@ class BotoTranslation(CloudApi):
                                                  bucket_name,
                                                  object_name,
                                                  generation=generation)
-          return CreateBucketNotFoundException(e.status,
-                                               self.provider,
+          return CreateBucketNotFoundException(e.status, self.provider,
                                                bucket_name)
         return NotFoundException(e.message, status=e.status, body=e.body)
 
@@ -1880,10 +1852,10 @@ class BotoTranslation(CloudApi):
     try:
       xml.sax.parseString(cors_text, h)
     except SaxExceptions.SAXParseException as e:
-      raise CommandException('Requested CORS is invalid: %s at line %s, '
-                             'column %s' % (e.getMessage(),
-                                            e.getLineNumber(),
-                                            e.getColumnNumber()))
+      raise CommandException(
+          'Requested CORS is invalid: %s at line %s, '
+          'column %s' %
+          (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
 
     try:
       uri = boto.storage_uri(
@@ -1943,9 +1915,7 @@ class BotoTranslation(CloudApi):
     except SaxExceptions.SAXParseException as e:
       raise CommandException(
           'Requested lifecycle config is invalid: %s at line %s, column %s' %
-          (e.getMessage(),
-           e.getLineNumber(),
-           e.getColumnNumber()))
+          (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
 
     try:
       uri = boto.storage_uri(
@@ -2000,9 +1970,7 @@ class BotoTranslation(CloudApi):
     except SaxExceptions.SAXParseException as e:
       raise CommandException(
           'Requested labels/tagging config is invalid: %s at line %s, column '
-          '%s' % (e.getMessage(),
-                  e.getLineNumber(),
-                  e.getColumnNumber()))
+          '%s' % (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
 
     try:
       uri = boto.storage_uri(

@@ -45,8 +45,8 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
         ('data-%d,' % i).encode('ascii') for i in xrange(num_components)
     ]
     components = [
-        self.CreateObject(bucket_uri=bucket_uri,
-                          contents=data).uri for data in data_list
+        self.CreateObject(bucket_uri=bucket_uri, contents=data).uri
+        for data in data_list
     ]
 
     composite = bucket_uri.clone_replace_name(self.MakeTempName('obj'))
@@ -62,8 +62,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     self.assertIn('command accepts at most', stderr)
 
   def test_compose_too_few_fails(self):
-    stderr = self.RunGsUtil(['compose',
-                             'gs://b/composite-obj'],
+    stderr = self.RunGsUtil(['compose', 'gs://b/composite-obj'],
                             expected_status=1,
                             return_stderr=True)
     self.assertIn(
@@ -83,10 +82,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 
   def test_versioned_target_disallowed(self):
     stderr = self.RunGsUtil(
-        ['compose',
-         'gs://b/o1',
-         'gs://b/o2',
-         'gs://b/o3#1234'],
+        ['compose', 'gs://b/o1', 'gs://b/o2', 'gs://b/o3#1234'],
         expected_status=1,
         return_stderr=True)
     expected_msg = ('CommandException: A version-specific URL (%s) '
@@ -128,9 +124,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     gen_match_header = 'x-goog-if-generation-match:%s' % g1
     # Append object 1 and 2
     self.RunGsUtil([
-        '-h',
-        gen_match_header,
-        'compose',
+        '-h', gen_match_header, 'compose',
         suri(k1_uri),
         suri(k2_uri),
         suri(k1_uri)
@@ -138,9 +132,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 
     # Second compose should fail the precondition.
     stderr = self.RunGsUtil([
-        '-h',
-        gen_match_header,
-        'compose',
+        '-h', gen_match_header, 'compose',
         suri(k1_uri),
         suri(k2_uri),
         suri(k1_uri)
@@ -168,8 +160,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
         'compose',
         suri(object_uri1),
         suri(object_uri2),
-        suri(bucket_uri,
-             'obj')
+        suri(bucket_uri, 'obj')
     ],
                             expected_status=1,
                             return_stderr=True)
@@ -177,32 +168,27 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 
     # Compose with different encryption key should fail; source and destination
     # encryption keys must match.
-    with SetBotoConfigForTest([('GSUtil',
-                                'encryption_key',
-                                TEST_ENCRYPTION_KEY2),
-                               ('GSUtil',
-                                'decryption_key1',
-                                TEST_ENCRYPTION_KEY1)]):
+    with SetBotoConfigForTest([
+        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
+        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY1)
+    ]):
       stderr = self.RunGsUtil([
           'compose',
           suri(object_uri1),
           suri(object_uri2),
-          suri(bucket_uri,
-               'obj')
+          suri(bucket_uri, 'obj')
       ],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('provided encryption key is incorrect', stderr)
 
-    with SetBotoConfigForTest([('GSUtil',
-                                'encryption_key',
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key',
                                 TEST_ENCRYPTION_KEY1)]):
       self.RunGsUtil([
           'compose',
           suri(object_uri1),
           suri(object_uri2),
-          suri(bucket_uri,
-               'obj')
+          suri(bucket_uri, 'obj')
       ])
 
   def test_compose_different_encryption_keys(self):
@@ -215,33 +201,28 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
                                     contents=b'bar',
                                     encryption_key=TEST_ENCRYPTION_KEY2)
 
-    with SetBotoConfigForTest([('GSUtil',
-                                'encryption_key',
-                                TEST_ENCRYPTION_KEY1),
-                               ('GSUtil',
-                                'decryption_key1',
-                                TEST_ENCRYPTION_KEY2)]):
+    with SetBotoConfigForTest([
+        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1),
+        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY2)
+    ]):
       stderr = self.RunGsUtil([
           'compose',
           suri(object_uri1),
           suri(object_uri2),
-          suri(bucket_uri,
-               'obj')
+          suri(bucket_uri, 'obj')
       ],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('provided encryption key is incorrect', stderr)
 
     # Should also fail if we don't have the second key.
-    with SetBotoConfigForTest([('GSUtil',
-                                'encryption_key',
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key',
                                 TEST_ENCRYPTION_KEY1)]):
       stderr = self.RunGsUtil([
           'compose',
           suri(object_uri1),
           suri(object_uri2),
-          suri(bucket_uri,
-               'obj')
+          suri(bucket_uri, 'obj')
       ],
                               expected_status=1,
                               return_stderr=True)
@@ -255,10 +236,8 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil([
         'compose',
         suri(object_uri),
-        suri(bucket_uri,
-             'nonexistent-obj'),
-        suri(bucket_uri,
-             'valid-destination')
+        suri(bucket_uri, 'nonexistent-obj'),
+        suri(bucket_uri, 'valid-destination')
     ],
                             expected_status=1,
                             return_stderr=True)
@@ -270,10 +249,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 class TestCompatibleCompose(testcase.GsUtilIntegrationTestCase):
 
   def test_compose_non_gcs_target(self):
-    stderr = self.RunGsUtil(['compose',
-                             'gs://b/o1',
-                             'gs://b/o2',
-                             's3://b/o3'],
+    stderr = self.RunGsUtil(['compose', 'gs://b/o1', 'gs://b/o2', 's3://b/o3'],
                             expected_status=1,
                             return_stderr=True)
     expected_msg = ('CommandException: "compose" called on URL with '
@@ -281,10 +257,7 @@ class TestCompatibleCompose(testcase.GsUtilIntegrationTestCase):
     self.assertIn(expected_msg, stderr)
 
   def test_compose_non_gcs_component(self):
-    stderr = self.RunGsUtil(['compose',
-                             'gs://b/o1',
-                             's3://b/o2',
-                             'gs://b/o3'],
+    stderr = self.RunGsUtil(['compose', 'gs://b/o1', 's3://b/o2', 'gs://b/o3'],
                             expected_status=1,
                             return_stderr=True)
     expected_msg = ('CommandException: "compose" called on URL with '

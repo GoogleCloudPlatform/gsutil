@@ -105,9 +105,7 @@ class MvCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'mv',
-      command_name_aliases=['move',
-                            'ren',
-                            'rename'],
+      command_name_aliases=['move', 'ren', 'rename'],
       usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
@@ -116,8 +114,7 @@ class MvCommand(Command):
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
           CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
@@ -125,8 +122,7 @@ class MvCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='mv',
-      help_name_aliases=['move',
-                         'rename'],
+      help_name_aliases=['move', 'rename'],
       help_type='command_help',
       help_one_line_summary='Move/rename objects and/or subdirectories',
       help_text=_DETAILED_HELP_TEXT,
@@ -143,8 +139,8 @@ class MvCommand(Command):
         raise CommandException('You cannot move a source bucket using the mv '
                                'command. If you meant to move\nall objects in '
                                'the bucket, you can use a command like:\n'
-                               '\tgsutil mv %s/* %s' % (arg_to_check,
-                                                        self.args[-1]))
+                               '\tgsutil mv %s/* %s' %
+                               (arg_to_check, self.args[-1]))
 
     # Insert command-line opts in front of args so they'll be picked up by cp
     # and rm commands (e.g., for -p option). Use undocumented (internal

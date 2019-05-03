@@ -69,9 +69,7 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     except SaxExceptions.SAXParseException as e:
       raise CommandException(
           'Requested labels/tagging config is invalid: %s at line %s, column '
-          '%s' % (e.getMessage(),
-                  e.getLineNumber(),
-                  e.getColumnNumber()))
+          '%s' % (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
     for tagset_list in tags_list:
       for tag in tagset_list:
         label_dict[tag.key] = tag.value
@@ -79,9 +77,7 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
 
   def testSetAndGet(self):
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(['label',
-                             'set',
-                             self.xml_fpath,
+    stderr = self.RunGsUtil(['label', 'set', self.xml_fpath,
                              suri(bucket_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.strip(), LABEL_SETTING_OUTPUT % suri(bucket_uri))
@@ -90,9 +86,7 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     # Work around eventual consistency for S3 tagging.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['label',
-                               'get',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                               return_stdout=True)
       self.assertItemsEqual(self._LabelDictFromXmlString(stdout),
                             self._LabelDictFromXmlString(self._label_xml))
@@ -102,14 +96,9 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
   def testCh(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil([
-        'label',
-        'ch',
-        '-l',
-        '%s:%s' % (KEY1,
-                   VALUE1),
-        '-l',
-        '%s:%s' % (KEY2,
-                   VALUE2),
+        'label', 'ch', '-l',
+        '%s:%s' % (KEY1, VALUE1), '-l',
+        '%s:%s' % (KEY2, VALUE2),
         suri(bucket_uri)
     ])
 
@@ -117,9 +106,7 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     # Work around eventual consistency for S3 tagging.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['label',
-                               'get',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                               return_stdout=True)
       self.assertItemsEqual(self._LabelDictFromXmlString(stdout),
                             self._LabelDictFromXmlString(self._label_xml))
@@ -129,13 +116,7 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     # Remove KEY1, add a new key, and attempt to remove a nonexistent key
     # with 'label ch'.
     self.RunGsUtil([
-        'label',
-        'ch',
-        '-d',
-        KEY1,
-        '-l',
-        'new_key:new_value',
-        '-d',
+        'label', 'ch', '-d', KEY1, '-l', 'new_key:new_value', '-d',
         'nonexistent-key',
         suri(bucket_uri)
     ])
@@ -143,9 +124,7 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
 
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
-      stdout = self.RunGsUtil(['label',
-                               'get',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                               return_stdout=True)
       self.assertItemsEqual(self._LabelDictFromXmlString(stdout), expected_dict)
 
@@ -167,16 +146,12 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
 
     # Try setting labels for one bucket.
-    stderr = self.RunGsUtil(['label',
-                             'set',
-                             self.json_fpath,
+    stderr = self.RunGsUtil(['label', 'set', self.json_fpath,
                              suri(bucket_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.strip(), LABEL_SETTING_OUTPUT % suri(bucket_uri))
     # Verify that the bucket is configured with the labels we just set.
-    stdout = self.RunGsUtil(['label',
-                             'get',
-                             suri(bucket_uri)],
+    stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                             return_stdout=True)
     self.assertDictEqual(json.loads(stdout), self._label_dict)
 
@@ -186,9 +161,7 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
 
     # Try setting labels for multiple buckets in one command.
     stderr = self.RunGsUtil(
-        ['label',
-         'set',
-         self.json_fpath,
+        ['label', 'set', self.json_fpath,
          suri(bucket_uri),
          suri(bucket2_uri)],
         return_stderr=True)
@@ -215,34 +188,25 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
     new_json_fpath = self.CreateTempFile(
         contents=json.dumps(new_json).encode('ascii'))
     self.RunGsUtil(['label', 'set', new_json_fpath, suri(bucket_uri)])
-    stdout = self.RunGsUtil(['label',
-                             'get',
-                             suri(bucket_uri)],
+    stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                             return_stdout=True)
     self.assertDictEqual(json.loads(stdout), new_json)
 
   def testInitialAndSubsequentCh(self):
     bucket_uri = self.CreateBucket()
     ch_subargs = [
-        '-l',
-        '%s:%s' % (KEY1,
-                   VALUE1),
-        '-l',
-        '%s:%s' % (KEY2,
-                   VALUE2)
+        '-l', '%s:%s' % (KEY1, VALUE1), '-l',
+        '%s:%s' % (KEY2, VALUE2)
     ]
 
     # Ensure 'ch' progress message shows in stderr.
-    stderr = self.RunGsUtil(['label',
-                             'ch'] + ch_subargs + [suri(bucket_uri)],
+    stderr = self.RunGsUtil(['label', 'ch'] + ch_subargs + [suri(bucket_uri)],
                             return_stderr=True)
     self.assertEqual(stderr.strip(), LABEL_SETTING_OUTPUT % suri(bucket_uri))
 
     # Check the bucket to ensure it's configured with the labels we just
     # specified.
-    stdout = self.RunGsUtil(['label',
-                             'get',
-                             suri(bucket_uri)],
+    stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                             return_stdout=True)
     self.assertDictEqual(json.loads(stdout), self._label_dict)
 
@@ -250,18 +214,11 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
     new_key = 'new-key'
     new_value = 'new-value'
     self.RunGsUtil([
-        'label',
-        'ch',
-        '-l',
-        '%s:%s' % (new_key,
-                   new_value),
-        '-d',
-        KEY2,
+        'label', 'ch', '-l',
+        '%s:%s' % (new_key, new_value), '-d', KEY2,
         suri(bucket_uri)
     ])
-    stdout = self.RunGsUtil(['label',
-                             'get',
-                             suri(bucket_uri)],
+    stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                             return_stdout=True)
     actual = json.loads(stdout)
     expected = {KEY1: VALUE1, new_key: new_value}
@@ -270,17 +227,12 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
   def testChAppliesChangesToAllBucketArgs(self):
     bucket_suris = [suri(self.CreateBucket()), suri(self.CreateBucket())]
     ch_subargs = [
-        '-l',
-        '%s:%s' % (KEY1,
-                   VALUE1),
-        '-l',
-        '%s:%s' % (KEY2,
-                   VALUE2)
+        '-l', '%s:%s' % (KEY1, VALUE1), '-l',
+        '%s:%s' % (KEY2, VALUE2)
     ]
 
     # Ensure 'ch' progress message appears for both buckets in stderr.
-    stderr = self.RunGsUtil(['label',
-                             'ch'] + ch_subargs + bucket_suris,
+    stderr = self.RunGsUtil(['label', 'ch'] + ch_subargs + bucket_suris,
                             return_stderr=True)
     actual = set(stderr.splitlines())
     expected = set(
@@ -296,9 +248,7 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
   def testChMinusDWorksWithoutExistingLabels(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(['label', 'ch', '-d', 'dummy-key', suri(bucket_uri)])
-    stdout = self.RunGsUtil(['label',
-                             'get',
-                             suri(bucket_uri)],
+    stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                             return_stdout=True)
     self.assertIn('%s/ has no label configuration.' % suri(bucket_uri), stdout)
 
@@ -308,30 +258,20 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
         # Neither arguments nor subcommand.
         ['label'],
         # Not enough arguments for 'set'.
-        ['label',
-         'set'],
-        ['label',
-         'set',
-         'filename'],
+        ['label', 'set'],
+        ['label', 'set', 'filename'],
         # Not enough arguments for 'get'.
-        ['label',
-         'get'],
+        ['label', 'get'],
         # Not enough arguments for 'ch'.
-        ['label',
-         'ch'],
-        ['label',
-         'ch',
-         '-l',
-         'key:val'])
+        ['label', 'ch'],
+        ['label', 'ch', '-l', 'key:val'])
     for arg_list in invocations_missing_args:
       stderr = self.RunGsUtil(arg_list, return_stderr=True, expected_status=1)
       self.assertIn('command requires at least', stderr)
 
     # Invoking 'ch' without any changes gives a slightly different message.
     stderr = self.RunGsUtil(
-        ['label',
-         'ch',
-         'gs://some-nonexistent-foobar-bucket-name'],
+        ['label', 'ch', 'gs://some-nonexistent-foobar-bucket-name'],
         return_stderr=True,
         expected_status=1)
     self.assertIn('Please specify at least one label change', stderr)

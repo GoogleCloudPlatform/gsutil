@@ -240,28 +240,25 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       logging.getLogger(command_name).removeHandler(mock_log_handler)
       mock_log_handler.close()
 
-      log_output = '\n'.join('%s:\n  ' % level + '\n  '.join(records)
-                             for level,
-                             records in six.iteritems(mock_log_handler.messages)
-                             if records)
+      log_output = '\n'.join(
+          '%s:\n  ' % level + '\n  '.join(records)
+          for level, records in six.iteritems(mock_log_handler.messages)
+          if records)
 
       _id = six.ensure_text(self.id())
       if self.is_debugging and log_output:
         self.stderr_save.write('==== logging RunCommand {} {} ====\n'.format(
-            _id,
-            command_line))
+            _id, command_line))
         self.stderr_save.write(log_output)
         self.stderr_save.write('\n==== end logging ====\n')
       if self.is_debugging and stdout:
         self.stderr_save.write('==== stdout RunCommand {} {} ====\n'.format(
-            _id,
-            command_line))
+            _id, command_line))
         self.stderr_save.write(stdout)
         self.stderr_save.write('==== end stdout ====\n')
       if self.is_debugging and stderr:
         self.stderr_save.write('==== stderr RunCommand {} {} ====\n'.format(
-            _id,
-            command_line))
+            _id, command_line))
         self.stderr_save.write(stderr)
         self.stderr_save.write('==== end stderr ====\n')
 
@@ -289,8 +286,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         ApiMapConstants.API_MAP:
         (cls.mock_gsutil_api_class_map_factory.GetClassMap()),
         ApiMapConstants.SUPPORT_MAP: {
-            'gs': [ApiSelector.XML,
-                   ApiSelector.JSON],
+            'gs': [ApiSelector.XML, ApiSelector.JSON],
             's3': [ApiSelector.XML]
         },
         ApiMapConstants.DEFAULT_MAP: {
@@ -353,10 +349,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     Returns:
       StorageUri based on the arguments.
     """
-    return boto.storage_uri(uri_str,
-                            default_scheme,
-                            debug,
-                            validate,
+    return boto.storage_uri(uri_str, default_scheme, debug, validate,
                             util.GSMockBucketStorageUri)
 
   def CreateBucket(self,
@@ -382,8 +375,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     """
     bucket_name = bucket_name or self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri(
-        '%s://%s' % (provider,
-                     bucket_name.lower()),
+        '%s://%s' % (provider, bucket_name.lower()),
         suppress_consec_slashes=False,
         bucket_storage_uri_class=util.GSMockBucketStorageUri)
     bucket_uri.create_bucket(storage_class=storage_class)

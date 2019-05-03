@@ -37,9 +37,7 @@ class TestLogging(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     bucket_suri = suri(bucket_uri)
     stderr = self.RunGsUtil(self._enable_log_cmd +
-                            ['-b',
-                             bucket_suri,
-                             bucket_suri],
+                            ['-b', bucket_suri, bucket_suri],
                             return_stderr=True)
     self.assertIn('Enabling logging', stderr)
 

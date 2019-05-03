@@ -82,18 +82,12 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
       self.assertSetEqual(
           set(stdout.splitlines()),
           set([
-              '%-11s  %s' % (5,
-                             suri(obj_uris[0])),
-              '%-11s  %s' % (4,
-                             suri(obj_uris[1])),
-              '%-11s  %s' % (5,
-                             suri(obj_uris[2])),
-              '%-11s  %s' % (4,
-                             suri(obj_uris[3])),
-              '%-11s  %s/sub1材/sub2/' % (9,
-                                         suri(bucket_uri)),
-              '%-11s  %s/sub1材/' % (18,
-                                    suri(bucket_uri)),
+              '%-11s  %s' % (5, suri(obj_uris[0])),
+              '%-11s  %s' % (4, suri(obj_uris[1])),
+              '%-11s  %s' % (5, suri(obj_uris[2])),
+              '%-11s  %s' % (4, suri(obj_uris[3])),
+              '%-11s  %s/sub1材/sub2/' % (9, suri(bucket_uri)),
+              '%-11s  %s/sub1材/' % (18, suri(bucket_uri)),
           ]))
 
     _Check()
@@ -106,17 +100,13 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      stdout = self.RunGsUtil(['du',
-                               suri(obj_uri1),
-                               suri(obj_uri2)],
-                              return_stdout=True)
+      stdout = self.RunGsUtil(
+          ['du', suri(obj_uri1), suri(obj_uri2)], return_stdout=True)
       self.assertSetEqual(
           set(stdout.splitlines()),
           set([
-              '%-11s  %s' % (3,
-                             suri(obj_uri1)),
-              '%-11s  %s' % (4,
-                             suri(obj_uri2)),
+              '%-11s  %s' % (3, suri(obj_uri1)),
+              '%-11s  %s' % (4, suri(obj_uri2)),
           ]))
 
     _Check()
@@ -129,17 +119,13 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      stdout = self.RunGsUtil(['du',
-                               '-c',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['du', '-c', suri(bucket_uri)],
                               return_stdout=True)
       self.assertSetEqual(
           set(stdout.splitlines()),
           set([
-              '%-11s  %s' % (3,
-                             suri(obj_uri1)),
-              '%-11s  %s' % (5,
-                             suri(obj_uri2)),
+              '%-11s  %s' % (3, suri(obj_uri1)),
+              '%-11s  %s' % (5, suri(obj_uri2)),
               '%-11s  total' % 8,
           ]))
 
@@ -164,18 +150,14 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(
-          ['du',
-           '-s',
-           suri(bucket_uri1),
+          ['du', '-s', suri(bucket_uri1),
            suri(bucket_uri2)],
           return_stdout=True)
       self.assertSetEqual(
           set(stdout.splitlines()),
           set([
-              '%-11s  %s' % (18,
-                             suri(bucket_uri1)),
-              '%-11s  %s' % (18,
-                             suri(bucket_uri2)),
+              '%-11s  %s' % (18, suri(bucket_uri1)),
+              '%-11s  %s' % (18, suri(bucket_uri2)),
           ]))
 
     _Check()
@@ -190,18 +172,13 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      stdout = self.RunGsUtil(['du',
-                               '-s',
-                               subdir1,
-                               subdir2],
+      stdout = self.RunGsUtil(['du', '-s', subdir1, subdir2],
                               return_stdout=True)
       self.assertSetEqual(
           set(stdout.splitlines()),
           set([
-              '%-11s  %s' % (18,
-                             subdir1),
-              '%-11s  %s' % (18,
-                             subdir2),
+              '%-11s  %s' % (18, subdir1),
+              '%-11s  %s' % (18, subdir2),
           ]))
 
     _Check()
@@ -230,19 +207,13 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
-      stdout = self.RunGsUtil(['du',
-                               '-a',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['du', '-a', suri(bucket_uri)],
                               return_stdout=True)
       self.assertSetEqual(
           set(stdout.splitlines()),
           set([
-              '%-11s  %s#%s' % (3,
-                                suri(object_uri1),
-                                object_uri1.generation),
-              '%-11s  %s#%s' % (4,
-                                suri(object_uri2),
-                                object_uri2.generation),
+              '%-11s  %s#%s' % (3, suri(object_uri1), object_uri1.generation),
+              '%-11s  %s#%s' % (4, suri(object_uri2), object_uri2.generation),
           ]))
 
     _Check2()
@@ -255,19 +226,14 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      stdout = self.RunGsUtil(['du',
-                               '-0c',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['du', '-0c', suri(bucket_uri)],
                               return_stdout=True)
       self.assertSetEqual(
           set(stdout.split('\0')),
           set([
-              '%-11s  %s' % (3,
-                             suri(obj_uri1)),
-              '%-11s  %s' % (5,
-                             suri(obj_uri2)),
-              '%-11s  total' % 8,
-              ''
+              '%-11s  %s' % (3, suri(obj_uri1)),
+              '%-11s  %s' % (5, suri(obj_uri2)),
+              '%-11s  total' % 8, ''
           ]))
 
     _Check()
@@ -280,24 +246,16 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
       stdout = self.RunGsUtil(
-          ['du',
-           '-e',
-           '*sub2/five*',
-           '-e',
-           '*sub1材/four',
+          ['du', '-e', '*sub2/five*', '-e', '*sub1材/four',
            suri(bucket_uri)],
           return_stdout=True)
       self.assertSetEqual(
           set(stdout.splitlines()),
           set([
-              '%-11s  %s' % (5,
-                             suri(obj_uris[0])),
-              '%-11s  %s' % (4,
-                             suri(obj_uris[3])),
-              '%-11s  %s/sub1材/sub2/' % (4,
-                                         suri(bucket_uri)),
-              '%-11s  %s/sub1材/' % (9,
-                                    suri(bucket_uri)),
+              '%-11s  %s' % (5, suri(obj_uris[0])),
+              '%-11s  %s' % (4, suri(obj_uris[3])),
+              '%-11s  %s/sub1材/sub2/' % (4, suri(bucket_uri)),
+              '%-11s  %s/sub1材/' % (9, suri(bucket_uri)),
           ]))
 
     _Check()
@@ -311,22 +269,15 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      stdout = self.RunGsUtil(['du',
-                               '-X',
-                               fpath,
-                               suri(bucket_uri)],
-                              return_stdout=True)
+      stdout = self.RunGsUtil(
+          ['du', '-X', fpath, suri(bucket_uri)], return_stdout=True)
       self.assertSetEqual(
           set(stdout.splitlines()),
           set([
-              '%-11s  %s' % (5,
-                             suri(obj_uris[0])),
-              '%-11s  %s' % (4,
-                             suri(obj_uris[3])),
-              '%-11s  %s/sub1材/sub2/' % (4,
-                                         suri(bucket_uri)),
-              '%-11s  %s/sub1材/' % (9,
-                                    suri(bucket_uri)),
+              '%-11s  %s' % (5, suri(obj_uris[0])),
+              '%-11s  %s' % (4, suri(obj_uris[3])),
+              '%-11s  %s/sub1材/sub2/' % (4, suri(bucket_uri)),
+              '%-11s  %s/sub1材/' % (9, suri(bucket_uri)),
           ]))
 
     _Check()

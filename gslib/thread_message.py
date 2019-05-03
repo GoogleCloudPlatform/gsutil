@@ -50,10 +50,9 @@ class StatusMessage(object):
 
   def __str__(self):
     """Returns a string with a valid constructor for this message."""
-    return ('%s(%s, process_id=%s, thread_id=%s)' % (self.__class__.__name__,
-                                                     self.time,
-                                                     self.process_id,
-                                                     self.thread_id))
+    return (
+        '%s(%s, process_id=%s, thread_id=%s)' %
+        (self.__class__.__name__, self.time, self.process_id, self.thread_id))
 
 
 class RetryableErrorMessage(StatusMessage):
@@ -82,10 +81,9 @@ class RetryableErrorMessage(StatusMessage):
           testing).
       thread_id: Thread ID that produced this message (overridable for testing).
     """
-    super(RetryableErrorMessage,
-          self).__init__(message_time,
-                         process_id=process_id,
-                         thread_id=thread_id)
+    super(RetryableErrorMessage, self).__init__(message_time,
+                                                process_id=process_id,
+                                                thread_id=thread_id)
 
     self.error_type = exception.__class__.__name__
     # The socket module error class names aren't descriptive enough, so we
@@ -94,10 +92,8 @@ class RetryableErrorMessage(StatusMessage):
     if exception.__class__.__module__ in ('socket', '_socket'):
       self.error_type = 'Socket' + exception.__class__.__name__.capitalize()
 
-    if (isinstance(exception,
-                   apitools_service_error) or
-        isinstance(exception,
-                   six_service_error)):
+    if (isinstance(exception, apitools_service_error) or
+        isinstance(exception, six_service_error)):
       self.is_service_error = True
     else:
       self.is_service_error = False
@@ -111,13 +107,9 @@ class RetryableErrorMessage(StatusMessage):
   def __str__(self):
     """Returns a string with a valid constructor for this message."""
     return ('%s(%s(), num_retries=%s, total_wait_sec=%s, '
-            'time=%s, process_id=%s, thread_id=%s)' % (self.__class__.__name__,
-                                                       self.error_type,
-                                                       self.num_retries,
-                                                       self.total_wait_sec,
-                                                       self.time,
-                                                       self.process_id,
-                                                       self.thread_id))
+            'time=%s, process_id=%s, thread_id=%s)' %
+            (self.__class__.__name__, self.error_type, self.num_retries,
+             self.total_wait_sec, self.time, self.process_id, self.thread_id))
 
 
 class FinalMessage(StatusMessage):
@@ -211,10 +203,9 @@ class FileMessage(StatusMessage):
       thread_id: Thread ID that produced this message (overridable for testing).
     """
 
-    super(FileMessage,
-          self).__init__(message_time,
-                         process_id=process_id,
-                         thread_id=thread_id)
+    super(FileMessage, self).__init__(message_time,
+                                      process_id=process_id,
+                                      thread_id=thread_id)
     self.src_url = src_url
     self.dst_url = dst_url
     self.size = size
@@ -227,17 +218,10 @@ class FileMessage(StatusMessage):
     """Returns a string with a valid constructor for this message."""
     return ('%s(\'%s\', \'%s\', %s, size=%s, finished=%s, component_num=%s, '
             'message_type=%s, bytes_already_downloaded=%s, process_id=%s, '
-            'thread_id=%s)' % (self.__class__.__name__,
-                               self.src_url,
-                               self.dst_url,
-                               self.time,
-                               self.size,
-                               self.finished,
-                               self.component_num,
-                               self.message_type,
-                               self.bytes_already_downloaded,
-                               self.process_id,
-                               self.thread_id))
+            'thread_id=%s)' %
+            (self.__class__.__name__, self.src_url, self.dst_url, self.time,
+             self.size, self.finished, self.component_num, self.message_type,
+             self.bytes_already_downloaded, self.process_id, self.thread_id))
 
 
 class ProgressMessage(StatusMessage):
@@ -292,16 +276,9 @@ class ProgressMessage(StatusMessage):
         '\'%s\'' % self.operation_name) if self.operation_name else None
     return ('%s(%s, %s, \'%s\', %s, dst_url=%s, component_num=%s, '
             'operation_name=%s, process_id=%s, thread_id=%s)' %
-            (self.__class__.__name__,
-             self.size,
-             self.processed_bytes,
-             self.src_url,
-             self.time,
-             dst_url_string,
-             self.component_num,
-             operation_name_string,
-             self.process_id,
-             self.thread_id))
+            (self.__class__.__name__, self.size, self.processed_bytes,
+             self.src_url, self.time, dst_url_string, self.component_num,
+             operation_name_string, self.process_id, self.thread_id))
 
 
 class SeekAheadMessage(StatusMessage):
@@ -329,12 +306,8 @@ class SeekAheadMessage(StatusMessage):
   def __str__(self):
     """Returns a string with a valid constructor for this message."""
     return ('%s(%s, %s, %s, process_id=%s, thread_id=%s)' %
-            (self.__class__.__name__,
-             self.num_objects,
-             self.size,
-             self.time,
-             self.process_id,
-             self.thread_id))
+            (self.__class__.__name__, self.num_objects, self.size, self.time,
+             self.process_id, self.thread_id))
 
 
 class ProducerThreadMessage(StatusMessage):
@@ -366,11 +339,9 @@ class ProducerThreadMessage(StatusMessage):
 
   def __str__(self):
     """Returns a string with a valid constructor for this message."""
-    return ('%s(%s, %s, %s, finished=%s)' % (self.__class__.__name__,
-                                             self.num_objects,
-                                             self.size,
-                                             self.time,
-                                             self.finished))
+    return ('%s(%s, %s, %s, finished=%s)' %
+            (self.__class__.__name__, self.num_objects, self.size, self.time,
+             self.finished))
 
 
 class PerformanceSummaryMessage(StatusMessage):
@@ -388,14 +359,12 @@ class PerformanceSummaryMessage(StatusMessage):
           Epoch).
       uses_slice: True if the command uses slice parallelism.
     """
-    super(PerformanceSummaryMessage,
-          self).__init__(message_time,
-                         process_id=None,
-                         thread_id=None)
+    super(PerformanceSummaryMessage, self).__init__(message_time,
+                                                    process_id=None,
+                                                    thread_id=None)
     self.uses_slice = uses_slice
 
   def __str__(self):
     """Returns a string with a valid constructor for this message."""
-    return ('%s(%s, %s)' % (self.__class__.__name__,
-                            self.time,
-                            self.uses_slice))
+    return ('%s(%s, %s)' %
+            (self.__class__.__name__, self.time, self.uses_slice))

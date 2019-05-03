@@ -217,8 +217,7 @@ DEFAULT_TASK_ESTIMATION_THRESHOLD = 30000
 
 
 def _GetTaskEstimationThreshold():
-  return boto.config.getint('GSUtil',
-                            'task_estimation_threshold',
+  return boto.config.getint('GSUtil', 'task_estimation_threshold',
                             DEFAULT_TASK_ESTIMATION_THRESHOLD)
 
 
@@ -231,38 +230,21 @@ MAX_RECURSIVE_DEPTH = 5
 # provide the same behavior.
 # TODO: Remove this map and deprecate old commands on 9/9/14.
 OLD_ALIAS_MAP = {
-    'chacl': ['acl',
-              'ch'],
-    'getacl': ['acl',
-               'get'],
-    'setacl': ['acl',
-               'set'],
-    'getcors': ['cors',
-                'get'],
-    'setcors': ['cors',
-                'set'],
-    'chdefacl': ['defacl',
-                 'ch'],
-    'getdefacl': ['defacl',
-                  'get'],
-    'setdefacl': ['defacl',
-                  'set'],
-    'disablelogging': ['logging',
-                       'set',
-                       'off'],
-    'enablelogging': ['logging',
-                      'set',
-                      'on'],
-    'getlogging': ['logging',
-                   'get'],
-    'getversioning': ['versioning',
-                      'get'],
-    'setversioning': ['versioning',
-                      'set'],
-    'getwebcfg': ['web',
-                  'get'],
-    'setwebcfg': ['web',
-                  'set']
+    'chacl': ['acl', 'ch'],
+    'getacl': ['acl', 'get'],
+    'setacl': ['acl', 'set'],
+    'getcors': ['cors', 'get'],
+    'setcors': ['cors', 'set'],
+    'chdefacl': ['defacl', 'ch'],
+    'getdefacl': ['defacl', 'get'],
+    'setdefacl': ['defacl', 'set'],
+    'disablelogging': ['logging', 'set', 'off'],
+    'enablelogging': ['logging', 'set', 'on'],
+    'getlogging': ['logging', 'get'],
+    'getversioning': ['versioning', 'get'],
+    'setversioning': ['versioning', 'set'],
+    'getwebcfg': ['web', 'get'],
+    'setwebcfg': ['web', 'set']
 }
 
 # Declare all of the module level variables - see
@@ -513,14 +495,9 @@ class Command(HelpProvider):
   # Each subclass must override this with an instance of CommandSpec.
   command_spec = None
 
-  _commands_with_subcommands_and_subopts = ('acl',
-                                            'defacl',
-                                            'kms',
-                                            'label',
-                                            'logging',
-                                            'notification',
-                                            'retention',
-                                            'web')
+  _commands_with_subcommands_and_subopts = ('acl', 'defacl', 'kms', 'label',
+                                            'logging', 'notification',
+                                            'retention', 'web')
 
   # This keeps track of the recursive depth of the current call to Apply.
   recursive_apply_level = 0
@@ -666,8 +643,7 @@ class Command(HelpProvider):
     quiet_mode = not self.logger.isEnabledFor(logging.INFO)
     ui_controller = UIController(quiet_mode=quiet_mode,
                                  dump_status_messages_file=boto.config.get(
-                                     'GSUtil',
-                                     'dump_status_messages_file',
+                                     'GSUtil', 'dump_status_messages_file',
                                      None))
 
     # Parse and validate args.
@@ -696,17 +672,14 @@ class Command(HelpProvider):
         's3': ApiSelector.XML
     }
     self.gsutil_api_map = GsutilApiMapFactory.GetApiMap(
-        self.gsutil_api_class_map_factory,
-        support_map,
-        default_map)
+        self.gsutil_api_class_map_factory, support_map, default_map)
 
     self.project_id = None
     self.gsutil_api = CloudApiDelegator(self.bucket_storage_uri_class,
                                         self.gsutil_api_map,
                                         self.logger,
                                         MainThreadUIQueue(
-                                            sys.stderr,
-                                            ui_controller),
+                                            sys.stderr, ui_controller),
                                         debug=self.debug,
                                         trace_token=self.trace_token,
                                         perf_trace_token=self.perf_trace_token,
@@ -736,24 +709,19 @@ class Command(HelpProvider):
     if len(self.args) < self.command_spec.min_args:
       tail_str = 's' if self.command_spec.min_args > 1 else ''
       message = ('The %s command requires at least %d argument%s.' %
-                 (self.command_name,
-                  self.command_spec.min_args,
-                  tail_str))
+                 (self.command_name, self.command_spec.min_args, tail_str))
     else:
       message = ('The %s command accepts at most %d arguments.' %
-                 (self.command_name,
-                  self.command_spec.max_args))
+                 (self.command_name, self.command_spec.max_args))
     message += ' Usage:\n%s\nFor additional help run:\n  gsutil help %s' % (
-        self.command_spec.usage_synopsis,
-        self.command_name)
+        self.command_spec.usage_synopsis, self.command_name)
     raise CommandException(message)
 
   def RaiseInvalidArgumentException(self):
     """Raises exception for specifying an invalid argument to command."""
     message = ('Incorrect option(s) specified. Usage:\n%s\n'
                'For additional help run:\n  gsutil help %s' %
-               (self.command_spec.usage_synopsis,
-                self.command_name))
+               (self.command_spec.usage_synopsis, self.command_name))
     raise CommandException(message)
 
   def ParseSubOpts(self, check_args=False):
@@ -904,11 +872,7 @@ class Command(HelpProvider):
           for blr in self.WildcardIterator(
               url.url_string).IterBuckets(bucket_fields=['id']):
             name_expansion_for_url = NameExpansionResult(
-                url,
-                False,
-                False,
-                blr.storage_url,
-                None)
+                url, False, False, blr.storage_url, None)
             acl_func(self, name_expansion_for_url)
       else:
         multi_threaded_url_args.append(url_str)
@@ -1022,8 +986,7 @@ class Command(HelpProvider):
                                    fields=['id'])
           else:
             def_obj_acl = AclTranslation.JsonToMessage(
-                self.acl_arg,
-                apitools_messages.ObjectAccessControl)
+                self.acl_arg, apitools_messages.ObjectAccessControl)
             if not def_obj_acl:
               # Use a sentinel value to indicate a private (no entries) default
               # object ACL.
@@ -1043,8 +1006,7 @@ class Command(HelpProvider):
                                    fields=['id'])
           else:
             bucket_acl = AclTranslation.JsonToMessage(
-                self.acl_arg,
-                apitools_messages.BucketAccessControl)
+                self.acl_arg, apitools_messages.BucketAccessControl)
             bucket_metadata = apitools_messages.Bucket(acl=bucket_acl)
             gsutil_api.PatchBucket(url.bucket_name,
                                    bucket_metadata,
@@ -1060,8 +1022,7 @@ class Command(HelpProvider):
                                          canned_acl=self.acl_arg)
         else:
           object_acl = AclTranslation.JsonToMessage(
-              self.acl_arg,
-              apitools_messages.ObjectAccessControl)
+              self.acl_arg, apitools_messages.ObjectAccessControl)
           object_metadata = apitools_messages.Object(acl=object_acl)
           gsutil_api.PatchObjectMetadata(url.bucket_name,
                                          url.object_name,
@@ -1177,9 +1138,7 @@ class Command(HelpProvider):
               'Policy Only enabled and therefore object ACLs and default '
               'object ACLs are disabled (see '
               'https://cloud.google.com/storage/docs/bucket-policy-only).',
-              url_str,
-              url_str,
-              url_str)
+              url_str, url_str, url_str)
       else:
         acl = blr.root_object.acl
         # Use the access controls api to check if the acl is actually empty or
@@ -1204,8 +1163,7 @@ class Command(HelpProvider):
     """
     if storage_url.IsBucket():
       return self.gsutil_api.ListBucketAccessControls(
-          storage_url.bucket_name,
-          provider=storage_url.scheme)
+          storage_url.bucket_name, provider=storage_url.scheme)
     elif storage_url.IsObject():
       return self.gsutil_api.ListObjectAccessControls(
           storage_url.bucket_name,
@@ -1249,8 +1207,7 @@ class Command(HelpProvider):
     if plurality_iter.HasPlurality():
       raise CommandException(
           '%s matched more than one URL, which is not allowed by the %s '
-          'command' % (url_str,
-                       self.command_name))
+          'command' % (url_str, self.command_name))
     return list(plurality_iter)[0]
 
   def GetSingleBucketUrlFromArg(self, arg, bucket_fields=None):
@@ -1267,12 +1224,11 @@ class Command(HelpProvider):
       CommandException if args did not match exactly one bucket.
     """
     plurality_checkable_iterator = self.GetBucketUrlIterFromArg(
-        arg,
-        bucket_fields=bucket_fields)
+        arg, bucket_fields=bucket_fields)
     if plurality_checkable_iterator.HasPlurality():
       raise CommandException('%s matched more than one URL, which is not\n'
-                             'allowed by the %s command' % (arg,
-                                                            self.command_name))
+                             'allowed by the %s command' %
+                             (arg, self.command_name))
     blr = list(plurality_checkable_iterator)[0]
     return StorageUrlFromString(blr.url_string), blr.root_object
 
@@ -1315,9 +1271,7 @@ class Command(HelpProvider):
       for i in connection_pool:
         connection_pool[i].connection.close()
 
-  def _GetProcessAndThreadCount(self,
-                                process_count,
-                                thread_count,
+  def _GetProcessAndThreadCount(self, process_count, thread_count,
                                 parallel_operations_override):
     """Determines the values of process_count and thread_count.
 
@@ -1343,16 +1297,14 @@ class Command(HelpProvider):
     if self.parallel_operations or parallel_operations_override:
       if not process_count:
         process_count = boto.config.getint(
-            'GSUtil',
-            'parallel_process_count',
+            'GSUtil', 'parallel_process_count',
             gslib.commands.config.DEFAULT_PARALLEL_PROCESS_COUNT)
       if process_count < 1:
         raise CommandException('Invalid parallel_process_count "%d".' %
                                process_count)
       if not thread_count:
         thread_count = boto.config.getint(
-            'GSUtil',
-            'parallel_thread_count',
+            'GSUtil', 'parallel_thread_count',
             gslib.commands.config.DEFAULT_PARALLEL_THREAD_COUNT)
       if thread_count < 1:
         raise CommandException('Invalid parallel_thread_count "%d".' %
@@ -1369,8 +1321,7 @@ class Command(HelpProvider):
               ('It is not possible to set process_count > 1 on %s. Please '
                'update your config file(s) (located at %s) and set '
                '"parallel_process_count = 1".') %
-              (os_name,
-               ', '.join(GetFriendlyConfigFilePaths())))))
+              (os_name, ', '.join(GetFriendlyConfigFilePaths())))))
     self.logger.debug('process count: %d', process_count)
     self.logger.debug('thread count: %d', thread_count)
 
@@ -1425,10 +1376,8 @@ class Command(HelpProvider):
     for _ in range(num_processes):
       recursive_apply_level = len(consumer_pools)
       p = multiprocessing.Process(target=self._ApplyThreads,
-                                  args=(num_threads,
-                                        num_processes,
-                                        recursive_apply_level,
-                                        status_queue))
+                                  args=(num_threads, num_processes,
+                                        recursive_apply_level, status_queue))
       p.daemon = True
       processes.append(p)
       _CryptoRandomAtFork()
@@ -1505,11 +1454,8 @@ class Command(HelpProvider):
         # We'll add it back after all of the tasks have been performed.
         setattr(self, name, 0)
 
-    (process_count,
-     thread_count) = self._GetProcessAndThreadCount(
-         process_count,
-         thread_count,
-         parallel_operations_override)
+    (process_count, thread_count) = self._GetProcessAndThreadCount(
+        process_count, thread_count, parallel_operations_override)
 
     is_main_thread = (self.recursive_apply_level == 0 and
                       self.sequential_caller_id == -1)
@@ -1565,13 +1511,8 @@ class Command(HelpProvider):
       if is_main_thread:
         _AggregateThreadStats()
     else:
-      self._SequentialApply(func,
-                            args_iterator,
-                            exception_handler,
-                            caller_id,
-                            arg_checker,
-                            should_return_results,
-                            fail_on_error)
+      self._SequentialApply(func, args_iterator, exception_handler, caller_id,
+                            arg_checker, should_return_results, fail_on_error)
 
     if shared_attrs:
       for name in shared_attrs:
@@ -1579,8 +1520,7 @@ class Command(HelpProvider):
         # and simply apply the delta after what was done during the call to
         # apply.
         final_value = (original_shared_vars_values[name] + shared_vars_map.get(
-            (caller_id,
-             name)))
+            (caller_id, name)))
         setattr(self, name, final_value)
 
     if should_return_results:
@@ -1588,12 +1528,8 @@ class Command(HelpProvider):
 
   def _MaybeSuggestGsutilDashM(self):
     """Outputs a suggestion to the user to use gsutil -m."""
-    if not (boto.config.getint('GSUtil',
-                               'parallel_process_count',
-                               0) == 1 and
-            boto.config.getint('GSUtil',
-                               'parallel_thread_count',
-                               0) == 1):
+    if not (boto.config.getint('GSUtil', 'parallel_process_count', 0) == 1 and
+            boto.config.getint('GSUtil', 'parallel_thread_count', 0) == 1):
       self.logger.info('\n' + textwrap.fill(
           '==> NOTE: You are performing a sequence of gsutil operations that '
           'may run significantly faster if you instead use gsutil -m %s ...\n'
@@ -1602,14 +1538,8 @@ class Command(HelpProvider):
           self.command_spec.command_name) + '\n')
 
   # pylint: disable=g-doc-args
-  def _SequentialApply(self,
-                       func,
-                       args_iterator,
-                       exception_handler,
-                       caller_id,
-                       arg_checker,
-                       should_return_results,
-                       fail_on_error):
+  def _SequentialApply(self, func, args_iterator, exception_handler, caller_id,
+                       arg_checker, should_return_results, fail_on_error):
     """Performs all function calls sequentially in the current thread.
 
     No other threads or processes will be spawned. This degraded functionality
@@ -1640,8 +1570,7 @@ class Command(HelpProvider):
             exception_handler(self, e)
           except Exception as _:  # pylint: disable=broad-except
             self.logger.debug(
-                'Caught exception while handling exception for %s:\n%s',
-                func,
+                'Caught exception while handling exception for %s:\n%s', func,
                 traceback.format_exc())
           continue
 
@@ -1652,13 +1581,8 @@ class Command(HelpProvider):
         self._MaybeSuggestGsutilDashM()
       if arg_checker(self, args):
         # Now that we actually have the next argument, perform the task.
-        task = Task(func,
-                    args,
-                    caller_id,
-                    exception_handler,
-                    should_return_results,
-                    arg_checker,
-                    fail_on_error)
+        task = Task(func, args, caller_id, exception_handler,
+                    should_return_results, arg_checker, fail_on_error)
         worker_thread.PerformTask(task, self)
 
     if sequential_call_count >= GetTermLines():
@@ -1792,8 +1716,7 @@ class Command(HelpProvider):
             # Only the main thread is allowed to create new processes -
             # otherwise, we will run into some Python bugs.
             if is_main_thread:
-              self._CreateNewConsumerPool(process_count,
-                                          thread_count,
+              self._CreateNewConsumerPool(process_count, thread_count,
                                           glob_status_queue)
             else:
               # Notify the main thread that we need a new consumer pool.
@@ -1874,8 +1797,7 @@ class Command(HelpProvider):
         elif (process_count > 1 and is_main_thread and
               new_pool_needed.GetValue()):
           new_pool_needed.Reset()
-          self._CreateNewConsumerPool(process_count,
-                                      thread_count,
+          self._CreateNewConsumerPool(process_count, thread_count,
                                       glob_status_queue)
           need_pool_or_done_cond.notify_all()
 
@@ -1916,10 +1838,7 @@ class Command(HelpProvider):
                                 has_cloud_src=args_iterator.has_cloud_src,
                                 provider_types=args_iterator.provider_types)
 
-  def _ApplyThreads(self,
-                    thread_count,
-                    process_count,
-                    recursive_apply_level,
+  def _ApplyThreads(self, thread_count, process_count, recursive_apply_level,
                     status_queue):
     """Assigns the work from the multi-process global task queue.
 
@@ -2007,10 +1926,9 @@ class _ConsumerPool(object):
 
 
 class Task(
-    namedtuple(
-        'Task',
-        ('func args caller_id exception_handler should_return_results arg_checker '
-         'fail_on_error'))):
+    namedtuple('Task', (
+        'func args caller_id exception_handler should_return_results arg_checker '
+        'fail_on_error'))):
   """Task class representing work to be completed.
 
   Args:
@@ -2054,8 +1972,7 @@ def _StartSeekAheadThread(seek_ahead_iterator, seek_ahead_thread_cancel_event):
   global glob_status_queue
   # pylint: enable=global-variable-not-assigned
   # pylint: enable=global-variable-undefined
-  return SeekAheadThread(seek_ahead_iterator,
-                         seek_ahead_thread_cancel_event,
+  return SeekAheadThread(seek_ahead_iterator, seek_ahead_thread_cancel_event,
                          glob_status_queue)
 
 
@@ -2150,8 +2067,7 @@ class ProducerThread(threading.Thread):
             except Exception as _:  # pylint: disable=broad-except
               self.cls.logger.debug(
                   'Caught exception while handling exception for %s:\n%s',
-                  self.func,
-                  traceback.format_exc())
+                  self.func, traceback.format_exc())
             self.shared_variables_updater.Update(self.caller_id, self.cls)
             continue
 
@@ -2160,21 +2076,14 @@ class ProducerThread(threading.Thread):
           if self.status_queue:
             if not num_tasks % 100:
               # Time to update the total number of tasks.
-              if (isinstance(args,
-                             NameExpansionResult) or
-                  isinstance(args,
-                             CopyObjectInfo) or
-                  isinstance(args,
-                             RsyncDiffToApply)):
+              if (isinstance(args, NameExpansionResult) or
+                  isinstance(args, CopyObjectInfo) or
+                  isinstance(args, RsyncDiffToApply)):
                 PutToQueueWithTimeout(
                     self.status_queue,
-                    ProducerThreadMessage(num_tasks,
-                                          total_size,
-                                          time.time()))
-            if (isinstance(args,
-                           NameExpansionResult) or
-                isinstance(args,
-                           CopyObjectInfo)):
+                    ProducerThreadMessage(num_tasks, total_size, time.time()))
+            if (isinstance(args, NameExpansionResult) or
+                isinstance(args, CopyObjectInfo)):
               if args.expanded_result:
                 json_expanded_result = json.loads(args.expanded_result)
                 if 'size' in json_expanded_result:
@@ -2193,8 +2102,7 @@ class ProducerThread(threading.Thread):
               if self.seek_ahead_iterator:
                 seek_ahead_thread_cancel_event = threading.Event()
                 seek_ahead_thread = _StartSeekAheadThread(
-                    self.seek_ahead_iterator,
-                    seek_ahead_thread_cancel_event)
+                    self.seek_ahead_iterator, seek_ahead_thread_cancel_event)
                 # For integration testing only, force estimation to complete
                 # prior to producing further results.
                 if boto.config.get('GSUtil', 'task_estimation_force', None):
@@ -2203,13 +2111,9 @@ class ProducerThread(threading.Thread):
               seek_ahead_thread_considered = True
 
           last_task = cur_task
-          cur_task = Task(self.func,
-                          args,
-                          self.caller_id,
-                          self.exception_handler,
-                          self.should_return_results,
-                          self.arg_checker,
-                          self.fail_on_error)
+          cur_task = Task(self.func, args, self.caller_id,
+                          self.exception_handler, self.should_return_results,
+                          self.arg_checker, self.fail_on_error)
           if last_task:
             self.task_queue.put(last_task)
     except Exception as e:  # pylint: disable=broad-except
@@ -2227,13 +2131,8 @@ class ProducerThread(threading.Thread):
       total_tasks[self.caller_id] = num_tasks
       if not cur_task:
         # This happens if there were zero arguments to be put in the queue.
-        cur_task = Task(None,
-                        ZERO_TASKS_TO_DO_ARGUMENT,
-                        self.caller_id,
-                        None,
-                        None,
-                        None,
-                        None)
+        cur_task = Task(None, ZERO_TASKS_TO_DO_ARGUMENT, self.caller_id, None,
+                        None, None, None)
       self.task_queue.put(cur_task)
 
       # If the seek ahead thread is still running, cancel it and wait for it
@@ -2249,11 +2148,8 @@ class ProducerThread(threading.Thread):
       # Send a final ProducerThread message that definitively states
       # the amount of actual work performed.
       if (self.status_queue and
-          (isinstance(args,
-                      NameExpansionResult) or isinstance(args,
-                                                         CopyObjectInfo) or
-           isinstance(args,
-                      RsyncDiffToApply))):
+          (isinstance(args, NameExpansionResult) or isinstance(
+              args, CopyObjectInfo) or isinstance(args, RsyncDiffToApply))):
         PutToQueueWithTimeout(
             self.status_queue,
             ProducerThreadMessage(num_tasks,
@@ -2409,8 +2305,7 @@ class WorkerThread(threading.Thread):
     try:
       results = task.func(cls, task.args, thread_state=self.thread_gsutil_api)
       if task.should_return_results:
-        global_return_values_map.Increment(caller_id,
-                                           [results],
+        global_return_values_map.Increment(caller_id, [results],
                                            default_value=[])
     except Exception as e:  # pylint: disable=broad-except
       _IncrementFailureCount()
@@ -2423,8 +2318,7 @@ class WorkerThread(threading.Thread):
           # Don't allow callers to raise exceptions here and kill the worker
           # threads.
           cls.logger.debug(
-              'Caught exception while handling exception for %s:\n%s',
-              task,
+              'Caught exception while handling exception for %s:\n%s', task,
               traceback.format_exc())
     finally:
       if self.worker_semaphore:

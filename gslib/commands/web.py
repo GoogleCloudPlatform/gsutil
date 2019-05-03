@@ -140,8 +140,7 @@ class WebCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'web',
-      command_name_aliases=['setwebcfg',
-                            'getwebcfg'],
+      command_name_aliases=['setwebcfg', 'getwebcfg'],
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
@@ -149,8 +148,7 @@ class WebCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
@@ -159,8 +157,7 @@ class WebCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='web',
-      help_name_aliases=['getwebcfg',
-                         'setwebcfg'],
+      help_name_aliases=['getwebcfg', 'setwebcfg'],
       help_type='command_help',
       help_one_line_summary=(
           'Set a main page and/or error page for one or more buckets'),
@@ -204,8 +201,7 @@ class WebCommand(Command):
     url_args = self.args
 
     website = apitools_messages.Bucket.WebsiteValue(
-        mainPageSuffix=main_page_suffix,
-        notFoundPage=error_page)
+        mainPageSuffix=main_page_suffix, notFoundPage=error_page)
 
     # Iterate over URLs, expanding wildcards and setting the website
     # configuration on each.
@@ -234,9 +230,9 @@ class WebCommand(Command):
     elif action_subcommand == 'set':
       func = self._SetWeb
     else:
-      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
-                              'See "gsutil help web".') % (action_subcommand,
-                                                           self.command_name))
+      raise CommandException(
+          ('Invalid subcommand "%s" for the %s command.\n'
+           'See "gsutil help web".') % (action_subcommand, self.command_name))
 
     # Commands with both suboptions and subcommands need to reparse for
     # suboptions, so we log again.

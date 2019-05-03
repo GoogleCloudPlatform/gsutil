@@ -286,8 +286,7 @@ class LsCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'ls',
-      command_name_aliases=['dir',
-                            'list'],
+      command_name_aliases=['dir', 'list'],
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=NO_MAX,
@@ -295,15 +294,13 @@ class LsCommand(Command):
       file_url_ok=False,
       provider_url_ok=True,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='ls',
-      help_name_aliases=['dir',
-                         'list'],
+      help_name_aliases=['dir', 'list'],
       help_type='command_help',
       help_one_line_summary='List providers, buckets, or objects',
       help_text=_DETAILED_HELP_TEXT,
@@ -372,8 +369,8 @@ class LsCommand(Command):
     # prettier.
     for key in fields:
       previous_value = fields[key]
-      if (not isinstance(previous_value,
-                         six.string_types) or '\n' not in previous_value):
+      if (not isinstance(previous_value, six.string_types) or
+          '\n' not in previous_value):
         continue
       new_value = previous_value.replace('\n', '\n\t  ')
       # Start multiline values on a new line if they aren't already.
@@ -521,24 +518,10 @@ class LsCommand(Command):
         bucket_fields = ['id']
       elif listing_style == ListingStyle.LONG_LONG:
         bucket_fields = [
-            'acl',
-            'billing',
-            'cors',
-            'defaultObjectAcl',
-            'encryption',
-            'iamConfiguration',
-            'labels',
-            'location',
-            'logging',
-            'lifecycle',
-            'metageneration',
-            'retentionPolicy',
-            'defaultEventBasedHold',
-            'storageClass',
-            'timeCreated',
-            'updated',
-            'versioning',
-            'website'
+            'acl', 'billing', 'cors', 'defaultObjectAcl', 'encryption',
+            'iamConfiguration', 'labels', 'location', 'logging', 'lifecycle',
+            'metageneration', 'retentionPolicy', 'defaultEventBasedHold',
+            'storageClass', 'timeCreated', 'updated', 'versioning', 'website'
         ]
       if storage_url.IsProvider():
         # Provider URL: use bucket wildcard to list buckets.
@@ -620,10 +603,9 @@ class LsCommand(Command):
         total_objs += exp_objs
 
     if total_objs and listing_style != ListingStyle.SHORT:
-      text_util.print_to_fd(('TOTAL: %d objects, %d bytes (%s)' %
-                             (total_objs,
-                              total_bytes,
-                              MakeHumanReadable(float(total_bytes)))))
+      text_util.print_to_fd(
+          ('TOTAL: %d objects, %d bytes (%s)' %
+           (total_objs, total_bytes, MakeHumanReadable(float(total_bytes)))))
     if got_nomatch_errors:
       raise CommandException('One or more URLs matched no objects.')
     if got_bucket_nomatch_errors:

@@ -124,6 +124,5 @@ class SeekAheadThread(threading.Thread):
 
     _PutToQueueWithTimeout(
         self.status_queue,
-        thread_message.SeekAheadMessage(num_objects,
-                                        num_data_bytes,
+        thread_message.SeekAheadMessage(num_objects, num_data_bytes,
                                         time.time()))

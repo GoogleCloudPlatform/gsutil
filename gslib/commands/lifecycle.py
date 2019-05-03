@@ -108,8 +108,7 @@ class LifecycleCommand(Command):
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.JSON,
-                      ApiSelector.XML],
+      gs_api_support=[ApiSelector.JSON, ApiSelector.XML],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
@@ -121,8 +120,7 @@ class LifecycleCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='lifecycle',
-      help_name_aliases=['getlifecycle',
-                         'setlifecycle'],
+      help_name_aliases=['getlifecycle', 'setlifecycle'],
       help_type='command_help',
       help_one_line_summary=('Get or set lifecycle configuration for a bucket'),
       help_text=_DETAILED_HELP_TEXT,
@@ -178,8 +176,7 @@ class LifecycleCommand(Command):
     if bucket_url.scheme == 's3':
       sys.stdout.write(
           self.gsutil_api.XmlPassThroughGetLifecycle(
-              bucket_url,
-              provider=bucket_url.scheme))
+              bucket_url, provider=bucket_url.scheme))
     else:
       if bucket_metadata.lifecycle and bucket_metadata.lifecycle.rule:
         sys.stdout.write(
@@ -201,5 +198,4 @@ class LifecycleCommand(Command):
       return self._SetLifecycleConfig()
     else:
       raise CommandException('Invalid subcommand "%s" for the %s command.' %
-                             (subcommand,
-                              self.command_name))
+                             (subcommand, self.command_name))

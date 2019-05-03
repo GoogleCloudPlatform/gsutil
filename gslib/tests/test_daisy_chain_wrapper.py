@@ -187,42 +187,21 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
     half_chunk = chunk[0:TRANSFER_BUFFER_SIZE // 2]
 
     write_values_dict = {
-        'First byte first chunk unaligned': (one_byte,
-                                             chunk_minus_one_byte,
-                                             chunk,
-                                             chunk),
-        'Last byte first chunk unaligned': (chunk_minus_one_byte,
-                                            chunk,
-                                            chunk),
-        'First byte second chunk unaligned': (chunk,
-                                              one_byte,
-                                              chunk_minus_one_byte,
-                                              chunk),
-        'Last byte second chunk unaligned': (chunk,
-                                             chunk_minus_one_byte,
-                                             one_byte,
-                                             chunk),
-        'First byte final chunk unaligned': (chunk,
-                                             chunk,
-                                             one_byte,
+        'First byte first chunk unaligned':
+        (one_byte, chunk_minus_one_byte, chunk, chunk),
+        'Last byte first chunk unaligned': (chunk_minus_one_byte, chunk, chunk),
+        'First byte second chunk unaligned':
+        (chunk, one_byte, chunk_minus_one_byte, chunk),
+        'Last byte second chunk unaligned':
+        (chunk, chunk_minus_one_byte, one_byte, chunk),
+        'First byte final chunk unaligned': (chunk, chunk, one_byte,
                                              chunk_minus_one_byte),
-        'Last byte final chunk unaligned': (chunk,
-                                            chunk,
-                                            chunk_minus_one_byte,
+        'Last byte final chunk unaligned': (chunk, chunk, chunk_minus_one_byte,
                                             one_byte),
-        'Half chunks': (half_chunk,
-                        half_chunk,
-                        half_chunk),
-        'Many unaligned': (one_byte,
-                           half_chunk,
-                           one_byte,
-                           half_chunk,
-                           chunk,
-                           chunk_minus_one_byte,
-                           chunk,
-                           one_byte,
-                           half_chunk,
-                           one_byte)
+        'Half chunks': (half_chunk, half_chunk, half_chunk),
+        'Many unaligned':
+        (one_byte, half_chunk, one_byte, half_chunk, chunk,
+         chunk_minus_one_byte, chunk, one_byte, half_chunk, one_byte)
     }
     upload_file = self.CreateTempFile()
     for case_name, write_values in six.iteritems(write_values_dict):
@@ -238,8 +217,7 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
       self._WriteFromWrapperToFile(daisy_chain_wrapper, upload_file)
       with open(upload_file, 'rb') as upload_stream:
         self.assertEqual(
-            upload_stream.read(),
-            expected_contents,
+            upload_stream.read(), expected_contents,
             'Uploaded file contents for case %s did not match' % case_name)
 
   def testSeekAndReturn(self):
@@ -307,8 +285,7 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
       pass
 
     write_values = [
-        b'a',
-        b'b',
+        b'a', b'b',
         DownloadException('Download thread forces failure')
     ]
     upload_file = self.CreateTempFile()

@@ -56,8 +56,7 @@ class MockObject(object):
     self.contents = contents
 
   def __str__(self):
-    return '%s/%s#%s' % (self.root_object.bucket,
-                         self.root_object.name,
+    return '%s/%s#%s' % (self.root_object.bucket, self.root_object.name,
                          self.root_object.generation)
 
   def __repr__(self):
@@ -161,8 +160,7 @@ class MockCloudApi(object):
     if apitools_object.bucket not in self.buckets:
       self.MockCreateBucket(apitools_object.bucket)
     return self.buckets[apitools_object.bucket].CreateObjectWithMetadata(
-        apitools_object,
-        contents=contents).root_object
+        apitools_object, contents=contents).root_object
 
   # pylint: disable=unused-argument
   def GetObjectMetadata(self,
@@ -190,8 +188,6 @@ class MockCloudApi(object):
           # Return live object.
           if 'live' in bucket.objects[object_name]:
             return bucket.objects[object_name]['live'].root_object
-      raise CreateObjectNotFoundException(404,
-                                          self.provider,
-                                          bucket_name,
+      raise CreateObjectNotFoundException(404, self.provider, bucket_name,
                                           object_name)
     raise CreateBucketNotFoundException(404, self.provider, bucket_name)

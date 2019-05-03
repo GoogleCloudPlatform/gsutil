@@ -101,9 +101,8 @@ def ReportMetrics(metrics_file_path, log_level, log_file_path=None):
     # Use a separate logger so that we don't add another handler to the default
     # module-level logger. This is intended to prevent multiple calls from tests
     # running in parallel from writing output to the same file.
-    new_name = '%s.%s' % (
-        logger.name,
-        ''.join(random.choice(string.ascii_lowercase) for _ in range(8)))
+    new_name = '%s.%s' % (logger.name, ''.join(
+        random.choice(string.ascii_lowercase) for _ in range(8)))
     logger = logging.getLogger(new_name)
 
   log_file_path = log_file_path or LOG_FILE_PATH

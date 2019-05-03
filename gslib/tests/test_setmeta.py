@@ -46,12 +46,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     ct = 'image/gif'
     self.RunGsUtil([
         '-h',
-        'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-        '-h',
-        'Content-Type:%s' % ct,
-        'cp',
-        inpath,
-        objuri
+        'x-%s-meta-xyz:abc' % self.provider_custom_meta, '-h',
+        'Content-Type:%s' % ct, 'cp', inpath, objuri
     ])
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -68,20 +64,12 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     inpath = self.CreateTempFile()
     self.RunGsUtil([
         '-h',
-        'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-        '-h',
-        'Content-Type:image/gif',
-        'cp',
-        inpath,
-        objuri
+        'x-%s-meta-xyz:abc' % self.provider_custom_meta, '-h',
+        'Content-Type:image/gif', 'cp', inpath, objuri
     ])
     self.RunGsUtil([
-        'setmeta',
-        '-h',
-        'Content-Type:text/html',
-        '-h',
-        'x-%s-meta-xyz' % self.provider_custom_meta,
-        objuri
+        'setmeta', '-h', 'Content-Type:text/html', '-h',
+        'x-%s-meta-xyz' % self.provider_custom_meta, objuri
     ])
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -100,11 +88,9 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     ct = 'image/gif'
     stderr = self.RunGsUtil([
         '-h',
-        'x-goog-if-generation-match:%d' % (long(generation) + 1),
-        'setmeta',
-        '-h',
-        'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-        '-h',
+        'x-goog-if-generation-match:%d' %
+        (long(generation) + 1), 'setmeta', '-h',
+        'x-%s-meta-xyz:abc' % self.provider_custom_meta, '-h',
         'Content-Type:%s' % ct,
         suri(object_uri)
     ],
@@ -114,11 +100,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtil([
         '-h',
-        'x-goog-generation-match:%s' % generation,
-        'setmeta',
-        '-h',
-        'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-        '-h',
+        'x-goog-generation-match:%s' % generation, 'setmeta', '-h',
+        'x-%s-meta-xyz:abc' % self.provider_custom_meta, '-h',
         'Content-Type:%s' % ct,
         suri(object_uri)
     ])
@@ -132,12 +115,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(contents=b'foo')
     ct = 'image/gif'
     stderr = self.RunGsUtil([
-        '-h',
-        'x-goog-if-metageneration-match:5',
-        'setmeta',
-        '-h',
-        'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-        '-h',
+        '-h', 'x-goog-if-metageneration-match:5', 'setmeta', '-h',
+        'x-%s-meta-xyz:abc' % self.provider_custom_meta, '-h',
         'Content-Type:%s' % ct,
         suri(object_uri)
     ],
@@ -145,12 +124,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertIn('Precondition', stderr)
     self.RunGsUtil([
-        '-h',
-        'x-goog-metageneration-match:1',
-        'setmeta',
-        '-h',
-        'x-%s-meta-xyz:abc' % self.provider_custom_meta,
-        '-h',
+        '-h', 'x-goog-metageneration-match:1', 'setmeta', '-h',
+        'x-%s-meta-xyz:abc' % self.provider_custom_meta, '-h',
         'Content-Type:%s' % ct,
         suri(object_uri)
     ])
@@ -160,11 +135,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_duplicate_header_removal(self):
     stderr = self.RunGsUtil([
-        'setmeta',
-        '-h',
-        'Content-Type:text/html',
-        '-h',
-        'Content-Type',
+        'setmeta', '-h', 'Content-Type:text/html', '-h', 'Content-Type',
         'gs://foo/bar'
     ],
                             expected_status=1,
@@ -173,11 +144,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_duplicate_header(self):
     stderr = self.RunGsUtil([
-        'setmeta',
-        '-h',
-        'Content-Type:text/html',
-        '-h',
-        'Content-Type:foobar',
+        'setmeta', '-h', 'Content-Type:text/html', '-h', 'Content-Type:foobar',
         'gs://foo/bar'
     ],
                             expected_status=1,
@@ -186,17 +153,10 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_setmeta_seek_ahead(self):
     object_uri = self.CreateObject(contents=b'foo')
-    with SetBotoConfigForTest([('GSUtil',
-                                'task_estimation_threshold',
-                                '1'),
-                               ('GSUtil',
-                                'task_estimation_force',
-                                'True')]):
+    with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
+                               ('GSUtil', 'task_estimation_force', 'True')]):
       stderr = self.RunGsUtil(
-          ['-m',
-           'setmeta',
-           '-h',
-           'content-type:footype',
+          ['-m', 'setmeta', '-h', 'content-type:footype',
            suri(object_uri)],
           return_stderr=True)
       self.assertIn('Estimated work for this command: objects: 1\n', stderr)
@@ -206,10 +166,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     self.RunGsUtil(
-        ['setmeta',
-         '-R',
-         '-h',
-         'content-type:footype',
+        ['setmeta', '-R', '-h', 'content-type:footype',
          suri(bucket_uri)])
 
     for obj_uri in [object1_uri, object2_uri]:
@@ -222,19 +179,15 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket(test_objects=2)
     self.AssertNObjectsInBucket(bucket_uri, 2)
     self.RunGsUtil([
-        'setmeta',
-        '-h',
+        'setmeta', '-h',
         'x-%s-meta-abc:123' % self.provider_custom_meta,
-        suri(bucket_uri,
-             '**')
+        suri(bucket_uri, '**')
     ])
 
   def test_invalid_non_ascii_custom_header(self):
     unicode_header = 'x-%s-meta-soufflé:5' % self.provider_custom_meta
     stderr = self.RunGsUtil([
-        'setmeta',
-        '-h',
-        unicode_header,
+        'setmeta', '-h', unicode_header,
         '%s://foo/bar' % self.default_provider
     ],
                             expected_status=1,
@@ -262,8 +215,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
       return unittest.skip('XML header keys are case-insensitive.')
     objuri = self.CreateObject(contents=b'foo')
     self.RunGsUtil([
-        'setmeta',
-        '-h',
+        'setmeta', '-h',
         'x-%s-meta-CaSe:SeNsItIvE' % self.provider_custom_meta,
         suri(objuri)
     ])
@@ -272,10 +224,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_disallowed_header(self):
     stderr = self.RunGsUtil(
-        ['setmeta',
-         '-h',
-         'Content-Length:5',
-         'gs://foo/bar'],
+        ['setmeta', '-h', 'Content-Length:5', 'gs://foo/bar'],
         expected_status=1,
         return_stderr=True)
     self.assertIn('Invalid or disallowed header', stderr)
@@ -283,8 +232,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
   def test_setmeta_bucket(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil([
-        'setmeta',
-        '-h',
+        'setmeta', '-h',
         'x-%s-meta-foo:5' % self.provider_custom_meta,
         suri(bucket_uri)
     ],
@@ -295,8 +243,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
   def test_setmeta_valid_with_multiple_colons_in_value(self):
     obj_uri = self.CreateObject(contents=b'foo')
     self.RunGsUtil([
-        'setmeta',
-        '-h',
+        'setmeta', '-h',
         'x-%s-meta-foo:bar:baz' % self.provider_custom_meta,
         suri(obj_uri)
     ])
@@ -305,10 +252,8 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_setmeta_with_canned_acl(self):
     stderr = self.RunGsUtil([
-        'setmeta',
-        '-h',
-        'x-%s-acl:public-read' % self.provider_custom_meta,
-        'gs://foo/bar'
+        'setmeta', '-h',
+        'x-%s-acl:public-read' % self.provider_custom_meta, 'gs://foo/bar'
     ],
                             expected_status=1,
                             return_stderr=True)
@@ -316,10 +261,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
 
   def test_invalid_non_ascii_header_value(self):
     unicode_header = 'Content-Type:dessert/soufflé'
-    stderr = self.RunGsUtil(['setmeta',
-                             '-h',
-                             unicode_header,
-                             'gs://foo/bar'],
+    stderr = self.RunGsUtil(['setmeta', '-h', unicode_header, 'gs://foo/bar'],
                             expected_status=1,
                             return_stderr=True)
     self.assertIn('Invalid non-ASCII value', stderr)

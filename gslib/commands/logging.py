@@ -130,9 +130,7 @@ class LoggingCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'logging',
-      command_name_aliases=['disablelogging',
-                            'enablelogging',
-                            'getlogging'],
+      command_name_aliases=['disablelogging', 'enablelogging', 'getlogging'],
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
@@ -140,24 +138,17 @@ class LoggingCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
-          CommandArgument('mode',
-                          choices=['on',
-                                   'off']),
+          CommandArgument('mode', choices=['on', 'off']),
           CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
       ])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='logging',
       help_name_aliases=[
-          'loggingconfig',
-          'logs',
-          'log',
-          'getlogging',
-          'enablelogging',
+          'loggingconfig', 'logs', 'log', 'getlogging', 'enablelogging',
           'disablelogging'
       ],
       help_type='command_help',
@@ -176,8 +167,7 @@ class LoggingCommand(Command):
 
     if bucket_url.scheme == 's3':
       text_util.print_to_fd(self.gsutil_api.XmlPassThroughGetLogging(
-          bucket_url,
-          provider=bucket_url.scheme),
+          bucket_url, provider=bucket_url.scheme),
                             end='')
     else:
       if (bucket_metadata.logging and bucket_metadata.logging.logBucket and
@@ -265,24 +255,20 @@ class LoggingCommand(Command):
       if state_subcommand == 'on':
         func = self._Enable
         metrics.LogCommandParams(
-            subcommands=[action_subcommand,
-                         state_subcommand])
+            subcommands=[action_subcommand, state_subcommand])
       elif state_subcommand == 'off':
         func = self._Disable
         metrics.LogCommandParams(
-            subcommands=[action_subcommand,
-                         state_subcommand])
+            subcommands=[action_subcommand, state_subcommand])
       else:
         raise CommandException(
             ('Invalid subcommand "%s" for the "%s %s" command.\n'
-             'See "gsutil help logging".') % (state_subcommand,
-                                              self.command_name,
-                                              action_subcommand))
+             'See "gsutil help logging".') %
+            (state_subcommand, self.command_name, action_subcommand))
     else:
-      raise CommandException(
-          ('Invalid subcommand "%s" for the %s command.\n'
-           'See "gsutil help logging".') % (action_subcommand,
-                                            self.command_name))
+      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
+                              'See "gsutil help logging".') %
+                             (action_subcommand, self.command_name))
     self.ParseSubOpts(check_args=True)
     # Commands with both suboptions and subcommands need to reparse for
     # suboptions, so we log again.

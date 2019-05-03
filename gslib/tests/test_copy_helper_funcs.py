@@ -87,10 +87,8 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEqual(151, component_size)
 
     # Test num_components with huge numbers.
-    (num_components,
-     component_size) = _GetPartitionInfo((10**150) + 1,
-                                         10**200,
-                                         10)
+    (num_components, component_size) = _GetPartitionInfo((10**150) + 1, 10**200,
+                                                         10)
     self.assertEqual((10**149) + 1, num_components)
     self.assertEqual(10, component_size)
 
@@ -120,9 +118,8 @@ class TestCpFuncs(GsUtilUnitTestCase):
     fpath_uploaded_correctly_url = StorageUrlFromString(
         str(fpath_uploaded_correctly))
     object_uploaded_correctly_url = StorageUrlFromString(
-        '%s://%s/%s' % (self.default_provider,
-                        bucket_name,
-                        fpath_uploaded_correctly))
+        '%s://%s/%s' %
+        (self.default_provider, bucket_name, fpath_uploaded_correctly))
     with open(fpath_uploaded_correctly, 'rb') as f_in:
       fpath_uploaded_correctly_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     mock_api.MockCreateObjectWithMetadata(apitools_messages.Object(
@@ -132,47 +129,28 @@ class TestCpFuncs(GsUtilUnitTestCase):
                                           contents=b'1')
 
     args_uploaded_correctly = PerformParallelUploadFileToObjectArgs(
-        fpath_uploaded_correctly,
-        0,
-        1,
-        fpath_uploaded_correctly_url,
-        object_uploaded_correctly_url,
-        '',
-        empty_object,
-        tracker_file,
-        tracker_file_lock,
-        None,
-        False)
+        fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly_url,
+        object_uploaded_correctly_url, '', empty_object, tracker_file,
+        tracker_file_lock, None, False)
 
     # Not yet uploaded, but needed.
     fpath_not_uploaded = self.CreateTempFile(file_name='foo2', contents=b'2')
     fpath_not_uploaded_url = StorageUrlFromString(str(fpath_not_uploaded))
-    object_not_uploaded_url = StorageUrlFromString('%s://%s/%s' %
-                                                   (self.default_provider,
-                                                    bucket_name,
-                                                    fpath_not_uploaded))
+    object_not_uploaded_url = StorageUrlFromString(
+        '%s://%s/%s' % (self.default_provider, bucket_name, fpath_not_uploaded))
     args_not_uploaded = PerformParallelUploadFileToObjectArgs(
-        fpath_not_uploaded,
-        0,
-        1,
-        fpath_not_uploaded_url,
-        object_not_uploaded_url,
-        '',
-        empty_object,
-        tracker_file,
-        tracker_file_lock,
-        None,
-        False)
+        fpath_not_uploaded, 0, 1, fpath_not_uploaded_url,
+        object_not_uploaded_url, '', empty_object, tracker_file,
+        tracker_file_lock, None, False)
 
     # Already uploaded, but contents no longer match. Even though the contents
     # differ, we don't delete this since the bucket is not versioned and it
     # will be overwritten anyway.
     fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents=b'4')
     fpath_wrong_contents_url = StorageUrlFromString(str(fpath_wrong_contents))
-    object_wrong_contents_url = StorageUrlFromString('%s://%s/%s' %
-                                                     (self.default_provider,
-                                                      bucket_name,
-                                                      fpath_wrong_contents))
+    object_wrong_contents_url = StorageUrlFromString(
+        '%s://%s/%s' %
+        (self.default_provider, bucket_name, fpath_wrong_contents))
     with open(self.CreateTempFile(contents=b'_'), 'rb') as f_in:
       fpath_wrong_contents_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     mock_api.MockCreateObjectWithMetadata(apitools_messages.Object(
@@ -182,42 +160,23 @@ class TestCpFuncs(GsUtilUnitTestCase):
                                           contents=b'1')
 
     args_wrong_contents = PerformParallelUploadFileToObjectArgs(
-        fpath_wrong_contents,
-        0,
-        1,
-        fpath_wrong_contents_url,
-        object_wrong_contents_url,
-        '',
-        empty_object,
-        tracker_file,
-        tracker_file_lock,
-        None,
-        False)
+        fpath_wrong_contents, 0, 1, fpath_wrong_contents_url,
+        object_wrong_contents_url, '', empty_object, tracker_file,
+        tracker_file_lock, None, False)
 
     # Exists in tracker file, but component object no longer exists.
     fpath_remote_deleted = self.CreateTempFile(file_name='foo5', contents=b'5')
     fpath_remote_deleted_url = StorageUrlFromString(str(fpath_remote_deleted))
     args_remote_deleted = PerformParallelUploadFileToObjectArgs(
-        fpath_remote_deleted,
-        0,
-        1,
-        fpath_remote_deleted_url,
-        '',
-        '',
-        empty_object,
-        tracker_file,
-        tracker_file_lock,
-        None,
-        False)
+        fpath_remote_deleted, 0, 1, fpath_remote_deleted_url, '', '',
+        empty_object, tracker_file, tracker_file_lock, None, False)
 
     # Exists in tracker file and already uploaded, but no longer needed.
     fpath_no_longer_used = self.CreateTempFile(file_name='foo6', contents=b'6')
     with open(fpath_no_longer_used, 'rb') as f_in:
       file_md5 = _CalculateB64EncodedMd5FromContents(f_in)
     mock_api.MockCreateObjectWithMetadata(apitools_messages.Object(
-        bucket=bucket_name,
-        name='foo6',
-        md5Hash=file_md5),
+        bucket=bucket_name, name='foo6', md5Hash=file_md5),
                                           contents=b'6')
 
     dst_args = {
@@ -228,26 +187,18 @@ class TestCpFuncs(GsUtilUnitTestCase):
     }
 
     existing_components = [
-        ObjectFromTracker(fpath_uploaded_correctly,
-                          ''),
-        ObjectFromTracker(fpath_wrong_contents,
-                          ''),
-        ObjectFromTracker(fpath_remote_deleted,
-                          ''),
-        ObjectFromTracker(fpath_no_longer_used,
-                          '')
+        ObjectFromTracker(fpath_uploaded_correctly, ''),
+        ObjectFromTracker(fpath_wrong_contents, ''),
+        ObjectFromTracker(fpath_remote_deleted, ''),
+        ObjectFromTracker(fpath_no_longer_used, '')
     ]
 
-    bucket_url = StorageUrlFromString('%s://%s' % (self.default_provider,
-                                                   bucket_name))
+    bucket_url = StorageUrlFromString('%s://%s' %
+                                      (self.default_provider, bucket_name))
 
-    (components_to_upload,
-     uploaded_components,
+    (components_to_upload, uploaded_components,
      existing_objects_to_delete) = (FilterExistingComponents(
-         dst_args,
-         existing_components,
-         bucket_url,
-         mock_api))
+         dst_args, existing_components, bucket_url, mock_api))
     uploaded_components = [i[0] for i in uploaded_components]
     for arg in [args_not_uploaded, args_wrong_contents, args_remote_deleted]:
       self.assertTrue(arg in components_to_upload)
@@ -255,10 +206,9 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEqual(args_uploaded_correctly.dst_url.url_string,
                      uploaded_components[0].url_string)
     self.assertEqual(1, len(existing_objects_to_delete))
-    no_longer_used_url = StorageUrlFromString('%s://%s/%s' %
-                                              (self.default_provider,
-                                               bucket_name,
-                                               fpath_no_longer_used))
+    no_longer_used_url = StorageUrlFromString(
+        '%s://%s/%s' %
+        (self.default_provider, bucket_name, fpath_no_longer_used))
     self.assertEqual(no_longer_used_url.url_string,
                      existing_objects_to_delete[0].url_string)
 
@@ -288,22 +238,13 @@ class TestCpFuncs(GsUtilUnitTestCase):
                                  md5Hash=fpath_uploaded_correctly_md5),
         contents=b'1')
     object_uploaded_correctly_url = StorageUrlFromString(
-        '%s://%s/%s#%s' % (self.default_provider,
-                           bucket_name,
-                           fpath_uploaded_correctly,
-                           object_uploaded_correctly.generation))
+        '%s://%s/%s#%s' %
+        (self.default_provider, bucket_name, fpath_uploaded_correctly,
+         object_uploaded_correctly.generation))
     args_uploaded_correctly = PerformParallelUploadFileToObjectArgs(
-        fpath_uploaded_correctly,
-        0,
-        1,
-        fpath_uploaded_correctly_url,
-        object_uploaded_correctly_url,
-        object_uploaded_correctly.generation,
-        empty_object,
-        tracker_file,
-        tracker_file_lock,
-        None,
-        False)
+        fpath_uploaded_correctly, 0, 1, fpath_uploaded_correctly_url,
+        object_uploaded_correctly_url, object_uploaded_correctly.generation,
+        empty_object, tracker_file, tracker_file_lock, None, False)
 
     # Duplicate object name in tracker file, but uploaded correctly.
     fpath_duplicate = fpath_uploaded_correctly
@@ -314,22 +255,14 @@ class TestCpFuncs(GsUtilUnitTestCase):
                                  md5Hash=fpath_uploaded_correctly_md5),
         contents=b'1')
     duplicate_uploaded_correctly_url = StorageUrlFromString(
-        '%s://%s/%s#%s' % (self.default_provider,
-                           bucket_name,
-                           fpath_uploaded_correctly,
-                           duplicate_uploaded_correctly.generation))
+        '%s://%s/%s#%s' %
+        (self.default_provider, bucket_name, fpath_uploaded_correctly,
+         duplicate_uploaded_correctly.generation))
     args_duplicate = PerformParallelUploadFileToObjectArgs(
-        fpath_duplicate,
-        0,
-        1,
-        fpath_duplicate_url,
+        fpath_duplicate, 0, 1, fpath_duplicate_url,
         duplicate_uploaded_correctly_url,
-        duplicate_uploaded_correctly.generation,
-        empty_object,
-        tracker_file,
-        tracker_file_lock,
-        None,
-        False)
+        duplicate_uploaded_correctly.generation, empty_object, tracker_file,
+        tracker_file_lock, None, False)
 
     # Already uploaded, but contents no longer match.
     fpath_wrong_contents = self.CreateTempFile(file_name='foo4', contents=b'4')
@@ -342,22 +275,13 @@ class TestCpFuncs(GsUtilUnitTestCase):
                                  md5Hash=fpath_wrong_contents_md5),
         contents=b'_')
     wrong_contents_url = StorageUrlFromString(
-        '%s://%s/%s#%s' % (self.default_provider,
-                           bucket_name,
-                           fpath_wrong_contents,
-                           object_wrong_contents.generation))
+        '%s://%s/%s#%s' %
+        (self.default_provider, bucket_name, fpath_wrong_contents,
+         object_wrong_contents.generation))
     args_wrong_contents = PerformParallelUploadFileToObjectArgs(
-        fpath_wrong_contents,
-        0,
-        1,
-        fpath_wrong_contents_url,
-        wrong_contents_url,
-        '',
-        empty_object,
-        tracker_file,
-        tracker_file_lock,
-        None,
-        False)
+        fpath_wrong_contents, 0, 1, fpath_wrong_contents_url,
+        wrong_contents_url, '', empty_object, tracker_file, tracker_file_lock,
+        None, False)
 
     dst_args = {
         fpath_uploaded_correctly: args_uploaded_correctly,
@@ -369,20 +293,15 @@ class TestCpFuncs(GsUtilUnitTestCase):
                           object_uploaded_correctly_url.generation),
         ObjectFromTracker(fpath_duplicate,
                           duplicate_uploaded_correctly_url.generation),
-        ObjectFromTracker(fpath_wrong_contents,
-                          wrong_contents_url.generation)
+        ObjectFromTracker(fpath_wrong_contents, wrong_contents_url.generation)
     ]
 
-    bucket_url = StorageUrlFromString('%s://%s' % (self.default_provider,
-                                                   bucket_name))
+    bucket_url = StorageUrlFromString('%s://%s' %
+                                      (self.default_provider, bucket_name))
 
-    (components_to_upload,
-     uploaded_components,
+    (components_to_upload, uploaded_components,
      existing_objects_to_delete) = (FilterExistingComponents(
-         dst_args,
-         existing_components,
-         bucket_url,
-         mock_api))
+         dst_args, existing_components, bucket_url, mock_api))
     uploaded_components = [i[0] for i in uploaded_components]
     self.assertEqual([args_wrong_contents], components_to_upload)
     self.assertEqual(args_uploaded_correctly.dst_url.url_string,
@@ -420,14 +339,12 @@ class TestCpFuncs(GsUtilUnitTestCase):
     exc = apitools_exceptions.HttpError({'status': 410}, None, None)
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(
-        isinstance(translated_exc,
-                   ResumableUploadStartOverException))
+        isinstance(translated_exc, ResumableUploadStartOverException))
 
     exc = apitools_exceptions.HttpError({'status': 404}, None, None)
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(
-        isinstance(translated_exc,
-                   ResumableUploadStartOverException))
+        isinstance(translated_exc, ResumableUploadStartOverException))
 
     exc = apitools_exceptions.HttpError({'status': 401}, None, None)
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
@@ -487,68 +404,54 @@ class TestCpFuncs(GsUtilUnitTestCase):
     src_url = StorageUrlFromString('gs://bucket/object')
 
     # Recent nearline objects should generate a warning.
-    for object_time_created in (self._PI_DAY,
-                                self._PI_DAY - datetime.timedelta(days=29,
-                                                                  hours=23)):
+    for object_time_created in (self._PI_DAY, self._PI_DAY -
+                                datetime.timedelta(days=29, hours=23)):
       recent_nearline_obj = apitools_messages.Object(
-          storageClass='NEARLINE',
-          timeCreated=object_time_created)
+          storageClass='NEARLINE', timeCreated=object_time_created)
 
       with mock.patch.object(test_logger, 'warn') as mocked_warn:
-        WarnIfMvEarlyDeletionChargeApplies(src_url,
-                                           recent_nearline_obj,
+        WarnIfMvEarlyDeletionChargeApplies(src_url, recent_nearline_obj,
                                            test_logger)
         mocked_warn.assert_called_with(
             'Warning: moving %s object %s may incur an early deletion '
             'charge, because the original object is less than %s days old '
-            'according to the local system time.',
-            'nearline',
-            src_url.url_string,
-            30)
+            'according to the local system time.', 'nearline',
+            src_url.url_string, 30)
 
     # Recent coldine objects should generate a warning.
-    for object_time_created in (self._PI_DAY,
-                                self._PI_DAY - datetime.timedelta(days=89,
-                                                                  hours=23)):
+    for object_time_created in (self._PI_DAY, self._PI_DAY -
+                                datetime.timedelta(days=89, hours=23)):
       recent_nearline_obj = apitools_messages.Object(
-          storageClass='COLDLINE',
-          timeCreated=object_time_created)
+          storageClass='COLDLINE', timeCreated=object_time_created)
 
       with mock.patch.object(test_logger, 'warn') as mocked_warn:
-        WarnIfMvEarlyDeletionChargeApplies(src_url,
-                                           recent_nearline_obj,
+        WarnIfMvEarlyDeletionChargeApplies(src_url, recent_nearline_obj,
                                            test_logger)
         mocked_warn.assert_called_with(
             'Warning: moving %s object %s may incur an early deletion '
             'charge, because the original object is less than %s days old '
-            'according to the local system time.',
-            'coldline',
-            src_url.url_string,
-            90)
+            'according to the local system time.', 'coldline',
+            src_url.url_string, 90)
 
     # Sufficiently old objects should not generate a warning.
     with mock.patch.object(test_logger, 'warn') as mocked_warn:
-      old_nearline_obj = apitools_messages.Object(storageClass='NEARLINE',
-                                                  timeCreated=self._PI_DAY -
-                                                  datetime.timedelta(days=30,
-                                                                     seconds=1))
+      old_nearline_obj = apitools_messages.Object(
+          storageClass='NEARLINE',
+          timeCreated=self._PI_DAY - datetime.timedelta(days=30, seconds=1))
       WarnIfMvEarlyDeletionChargeApplies(src_url, old_nearline_obj, test_logger)
       mocked_warn.assert_not_called()
     with mock.patch.object(test_logger, 'warn') as mocked_warn:
-      old_coldline_obj = apitools_messages.Object(storageClass='COLDLINE',
-                                                  timeCreated=self._PI_DAY -
-                                                  datetime.timedelta(days=90,
-                                                                     seconds=1))
+      old_coldline_obj = apitools_messages.Object(
+          storageClass='COLDLINE',
+          timeCreated=self._PI_DAY - datetime.timedelta(days=90, seconds=1))
       WarnIfMvEarlyDeletionChargeApplies(src_url, old_coldline_obj, test_logger)
       mocked_warn.assert_not_called()
 
     # Recent standard storage class object should not generate a warning.
     with mock.patch.object(test_logger, 'warn') as mocked_warn:
       not_old_enough_nearline_obj = apitools_messages.Object(
-          storageClass='STANDARD',
-          timeCreated=self._PI_DAY)
-      WarnIfMvEarlyDeletionChargeApplies(src_url,
-                                         not_old_enough_nearline_obj,
+          storageClass='STANDARD', timeCreated=self._PI_DAY)
+      WarnIfMvEarlyDeletionChargeApplies(src_url, not_old_enough_nearline_obj,
                                          test_logger)
       mocked_warn.assert_not_called()
 

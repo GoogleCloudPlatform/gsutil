@@ -124,10 +124,8 @@ class VersionCommand(Command):
               checksum=cur_checksum,
               checksum_ok=checksum_ok_str,
               boto_version=boto.__version__,
-              python_version=sys.version.replace('\n',
-                                                 ''),
-              os_version='%s %s' % (platform.system(),
-                                    platform.release()),
+              python_version=sys.version.replace('\n', ''),
+              os_version='%s %s' % (platform.system(), platform.release()),
               multiprocessing_available=(
                   CheckMultiprocessingAvailableAndInit().is_available),
               cloud_sdk=system_util.InvokedViaCloudSdk(),
@@ -198,8 +196,7 @@ def GetCloudSdkGsutilWrapperScriptPath():
     platform_path_suffix = os.path.join('platform', 'gsutil', 'gsutil')
     if gsutil_path.endswith(platform_path_suffix):
       bin_path = os.path.join(
-          gsutil_path[0:gsutil_path.rfind(platform_path_suffix)],
-          'bin',
+          gsutil_path[0:gsutil_path.rfind(platform_path_suffix)], 'bin',
           'gsutil')
       if os.path.exists(bin_path):
         return bin_path

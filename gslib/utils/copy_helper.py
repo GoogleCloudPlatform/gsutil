@@ -204,12 +204,7 @@ hash the original name.
 # When uploading a file, get the following fields in the response for
 # filling in command output and manifests.
 UPLOAD_RETURN_FIELDS = [
-    'crc32c',
-    'customerEncryption',
-    'etag',
-    'generation',
-    'md5Hash',
-    'size'
+    'crc32c', 'customerEncryption', 'etag', 'generation', 'md5Hash', 'size'
 ]
 
 # This tuple is used only to encapsulate the arguments needed for
@@ -374,20 +369,11 @@ def _PerformParallelUploadFileToObject(cls, args, thread_state=None):
   return ret
 
 
-CopyHelperOpts = namedtuple('CopyHelperOpts',
-                            [
-                                'perform_mv',
-                                'no_clobber',
-                                'daisy_chain',
-                                'read_args_from_stdin',
-                                'print_ver',
-                                'use_manifest',
-                                'preserve_acl',
-                                'canned_acl',
-                                'skip_unsupported_objects',
-                                'test_callback_file',
-                                'dest_storage_class'
-                            ])
+CopyHelperOpts = namedtuple('CopyHelperOpts', [
+    'perform_mv', 'no_clobber', 'daisy_chain', 'read_args_from_stdin',
+    'print_ver', 'use_manifest', 'preserve_acl', 'canned_acl',
+    'skip_unsupported_objects', 'test_callback_file', 'dest_storage_class'
+])
 
 
 # pylint: disable=global-variable-undefined
@@ -456,8 +442,7 @@ def _SelectDownloadStrategy(dst_url):
     return CloudApi.DownloadStrategy.RESUMABLE
 
 
-def InsistDstUrlNamesContainer(exp_dst_url,
-                               have_existing_dst_container,
+def InsistDstUrlNamesContainer(exp_dst_url, have_existing_dst_container,
                                command_name):
   """Ensures the destination URL names a container.
 
@@ -483,8 +468,7 @@ def InsistDstUrlNamesContainer(exp_dst_url,
                            'source form of the %s command.' % command_name)
 
 
-def _ShouldTreatDstUrlAsBucketSubDir(have_multiple_srcs,
-                                     dst_url,
+def _ShouldTreatDstUrlAsBucketSubDir(have_multiple_srcs, dst_url,
                                      have_existing_dest_subdir,
                                      src_url_names_container,
                                      recursion_requested):
@@ -535,10 +519,8 @@ def _ShouldTreatDstUrlAsBucketSubDir(have_multiple_srcs,
             (src_url_names_container and recursion_requested))
 
 
-def _ShouldTreatDstUrlAsSingleton(src_url_names_container,
-                                  have_multiple_srcs,
-                                  have_existing_dest_subdir,
-                                  dst_url,
+def _ShouldTreatDstUrlAsSingleton(src_url_names_container, have_multiple_srcs,
+                                  have_existing_dest_subdir, dst_url,
                                   recursion_requested):
   """Checks that dst_url names a single file/object after wildcard expansion.
 
@@ -605,10 +587,8 @@ def ConstructDstUrl(src_url,
   if (exp_dst_url.IsFileUrl() and exp_dst_url.IsStream() and preserve_posix):
     raise CommandException('Cannot preserve POSIX attributes with a stream.')
 
-  if _ShouldTreatDstUrlAsSingleton(src_url_names_container,
-                                   have_multiple_srcs,
-                                   have_existing_dest_subdir,
-                                   exp_dst_url,
+  if _ShouldTreatDstUrlAsSingleton(src_url_names_container, have_multiple_srcs,
+                                   have_existing_dest_subdir, exp_dst_url,
                                    recursion_requested):
     # We're copying one file or object to one file or object.
     return exp_dst_url
@@ -624,10 +604,8 @@ def ConstructDstUrl(src_url,
     # We're copying one file or object to a subdirectory. Append final comp
     # of exp_src_url to exp_dst_url.
     src_final_comp = exp_src_url.object_name.rpartition(src_url.delim)[-1]
-    return StorageUrlFromString(
-        '%s%s%s' % (exp_dst_url.url_string.rstrip(exp_dst_url.delim),
-                    exp_dst_url.delim,
-                    src_final_comp))
+    return StorageUrlFromString('%s%s%s' % (exp_dst_url.url_string.rstrip(
+        exp_dst_url.delim), exp_dst_url.delim, src_final_comp))
 
   # Else we're copying multiple sources to a directory, bucket, or a bucket
   # "sub-directory".
@@ -644,8 +622,8 @@ def ConstructDstUrl(src_url,
   if ((have_multiple_srcs or src_url_names_container or
        (exp_dst_url.IsFileUrl() and exp_dst_url.IsDirectory())) and
       not exp_dst_url.url_string.endswith(exp_dst_url.delim)):
-    exp_dst_url = StorageUrlFromString('%s%s' % (exp_dst_url.url_string,
-                                                 exp_dst_url.delim))
+    exp_dst_url = StorageUrlFromString(
+        '%s%s' % (exp_dst_url.url_string, exp_dst_url.delim))
 
   # Making naming behavior match how things work with local Linux cp and mv
   # operations depends on many factors, including whether the destination is a
@@ -724,23 +702,17 @@ def ConstructDstUrl(src_url,
     dst_key_name = exp_src_url.object_name.rpartition(src_url.delim)[-1]
 
   if (not recursive_move_to_new_subdir and
-      (exp_dst_url.IsFileUrl() or
-       _ShouldTreatDstUrlAsBucketSubDir(have_multiple_srcs,
-                                        exp_dst_url,
-                                        have_existing_dest_subdir,
-                                        src_url_names_container,
-                                        recursion_requested))):
+      (exp_dst_url.IsFileUrl() or _ShouldTreatDstUrlAsBucketSubDir(
+          have_multiple_srcs, exp_dst_url, have_existing_dest_subdir,
+          src_url_names_container, recursion_requested))):
     if exp_dst_url.object_name and exp_dst_url.object_name.endswith(
         exp_dst_url.delim):
       dst_key_name = '%s%s%s' % (exp_dst_url.object_name.rstrip(
-          exp_dst_url.delim),
-                                 exp_dst_url.delim,
-                                 dst_key_name)
+          exp_dst_url.delim), exp_dst_url.delim, dst_key_name)
     else:
       delim = exp_dst_url.delim if exp_dst_url.object_name else ''
-      dst_key_name = '%s%s%s' % (exp_dst_url.object_name or '',
-                                 delim,
-                                 dst_key_name)
+      dst_key_name = '%s%s%s' % (exp_dst_url.object_name or
+                                 '', delim, dst_key_name)
 
   new_exp_dst_url = exp_dst_url.Clone()
   new_exp_dst_url.object_name = dst_key_name.replace(src_url.delim,
@@ -758,10 +730,7 @@ def _CreateDigestsFromDigesters(digesters):
   return digests
 
 
-def _CreateDigestsFromLocalFile(status_queue,
-                                algs,
-                                file_name,
-                                src_url,
+def _CreateDigestsFromLocalFile(status_queue, algs, file_name, src_url,
                                 src_obj_metadata):
   """Creates a base64 CRC32C and/or MD5 digest from file_name.
 
@@ -795,10 +764,7 @@ def _CreateDigestsFromLocalFile(status_queue,
   return digests
 
 
-def _CheckCloudHashes(logger,
-                      src_url,
-                      dst_url,
-                      src_obj_metadata,
+def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
                       dst_obj_metadata):
   """Validates integrity of two cloud objects copied via daisy-chain.
 
@@ -837,26 +803,19 @@ def _CheckCloudHashes(logger,
     if six.PY3 and isinstance(download_b64_digest, str):
       download_b64_digest = download_b64_digest.encode('ascii')
     logger.debug('Comparing source vs destination %s-checksum for %s. (%s/%s)',
-                 alg,
-                 dst_url,
-                 download_b64_digest,
-                 upload_b64_digest)
+                 alg, dst_url, download_b64_digest, upload_b64_digest)
     if download_b64_digest != upload_b64_digest:
       raise HashMismatchException(
           '%s signature for source object (%s) doesn\'t match '
           'destination object digest (%s). Object (%s) will be deleted.' %
-          (alg,
-           download_b64_digest,
-           upload_b64_digest,
-           dst_url))
+          (alg, download_b64_digest, upload_b64_digest, dst_url))
     checked_one = True
   if not checked_one:
     # One known way this can currently happen is when downloading objects larger
     # than 5 GiB from S3 (for which the etag is not an MD5).
     logger.warn(
         'WARNING: Found no hashes to validate object downloaded from %s and '
-        'uploaded to %s. Integrity cannot be assured without hashes.',
-        src_url,
+        'uploaded to %s. Integrity cannot be assured without hashes.', src_url,
         dst_url)
 
 
@@ -905,34 +864,26 @@ def _CheckHashes(logger,
 
     local_b64_digest = six.ensure_binary(local_hashes[alg])
     cloud_b64_digest = cloud_hashes[alg]
-    logger.debug('Comparing local vs cloud %s-checksum for %s. (%s/%s)',
-                 alg,
-                 file_name,
-                 local_b64_digest,
-                 cloud_b64_digest)
+    logger.debug('Comparing local vs cloud %s-checksum for %s. (%s/%s)', alg,
+                 file_name, local_b64_digest, cloud_b64_digest)
     if local_b64_digest != cloud_b64_digest:
       raise HashMismatchException(
           '%s signature computed for local file (%s) doesn\'t match '
           'cloud-supplied digest (%s). %s (%s) will be deleted.' %
-          (alg,
-           local_b64_digest,
-           cloud_b64_digest,
-           'Cloud object' if is_upload else 'Local file',
-           obj_url if is_upload else file_name))
+          (alg, local_b64_digest, cloud_b64_digest, 'Cloud object'
+           if is_upload else 'Local file', obj_url if is_upload else file_name))
     checked_one = True
   if not checked_one:
     if is_upload:
       logger.warn(
           'WARNING: Found no hashes to validate object uploaded to %s. '
-          'Integrity cannot be assured without hashes.',
-          obj_url)
+          'Integrity cannot be assured without hashes.', obj_url)
     else:
       # One known way this can currently happen is when downloading objects larger
       # than 5 GB from S3 (for which the etag is not an MD5).
       logger.warn(
           'WARNING: Found no hashes to validate object downloaded to %s. '
-          'Integrity cannot be assured without hashes.',
-          file_name)
+          'Integrity cannot be assured without hashes.', file_name)
 
 
 def IsNoClobberServerException(e):
@@ -948,10 +899,8 @@ def IsNoClobberServerException(e):
     bool indicator - True indicates that the server did attempt to clobber
         an existing file.
   """
-  return ((isinstance(e,
-                      PreconditionException)) or
-          (isinstance(e,
-                      ResumableUploadException) and '412' in e.message))
+  return ((isinstance(e, PreconditionException)) or
+          (isinstance(e, ResumableUploadException) and '412' in e.message))
 
 
 def CheckForDirFileConflict(exp_src_url, dst_url):
@@ -987,13 +936,11 @@ def CheckForDirFileConflict(exp_src_url, dst_url):
   if os.path.isfile(final_dir):
     raise CommandException('Cannot retrieve %s because a file exists '
                            'where a directory needs to be created (%s).' %
-                           (exp_src_url.url_string,
-                            final_dir))
+                           (exp_src_url.url_string, final_dir))
   if os.path.isdir(dst_path):
     raise CommandException('Cannot retrieve %s because a directory exists '
                            '(%s) where the file needs to be created.' %
-                           (exp_src_url.url_string,
-                            dst_path))
+                           (exp_src_url.url_string, dst_path))
 
 
 def _PartitionFile(fp,
@@ -1032,14 +979,10 @@ def _PartitionFile(fp,
     dst_args: The destination URIs for the temporary component objects.
   """
   parallel_composite_upload_component_size = HumanReadableToBytes(
-      config.get('GSUtil',
-                 'parallel_composite_upload_component_size',
+      config.get('GSUtil', 'parallel_composite_upload_component_size',
                  DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE))
-  (num_components,
-   component_size) = _GetPartitionInfo(
-       file_size,
-       MAX_COMPOSE_ARITY,
-       parallel_composite_upload_component_size)
+  (num_components, component_size) = _GetPartitionInfo(
+      file_size, MAX_COMPOSE_ARITY, parallel_composite_upload_component_size)
 
   dst_args = {}  # Arguments to create commands and pass to subprocesses.
   file_names = []  # Used for the 2-step process of forming dst_args.
@@ -1065,17 +1008,10 @@ def _PartitionFile(fp,
       # The last component just gets all of the remaining bytes.
       file_part_length = (file_size - ((num_components - 1) * component_size))
     offset = i * component_size
-    func_args = PerformParallelUploadFileToObjectArgs(fp.name,
-                                                      offset,
-                                                      file_part_length,
-                                                      src_url,
-                                                      tmp_dst_url,
-                                                      canned_acl,
-                                                      content_type,
-                                                      tracker_file,
-                                                      tracker_file_lock,
-                                                      encryption_key_sha256,
-                                                      gzip_encoded)
+    func_args = PerformParallelUploadFileToObjectArgs(
+        fp.name, offset, file_part_length, src_url, tmp_dst_url, canned_acl,
+        content_type, tracker_file, tracker_file_lock, encryption_key_sha256,
+        gzip_encoded)
     file_names.append(temp_file_name)
     dst_args[temp_file_name] = func_args
 
@@ -1143,29 +1079,18 @@ def _DoParallelCompositeUpload(fp,
   # uploaded.
   tracker_file_name = GetTrackerFilePath(dst_url,
                                          TrackerFileType.PARALLEL_UPLOAD,
-                                         api_selector,
-                                         src_url)
+                                         api_selector, src_url)
 
-  (existing_enc_key_sha256,
-   existing_prefix,
+  (existing_enc_key_sha256, existing_prefix,
    existing_components) = (ReadParallelUploadTrackerFile(
-       tracker_file_name,
-       logger))
+       tracker_file_name, logger))
 
   # Ensure that the tracker data is still valid (encryption keys match) and
   # perform any necessary cleanup.
-  (existing_prefix,
-   existing_components) = ValidateParallelCompositeTrackerData(
-       tracker_file_name,
-       existing_enc_key_sha256,
-       existing_prefix,
-       existing_components,
-       encryption_key_sha256,
-       dst_bucket_url,
-       command_obj,
-       logger,
-       _DeleteTempComponentObjectFn,
-       _RmExceptionHandler)
+  (existing_prefix, existing_components) = ValidateParallelCompositeTrackerData(
+      tracker_file_name, existing_enc_key_sha256, existing_prefix,
+      existing_components, encryption_key_sha256, dst_bucket_url, command_obj,
+      logger, _DeleteTempComponentObjectFn, _RmExceptionHandler)
 
   encryption_key_sha256 = (encryption_key_sha256.decode('ascii')
                            if encryption_key_sha256 is not None else None)
@@ -1197,19 +1122,14 @@ def _DoParallelCompositeUpload(fp,
                             encryption_key_sha256=encryption_key_sha256,
                             gzip_encoded=gzip_encoded)
 
-  (components_to_upload,
-   existing_components,
+  (components_to_upload, existing_components,
    existing_objects_to_delete) = (FilterExistingComponents(
-       dst_args,
-       existing_components,
-       dst_bucket_url,
-       gsutil_api))
+       dst_args, existing_components, dst_bucket_url, gsutil_api))
 
   # Assign a start message to each different component type
   for component in components_to_upload:
     components_info[component.dst_url.url_string] = (
-        FileMessage.COMPONENT_TO_UPLOAD,
-        component.file_length)
+        FileMessage.COMPONENT_TO_UPLOAD, component.file_length)
     PutToQueueWithTimeout(
         gsutil_api.status_queue,
         FileMessage(component.src_url,
@@ -1247,9 +1167,7 @@ def _DoParallelCompositeUpload(fp,
   cp_results = command_obj.Apply(
       _PerformParallelUploadFileToObject,
       components_to_upload,
-      copy_exception_handler,
-      ('op_failure_count',
-       'total_bytes_transferred'),
+      copy_exception_handler, ('op_failure_count', 'total_bytes_transferred'),
       arg_checker=gslib.command.DummyArgChecker,
       parallel_operations_override=command_obj.ParallelOverrideReason.SLICE,
       should_return_results=True)
@@ -1277,9 +1195,7 @@ def _DoParallelCompositeUpload(fp,
         dst_obj_metadata,
         preconditions=preconditions,
         provider=dst_url.scheme,
-        fields=['crc32c',
-                'generation',
-                'size'],
+        fields=['crc32c', 'generation', 'size'],
         encryption_tuple=encryption_keywrapper)
 
     try:
@@ -1311,10 +1227,7 @@ def _DoParallelCompositeUpload(fp,
         except:  # pylint: disable=bare-except
           PutToQueueWithTimeout(
               gsutil_api.status_queue,
-              FileMessage(src_url,
-                          component,
-                          time.time(),
-                          finished=True))
+              FileMessage(src_url, component, time.time(), finished=True))
 
       for component in existing_objects_to_delete:
         PutToQueueWithTimeout(
@@ -1378,8 +1291,7 @@ def _ShouldDoParallelCompositeUpload(logger,
 
   global suggested_sliced_transfers, suggested_sliced_transfers_lock
   parallel_composite_upload_threshold = HumanReadableToBytes(
-      config.get('GSUtil',
-                 'parallel_composite_upload_threshold',
+      config.get('GSUtil', 'parallel_composite_upload_threshold',
                  DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD))
 
   all_factors_but_size = (
@@ -1445,8 +1357,7 @@ def _ShouldDoParallelCompositeUpload(logger,
     try:
       bucket = gsutil_api.GetBucket(dst_url.bucket_name,
                                     provider=dst_url.scheme,
-                                    fields=['id',
-                                            'encryption'])
+                                    fields=['id', 'encryption'])
       if bucket.encryption and bucket.encryption.defaultKmsKeyName:
         bucket_metadata_pcu_check = False
       else:
@@ -1527,8 +1438,7 @@ def ExpandUrlToSingleBlr(url_str,
                                          prefix=storage_url.object_name,
                                          delimiter='/',
                                          provider=storage_url.scheme,
-                                         fields=['prefixes',
-                                                 'items/name'])
+                                         fields=['prefixes', 'items/name'])
   for obj_or_prefix in list_iterator:
     # To conserve HTTP calls for the common case, we make a single listing
     # that covers prefixes and object names. Listing object names covers the
@@ -1686,9 +1596,7 @@ def _CopyObjToObjInTheCloud(src_url,
                   size=src_obj_metadata.size,
                   finished=True))
 
-  return (end_time - start_time,
-          src_obj_metadata.size,
-          result_url,
+  return (end_time - start_time, src_obj_metadata.size, result_url,
           dst_obj.md5Hash)
 
 
@@ -1714,10 +1622,7 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
       real_file_path = os.path.realpath(object_name)
       if config.getbool('GSUtil', 'use_magicfile', False) and not IS_WINDOWS:
         try:
-          p = subprocess.Popen(['file',
-                                '-b',
-                                '--mime',
-                                real_file_path],
+          p = subprocess.Popen(['file', '-b', '--mime', real_file_path],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
           output, error = p.communicate()
@@ -1726,16 +1631,13 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
           if p.returncode != 0 or error:
             raise CommandException(
                 'Encountered error running "file -b --mime %s" '
-                '(returncode=%d).\n%s' % (real_file_path,
-                                          p.returncode,
-                                          error))
+                '(returncode=%d).\n%s' % (real_file_path, p.returncode, error))
           # Parse output by removing line delimiter
           content_type = output.rstrip()
         except OSError as e:  # 'file' executable may not always be present.
           raise CommandException(
               'Encountered OSError running "file -b --mime %s"\n%s' %
-              (real_file_path,
-               e))
+              (real_file_path, e))
       else:
         content_type = mimetypes.guess_type(real_file_path)[0]
     if not content_type:
@@ -1843,8 +1745,7 @@ def _UploadFileToObjectResumable(src_url,
     populated.
   """
   tracker_file_name = GetTrackerFilePath(
-      dst_url,
-      TrackerFileType.UPLOAD,
+      dst_url, TrackerFileType.UPLOAD,
       gsutil_api.GetApiSelector(provider=dst_url.scheme))
 
   encryption_keywrapper = GetEncryptionKeyWrapper(config)
@@ -1878,9 +1779,7 @@ def _UploadFileToObjectResumable(src_url,
   # This contains the upload URL, which will uniquely identify the
   # destination object.
   tracker_data = GetUploadTrackerData(
-      tracker_file_name,
-      logger,
-      encryption_key_sha256=encryption_key_sha256)
+      tracker_file_name, logger, encryption_key_sha256=encryption_key_sha256)
   if tracker_data:
     logger.info('Resuming upload for %s', src_url.url_string)
 
@@ -1949,15 +1848,12 @@ def _UploadFileToObjectResumable(src_url,
       finally:
         DeleteTrackerFile(tracker_file_name)
         logger.info('Deleted tracker file %s for resumable upload of %s before '
-                    'retrying.' % (tracker_file_name,
-                                   src_url.url_string))
+                    'retrying.' % (tracker_file_name, src_url.url_string))
 
       logger.info(
           'Restarting upload of %s from scratch (retry #%d) after exception '
           'indicating we need to start over with a new resumable upload ID: %s'
-          % (src_url.url_string,
-             num_startover_attempts,
-             e))
+          % (src_url.url_string, num_startover_attempts, e))
       tracker_data = None
       src_obj_filestream.seek(0)
       # Reset the progress callback handler.
@@ -2030,9 +1926,7 @@ def _SelectUploadCompressionStrategy(object_name,
   return zipped_file, gzip_encoded_file
 
 
-def _ApplyZippedUploadCompression(src_url,
-                                  src_obj_filestream,
-                                  src_obj_size,
+def _ApplyZippedUploadCompression(src_url, src_obj_filestream, src_obj_size,
                                   logger):
   """Compresses a to-be-uploaded local file to save bandwidth.
 
@@ -2069,8 +1963,7 @@ def _ApplyZippedUploadCompression(src_url,
       raise CommandException('Inadequate temp space available to compress '
                              '%s. See the CHANGING TEMP DIRECTORIES section '
                              'of "gsutil help cp" for more info.' % src_url)
-    compression_level = config.getint('GSUtil',
-                                      'gzip_compression_level',
+    compression_level = config.getint('GSUtil', 'gzip_compression_level',
                                       DEFAULT_GZIP_COMPRESSION_LEVEL)
     gzip_fp = gzip.open(gzip_path, 'wb', compresslevel=compression_level)
     data = src_obj_filestream.read(GZIP_CHUNK_SIZE)
@@ -2087,13 +1980,9 @@ def _ApplyZippedUploadCompression(src_url,
   return StorageUrlFromString(gzip_path), compressed_filestream, gzip_size
 
 
-def _DelegateUploadFileToObject(upload_delegate,
-                                upload_url,
-                                upload_stream,
-                                zipped_file,
-                                gzip_encoded_file,
-                                parallel_composite_upload,
-                                logger):
+def _DelegateUploadFileToObject(upload_delegate, upload_url, upload_stream,
+                                zipped_file, gzip_encoded_file,
+                                parallel_composite_upload, logger):
   """Handles setup and tear down logic for uploads.
 
   This is a helper function for _UploadFileToObject.
@@ -2140,8 +2029,7 @@ def _DelegateUploadFileToObject(upload_delegate,
       except Exception:  # pylint: disable=broad-except
         logger.warning(
             'Could not delete %s. This can occur in Windows because the '
-            'temporary file is still locked.',
-            upload_url.object_name)
+            'temporary file is still locked.', upload_url.object_name)
 
     # In the zipped_file case, this is the gzip stream. When the gzip stream is
     # created, the original source stream is closed in
@@ -2258,18 +2146,14 @@ def _UploadFileToObject(src_url,
     orig_stream = upload_stream
     # Add limited seekable properties to the stream via buffering.
     upload_stream = ResumableStreamingJsonUploadWrapper(
-        orig_stream,
-        GetJsonResumableChunkSize())
+        orig_stream, GetJsonResumableChunkSize())
 
   if not parallel_composite_upload and len(hash_algs):
     # Parallel composite uploads calculate hashes per-component in subsequent
     # calls to this function, but the composition of the final object is a
     # cloud-only operation.
-    wrapped_filestream = HashingFileUploadWrapper(upload_stream,
-                                                  digesters,
-                                                  hash_algs,
-                                                  upload_url,
-                                                  logger)
+    wrapped_filestream = HashingFileUploadWrapper(upload_stream, digesters,
+                                                  hash_algs, upload_url, logger)
   else:
     wrapped_filestream = upload_stream
 
@@ -2363,9 +2247,7 @@ def _UploadFileToObject(src_url,
                     size=upload_size,
                     finished=True))
 
-  return (elapsed_time,
-          uploaded_object.size,
-          result_url,
+  return (elapsed_time, uploaded_object.size, result_url,
           uploaded_object.md5Hash)
 
 
@@ -2426,10 +2308,8 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
   return download_file_name, need_to_unzip
 
 
-def _ShouldDoSlicedDownload(download_strategy,
-                            src_obj_metadata,
-                            allow_splitting,
-                            logger):
+def _ShouldDoSlicedDownload(download_strategy, src_obj_metadata,
+                            allow_splitting, logger):
   """Determines whether the sliced download strategy should be used.
 
   Args:
@@ -2442,8 +2322,7 @@ def _ShouldDoSlicedDownload(download_strategy,
     True iff a sliced download should be performed on the source file.
   """
   sliced_object_download_threshold = HumanReadableToBytes(
-      config.get('GSUtil',
-                 'sliced_object_download_threshold',
+      config.get('GSUtil', 'sliced_object_download_threshold',
                  DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD))
 
   max_components = config.getint('GSUtil',
@@ -2452,8 +2331,7 @@ def _ShouldDoSlicedDownload(download_strategy,
 
   # Don't use sliced download if it will prevent us from performing an
   # integrity check.
-  check_hashes_config = config.get('GSUtil',
-                                   'check_hashes',
+  check_hashes_config = config.get('GSUtil', 'check_hashes',
                                    CHECK_HASH_IF_FAST_ELSE_FAIL)
   parallel_hashing = src_obj_metadata.crc32c and UsingCrcmodExtension(crcmod)
   hashing_okay = parallel_hashing or check_hashes_config == CHECK_HASH_NEVER
@@ -2508,36 +2386,31 @@ def _PerformSlicedDownloadObjectToFile(cls, args, thread_state=None):
                                   consider_crc32c=src_obj_metadata.crc32c)
   digesters = dict((alg, hash_algs[alg]()) for alg in hash_algs or {})
 
-  (bytes_transferred,
-   server_encoding) = (_DownloadObjectToFileResumable(
-       args.src_url,
-       src_obj_metadata,
-       args.dst_url,
-       args.download_file_name,
-       gsutil_api,
-       cls.logger,
-       digesters,
-       component_num=args.component_num,
-       start_byte=args.start_byte,
-       end_byte=args.end_byte,
-       decryption_key=args.decryption_key))
+  (bytes_transferred, server_encoding) = (_DownloadObjectToFileResumable(
+      args.src_url,
+      src_obj_metadata,
+      args.dst_url,
+      args.download_file_name,
+      gsutil_api,
+      cls.logger,
+      digesters,
+      component_num=args.component_num,
+      start_byte=args.start_byte,
+      end_byte=args.end_byte,
+      decryption_key=args.decryption_key))
 
   crc32c_val = None
   if 'crc32c' in digesters:
     crc32c_val = digesters['crc32c'].crcValue
-  return PerformSlicedDownloadReturnValues(args.component_num,
-                                           crc32c_val,
+  return PerformSlicedDownloadReturnValues(args.component_num, crc32c_val,
                                            bytes_transferred,
                                            args.end_byte - args.start_byte + 1,
                                            server_encoding)
 
 
-def _MaintainSlicedDownloadTrackerFiles(src_obj_metadata,
-                                        dst_url,
-                                        download_file_name,
-                                        logger,
-                                        api_selector,
-                                        num_components):
+def _MaintainSlicedDownloadTrackerFiles(src_obj_metadata, dst_url,
+                                        download_file_name, logger,
+                                        api_selector, num_components):
   """Maintains sliced download tracker files in order to permit resumability.
 
   Reads or creates a sliced download tracker file representing this object
@@ -2594,8 +2467,8 @@ def _MaintainSlicedDownloadTrackerFiles(src_obj_metadata,
     # is attempted on an object), but warn user for other errors.
     if isinstance(e, ValueError) or e.errno != errno.ENOENT:
       logger.warn('Couldn\'t read sliced download tracker file (%s): %s. '
-                  'Restarting download from scratch.' % (tracker_file_name,
-                                                         str(e)))
+                  'Restarting download from scratch.' %
+                  (tracker_file_name, str(e)))
   finally:
     if fp:
       fp.close()
@@ -2628,11 +2501,7 @@ class SlicedDownloadFileWrapper(object):
   while the downloaded bytes are normally written to file.
   """
 
-  def __init__(self,
-               fp,
-               tracker_file_name,
-               src_obj_metadata,
-               start_byte,
+  def __init__(self, fp, tracker_file_name, src_obj_metadata, start_byte,
                end_byte):
     """Initializes the SlicedDownloadFileWrapper.
 
@@ -2712,8 +2581,7 @@ def _PartitionObject(src_url,
                             to be used in Apply for the sliced download.
   """
   sliced_download_component_size = HumanReadableToBytes(
-      config.get('GSUtil',
-                 'sliced_object_download_component_size',
+      config.get('GSUtil', 'sliced_object_download_component_size',
                  DEFAULT_SLICED_OBJECT_DOWNLOAD_COMPONENT_SIZE))
 
   max_components = config.getint('GSUtil',
@@ -2735,13 +2603,9 @@ def _PartitionObject(src_url,
     src_obj_metadata_json = protojson.encode_message(src_obj_metadata)
 
     components_to_download.append(
-        PerformSlicedDownloadObjectToFileArgs(i,
-                                              src_url,
-                                              src_obj_metadata_json,
-                                              dst_url,
-                                              download_file_name,
-                                              start_byte,
-                                              end_byte,
+        PerformSlicedDownloadObjectToFileArgs(i, src_url, src_obj_metadata_json,
+                                              dst_url, download_file_name,
+                                              start_byte, end_byte,
                                               decryption_key))
   return components_to_download, component_lengths
 
@@ -2788,11 +2652,8 @@ def _DoSlicedDownload(src_url,
       src_url, src_obj_metadata, dst_url, download_file_name, decryption_key)
 
   num_components = len(components_to_download)
-  _MaintainSlicedDownloadTrackerFiles(src_obj_metadata,
-                                      dst_url,
-                                      download_file_name,
-                                      logger,
-                                      api_selector,
+  _MaintainSlicedDownloadTrackerFiles(src_obj_metadata, dst_url,
+                                      download_file_name, logger, api_selector,
                                       num_components)
 
   # Resize the download file so each child process can seek to its start byte.
@@ -2802,12 +2663,9 @@ def _DoSlicedDownload(src_url,
   for (i, component) in enumerate(components_to_download):
     size = component.end_byte - component.start_byte + 1
 
-    download_start_byte = GetDownloadStartByte(src_obj_metadata,
-                                               dst_url,
+    download_start_byte = GetDownloadStartByte(src_obj_metadata, dst_url,
                                                api_selector,
-                                               component.start_byte,
-                                               size,
-                                               i)
+                                               component.start_byte, size, i)
     bytes_already_downloaded = download_start_byte - component.start_byte
     PutToQueueWithTimeout(
         status_queue,
@@ -2939,8 +2797,7 @@ def _DownloadObjectToFileResumable(src_url,
     elif download_complete:
       logger.info(
           'Download already complete for %s, skipping download but '
-          'will run integrity checks.',
-          download_name)
+          'will run integrity checks.', download_name)
 
     # This is used for resuming downloads, but also for passing the mediaLink
     # and size into the download for new downloads so that we can avoid
@@ -2990,11 +2847,8 @@ def _DownloadObjectToFileResumable(src_url,
         progress_callback = pickle.loads(test_fp.read()).call
 
     if is_sliced and src_obj_metadata.size >= ResumableThreshold():
-      fp = SlicedDownloadFileWrapper(fp,
-                                     tracker_file_name,
-                                     src_obj_metadata,
-                                     start_byte,
-                                     end_byte)
+      fp = SlicedDownloadFileWrapper(fp, tracker_file_name, src_obj_metadata,
+                                     start_byte, end_byte)
 
     compressed_encoding = ObjectIsGzipEncoded(src_obj_metadata)
 
@@ -3024,8 +2878,7 @@ def _DownloadObjectToFileResumable(src_url,
 
   except ResumableDownloadException as e:
     logger.warning('Caught ResumableDownloadException (%s) for download of %s.',
-                   e.reason,
-                   download_name)
+                   e.reason, download_name)
     raise
   finally:
     if fp:
@@ -3068,9 +2921,7 @@ def _DownloadObjectToFileNonResumable(src_url,
     # This is used to pass the mediaLink and the size into the download so that
     # we can avoid making an extra HTTP call.
     serialization_data = GetDownloadSerializationData(
-        src_obj_metadata,
-        0,
-        user_project=gsutil_api.user_project)
+        src_obj_metadata, 0, user_project=gsutil_api.user_project)
 
     progress_callback = FileProgressCallbackHandler(
         gsutil_api.status_queue,
@@ -3147,10 +2998,8 @@ def _DownloadObjectToFile(src_url,
 
   api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
   download_strategy = _SelectDownloadStrategy(dst_url)
-  sliced_download = _ShouldDoSlicedDownload(download_strategy,
-                                            src_obj_metadata,
-                                            allow_splitting,
-                                            logger)
+  sliced_download = _ShouldDoSlicedDownload(download_strategy, src_obj_metadata,
+                                            allow_splitting, logger)
 
   download_file_name, need_to_unzip = _GetDownloadFile(dst_url,
                                                        src_obj_metadata, logger)
@@ -3190,30 +3039,28 @@ def _DownloadObjectToFile(src_url,
       if 'crc32c' in digesters:
         digesters['crc32c'].crcValue = crc32c
     elif download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
-      (bytes_transferred,
-       server_encoding) = (_DownloadObjectToFileNonResumable(
-           src_url,
-           src_obj_metadata,
-           dst_url,
-           download_file_name,
-           gsutil_api,
-           digesters,
-           decryption_key=decryption_key))
+      (bytes_transferred, server_encoding) = (_DownloadObjectToFileNonResumable(
+          src_url,
+          src_obj_metadata,
+          dst_url,
+          download_file_name,
+          gsutil_api,
+          digesters,
+          decryption_key=decryption_key))
     elif download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
-      (bytes_transferred,
-       server_encoding) = (_DownloadObjectToFileResumable(
-           src_url,
-           src_obj_metadata,
-           dst_url,
-           download_file_name,
-           gsutil_api,
-           logger,
-           digesters,
-           decryption_key=decryption_key))
+      (bytes_transferred, server_encoding) = (_DownloadObjectToFileResumable(
+          src_url,
+          src_obj_metadata,
+          dst_url,
+          download_file_name,
+          gsutil_api,
+          logger,
+          digesters,
+          decryption_key=decryption_key))
     else:
       raise CommandException('Invalid download strategy %s chosen for'
-                             'file %s' % (download_strategy,
-                                          download_file_name))
+                             'file %s' %
+                             (download_strategy, download_file_name))
   end_time = time.time()
 
   server_gzip = server_encoding and server_encoding.lower().endswith('gzip')
@@ -3322,18 +3169,13 @@ def _ValidateAndCompleteDownload(logger,
     local_hashes = _CreateDigestsFromDigesters(digesters)
   else:
     local_hashes = _CreateDigestsFromLocalFile(gsutil_api.status_queue,
-                                               hash_algs,
-                                               file_name,
-                                               src_url,
+                                               hash_algs, file_name, src_url,
                                                src_obj_metadata)
 
   digest_verified = True
   hash_invalid_exception = None
   try:
-    _CheckHashes(logger,
-                 src_url,
-                 src_obj_metadata,
-                 final_file_name,
+    _CheckHashes(logger, src_url, src_obj_metadata, final_file_name,
                  local_hashes)
     DeleteDownloadTrackerFiles(dst_url, api_selector)
   except HashMismatchException as e:
@@ -3394,14 +3236,9 @@ def _ValidateAndCompleteDownload(logger,
     try:
       # Recalculate hashes on the unzipped local file.
       local_hashes = _CreateDigestsFromLocalFile(gsutil_api.status_queue,
-                                                 hash_algs,
-                                                 file_name,
-                                                 src_url,
+                                                 hash_algs, file_name, src_url,
                                                  src_obj_metadata)
-      _CheckHashes(logger,
-                   src_url,
-                   src_obj_metadata,
-                   final_file_name,
+      _CheckHashes(logger, src_url, src_obj_metadata, final_file_name,
                    local_hashes)
       DeleteDownloadTrackerFiles(dst_url, api_selector)
     except HashMismatchException:
@@ -3460,9 +3297,7 @@ def _CopyFileToFile(src_url, dst_url, status_queue=None, src_obj_metadata=None):
                   size=src_obj_metadata.size if src_obj_metadata else None,
                   finished=True))
 
-  return (end_time - start_time,
-          os.path.getsize(dst_url.object_name),
-          dst_url,
+  return (end_time - start_time, os.path.getsize(dst_url.object_name), dst_url,
           None)
 
 
@@ -3561,10 +3396,7 @@ def _CopyObjToObjDaisyChainMode(src_url,
   end_time = time.time()
 
   try:
-    _CheckCloudHashes(logger,
-                      src_url,
-                      dst_url,
-                      src_obj_metadata,
+    _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
                       uploaded_object)
   except HashMismatchException:
     if _RENAME_ON_HASH_MISMATCH:
@@ -3600,9 +3432,7 @@ def _CopyObjToObjDaisyChainMode(src_url,
                   size=src_obj_metadata.size,
                   finished=True))
 
-  return (end_time - start_time,
-          src_obj_metadata.size,
-          result_url,
+  return (end_time - start_time, src_obj_metadata.size, result_url,
           uploaded_object.md5Hash)
 
 
@@ -3654,23 +3484,10 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud,
     # complete object resource. Since we want metadata like the object size for
     # our own tracking, we just get all of the metadata here.
     src_obj_fields_set.update([
-        'cacheControl',
-        'componentCount',
-        'contentDisposition',
-        'contentEncoding',
-        'contentLanguage',
-        'contentType',
-        'crc32c',
-        'customerEncryption',
-        'etag',
-        'generation',
-        'md5Hash',
-        'mediaLink',
-        'metadata',
-        'metageneration',
-        'size',
-        'storageClass',
-        'timeCreated'
+        'cacheControl', 'componentCount', 'contentDisposition',
+        'contentEncoding', 'contentLanguage', 'contentType', 'crc32c',
+        'customerEncryption', 'etag', 'generation', 'md5Hash', 'mediaLink',
+        'metadata', 'metageneration', 'size', 'storageClass', 'timeCreated'
     ])
     # We only need the ACL if we're going to preserve it.
     if preserve_acl:
@@ -3679,15 +3496,8 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud,
   else:
     # Just get the fields needed to perform and validate the download.
     src_obj_fields_set.update([
-        'crc32c',
-        'contentEncoding',
-        'contentType',
-        'customerEncryption',
-        'etag',
-        'mediaLink',
-        'md5Hash',
-        'size',
-        'generation'
+        'crc32c', 'contentEncoding', 'contentType', 'customerEncryption',
+        'etag', 'mediaLink', 'md5Hash', 'size', 'generation'
     ])
     if is_rsync:
       src_obj_fields_set.update(['metadata/%s' % MTIME_ATTR, 'timeCreated'])
@@ -3735,8 +3545,7 @@ def WarnIfMvEarlyDeletionChargeApplies(src_url, src_obj_metadata, logger):
       src_obj_metadata.timeCreated and src_obj_metadata.storageClass):
     object_storage_class = src_obj_metadata.storageClass.lower()
     early_deletion_cutoff_seconds = EARLY_DELETION_MINIMUM_LIFETIME.get(
-        object_storage_class,
-        None)
+        object_storage_class, None)
     if early_deletion_cutoff_seconds:
       minimum_delete_age = (
           early_deletion_cutoff_seconds +
@@ -3746,8 +3555,7 @@ def WarnIfMvEarlyDeletionChargeApplies(src_url, src_obj_metadata, logger):
             'Warning: moving %s object %s may incur an early deletion '
             'charge, because the original object is less than %s '
             'days old according to the local system time.',
-            object_storage_class,
-            src_url.url_string,
+            object_storage_class, src_url.url_string,
             early_deletion_cutoff_seconds // SECONDS_PER_DAY)
 
 
@@ -3785,13 +3593,12 @@ def GetDecryptionCSEK(src_url, src_obj_metadata):
   """
   if src_obj_metadata.customerEncryption:
     decryption_key = FindMatchingCSEKInBotoConfig(
-        src_obj_metadata.customerEncryption.keySha256,
-        config)
+        src_obj_metadata.customerEncryption.keySha256, config)
     if not decryption_key:
       raise EncryptionException(
           'Missing decryption key with SHA256 hash %s. No decryption key '
-          'matches object %s' % (src_obj_metadata.customerEncryption.keySha256,
-                                 src_url))
+          'matches object %s' %
+          (src_obj_metadata.customerEncryption.keySha256, src_url))
     return decryption_key
 
 
@@ -3921,8 +3728,8 @@ def PerformCopy(logger,
     raise CommandException(
         '"%s" exceeds the maximum gsutil-supported size for an S3 upload. S3 '
         'objects greater than %s in size require multipart uploads, which '
-        'gsutil does not support.' % (src_url,
-                                      MakeHumanReadable(S3_MAX_UPLOAD_SIZE)))
+        'gsutil does not support.' %
+        (src_url, MakeHumanReadable(S3_MAX_UPLOAD_SIZE)))
 
   # On Windows, stdin is opened as text mode instead of binary which causes
   # problems when piping a binary file, so this switches it to binary mode.
@@ -4142,31 +3949,15 @@ class Manifest(object):
           with open(self.manifest_path, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
-                'Source',
-                'Destination',
-                'Start',
-                'End',
-                'Md5',
-                'UploadId',
-                'Source Size',
-                'Bytes Transferred',
-                'Result',
-                'Description'
+                'Source', 'Destination', 'Start', 'End', 'Md5', 'UploadId',
+                'Source Size', 'Bytes Transferred', 'Result', 'Description'
             ])
         else:
           with open(self.manifest_path, 'wb', 1) as f:
             writer = csv.writer(f)
             writer.writerow([
-                'Source',
-                'Destination',
-                'Start',
-                'End',
-                'Md5',
-                'UploadId',
-                'Source Size',
-                'Bytes Transferred',
-                'Result',
-                'Description'
+                'Source', 'Destination', 'Start', 'End', 'Md5', 'UploadId',
+                'Source Size', 'Bytes Transferred', 'Result', 'Description'
             ])
     except IOError:
       raise CommandException('Could not create manifest file.')
@@ -4200,16 +3991,14 @@ class Manifest(object):
     """Writes a manifest entry to the manifest file for the url argument."""
     row_item = self.items[url]
     data = [
-        row_item['source_uri'],
-        row_item['destination_uri'],
+        row_item['source_uri'], row_item['destination_uri'],
         '%sZ' % row_item['start_time'].isoformat(),
         '%sZ' % row_item['end_time'].isoformat(),
         row_item['md5'] if 'md5' in row_item else '',
         row_item['upload_id'] if 'upload_id' in row_item else '',
         str(row_item['size']) if 'size' in row_item else '',
         str(row_item['bytes']) if 'bytes' in row_item else '',
-        row_item['result'],
-        row_item['description']
+        row_item['result'], row_item['description']
     ]
 
     data = [six.ensure_str(value) for value in data]
@@ -4370,9 +4159,7 @@ def _DeleteTempComponentObjectFn(cls, url_to_delete, thread_state=None):
     pass
 
 
-def FilterExistingComponents(dst_args,
-                             existing_components,
-                             bucket_url,
+def FilterExistingComponents(dst_args, existing_components, bucket_url,
                              gsutil_api):
   """Determines course of action for component objects.
 
@@ -4431,8 +4218,7 @@ def FilterExistingComponents(dst_args,
       continue
 
     dst_arg = dst_args[tracker_object.object_name]
-    file_part = FilePart(dst_arg.filename,
-                         dst_arg.file_start,
+    file_part = FilePart(dst_arg.filename, dst_arg.file_start,
                          dst_arg.file_length)
     # TODO: calculate MD5's in parallel when possible.
     content_md5 = CalculateB64EncodedMd5FromContents(file_part)
@@ -4445,9 +4231,7 @@ def FilterExistingComponents(dst_args,
           dst_url.object_name,
           generation=dst_url.generation,
           provider=dst_url.scheme,
-          fields=['customerEncryption',
-                  'etag',
-                  'md5Hash'])
+          fields=['customerEncryption', 'etag', 'md5Hash'])
       cloud_md5 = dst_metadata.md5Hash
     except Exception:  # pylint: disable=broad-except
       # We don't actually care what went wrong - we couldn't retrieve the

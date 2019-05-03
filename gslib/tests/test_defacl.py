@@ -40,9 +40,7 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
 
   def _MakeScopeRegex(self, role, entity_type, email_address):
     template_regex = (r'\{.*"entity":\s*"%s-%s".*"role":\s*"%s".*\}' %
-                      (entity_type,
-                       email_address,
-                       role))
+                      (entity_type, email_address, role))
     return re.compile(template_regex, flags=re.DOTALL)
 
   def testChangeDefaultAcl(self):
@@ -50,24 +48,21 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     bucket = self.CreateBucket()
 
     test_regex = self._MakeScopeRegex('OWNER', 'group', self.GROUP_TEST_ADDRESS)
-    test_regex2 = self._MakeScopeRegex('READER',
-                                       'group',
+    test_regex2 = self._MakeScopeRegex('READER', 'group',
                                        self.GROUP_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
                                return_stdout=True)
     self.assertNotRegex(json_text, test_regex)
 
     self.RunGsUtil(self._defacl_ch_prefix +
-                   ['-g',
-                    self.GROUP_TEST_ADDRESS + ':FC',
-                    suri(bucket)])
+                   ['-g', self.GROUP_TEST_ADDRESS +
+                    ':FC', suri(bucket)])
     json_text2 = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
                                 return_stdout=True)
     self.assertRegex(json_text2, test_regex)
 
     self.RunGsUtil(self._defacl_ch_prefix +
-                   ['-g',
-                    self.GROUP_TEST_ADDRESS + ':READ',
+                   ['-g', self.GROUP_TEST_ADDRESS + ':READ',
                     suri(bucket)])
     json_text3 = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
                                 return_stdout=True)
@@ -75,8 +70,7 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
 
     stderr = self.RunGsUtil(
         self._defacl_ch_prefix +
-        ['-g',
-         self.GROUP_TEST_ADDRESS + ':WRITE',
+        ['-g', self.GROUP_TEST_ADDRESS + ':WRITE',
          suri(bucket)],
         return_stderr=True,
         expected_status=1)
@@ -94,12 +88,10 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     empty_regex = r'\[\]\s*'
     self.assertRegex(json_text, empty_regex)
 
-    group_regex = self._MakeScopeRegex('READER',
-                                       'group',
+    group_regex = self._MakeScopeRegex('READER', 'group',
                                        self.GROUP_TEST_ADDRESS)
     self.RunGsUtil(self._defacl_ch_prefix +
-                   ['-g',
-                    self.GROUP_TEST_ADDRESS + ':READ',
+                   ['-g', self.GROUP_TEST_ADDRESS + ':READ',
                     suri(bucket)])
     json_text2 = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
                                 return_stdout=True)
@@ -112,8 +104,7 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
 
     # After adding and removing a group, the default object ACL should be empty.
     self.RunGsUtil(self._defacl_ch_prefix +
-                   ['-d',
-                    self.GROUP_TEST_ADDRESS,
+                   ['-d', self.GROUP_TEST_ADDRESS,
                     suri(bucket)])
     json_text3 = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
                                 return_stdout=True)
@@ -124,8 +115,7 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     bucket1 = self.CreateBucket()
     bucket2 = self.CreateBucket()
 
-    test_regex = self._MakeScopeRegex('READER',
-                                      'group',
+    test_regex = self._MakeScopeRegex('READER', 'group',
                                       self.GROUP_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket1)],
                                return_stdout=True)
@@ -136,8 +126,7 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
 
     self.RunGsUtil(
         self._defacl_ch_prefix +
-        ['-g',
-         self.GROUP_TEST_ADDRESS + ':READ',
+        ['-g', self.GROUP_TEST_ADDRESS + ':READ',
          suri(bucket1),
          suri(bucket2)])
     json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket1)],
@@ -151,11 +140,9 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     """Tests defacl ch with multiple ACL entries."""
     bucket = self.CreateBucket()
 
-    test_regex_group = self._MakeScopeRegex('READER',
-                                            'group',
+    test_regex_group = self._MakeScopeRegex('READER', 'group',
                                             self.GROUP_TEST_ADDRESS)
-    test_regex_user = self._MakeScopeRegex('OWNER',
-                                           'user',
+    test_regex_user = self._MakeScopeRegex('OWNER', 'user',
                                            self.USER_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
                                return_stdout=True)
@@ -163,10 +150,8 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     self.assertNotRegex(json_text, test_regex_user)
 
     self.RunGsUtil(self._defacl_ch_prefix + [
-        '-g',
-        self.GROUP_TEST_ADDRESS + ':READ',
-        '-u',
-        self.USER_TEST_ADDRESS + ':fc',
+        '-g', self.GROUP_TEST_ADDRESS + ':READ', '-u', self.USER_TEST_ADDRESS +
+        ':fc',
         suri(bucket)
     ])
     json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
@@ -181,9 +166,8 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
                             return_stdout=True)
     self.assertEquals(stdout.rstrip(), '[]')
     self.RunGsUtil(self._defacl_ch_prefix +
-                   ['-u',
-                    self.USER_TEST_ADDRESS + ':fc',
-                    suri(bucket)])
+                   ['-u', self.USER_TEST_ADDRESS +
+                    ':fc', suri(bucket)])
 
   def testDeletePermissionsWithCh(self):
     """Tests removing permissions with defacl ch."""
@@ -195,16 +179,14 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     self.assertNotRegex(json_text, test_regex)
 
     self.RunGsUtil(self._defacl_ch_prefix +
-                   ['-u',
-                    self.USER_TEST_ADDRESS + ':fc',
-                    suri(bucket)])
+                   ['-u', self.USER_TEST_ADDRESS +
+                    ':fc', suri(bucket)])
     json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
                                return_stdout=True)
     self.assertRegex(json_text, test_regex)
 
     self.RunGsUtil(self._defacl_ch_prefix +
-                   ['-d',
-                    self.USER_TEST_ADDRESS,
+                   ['-d', self.USER_TEST_ADDRESS,
                     suri(bucket)])
     json_text = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
                                return_stdout=True)

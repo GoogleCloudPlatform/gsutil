@@ -196,11 +196,7 @@ class CommandOptions(HelpProvider):
   help_spec = HelpProvider.HelpSpec(
       help_name='metadata',
       help_name_aliases=[
-          'cache-control',
-          'caching',
-          'content type',
-          'mime type',
-          'mime',
+          'cache-control', 'caching', 'content type', 'mime type', 'mime',
           'type'
       ],
       help_type='additional_help',

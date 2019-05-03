@@ -44,8 +44,7 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('hash', args=[tmp_file], return_stdout=True)
     self.assertIn(b'Hashes [base64]', stdout)
     self.assertIn(
-        ('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC).encode('ascii'),
-        stdout)
+        ('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC).encode('ascii'), stdout)
     self.assertIn(('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5).encode('ascii'),
                   stdout)
 
@@ -61,8 +60,7 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('hash', args=['-h', tmp_file], return_stdout=True)
     self.assertIn(b'Hashes [hex]', stdout)
     self.assertIn(
-        ('\tHash (crc32c):\t\t%s' % _TEST_FILE_HEX_CRC).encode('ascii'),
-        stdout)
+        ('\tHash (crc32c):\t\t%s' % _TEST_FILE_HEX_CRC).encode('ascii'), stdout)
     self.assertIn(('\tHash (md5):\t\t%s' % _TEST_FILE_HEX_MD5).encode('ascii'),
                   stdout)
 
@@ -70,8 +68,7 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
     num_test_files = 2
     tmp_dir = self.CreateTempDir(test_files=num_test_files)
     stdout = self.RunCommand('hash',
-                             args=[os.path.join(tmp_dir,
-                                                '*')],
+                             args=[os.path.join(tmp_dir, '*')],
                              return_stdout=True)
     # One summary line and two hash lines per file.
     num_expected_lines = num_test_files * (1 + 2)
@@ -80,17 +77,13 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
   def testHashSelectAlg(self):
     tmp_file = self.CreateTempFile(contents=_TEST_FILE_CONTENTS)
     stdout_crc = self.RunCommand('hash',
-                                 args=['-c',
-                                       tmp_file],
+                                 args=['-c', tmp_file],
                                  return_stdout=True)
     stdout_md5 = self.RunCommand('hash',
-                                 args=['-m',
-                                       tmp_file],
+                                 args=['-m', tmp_file],
                                  return_stdout=True)
     stdout_both = self.RunCommand('hash',
-                                  args=['-c',
-                                        '-m',
-                                        tmp_file],
+                                  args=['-c', '-m', tmp_file],
                                   return_stdout=True)
     for stdout in (stdout_crc, stdout_both):
       self.assertIn(
@@ -98,8 +91,7 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
           stdout)
     for stdout in (stdout_md5, stdout_both):
       self.assertIn(
-          ('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5).encode('ascii'),
-          stdout)
+          ('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5).encode('ascii'), stdout)
     self.assertNotIn(b'md5', stdout_crc)
     self.assertNotIn(b'crc32c', stdout_md5)
 

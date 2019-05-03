@@ -109,8 +109,7 @@ class UpdateCommand(Command):
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
   )
   # Help specification. See help_provider.py for documentation.
@@ -170,9 +169,7 @@ class UpdateCommand(Command):
             'password, and the install will run as "root". If you\'re unsure what '
             'this means please ask your system administrator for help:')) + (
                 '\n\tsudo chmod 0644 %s\n\tsudo env BOTO_CONFIG="%s" %s update'
-                '%s') % (config_files,
-                         config_files,
-                         self.gsutil_path,
+                '%s') % (config_files, config_files, self.gsutil_path,
                          ' '.join(chmod_cmds)),
                            informational=True)
 
@@ -373,13 +370,10 @@ class UpdateCommand(Command):
                 'NOTE: This a major new version, so it is strongly recommended '
                 'that you review the release note details at %s before updating to '
                 'this version, especially if you use gsutil in scripts.' %
-                (tarball_version,
-                 gslib.GSUTIL_DIR,
-                 RELEASE_NOTES_URL)))))
+                (tarball_version, gslib.GSUTIL_DIR, RELEASE_NOTES_URL)))))
       else:
         print(('This command will update to the "%s" version of\ngsutil at %s' %
-               (tarball_version,
-                gslib.GSUTIL_DIR)))
+               (tarball_version, gslib.GSUTIL_DIR)))
     self._ExplainIfSudoNeeded(tf, dirs_to_remove, old_cwd)
 
     if no_prompt:
@@ -402,8 +396,7 @@ class UpdateCommand(Command):
     # tarball (since the latter creates files in ./gsutil). So, we need to
     # extract at the parent directory level.
     gsutil_bin_parent_dir = os.path.normpath(
-        os.path.join(gslib.GSUTIL_DIR,
-                     '..'))
+        os.path.join(gslib.GSUTIL_DIR, '..'))
 
     # Extract tarball to a temporary directory in a sibling to GSUTIL_DIR.
     old_dir = tempfile.mkdtemp(dir=gsutil_bin_parent_dir)
@@ -435,16 +428,14 @@ class UpdateCommand(Command):
         for subdir in subdirs:
           fd = os.open(os.path.join(dirname, subdir), os.O_RDONLY)
           os.fchmod(
-              fd,
-              stat.S_IRWXU | stat.S_IXGRP | stat.S_IXOTH | stat.S_IRGRP |
+              fd, stat.S_IRWXU | stat.S_IXGRP | stat.S_IXOTH | stat.S_IRGRP |
               stat.S_IROTH)
           os.close(fd)
 
       # Make main gsutil script owner-RWX and world-RX.
       fd = os.open(os.path.join(new_dir, 'gsutil', 'gsutil'), os.O_RDONLY)
       os.fchmod(
-          fd,
-          stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH |
+          fd, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH |
           stat.S_IXOTH)
       os.close(fd)
 
@@ -458,9 +449,7 @@ class UpdateCommand(Command):
 
   def _FetchAndOpenGsutilTarball(self, update_from_url_str):
     self.command_runner.RunNamedCommand(
-        'cp',
-        [update_from_url_str,
-         'file://gsutil.tar.gz'],
+        'cp', [update_from_url_str, 'file://gsutil.tar.gz'],
         self.headers,
         self.debug,
         skip_update_check=True)

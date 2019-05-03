@@ -90,11 +90,7 @@ class CommandOptions(HelpProvider):
   help_spec = HelpProvider.HelpSpec(
       help_name='support',
       help_name_aliases=[
-          'techsupport',
-          'tech support',
-          'technical support',
-          'billing',
-          'faq',
+          'techsupport', 'tech support', 'technical support', 'billing', 'faq',
           'questions'
       ],
       help_type='additional_help',

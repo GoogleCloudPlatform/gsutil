@@ -51,11 +51,9 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     self.requester_pays_bucket_uri = self.CreateBucket()
     self._set_requester_pays(self.requester_pays_bucket_uri)
     self.non_requester_pays_object_uri = self.CreateObject(
-        bucket_uri=self.non_requester_pays_bucket_uri,
-        contents=OBJECT_CONTENTS)
+        bucket_uri=self.non_requester_pays_bucket_uri, contents=OBJECT_CONTENTS)
     self.requester_pays_object_uri = self.CreateObject(
-        bucket_uri=self.requester_pays_bucket_uri,
-        contents=OBJECT_CONTENTS)
+        bucket_uri=self.requester_pays_bucket_uri, contents=OBJECT_CONTENTS)
     self.user_project_flag = ['-u', PopulateProjectId()]
 
   def _set_requester_pays(self, bucket_uri):
@@ -146,31 +144,22 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     requester_pays_bucket_uri = self.CreateBucket()
     self._set_requester_pays(requester_pays_bucket_uri)
     self._run_requester_pays_test(
-        ['acl',
-         'set',
-         'public-read',
+        ['acl', 'set', 'public-read',
          suri(requester_pays_bucket_uri)])
     self._run_requester_pays_test(
-        ['acl',
-         'get',
-         suri(requester_pays_bucket_uri)])
+        ['acl', 'get', suri(requester_pays_bucket_uri)])
 
     non_requester_pays_bucket_uri = self.CreateBucket()
     self._run_non_requester_pays_test(
-        ['acl',
-         'set',
-         'public-read',
+        ['acl', 'set', 'public-read',
          suri(non_requester_pays_bucket_uri)])
     self._run_non_requester_pays_test(
-        ['acl',
-         'get',
-         suri(non_requester_pays_bucket_uri)])
+        ['acl', 'get', suri(non_requester_pays_bucket_uri)])
 
   def test_ls(self):
     self._run_requester_pays_test(['ls', suri(self.requester_pays_bucket_uri)])
     self._run_non_requester_pays_test(
-        ['ls',
-         suri(self.non_requester_pays_bucket_uri)])
+        ['ls', suri(self.non_requester_pays_bucket_uri)])
 
   def test_rb(self):
     rp_bucket_uri = self.CreateBucket()
@@ -197,8 +186,8 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
 
     bucket_uri = self.CreateBucket()
     components = [
-        self.CreateObject(bucket_uri=bucket_uri,
-                          contents=data).uri for data in data_list
+        self.CreateObject(bucket_uri=bucket_uri, contents=data).uri
+        for data in data_list
     ]
     composite = bucket_uri.clone_replace_name(self.MakeTempName('obj'))
     self._run_non_requester_pays_test(['compose'] + components +
@@ -207,19 +196,17 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     rp_bucket_uri = self.CreateBucket()
     self._set_requester_pays(rp_bucket_uri)
     rp_components = [
-        self.CreateObject(bucket_uri=rp_bucket_uri,
-                          contents=data).uri for data in data_list
+        self.CreateObject(bucket_uri=rp_bucket_uri, contents=data).uri
+        for data in data_list
     ]
     rp_composite = suri(rp_bucket_uri) + '/composite.txt'
     self._run_requester_pays_test(['compose'] + rp_components + [rp_composite])
 
   def test_cat(self):
-    self._run_requester_pays_test(['cat',
-                                   suri(self.requester_pays_object_uri)],
-                                  regex=OBJECT_CONTENTS)
+    self._run_requester_pays_test(
+        ['cat', suri(self.requester_pays_object_uri)], regex=OBJECT_CONTENTS)
     self._run_non_requester_pays_test(
-        ['cat',
-         suri(self.non_requester_pays_object_uri)])
+        ['cat', suri(self.non_requester_pays_object_uri)])
 
   def test_du_obj(self):
 
@@ -227,34 +214,24 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     def _check():
       self._run_requester_pays_test(
-          ['du',
-           suri(self.requester_pays_object_uri)])
+          ['du', suri(self.requester_pays_object_uri)])
       self._run_non_requester_pays_test(
-          ['du',
-           suri(self.non_requester_pays_object_uri)])
+          ['du', suri(self.non_requester_pays_object_uri)])
 
     _check()
 
   def test_hash(self):
     self._run_requester_pays_test(
-        ['hash',
-         '-c',
-         suri(self.requester_pays_object_uri)],
+        ['hash', '-c', suri(self.requester_pays_object_uri)],
         regex=r'Hash \(crc32c\)')
     self._run_non_requester_pays_test(
-        ['hash',
-         '-c',
-         suri(self.non_requester_pays_object_uri)])
+        ['hash', '-c', suri(self.non_requester_pays_object_uri)])
 
   def test_iam(self):
     self._run_requester_pays_test(
-        ['iam',
-         'get',
-         str(self.requester_pays_object_uri)])
+        ['iam', 'get', str(self.requester_pays_object_uri)])
     self._run_non_requester_pays_test(
-        ['iam',
-         'get',
-         str(self.non_requester_pays_object_uri)])
+        ['iam', 'get', str(self.non_requester_pays_object_uri)])
 
   def test_mv(self):
     requester_pays_bucket_uri = self.CreateBucket()
@@ -277,36 +254,27 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket_uri, 2)
     for obj in [object1_uri, object2_uri]:
       self._run_non_requester_pays_test(
-          ['mv',
-           suri(obj),
-           suri(dest_bucket_uri)])
+          ['mv', suri(obj), suri(dest_bucket_uri)])
     self.AssertNObjectsInBucket(bucket_uri, 0)
 
   def test_rewrite(self):
     object_uri = self.CreateObject(contents=b'bar')
     self._run_non_requester_pays_test(
-        ['rewrite',
-         '-s',
-         'dra',
-         suri(object_uri)])
+        ['rewrite', '-s', 'dra', suri(object_uri)])
 
     req_pays_bucket_uri = self.CreateBucket()
     self._set_requester_pays(req_pays_bucket_uri)
     req_pays_obj_uri = self.CreateObject(bucket_uri=req_pays_bucket_uri,
                                          contents=b'baz')
     self._run_requester_pays_test(
-        ['rewrite',
-         '-s',
-         'dra',
-         suri(req_pays_obj_uri)])
+        ['rewrite', '-s', 'dra', suri(req_pays_obj_uri)])
 
   def test_rsync(self):
     req_pays_bucket_uri = self.CreateBucket(test_objects=2)
     self._set_requester_pays(req_pays_bucket_uri)
     bucket_uri = self.CreateBucket(test_objects=1)
     self._run_requester_pays_test([
-        'rsync',
-        '-d',
+        'rsync', '-d',
         suri(req_pays_bucket_uri),
         suri(self.requester_pays_bucket_uri)
     ])
@@ -314,9 +282,7 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
     bucket_uri1 = self.CreateBucket(test_objects=2)
     bucket_uri2 = self.CreateBucket(test_objects=1)
     self._run_non_requester_pays_test(
-        ['rsync',
-         '-d',
-         suri(bucket_uri1),
+        ['rsync', '-d', suri(bucket_uri1),
          suri(bucket_uri2)])
 
   def test_setmeta(self):
@@ -324,23 +290,17 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
         bucket_uri=self.requester_pays_bucket_uri,
         contents=b'<html><body>text</body></html>')
     self._run_requester_pays_test(
-        ['setmeta',
-         '-h',
-         'content-type:text/html',
+        ['setmeta', '-h', 'content-type:text/html',
          suri(req_pays_obj_uri)])
 
     obj_uri = self.CreateObject(bucket_uri=self.non_requester_pays_bucket_uri,
                                 contents=b'<html><body>text</body></html>')
     self._run_non_requester_pays_test(
-        ['setmeta',
-         '-h',
-         'content-type:text/html',
+        ['setmeta', '-h', 'content-type:text/html',
          suri(obj_uri)])
 
   def test_stat(self):
     self._run_requester_pays_test(
-        ['stat',
-         suri(self.requester_pays_object_uri)])
+        ['stat', suri(self.requester_pays_object_uri)])
     self._run_non_requester_pays_test(
-        ['stat',
-         suri(self.non_requester_pays_object_uri)])
+        ['stat', suri(self.non_requester_pays_object_uri)])

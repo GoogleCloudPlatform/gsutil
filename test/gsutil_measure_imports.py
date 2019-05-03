@@ -56,8 +56,7 @@ def get_sorted_initialization_times(items=10):
     An OrderedDict object, sorting initialization times in increasing order.
   """
   return OrderedDict(
-      sorted(INITIALIZATION_TIMES.items(),
-             key=itemgetter(1),
+      sorted(INITIALIZATION_TIMES.items(), key=itemgetter(1),
              reverse=True)[:items])
 
 

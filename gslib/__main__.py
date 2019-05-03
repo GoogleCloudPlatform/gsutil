@@ -164,10 +164,7 @@ def _OutputAndExit(message, exception=None):
   if debug_level >= constants.DEBUGLEVEL_DUMP_REQUESTS or test_exception_traces:
     stack_trace = traceback.format_exc()
     err = ('DEBUG: Exception stack trace:\n    %s\n%s\n' %
-           (re.sub('\\n',
-                   '\n    ',
-                   stack_trace),
-            message))
+           (re.sub('\\n', '\n    ', stack_trace), message))
   else:
     err = '%s\n' % message
   try:
@@ -237,8 +234,7 @@ def main():
     gsutil_client_id, gsutil_client_secret = (
         system_util.GetGsutilClientIdAndSecret())
     gcs_oauth2_boto_plugin.oauth2_helper.SetFallbackClientIdAndSecret(
-        gsutil_client_id,
-        gsutil_client_secret)
+        gsutil_client_id, gsutil_client_secret)
     gcs_oauth2_boto_plugin.oauth2_helper.SetLock(
         gslib.utils.parallelism_framework_util.CreateLock())
     credentials_lib.SetCredentialsCacheFileLock(
@@ -441,23 +437,15 @@ def _CheckAndWarnForProxyDifferences():
         if proxy_info.proxy_host != boto.config.get('Boto', 'proxy', None):
           differing_values.append(
               'Boto proxy host: "%s" differs from %s proxy host: "%s"' %
-              (boto.config.get('Boto',
-                               'proxy',
-                               None),
-               proxy_env_var,
-               proxy_info.proxy_host))
-        if (proxy_info.proxy_user != boto.config.get('Boto',
-                                                     'proxy_user',
+              (boto.config.get('Boto', 'proxy',
+                               None), proxy_env_var, proxy_info.proxy_host))
+        if (proxy_info.proxy_user != boto.config.get('Boto', 'proxy_user',
                                                      None)):
           differing_values.append(
               'Boto proxy user: "%s" differs from %s proxy user: "%s"' %
-              (boto.config.get('Boto',
-                               'proxy_user',
-                               None),
-               proxy_env_var,
-               proxy_info.proxy_user))
-        if (proxy_info.proxy_pass != boto.config.get('Boto',
-                                                     'proxy_pass',
+              (boto.config.get('Boto', 'proxy_user',
+                               None), proxy_env_var, proxy_info.proxy_user))
+        if (proxy_info.proxy_pass != boto.config.get('Boto', 'proxy_pass',
                                                      None)):
           differing_values.append(
               'Boto proxy password differs from %s proxy password' %
@@ -468,9 +456,7 @@ def _CheckAndWarnForProxyDifferences():
             proxy_info.proxy_port != boto_port):
           differing_values.append(
               'Boto proxy port: "%s" differs from %s proxy port: "%s"' %
-              (boto_port,
-               proxy_env_var,
-               proxy_info.proxy_port))
+              (boto_port, proxy_env_var, proxy_info.proxy_port))
         if differing_values:
           sys.stderr.write('\n'.join(
               textwrap.wrap(
@@ -511,10 +497,8 @@ def _HandleControlC(signal_num, cur_stack_frame):
   if debug_level >= 2:
     stack_trace = ''.join(traceback.format_list(traceback.extract_stack()))
     _OutputAndExit('DEBUG: Caught CTRL-C (signal %d) - Exception stack trace:\n'
-                   '    %s' % (signal_num,
-                               re.sub('\\n',
-                                      '\n    ',
-                                      stack_trace)),
+                   '    %s' %
+                   (signal_num, re.sub('\\n', '\n    ', stack_trace)),
                    exception=ControlCException())
   else:
     _OutputAndExit('Caught CTRL-C (signal %d) - exiting' % signal_num,
@@ -568,10 +552,8 @@ def _CheckAndHandleCredentialException(e, args):
   # Provide detail to users who have no boto config file (who might previously
   # have been using gsutil only for accessing publicly readable buckets and
   # objects).
-  if (not boto_util.HasConfiguredCredentials() and
-      not boto.config.get_value('Tests',
-                                'bypass_anonymous_access_warning',
-                                False)):
+  if (not boto_util.HasConfiguredCredentials() and not boto.config.get_value(
+      'Tests', 'bypass_anonymous_access_warning', False)):
     # The check above allows tests to assert that we get a particular,
     # expected failure, rather than always encountering this error message
     # when there are no configured credentials. This allows tests to
@@ -712,10 +694,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner,
     # These should usually be retried by the underlying implementation or
     # wrapped by CloudApi ServiceExceptions, but if we do get them,
     # print something useful.
-    _OutputAndExit('HttpError: %s, %s' % (getattr(e.response,
-                                                  'status',
-                                                  ''),
-                                          e.content or ''),
+    _OutputAndExit('HttpError: %s, %s' %
+                   (getattr(e.response, 'status', ''), e.content or ''),
                    exception=e)
   except socket.error as e:
     if e.args[0] == errno.EPIPE:

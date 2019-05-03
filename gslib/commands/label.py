@@ -150,8 +150,7 @@ class LabelCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
@@ -213,11 +212,8 @@ class LabelCommand(Command):
         if (self.gsutil_api.GetApiSelector(url.scheme) == ApiSelector.JSON):
           # Perform a read-modify-write so that we can specify which
           # existing labels need to be deleted.
-          (_,
-           bucket_metadata) = self.GetSingleBucketUrlFromArg(
-               url.url_string,
-               bucket_fields=['labels',
-                              'metageneration'])
+          (_, bucket_metadata) = self.GetSingleBucketUrlFromArg(
+              url.url_string, bucket_fields=['labels', 'metageneration'])
           metageneration = bucket_metadata.metageneration
           label_json = {}
           if bucket_metadata.labels:
@@ -225,9 +221,8 @@ class LabelCommand(Command):
                 LabelTranslation.JsonFromMessage(bucket_metadata.labels))
           # Set all old keys' values to None; this will delete each key that
           # is not included in the new set of labels.
-          merged_labels = dict((key,
-                                None) for key,
-                               _ in six.iteritems(label_json))
+          merged_labels = dict(
+              (key, None) for key, _ in six.iteritems(label_json))
           merged_labels.update(new_label_json)
           labels_message = LabelTranslation.DictToMessage(merged_labels)
         else:  # ApiSelector.XML
@@ -298,28 +293,19 @@ class LabelCommand(Command):
         # nonexistent label returns an error iff no labels previously existed
         corrected_changes = self.label_changes
         if self.num_deletions:
-          (_,
-           bucket_metadata) = self.GetSingleBucketUrlFromArg(
-               url.url_string,
-               bucket_fields=['labels',
-                              'metageneration'])
+          (_, bucket_metadata) = self.GetSingleBucketUrlFromArg(
+              url.url_string, bucket_fields=['labels', 'metageneration'])
           if not bucket_metadata.labels:
             metageneration = bucket_metadata.metageneration
             # Remove each change that would try to delete a nonexistent key.
-            corrected_changes = dict((k,
-                                      v)
-                                     for k,
-                                     v in six.iteritems(self.label_changes)
-                                     if v)
+            corrected_changes = dict(
+                (k, v) for k, v in six.iteritems(self.label_changes) if v)
         labels_message = LabelTranslation.DictToMessage(corrected_changes)
       else:  # ApiSelector.XML
         # Perform a read-modify-write cycle so that we can specify which
         # existing labels need to be deleted.
-        (_,
-         bucket_metadata) = self.GetSingleBucketUrlFromArg(
-             url.url_string,
-             bucket_fields=['labels',
-                            'metageneration'])
+        (_, bucket_metadata) = self.GetSingleBucketUrlFromArg(
+            url.url_string, bucket_fields=['labels', 'metageneration'])
         metageneration = bucket_metadata.metageneration
 
         label_json = {}
@@ -365,8 +351,7 @@ class LabelCommand(Command):
                                                        bucket_fields=['labels'])
     if bucket_url.scheme == 's3':
       print((self.gsutil_api.XmlPassThroughGetTagging(
-          bucket_url,
-          provider=bucket_url.scheme)))
+          bucket_url, provider=bucket_url.scheme)))
     else:
       if bucket_metadata.labels:
         print((LabelTranslation.JsonFromMessage(bucket_metadata.labels,
@@ -394,7 +379,5 @@ class LabelCommand(Command):
     else:
       raise CommandException(
           'Invalid subcommand "%s" for the %s command.\nSee "gsutil help %s".' %
-          (action_subcommand,
-           self.command_name,
-           self.command_name))
+          (action_subcommand, self.command_name, self.command_name))
     return 0

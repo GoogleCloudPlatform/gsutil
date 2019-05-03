@@ -65,8 +65,7 @@ def CreateCustomMetadata(entries=None, custom_metadata=None):
   for key, value in six.iteritems(entries):
     custom_metadata.additionalProperties.append(
         apitools_messages.Object.MetadataValue.AdditionalProperty(
-            key=str(key),
-            value=str(value)))
+            key=str(key), value=str(value)))
   return custom_metadata
 
 
@@ -90,8 +89,7 @@ def GetValueFromObjectCustomMetadata(obj_metadata,
   try:
     value = next((attr.value
                   for attr in obj_metadata.metadata.additionalProperties
-                  if attr.key == search_key),
-                 None)
+                  if attr.key == search_key), None)
     if value is None:
       return False, default_value
     return True, value

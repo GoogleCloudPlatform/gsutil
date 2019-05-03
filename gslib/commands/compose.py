@@ -89,8 +89,7 @@ class ComposeCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
@@ -164,8 +163,7 @@ class ComposeCommand(Command):
 
     preconditions = PreconditionsFromHeaders(self.headers or {})
 
-    self.logger.info('Composing %s from %d component object(s).',
-                     target_url,
+    self.logger.info('Composing %s from %d component object(s).', target_url,
                      len(components))
     self.gsutil_api.ComposeObject(
         components,

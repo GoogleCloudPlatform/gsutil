@@ -733,9 +733,7 @@ class ConfigCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'config',
-      command_name_aliases=['cfg',
-                            'conf',
-                            'configure'],
+      command_name_aliases=['cfg', 'conf', 'configure'],
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=0,
@@ -748,11 +746,7 @@ class ConfigCommand(Command):
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='config',
-      help_name_aliases=['cfg',
-                         'conf',
-                         'configure',
-                         'aws',
-                         's3'],
+      help_name_aliases=['cfg', 'conf', 'configure', 'aws', 's3'],
       help_type='command_help',
       help_one_line_summary=(
           'Obtain credentials and create configuration file'),
@@ -785,8 +779,8 @@ class ConfigCommand(Command):
     try:
       fd = os.open(file_path, flags, 0o600)
     except (OSError, IOError) as e:
-      raise CommandException('Failed to open %s for writing: %s' % (file_path,
-                                                                    e))
+      raise CommandException('Failed to open %s for writing: %s' %
+                             (file_path, e))
     return os.fdopen(fd, 'w')
 
   def _CheckPrivateKeyFilePermissions(self, file_path):
@@ -857,17 +851,13 @@ class ConfigCommand(Command):
     """Prompts for proxy config data, loads non-empty values into boto.config.
     """
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy',
-        'What is your proxy host? ')
+        'proxy', 'What is your proxy host? ')
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy_port',
-        'What is your proxy port? ')
+        'proxy_port', 'What is your proxy port? ')
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy_user',
-        'What is your proxy user (leave blank if not used)? ')
+        'proxy_user', 'What is your proxy user (leave blank if not used)? ')
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
-        'proxy_pass',
-        'What is your proxy pass (leave blank if not used)? ')
+        'proxy_pass', 'What is your proxy pass (leave blank if not used)? ')
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
         'proxy_rdns',
         'Should DNS lookups be resolved by your proxy? (Y if your site '
@@ -914,39 +904,21 @@ class ConfigCommand(Command):
         '# HTTPS_PROXY is defined, gsutil will use the proxy server specified\n'
         '# in these environment variables, in order of precedence according\n'
         '# to how they are listed above.\n')
-    self._WriteConfigLineMaybeCommented(config_file,
-                                        'proxy',
-                                        config.get_value('Boto',
-                                                         'proxy',
-                                                         None),
+    self._WriteConfigLineMaybeCommented(config_file, 'proxy',
+                                        config.get_value('Boto', 'proxy', None),
                                         'proxy host')
     self._WriteConfigLineMaybeCommented(
-        config_file,
-        'proxy_port',
-        config.get_value('Boto',
-                         'proxy_port',
-                         None),
+        config_file, 'proxy_port', config.get_value('Boto', 'proxy_port', None),
         'proxy port')
     self._WriteConfigLineMaybeCommented(
-        config_file,
-        'proxy_user',
-        config.get_value('Boto',
-                         'proxy_user',
-                         None),
+        config_file, 'proxy_user', config.get_value('Boto', 'proxy_user', None),
         'proxy user')
     self._WriteConfigLineMaybeCommented(
-        config_file,
-        'proxy_pass',
-        config.get_value('Boto',
-                         'proxy_pass',
-                         None),
+        config_file, 'proxy_pass', config.get_value('Boto', 'proxy_pass', None),
         'proxy password')
     self._WriteConfigLineMaybeCommented(
-        config_file,
-        'proxy_rdns',
-        config.get_value('Boto',
-                         'proxy_rdns',
-                         False),
+        config_file, 'proxy_rdns', config.get_value('Boto', 'proxy_rdns',
+                                                    False),
         'let proxy server perform DNS lookups')
 
   # pylint: disable=dangerous-default-value,too-many-statements
@@ -1014,13 +986,10 @@ class ConfigCommand(Command):
         self._CheckPrivateKeyFilePermissions(gs_service_key_file)
       elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
         oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(
-            boto.config,
-            cred_type)
+            boto.config, cred_type)
         try:
           oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
-              oauth2_client,
-              oauth2_scopes,
-              launch_browser)
+              oauth2_client, oauth2_scopes, launch_browser)
         except (ResponseNotReady, ServerNotFoundError, socket.error):
           # TODO: Determine condition to check for in the ResponseNotReady
           # exception so we only run proxy config flow if failure was caused by
@@ -1036,12 +1005,9 @@ class ConfigCommand(Command):
                   "otherwise leave the following fields blank.")) + '\n')
           self._PromptForProxyConfig()
           oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(
-              boto.config,
-              cred_type)
+              boto.config, cred_type)
           oauth2_refresh_token = oauth2_helper.OAuth2ApprovalFlow(
-              oauth2_client,
-              oauth2_scopes,
-              launch_browser)
+              oauth2_client, oauth2_scopes, launch_browser)
       elif cred_type == CredTypes.HMAC:
         got_creds = False
         for provider in provider_map:
@@ -1059,9 +1025,9 @@ class ConfigCommand(Command):
 
     # Write the config file prelude.
     config_file.write(CONFIG_PRELUDE_CONTENT.lstrip())
-    config_file.write('# This file was created by gsutil version %s at %s.\n' %
-                      (gslib.VERSION,
-                       datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    config_file.write(
+        '# This file was created by gsutil version %s at %s.\n' %
+        (gslib.VERSION, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     config_file.write(
         '#\n# You can create additional configuration files by '
         'running\n# gsutil config [options] [-o <config-file>]\n\n\n')
@@ -1115,24 +1081,19 @@ class ConfigCommand(Command):
       key_prefix = provider_map[provider]
       uri_scheme = uri_map[provider]
       if provider in key_ids and provider in sec_keys:
-        config_file.write('# %s credentials ("%s://" URIs):\n' % (provider,
-                                                                  uri_scheme))
-        config_file.write('%s_access_key_id = %s\n' % (key_prefix,
-                                                       key_ids[provider]))
-        config_file.write('%s_secret_access_key = %s\n' % (key_prefix,
-                                                           sec_keys[provider]))
+        config_file.write('# %s credentials ("%s://" URIs):\n' %
+                          (provider, uri_scheme))
+        config_file.write('%s_access_key_id = %s\n' %
+                          (key_prefix, key_ids[provider]))
+        config_file.write('%s_secret_access_key = %s\n' %
+                          (key_prefix, sec_keys[provider]))
       else:
         config_file.write(
             '# To add HMAC %s credentials for "%s://" URIs, edit and '
             'uncomment the\n# following two lines:\n'
             '#%s_access_key_id = <your %s access key ID>\n'
             '#%s_secret_access_key = <your %s secret access key>\n' %
-            (provider,
-             uri_scheme,
-             key_prefix,
-             provider,
-             key_prefix,
-             provider))
+            (provider, uri_scheme, key_prefix, provider, key_prefix, provider))
       host_key = Provider.HostKeyMap[provider]
       config_file.write(
           '# The ability to specify an alternate storage host and port\n'
@@ -1142,17 +1103,14 @@ class ConfigCommand(Command):
           '#%s_port = <alternate storage host port>\n'
           '# In some cases, (e.g. VPC requests) the "host" HTTP header should\n'
           '# be different than the host used in the request URL.\n'
-          '#%s_host_header = <alternate storage host header>\n' % (host_key,
-                                                                   host_key,
-                                                                   host_key))
+          '#%s_host_header = <alternate storage host header>\n' %
+          (host_key, host_key, host_key))
       if host_key == 'gs':
         config_file.write(
             '#%s_json_host = <alternate JSON API storage host address>\n'
             '#%s_json_port = <alternate JSON API storage host port>\n'
             '#%s_json_host_header = <alternate JSON API storage host header>\n\n'
-            % (host_key,
-               host_key,
-               host_key))
+            % (host_key, host_key, host_key))
       config_file.write('\n')
 
     # Write the config file Boto section.
@@ -1218,8 +1176,7 @@ class ConfigCommand(Command):
             'No default project ID entered. The default project ID is needed '
             'by the\nls and mb commands; please try again.')
       config_file.write('%sdefault_project_id = %s\n\n\n' %
-                        (project_id_section_prelude,
-                         default_project_id))
+                        (project_id_section_prelude, default_project_id))
 
       CheckAndMaybePromptForAnalyticsEnabling()
 
@@ -1232,8 +1189,7 @@ class ConfigCommand(Command):
         oauth2_client.client_id != oauth2_helper.CLIENT_ID and
         oauth2_client.client_secret != oauth2_helper.CLIENT_SECRET):
       config_file.write('client_id = %s\nclient_secret = %s\n' %
-                        (oauth2_client.client_id,
-                         oauth2_client.client_secret))
+                        (oauth2_client.client_id, oauth2_client.client_secret))
     else:
       config_file.write('#client_id = <OAuth2 client id>\n'
                         '#client_secret = <OAuth2 client secret>\n')
@@ -1340,21 +1296,18 @@ class ConfigCommand(Command):
         if os.path.exists(default_config_path_bak):
           raise CommandException('Cannot back up existing config '
                                  'file "%s": backup file exists ("%s").' %
-                                 (default_config_path,
-                                  default_config_path_bak))
+                                 (default_config_path, default_config_path_bak))
         else:
           try:
             sys.stderr.write(
                 'Backing up existing config file "%s" to "%s"...\n' %
-                (default_config_path,
-                 default_config_path_bak))
+                (default_config_path, default_config_path_bak))
             os.rename(default_config_path, default_config_path_bak)
           except Exception as e:
-            raise CommandException('Failed to back up existing config '
-                                   'file ("%s" -> "%s"): %s.' %
-                                   (default_config_path,
-                                    default_config_path_bak,
-                                    e))
+            raise CommandException(
+                'Failed to back up existing config '
+                'file ("%s" -> "%s"): %s.' %
+                (default_config_path, default_config_path_bak, e))
           output_file_name = default_config_path
 
     if output_file_name == '-':

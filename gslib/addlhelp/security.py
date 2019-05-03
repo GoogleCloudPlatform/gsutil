@@ -217,10 +217,7 @@ class CommandOptions(HelpProvider):
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
       help_name='security',
-      help_name_aliases=['protection',
-                         'privacy',
-                         'proxies',
-                         'proxy'],
+      help_name_aliases=['protection', 'privacy', 'proxies', 'proxy'],
       help_type='additional_help',
       help_one_line_summary='Security and Privacy Considerations',
       help_text=_DETAILED_HELP_TEXT,

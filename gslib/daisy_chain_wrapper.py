@@ -231,8 +231,7 @@ class DaisyChainWrapper(object):
     if amt is None or amt > constants.TRANSFER_BUFFER_SIZE:
       raise BadRequestException(
           'Invalid HTTP read size %s during daisy chain operation, '
-          'expected <= %s.' % (amt,
-                               constants.TRANSFER_BUFFER_SIZE))
+          'expected <= %s.' % (amt, constants.TRANSFER_BUFFER_SIZE))
 
     while True:
       with self.lock:
@@ -260,8 +259,7 @@ class DaisyChainWrapper(object):
     if data_len > amt:
       raise BadRequestException(
           'Invalid read during daisy chain operation, got data of size '
-          '%s, expected size %s.' % (data_len,
-                                     amt))
+          '%s, expected size %s.' % (data_len, amt))
     return data
 
   def tell(self):  # pylint: disable=invalid-name

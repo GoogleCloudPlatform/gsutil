@@ -98,8 +98,7 @@ def HandleHeaderCoding(headers):
                   'replaces the problematic characters with a hex-encoded '
                   'printable representation. For more details (including how to '
                   'convert to a gsutil-compatible encoding) see `gsutil help '
-                  'encoding`.' % (repr(key),
-                                  repr(headers[key])))))
+                  'encoding`.' % (repr(key), repr(headers[key])))))
     else:
       # Non-custom-metadata headers and their values must be ASCII characters.
       InsistAsciiHeaderValue(key, headers[key])
@@ -183,8 +182,7 @@ class CommandRunner(object):
     """Returns a logger for tab completion."""
     return CreateOrGetGsutilLogger('tab_complete')
 
-  def _ConfigureCommandArgumentParserArguments(self,
-                                               parser,
+  def _ConfigureCommandArgumentParserArguments(self, parser,
                                                subcommands_or_arguments,
                                                gsutil_api):
     """Creates parsers recursively for potentially nested subcommands.
@@ -240,15 +238,12 @@ class CommandRunner(object):
     """
     # This should match the support map for the "ls" command.
     support_map = {
-        'gs': [ApiSelector.XML,
-               ApiSelector.JSON],
+        'gs': [ApiSelector.XML, ApiSelector.JSON],
         's3': [ApiSelector.XML]
     }
     default_map = {'gs': ApiSelector.JSON, 's3': ApiSelector.XML}
     gsutil_api_map = GsutilApiMapFactory.GetApiMap(
-        self.gsutil_api_class_map_factory,
-        support_map,
-        default_map)
+        self.gsutil_api_class_map_factory, support_map, default_map)
 
     gsutil_api = CloudApiDelegator(self.bucket_storage_uri_class,
                                    gsutil_api_map,
@@ -294,9 +289,7 @@ class CommandRunner(object):
     # arguments are added to the subparser for the lowest level command.
 
     self._ConfigureCommandArgumentParserArguments(
-        main_parser,
-        command_to_argparse_arguments,
-        gsutil_api)
+        main_parser, command_to_argparse_arguments, gsutil_api)
 
   def RunNamedCommand(self,
                       command_name,
@@ -340,8 +333,7 @@ class CommandRunner(object):
     """
     command_changed_to_update = False
     if (not skip_update_check and
-        self.MaybeCheckForAndOfferSoftwareUpdate(command_name,
-                                                 debug)):
+        self.MaybeCheckForAndOfferSoftwareUpdate(command_name, debug)):
       command_name = 'update'
       command_changed_to_update = True
       args = [_StringToSysArgType('-n')]
@@ -466,17 +458,13 @@ class CommandRunner(object):
     #   gcloud components update)
     logger = logging.getLogger()
     if (not system_util.IsRunningInteractively() or
-        command_name in ('config',
-                         'update',
-                         'ver',
-                         'version') or not logger.isEnabledFor(logging.INFO) or
-        HAS_NON_DEFAULT_GS_HOST or system_util.InvokedViaCloudSdk()):
+        command_name in ('config', 'update', 'ver', 'version') or
+        not logger.isEnabledFor(logging.INFO) or HAS_NON_DEFAULT_GS_HOST or
+        system_util.InvokedViaCloudSdk()):
       return False
 
     software_update_check_period = boto.config.getint(
-        'GSUtil',
-        'software_update_check_period',
-        30)
+        'GSUtil', 'software_update_check_period', 30)
     # Setting software_update_check_period to 0 means periodic software
     # update checking is disabled.
     if software_update_check_period == 0:
@@ -521,9 +509,7 @@ class CommandRunner(object):
                 'are running (%s). NOTE: This is a major new version, so it is '
                 'strongly recommended that you review the release note details at '
                 '%s before updating to this version, especially if you use gsutil '
-                'in scripts.' % (cur_ver,
-                                 gslib.VERSION,
-                                 RELEASE_NOTES_URL))))
+                'in scripts.' % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
         print_to_fd('\n')
@@ -535,9 +521,7 @@ class CommandRunner(object):
                 'A newer version of gsutil (%s) is available than the version you '
                 'are running (%s). A detailed log of gsutil release changes is '
                 'available at %s if you would like to read them before updating.'
-                % (cur_ver,
-                   gslib.VERSION,
-                   RELEASE_NOTES_URL))))
+                % (cur_ver, gslib.VERSION, RELEASE_NOTES_URL))))
         if gslib.IS_PACKAGE_INSTALL:
           return False
         print_to_fd('\n')

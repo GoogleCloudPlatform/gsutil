@@ -39,15 +39,10 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
     self.logger.addHandler(self.log_handler)
 
   def testMultipleConfiguredCreds(self):
-    with SetBotoConfigForTest([('Credentials',
-                                'gs_oauth2_refresh_token',
+    with SetBotoConfigForTest([('Credentials', 'gs_oauth2_refresh_token',
                                 'foo'),
-                               ('Credentials',
-                                'gs_service_client_id',
-                                'bar'),
-                               ('Credentials',
-                                'gs_service_key_file',
-                                'baz')]):
+                               ('Credentials', 'gs_service_client_id', 'bar'),
+                               ('Credentials', 'gs_service_key_file', 'baz')]):
 
       try:
         GcsJsonApi(None, self.logger, DiscardMessagesQueue())
@@ -64,18 +59,12 @@ class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
   @SkipForS3('Tests only uses gs credentials.')
   def testExactlyOneInvalid(self):
     bucket_uri = self.CreateBucket()
-    with SetBotoConfigForTest([('Credentials',
-                                'gs_oauth2_refresh_token',
-                                'foo'),
-                               ('Credentials',
-                                'gs_service_client_id',
-                                None),
-                               ('Credentials',
-                                'gs_service_key_file',
-                                None)],
-                              use_existing_config=False):
-      stderr = self.RunGsUtil(['ls',
-                               suri(bucket_uri)],
+    with SetBotoConfigForTest(
+        [('Credentials', 'gs_oauth2_refresh_token', 'foo'),
+         ('Credentials', 'gs_service_client_id', None),
+         ('Credentials', 'gs_service_key_file', None)],
+        use_existing_config=False):
+      stderr = self.RunGsUtil(['ls', suri(bucket_uri)],
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('credentials are invalid', stderr)

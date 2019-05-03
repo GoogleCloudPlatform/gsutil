@@ -36,5 +36,5 @@ install:
 script:
   - gsutil version -l
   - gsutil test -u
-  - yapf -dr
+  - yapf -dr .
 

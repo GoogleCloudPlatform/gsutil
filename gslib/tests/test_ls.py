@@ -135,15 +135,13 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
     # Verify that Creation time and Storage class update time fields display and
     # are the same as the times set in the object message.
     find_time_created_re = re.compile(
-        r'^\s*Creation time:\s+(?P<time_created_val>.+)$',
-        re.MULTILINE)
+        r'^\s*Creation time:\s+(?P<time_created_val>.+)$', re.MULTILINE)
     time_created_match = re.search(find_time_created_re, output2)
     self.assertIsNotNone(time_created_match)
     time_created = time_created_match.group('time_created_val')
     self.assertEqual(
         time_created,
-        datetime.strftime(current_time,
-                          '%a, %d %b %Y %H:%M:%S GMT'))
+        datetime.strftime(current_time, '%a, %d %b %Y %H:%M:%S GMT'))
     find_stor_update_re_2 = re.compile(
         r'^\s*Storage class update time:+(?P<stor_update_time_val_2>.+)$',
         re.MULTILINE)
@@ -152,8 +150,7 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
     stor_update_time = stor_update_time_match_2.group('stor_update_time_val_2')
     self.assertEqual(
         stor_update_time,
-        datetime.strftime(new_update_time,
-                          '%a, %d %b %Y %H:%M:%S GMT'))
+        datetime.strftime(new_update_time, '%a, %d %b %Y %H:%M:%S GMT'))
 
 
 class TestLs(testcase.GsUtilIntegrationTestCase):
@@ -172,9 +169,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['ls',
-                               '-b',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-b', suri(bucket_uri)],
                               return_stdout=True)
       self.assertEqual('%s/\n' % suri(bucket_uri), stdout)
 
@@ -196,14 +191,11 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['versioning', 'set', 'off', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     find_metageneration_re = re.compile(
-        r'^\s*Metageneration:\s+(?P<metageneration_val>.+)$',
-        re.MULTILINE)
+        r'^\s*Metageneration:\s+(?P<metageneration_val>.+)$', re.MULTILINE)
     find_time_created_re = re.compile(
-        r'^\s*Time created:\s+(?P<time_created_val>.+)$',
-        re.MULTILINE)
+        r'^\s*Time created:\s+(?P<time_created_val>.+)$', re.MULTILINE)
     find_time_updated_re = re.compile(
-        r'^\s*Time updated:\s+(?P<time_updated_val>.+)$',
-        re.MULTILINE)
+        r'^\s*Time updated:\s+(?P<time_updated_val>.+)$', re.MULTILINE)
     metageneration_match = re.search(find_metageneration_re, stdout)
     time_created_match = re.search(find_time_created_re, stdout)
     time_updated_match = re.search(find_time_updated_re, stdout)
@@ -230,16 +222,13 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     if self.test_api == ApiSelector.JSON:
       bucket_uri = self.CreateBucket(bucket_policy_only=True,
                                      prefer_json_api=True)
-      stdout = self.RunGsUtil(['ls',
-                               '-Lb',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
                               return_stdout=True)
       self._AssertBucketPolicyOnly(True, stdout)
 
   def _AssertBucketPolicyOnly(self, value, stdout):
     bucket_policy_only_re = re.compile(
-        r'^\s*Bucket Policy Only enabled:\s+(?P<bpo_val>.+)$',
-        re.MULTILINE)
+        r'^\s*Bucket Policy Only enabled:\s+(?P<bpo_val>.+)$', re.MULTILINE)
     bucket_policy_only_match = re.search(bucket_policy_only_re, stdout)
     bucket_policy_only_val = bucket_policy_only_match.group('bpo_val')
     self.assertEqual(str(value), bucket_policy_only_val)
@@ -250,9 +239,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['ls',
-                               '-lb',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-lb', suri(bucket_uri)],
                               return_stdout=True)
       self.assertIn(suri(bucket_uri), stdout)
       self.assertNotIn('TOTAL:', stdout)
@@ -271,13 +258,11 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # We want to be careful when setting a wildcard on buckets to make sure we
     # don't step outside the test buckets to affect other buckets.
     common_prefix = posixpath.commonprefix(
-        [suri(bucket1_uri),
-         suri(bucket2_uri)])
+        [suri(bucket1_uri), suri(bucket2_uri)])
     self.assertTrue(
         common_prefix.startswith(
             '%s://%sgsutil-test-test-bucket-list-wildcard-bucket-' %
-            (self.default_provider,
-             random_prefix)))
+            (self.default_provider, random_prefix)))
     wildcard = '%s*' % common_prefix
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -293,25 +278,19 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_nonexistent_bucket_with_ls(self):
     """Tests a bucket that is known not to exist."""
     stderr = self.RunGsUtil(
-        ['ls',
-         '-lb',
-         'gs://%s' % self.nonexistent_bucket_name],
+        ['ls', '-lb', 'gs://%s' % self.nonexistent_bucket_name],
         return_stderr=True,
         expected_status=1)
     self.assertIn('404', stderr)
 
     stderr = self.RunGsUtil(
-        ['ls',
-         '-Lb',
-         'gs://%s' % self.nonexistent_bucket_name],
+        ['ls', '-Lb', 'gs://%s' % self.nonexistent_bucket_name],
         return_stderr=True,
         expected_status=1)
     self.assertIn('404', stderr)
 
     stderr = self.RunGsUtil(
-        ['ls',
-         '-b',
-         'gs://%s' % self.nonexistent_bucket_name],
+        ['ls', '-b', 'gs://%s' % self.nonexistent_bucket_name],
         return_stderr=True,
         expected_status=1)
     self.assertIn('404', stderr)
@@ -319,9 +298,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_list_missing_object(self):
     """Tests listing a non-existent object."""
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(['ls',
-                             suri(bucket_uri,
-                                  'missing')],
+    stderr = self.RunGsUtil(['ls', suri(bucket_uri, 'missing')],
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('matched no objects', stderr)
@@ -355,11 +332,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Check that the creation time, rather than the updated time, is displayed.
     self.RunGsUtil(['setmeta', '-h', 'x-goog-meta-foo:bar', suri(obj_uri)])
     find_time_created_re = re.compile(
-        r'^\s*Creation time:\s+(?P<time_created_val>.+)$',
-        re.MULTILINE)
+        r'^\s*Creation time:\s+(?P<time_created_val>.+)$', re.MULTILINE)
     find_time_updated_re = re.compile(
-        r'^\s*Update time:\s+(?P<time_updated_val>.+)$',
-        re.MULTILINE)
+        r'^\s*Update time:\s+(?P<time_updated_val>.+)$', re.MULTILINE)
     stdout = self.RunGsUtil(['ls', '-L', suri(obj_uri)], return_stdout=True)
 
     time_created_match = re.search(find_time_created_re, stdout)
@@ -386,8 +361,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['ls',
-                               '%s/dir' % suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '%s/dir' % suri(bucket_uri)],
                               return_stdout=True)
       self.assertEqual('%s\n' % suri(k2_uri), stdout)
       stdout = self.RunGsUtil(['ls', suri(k1_uri)], return_stdout=True)
@@ -413,14 +387,10 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['ls',
-                               '-d',
-                               '%s/dir*' % suri(bucket_uri)],
-                              return_stdout=True)
+      stdout = self.RunGsUtil(
+          ['ls', '-d', '%s/dir*' % suri(bucket_uri)], return_stdout=True)
       self.assertEqual(
-          '%s/dir/\n%s/dir2/\n' % (suri(bucket_uri),
-                                   suri(bucket_uri)),
-          stdout)
+          '%s/dir/\n%s/dir2/\n' % (suri(bucket_uri), suri(bucket_uri)), stdout)
       stdout = self.RunGsUtil(['ls', suri(k1_uri)], return_stdout=True)
       self.assertEqual('%s\n' % suri(k1_uri), stdout)
 
@@ -442,14 +412,10 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
-      stdout = self.RunGsUtil(['ls',
-                               '-a',
-                               suri(bucket2_uri)],
+      stdout = self.RunGsUtil(['ls', '-a', suri(bucket2_uri)],
                               return_stdout=True)
       self.assertNumLines(stdout, 3)
-      stdout = self.RunGsUtil(['ls',
-                               '-la',
-                               suri(bucket2_uri)],
+      stdout = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)],
                               return_stdout=True)
       self.assertIn('%s#' % bucket2_uri.clone_replace_name(bucket_list[0].name),
                     stdout)
@@ -467,9 +433,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['ls',
-                               '-l',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-l', suri(bucket_uri)],
                               return_stdout=True)
       if self.test_api == ApiSelector.XML:
         self.assertNotIn(etag, stdout)
@@ -479,9 +443,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
     def _Check2():
-      stdout = self.RunGsUtil(['ls',
-                               '-le',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-le', suri(bucket_uri)],
                               return_stdout=True)
       if self.test_api == ApiSelector.XML:
         self.assertIn(etag, stdout)
@@ -491,9 +453,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
     def _Check3():
-      stdout = self.RunGsUtil(['ls',
-                               '-ale',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-ale', suri(bucket_uri)],
                               return_stdout=True)
       if self.test_api == ApiSelector.XML:
         self.assertIn(etag, stdout)
@@ -613,9 +573,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['ls',
-                               '-l',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-l', suri(bucket_uri)],
                               return_stdout=True)
       self.assertIn('2048', stdout)
 
@@ -624,9 +582,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
-      stdout = self.RunGsUtil(['ls',
-                               '-L',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-L', suri(bucket_uri)],
                               return_stdout=True)
       self.assertIn('2048', stdout)
 
@@ -635,9 +591,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check3():
-      stdout = self.RunGsUtil(['ls',
-                               '-al',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-al', suri(bucket_uri)],
                               return_stdout=True)
       self.assertIn('2048', stdout)
 
@@ -646,9 +600,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check4():
-      stdout = self.RunGsUtil(['ls',
-                               '-lh',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-lh', suri(bucket_uri)],
                               return_stdout=True)
       self.assertIn('2 KiB', stdout)
 
@@ -657,9 +609,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check5():
-      stdout = self.RunGsUtil(['ls',
-                               '-alh',
-                               suri(bucket_uri)],
+      stdout = self.RunGsUtil(['ls', '-alh', suri(bucket_uri)],
                               return_stdout=True)
       self.assertIn('2 KiB', stdout)
 
@@ -735,10 +685,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
     # Run Python with the -u flag so output is not buffered.
     gsutil_cmd = [
-        sys.executable,
-        '-u',
-        gslib.GSUTIL_PATH,
-        'ls',
+        sys.executable, '-u', gslib.GSUTIL_PATH, 'ls',
         suri(bucket_uri)
     ]
     # Set bufsize to 0 to make sure output is not buffered.
@@ -781,24 +728,18 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                       object_name=object_matching_folder,
                       contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 2)
-    stderr = self.RunGsUtil(['ls',
-                             suri(bucket_uri,
-                                  'wildcard*')],
+    stderr = self.RunGsUtil(['ls', suri(bucket_uri, 'wildcard*')],
                             return_stderr=True,
                             expected_status=1)
     self.assertIn(
-        'Cloud folder %s%s contains a wildcard' % (suri(bucket_uri),
-                                                   '/wildcard*/'),
-        stderr)
+        'Cloud folder %s%s contains a wildcard' %
+        (suri(bucket_uri), '/wildcard*/'), stderr)
 
     # Listing with a flat wildcard should still succeed.
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check():
-      stdout = self.RunGsUtil(['ls',
-                               '-l',
-                               suri(bucket_uri,
-                                    '**')],
+      stdout = self.RunGsUtil(['ls', '-l', suri(bucket_uri, '**')],
                               return_stdout=True)
       self.assertNumLines(stdout, 3)  # 2 object lines, one summary line.
 
@@ -815,9 +756,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['acl', 'set', 'public-read', suri(object_uri)])
     # Drop credentials.
     with self.SetAnonymousBotoCreds():
-      stdout = self.RunGsUtil(['ls',
-                               '-L',
-                               suri(object_uri)],
+      stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)],
                               return_stdout=True)
       self.assertIn(suri(object_uri), stdout)
 
@@ -831,15 +770,12 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                                    encryption_key=TEST_ENCRYPTION_KEY1)
 
     # Listing object with key should return unencrypted hashes.
-    with SetBotoConfigForTest([('GSUtil',
-                                'encryption_key',
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key',
                                 TEST_ENCRYPTION_KEY1)]):
       # Use @Retry as hedge against bucket listing eventual consistency.
       @Retry(AssertionError, tries=3, timeout_secs=1)
       def _ListExpectDecrypted():
-        stdout = self.RunGsUtil(['ls',
-                                 '-L',
-                                 suri(object_uri)],
+        stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)],
                                 return_stdout=True)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
@@ -851,9 +787,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _ListExpectEncrypted():
-      stdout = self.RunGsUtil(['ls',
-                               '-L',
-                               suri(object_uri)],
+      stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)],
                               return_stdout=True)
       self.assertNotIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
       self.assertNotIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
@@ -863,8 +797,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     _ListExpectEncrypted()
 
     # Listing object with a non-matching key should return encrypted hashes.
-    with SetBotoConfigForTest([('GSUtil',
-                                'encryption_key',
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key',
                                 TEST_ENCRYPTION_KEY2)]):
       _ListExpectEncrypted()
 
@@ -896,22 +829,16 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # List 5 objects, one encrypted with each of four keys, and one
     # unencrypted. Supplying keys [1,3,4] should result in four unencrypted
     # listings and one encrypted listing (for key 2).
-    with SetBotoConfigForTest([('GSUtil',
-                                'encryption_key',
-                                TEST_ENCRYPTION_KEY1),
-                               ('GSUtil',
-                                'decryption_key1',
-                                TEST_ENCRYPTION_KEY3),
-                               ('GSUtil',
-                                'decryption_key2',
-                                TEST_ENCRYPTION_KEY4)]):
+    with SetBotoConfigForTest([
+        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1),
+        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY3),
+        ('GSUtil', 'decryption_key2', TEST_ENCRYPTION_KEY4)
+    ]):
       # Use @Retry as hedge against bucket listing eventual consistency.
       @Retry(AssertionError, tries=3, timeout_secs=1)
       def _ListExpectMixed():
         """Validates object listing."""
-        stdout = self.RunGsUtil(['ls',
-                                 '-L',
-                                 suri(bucket_uri)],
+        stdout = self.RunGsUtil(['ls', '-L', suri(bucket_uri)],
                                 return_stdout=True)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
         self.assertIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
@@ -932,10 +859,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       _ListExpectMixed()
 
   def test_non_ascii_project_fails(self):
-    stderr = self.RunGsUtil(['ls',
-                             '-p',
-                             'ã',
-                             'gs://fobarbaz'],
+    stderr = self.RunGsUtil(['ls', '-p', 'ã', 'gs://fobarbaz'],
                             expected_status=1,
                             return_stderr=True)
     self.assertIn('Invalid non-ASCII', stderr)
@@ -947,8 +871,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
         testcase.KmsTestingResources.KEYRING_NAME,
         location=testcase.KmsTestingResources.KEYRING_LOCATION)
     key_fqn = self.kms_api.CreateCryptoKey(
-        keyring_fqn,
-        testcase.KmsTestingResources.CONSTANT_KEY_NAME)
+        keyring_fqn, testcase.KmsTestingResources.CONSTANT_KEY_NAME)
     # Make sure that the service account for the desired bucket's parent project
     # is authorized to encrypt with the key above.
     self.RunGsUtil(['kms', 'encryption', '-k', key_fqn, suri(bucket_uri)])

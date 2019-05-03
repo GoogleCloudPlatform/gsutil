@@ -129,8 +129,7 @@ class DuCommand(Command):
       file_url_ok=False,
       provider_url_ok=True,
       urls_start_arg=0,
-      gs_api_support=[ApiSelector.XML,
-                      ApiSelector.JSON],
+      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
@@ -147,8 +146,7 @@ class DuCommand(Command):
     size_string = (MakeHumanReadable(num_bytes)
                    if self.human_readable else six.text_type(num_bytes))
     text_util.print_to_fd('{size:<11}  {name}'.format(
-        size=size_string,
-        name=six.ensure_text(name)),
+        size=size_string, name=six.ensure_text(name)),
                           end=self.line_ending)
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):

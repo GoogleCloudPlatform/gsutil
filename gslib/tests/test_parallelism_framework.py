@@ -174,8 +174,7 @@ def _PerformNRecursiveCalls(cls, args, thread_state=None):
   """
   process_count = _AdjustProcessCountIfWindows(args[0])
   thread_count = args[1]
-  return_values = cls.Apply(_ReturnOneValue,
-                            [()] * args[2],
+  return_values = cls.Apply(_ReturnOneValue, [()] * args[2],
                             _ExceptionHandler,
                             arg_checker=DummyArgChecker,
                             process_count=process_count,
@@ -231,9 +230,7 @@ class FakeCommand(Command):
     support_map = {'gs': ['JSON'], 's3': ['XML']}
     default_map = {'gs': 'JSON', 's3': 'XML'}
     self.gsutil_api_map = cs_api_map.GsutilApiMapFactory.GetApiMap(
-        cs_api_map.GsutilApiClassMapFactory,
-        support_map,
-        default_map)
+        cs_api_map.GsutilApiClassMapFactory, support_map, default_map)
     self.logger = CreateOrGetGsutilLogger('FakeCommand')
     self.parallel_operations = do_parallel
     self.failure_count = 0
@@ -350,8 +347,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self._TestApplySaturatesAvailableProcessesAndThreads(3, 3)
 
   @RequiresIsolation
-  def _TestApplySaturatesAvailableProcessesAndThreads(self,
-                                                      process_count,
+  def _TestApplySaturatesAvailableProcessesAndThreads(self, process_count,
                                                       thread_count):
     """Tests that created processes and threads evenly share tasks."""
     calls_per_thread = 2
@@ -363,25 +359,18 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
       # Calls should be evenly distributed across threads.
       expected_calls_per_thread = calls_per_thread * process_count
 
-    results = self._RunApply(_SleepThenReturnProcAndThreadId,
-                             args,
-                             process_count,
-                             thread_count)
+    results = self._RunApply(_SleepThenReturnProcAndThreadId, args,
+                             process_count, thread_count)
     usage_dict = {}  # (process_id, thread_id): number of tasks performed
     for (process_id, thread_id) in results:
-      usage_dict[(process_id,
-                  thread_id)] = (usage_dict.get((process_id,
-                                                 thread_id),
-                                                0) + 1)
+      usage_dict[(process_id, thread_id)] = (usage_dict.get(
+          (process_id, thread_id), 0) + 1)
 
     for (id_tuple, num_tasks_completed) in six.iteritems(usage_dict):
       self.assertEqual(
-          num_tasks_completed,
-          expected_calls_per_thread,
+          num_tasks_completed, expected_calls_per_thread,
           'Process %s thread %s completed %s tasks. Expected: %s' %
-          (id_tuple[0],
-           id_tuple[1],
-           num_tasks_completed,
+          (id_tuple[0], id_tuple[1], num_tasks_completed,
            expected_calls_per_thread))
 
   @RequiresIsolation
@@ -475,17 +464,9 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     # Test that shared variables work when the iterator fails at the beginning,
     # middle, and end.
     for (failing_iterator,
-         expected_failure_count) in ((FailingIterator(5,
-                                                      [0]),
-                                      1),
-                                     (FailingIterator(10,
-                                                      [1,
-                                                       3,
-                                                       5]),
-                                      3),
-                                     (FailingIterator(5,
-                                                      [4]),
-                                      1)):
+         expected_failure_count) in ((FailingIterator(5, [0]),
+                                      1), (FailingIterator(10, [1, 3, 5]), 3),
+                                     (FailingIterator(5, [4]), 1)):
       command_inst = self.command_class(True)
       args = failing_iterator
       self._RunApply(_ReturnOneValue,
@@ -499,10 +480,8 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
           command_inst.failure_count,
           msg='Failure count did not match. Expected: %s, actual: %s '
           'for failing iterator of size %s, failing indices %s' %
-          (expected_failure_count,
-           command_inst.failure_count,
-           failing_iterator.size,
-           failing_iterator.failure_indices))
+          (expected_failure_count, command_inst.failure_count,
+           failing_iterator.size, failing_iterator.failure_indices))
 
   @RequiresIsolation
   def testThreadsSurviveExceptionsInFuncSingleProcessSingleThread(self):
@@ -641,8 +620,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self._TestRecursiveDepthThreeDifferentFunctions(3, 3)
 
   @Timeout
-  def _TestRecursiveDepthThreeDifferentFunctions(self,
-                                                 process_count,
+  def _TestRecursiveDepthThreeDifferentFunctions(self, process_count,
                                                  thread_count):
     """Tests recursive application of Apply.
 
@@ -656,10 +634,8 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     base_args = [3, 1, 4, 1, 5]
     args = [[process_count, thread_count, count] for count in base_args]
 
-    results = self._RunApply(_ReApplyWithReplicatedArguments,
-                             args,
-                             process_count,
-                             thread_count)
+    results = self._RunApply(_ReApplyWithReplicatedArguments, args,
+                             process_count, thread_count)
     self.assertEqual(7 * (sum(base_args) + len(base_args)), sum(results))
 
   @RequiresIsolation
@@ -681,8 +657,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self._TestExceptionInProducerRaisesAndTerminates(3, 3)
 
   @Timeout
-  def _TestExceptionInProducerRaisesAndTerminates(self,
-                                                  process_count,
+  def _TestExceptionInProducerRaisesAndTerminates(self, process_count,
                                                   thread_count):
     args = self  # The ProducerThread will try and fail to iterate over this.
     try:

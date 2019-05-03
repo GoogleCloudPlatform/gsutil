@@ -46,16 +46,12 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   # endpoint, and when connecting to a specific IP or host while setting the
   # host header. For the 2nd case we resolve gs_host (normally
   # storage.googleapis.com) to a specific IP and connect to that explicitly.
-  _gs_host = boto.config.get('Credentials',
-                             'gs_host',
+  _gs_host = boto.config.get('Credentials', 'gs_host',
                              boto.gs.connection.GSConnection.DefaultHost)
   _gs_ip = socket.gethostbyname(_gs_host)
   _custom_endpoint_flags = [
-      '-o',
-      'Credentials:gs_host=' + _gs_ip,
-      '-o',
-      'Credentials:gs_host_header=' + _gs_host,
-      '-o',
+      '-o', 'Credentials:gs_host=' + _gs_ip, '-o',
+      'Credentials:gs_host_header=' + _gs_host, '-o',
       'Boto:https_validate_certificates=False'
   ]
 
@@ -93,17 +89,10 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
 
     cmd = [
-        'perfdiag',
-        '-n',
-        str(num_processes * num_threads),
-        '-s',
-        '1024',
-        '-c',
-        str(num_processes),
-        '-k',
-        str(num_threads),
-        '-t',
-        test_name
+        'perfdiag', '-n',
+        str(num_processes * num_threads), '-s', '1024', '-c',
+        str(num_processes), '-k',
+        str(num_threads), '-t', test_name
     ]
     if compression_ratio is not None:
       cmd += ['-j', str(compression_ratio)]
@@ -190,40 +179,20 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
     outpath = self.CreateTempFile()
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(
-        ['perfdiag',
-         '-o',
-         outpath,
-         '-n',
-         '1',
-         '-t',
-         'lat',
+        ['perfdiag', '-o', outpath, '-n', '1', '-t', 'lat',
          suri(bucket_uri)])
     self.RunGsUtil(['perfdiag', '-i', outpath])
 
   def test_invalid_size(self):
     stderr = self.RunGsUtil(
-        ['perfdiag',
-         '-n',
-         '1',
-         '-s',
-         'foo',
-         '-t',
-         'wthru',
-         'gs://foobar'],
+        ['perfdiag', '-n', '1', '-s', 'foo', '-t', 'wthru', 'gs://foobar'],
         expected_status=1,
         return_stderr=True)
     self.assertIn('Invalid -s', stderr)
 
   def test_toobig_size(self):
     stderr = self.RunGsUtil(
-        ['perfdiag',
-         '-n',
-         '1',
-         '-s',
-         '3pb',
-         '-t',
-         'wthru',
-         'gs://foobar'],
+        ['perfdiag', '-n', '1', '-s', '3pb', '-t', 'wthru', 'gs://foobar'],
         expected_status=1,
         return_stderr=True)
     self.assertIn('in-memory tests maximum file size', stderr)
@@ -231,11 +200,7 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
   def test_listing(self):
     bucket_uri = self.CreateBucket()
     stdout = self.RunGsUtil(
-        ['perfdiag',
-         '-n',
-         '1',
-         '-t',
-         'list',
+        ['perfdiag', '-n', '1', '-t', 'list',
          suri(bucket_uri)],
         return_stdout=True)
     self.assertIn('Number of listing calls made:', stdout)
@@ -243,18 +208,16 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
 
   @SkipForXML('No compressed transport encoding support for the XML API.')
   def test_gzip_write_throughput_single_process_single_thread(self):
-    (stderr_default,
-     _) = self._run_throughput_test('wthru',
-                                    1,
-                                    1,
-                                    compression_ratio=50)
+    (stderr_default, _) = self._run_throughput_test('wthru',
+                                                    1,
+                                                    1,
+                                                    compression_ratio=50)
     self.assertIn('Gzip compression ratio: 50', stderr_default)
     self.assertIn('Gzip transport encoding writes: True', stderr_default)
-    (stderr_default,
-     _) = self._run_throughput_test('wthru_file',
-                                    1,
-                                    1,
-                                    compression_ratio=50)
+    (stderr_default, _) = self._run_throughput_test('wthru_file',
+                                                    1,
+                                                    1,
+                                                    compression_ratio=50)
     self.assertIn('Gzip compression ratio: 50', stderr_default)
     self.assertIn('Gzip transport encoding writes: True', stderr_default)
 
@@ -287,10 +250,7 @@ class TestPerfDiagUnitTests(testcase.GsUtilUnitTestCase):
     self.CreateObject(bucket_uri=bucket_uri, contents=b'bar')
     mock_log_handler = self.RunCommand(
         'perfdiag',
-        ['-n',
-         str(test_objects),
-         '-t',
-         'list',
+        ['-n', str(test_objects), '-t', 'list',
          suri(bucket_uri)],
         return_log_handler=True)
     self.assertNotIn(

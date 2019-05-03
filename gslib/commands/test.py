@@ -179,12 +179,8 @@ def MakeCustomTestResultClass(total_tests):
       if self.dots:
         test_id = '.'.join(test.id().split('.')[-2:])
         message = ('\r%d/%d finished - E[%d] F[%d] s[%d] - %s' %
-                   (self.testsRun,
-                    total_tests,
-                    len(self.errors),
-                    len(self.failures),
-                    len(self.skipped),
-                    test_id))
+                   (self.testsRun, total_tests, len(self.errors),
+                    len(self.failures), len(self.skipped), test_id))
         message = message[:73]
         message = message.ljust(73)
         self.stream.write('%s - ' % message)
@@ -262,8 +258,7 @@ def SplitParallelizableTestSuite(test_suite):
     else:
       parallelizable_integration_tests.append(TestCaseToName(test_case))
 
-  return (sorted(sequential_tests),
-          sorted(isolated_tests),
+  return (sorted(sequential_tests), sorted(isolated_tests),
           sorted(parallelizable_unit_tests),
           sorted(parallelizable_integration_tests))
 
@@ -308,8 +303,7 @@ def CreateTestProcesses(parallel_tests,
   project_id_arg = []
   try:
     project_id_arg = [
-        '-o',
-        'GSUtil:default_project_id=%s' % PopulateProjectId()
+        '-o', 'GSUtil:default_project_id=%s' % PopulateProjectId()
     ]
   except ProjectIdException:
     # If we don't have a project ID, unit tests should still be able to pass.
@@ -342,14 +336,12 @@ def CreateTestProcesses(parallel_tests,
     process_done.append(False)
     if time.time() - last_log_time > 5:
       print(('Created %d new processes (total %d/%d created)' %
-             (test_index - orig_test_index,
-              len(process_list),
+             (test_index - orig_test_index, len(process_list),
               len(parallel_tests))))
       last_log_time = time.time()
   if test_index == len(parallel_tests):
     print(('Test process creation finished (%d/%d created)' %
-           (len(process_list),
-            len(parallel_tests))))
+           (len(process_list), len(parallel_tests))))
   return test_index
 
 
@@ -379,9 +371,7 @@ class TestCommand(Command):
       subcommand_help_text={},
   )
 
-  def RunParallelTests(self,
-                       parallel_integration_tests,
-                       max_parallel_tests,
+  def RunParallelTests(self, parallel_integration_tests, max_parallel_tests,
                        coverage_filename):
     """Executes the parallel/isolated portion of the test suite.
 
@@ -433,9 +423,9 @@ class TestCommand(Command):
                                          root_coverage_file=coverage_filename)
       if len(process_results) < num_parallel_tests:
         if time.time() - last_log_time > 5:
-          print('%d/%d finished - %d failures' % (len(process_results),
-                                                  num_parallel_tests,
-                                                  num_parallel_failures))
+          print(
+              '%d/%d finished - %d failures' %
+              (len(process_results), num_parallel_tests, num_parallel_failures))
           if len(process_results) == completed_as_of_last_log:
             progress_less_logging_cycles += 1
           else:
@@ -466,27 +456,20 @@ class TestCommand(Command):
     return (num_parallel_failures,
             (process_run_finish_time - parallel_start_time))
 
-  def PrintTestResults(self,
-                       num_sequential_tests,
-                       sequential_success,
-                       sequential_skipped,
-                       sequential_time_elapsed,
-                       num_parallel_tests,
-                       num_parallel_failures,
+  def PrintTestResults(self, num_sequential_tests, sequential_success,
+                       sequential_skipped, sequential_time_elapsed,
+                       num_parallel_tests, num_parallel_failures,
                        parallel_time_elapsed):
     """Prints test results for parallel and sequential tests."""
     # TODO: Properly track test skips.
     print('Parallel tests complete. Success: %s Fail: %s' %
-          (num_parallel_tests - num_parallel_failures,
-           num_parallel_failures))
+          (num_parallel_tests - num_parallel_failures, num_parallel_failures))
     print((
         'Ran %d tests in %.3fs (%d sequential in %.3fs, %d parallel in %.3fs)' %
         (num_parallel_tests + num_sequential_tests,
          float(sequential_time_elapsed + parallel_time_elapsed),
-         num_sequential_tests,
-         float(sequential_time_elapsed),
-         num_parallel_tests,
-         float(parallel_time_elapsed))))
+         num_sequential_tests, float(sequential_time_elapsed),
+         num_parallel_tests, float(parallel_time_elapsed))))
     self.PrintSkippedTests(sequential_skipped)
     print()
 
@@ -562,8 +545,7 @@ class TestCommand(Command):
         max_parallel_tests > _DEFAULT_S3_TEST_PARALLEL_PROCESSES):
       self.logger.warn(
           'Reducing parallel tests to %d due to S3 maximum bucket '
-          'limitations.',
-          _DEFAULT_S3_TEST_PARALLEL_PROCESSES)
+          'limitations.', _DEFAULT_S3_TEST_PARALLEL_PROCESSES)
       max_parallel_tests = _DEFAULT_S3_TEST_PARALLEL_PROCESSES
 
     test_names = sorted(GetTestNames())
@@ -596,8 +578,7 @@ class TestCommand(Command):
           suite.addTests(suite_for_current_command)
         except (ImportError, AttributeError) as e:
           msg = ('Failed to import test code from file %s. TestLoader provided '
-                 'this error:\n\n%s' % (command_name,
-                                        str(e)))
+                 'this error:\n\n%s' % (command_name, str(e)))
 
           # Try to give a better error message; by default, unittest swallows
           # ImportErrors and only shows that an import failed, not why. E.g.:
@@ -640,9 +621,7 @@ class TestCommand(Command):
     num_parallel_failures = 0
     sequential_success = False
 
-    (sequential_tests,
-     isolated_tests,
-     parallel_unit_tests,
+    (sequential_tests, isolated_tests, parallel_unit_tests,
      parallel_integration_tests) = (SplitParallelizableTestSuite(suite))
 
     # Since parallel integration tests are run in a separate process, they
@@ -726,23 +705,17 @@ class TestCommand(Command):
                 'the amount of parallel test processes by running '
                 '\'gsutil test -p <num_processes>\'.')
           print(('\n'.join(
-              textwrap.wrap(message % (num_parallel_tests,
-                                       num_processes)))))
+              textwrap.wrap(message % (num_parallel_tests, num_processes)))))
         else:
           print(('Running %d tests sequentially in isolated processes.' %
                  num_parallel_tests))
-        (num_parallel_failures,
-         parallel_time_elapsed) = self.RunParallelTests(
-             parallel_integration_tests,
-             max_parallel_tests,
-             coverage_controller.data_files.filename
-             if perform_coverage else None)
-        self.PrintTestResults(num_sequential_tests,
-                              sequential_success,
-                              sequential_skipped,
-                              sequential_time_elapsed,
-                              num_parallel_tests,
-                              num_parallel_failures,
+        (num_parallel_failures, parallel_time_elapsed) = self.RunParallelTests(
+            parallel_integration_tests, max_parallel_tests,
+            coverage_controller.data_files.filename
+            if perform_coverage else None)
+        self.PrintTestResults(num_sequential_tests, sequential_success,
+                              sequential_skipped, sequential_time_elapsed,
+                              num_parallel_tests, num_parallel_failures,
                               parallel_time_elapsed)
 
     if perform_coverage:

@@ -61,12 +61,8 @@ class NameExpansionResult(object):
   in _NameExpansionIterator.
   """
 
-  def __init__(self,
-               source_storage_url,
-               is_multi_source_request,
-               names_container,
-               expanded_storage_url,
-               expanded_result):
+  def __init__(self, source_storage_url, is_multi_source_request,
+               names_container, expanded_storage_url, expanded_result):
     """Instantiates a result from name expansion.
 
     Args:
@@ -241,9 +237,7 @@ class _NameExpansionIterator(object):
       subdir_exp_wildcard = self._flatness_wildcard[self.recursion_requested]
       if self.recursion_requested:
         post_step2_iter = _ImplicitBucketSubdirIterator(
-            self,
-            post_step1_iter,
-            subdir_exp_wildcard,
+            self, post_step1_iter, subdir_exp_wildcard,
             self.bucket_listing_fields)
       else:
         post_step2_iter = _NonContainerTuplifyIterator(post_step1_iter)
@@ -268,11 +262,9 @@ class _NameExpansionIterator(object):
       # Step 3. Omit any directories, buckets, or bucket subdirectories for
       # non-recursive expansions.
       post_step3_iter = PluralityCheckableIterator(
-          _OmitNonRecursiveIterator(post_step2_iter,
-                                    self.recursion_requested,
+          _OmitNonRecursiveIterator(post_step2_iter, self.recursion_requested,
                                     self.command_name,
-                                    self.cmd_supports_recursion,
-                                    self.logger))
+                                    self.cmd_supports_recursion, self.logger))
 
       src_url_expands_to_multi = post_step3_iter.HasPlurality()
       is_multi_source_request = (self.url_strs.has_plurality or
@@ -287,10 +279,8 @@ class _NameExpansionIterator(object):
         src_names_container = src_names_bucket or names_container
 
         if blr.IsObject():
-          yield NameExpansionResult(storage_url,
-                                    is_multi_source_request,
-                                    src_names_container,
-                                    blr.storage_url,
+          yield NameExpansionResult(storage_url, is_multi_source_request,
+                                    src_names_container, blr.storage_url,
                                     blr.root_object)
         else:
           # Use implicit wildcarding to do the enumeration.
@@ -318,11 +308,8 @@ class _NameExpansionIterator(object):
           # This will be a flattened listing of all underlying objects in the
           # subdir.
           for blr in wc_iter:
-            yield NameExpansionResult(storage_url,
-                                      is_multi_source_request,
-                                      True,
-                                      blr.storage_url,
-                                      blr.root_object)
+            yield NameExpansionResult(storage_url, is_multi_source_request,
+                                      True, blr.storage_url, blr.root_object)
 
   def WildcardIterator(self, url_string):
     """Helper to instantiate gslib.WildcardIterator.
@@ -392,8 +379,7 @@ class SeekAheadNameExpansionIterator(object):
     for name_expansion_result in self.name_expansion_iterator:
       if self.count_data_bytes and name_expansion_result.expanded_result:
         iterated_metadata = encoding.JsonToMessage(
-            apitools_messages.Object,
-            name_expansion_result.expanded_result)
+            apitools_messages.Object, name_expansion_result.expanded_result)
         iterated_size = iterated_metadata.size or 0
         yield SeekAheadResult(data_bytes=iterated_size)
       else:
@@ -500,12 +486,8 @@ class _OmitNonRecursiveIterator(object):
   yielded.
   """
 
-  def __init__(self,
-               tuple_iter,
-               recursion_requested,
-               command_name,
-               cmd_supports_recursion,
-               logger):
+  def __init__(self, tuple_iter, recursion_requested, command_name,
+               cmd_supports_recursion, logger):
     """Instanties the iterator.
 
     Args:
@@ -534,9 +516,7 @@ class _OmitNonRecursiveIterator(object):
           desc = blr.type_name
         if self.cmd_supports_recursion:
           self.logger.info('Omitting %s "%s". (Did you mean to do %s -r?)',
-                           desc,
-                           blr.url_string,
-                           self.command_name)
+                           desc, blr.url_string, self.command_name)
         else:
           self.logger.info('Omitting %s "%s".', desc, blr.url_string)
       else:
@@ -555,10 +535,7 @@ class _ImplicitBucketSubdirIterator(object):
   if those subdir objects exist, and [BucketListingRef("gs://abc") otherwise.
   """
 
-  def __init__(self,
-               name_exp_instance,
-               blr_iter,
-               subdir_exp_wildcard,
+  def __init__(self, name_exp_instance, blr_iter, subdir_exp_wildcard,
                bucket_listing_fields):
     """Instantiates the iterator.
 
@@ -603,9 +580,7 @@ class CopyObjectInfo(object):
   """Represents the information needed for copying a single object.
   """
 
-  def __init__(self,
-               name_expansion_result,
-               exp_dst_url,
+  def __init__(self, name_expansion_result, exp_dst_url,
                have_existing_dst_container):
     """Instantiates the object info from name expansion result and destination.
 
@@ -639,8 +614,7 @@ DestinationInfo = collections.namedtuple(
 # Describes (NameExpansionIterator, DestinationInfo) tuple.
 NameExpansionIteratorDestinationTuple = collections.namedtuple(
     'NameExpansionIteratorDestinationTuple',
-    ['name_expansion_iter',
-     'destination'])
+    ['name_expansion_iter', 'destination'])
 
 
 class CopyObjectsIterator(six.Iterator):

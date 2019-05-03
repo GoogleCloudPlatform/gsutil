@@ -39,13 +39,11 @@ def _ConstructNameExpansionIterator(src_url_strs):
 
 
 def _ConstrcutNameExpansionIteratorDestinationTupleIterator(
-    src_url_strs_array,
-    dst_url_strs):
+    src_url_strs_array, dst_url_strs):
   for src_url_strs, dst_url_str in zip(src_url_strs_array, dst_url_strs):
     name_expansion_iter_dst_tuple = NameExpansionIteratorDestinationTuple(
         _ConstructNameExpansionIterator(src_url_strs),
-        DestinationInfo(StorageUrlFromString(dst_url_str),
-                        False))
+        DestinationInfo(StorageUrlFromString(dst_url_str), False))
     yield name_expansion_iter_dst_tuple
 
 
@@ -56,23 +54,21 @@ class TestCopyObjectsIterator(testcase.GsUtilUnitTestCase):
     super(TestCopyObjectsIterator, self).setUp()
 
   def test_iterator(self):
-    src_strings_array = [['src_{}_{}'.format(i,
-                                             j)
-                          for j in range(4)]
-                         for i in range(3)]
+    src_strings_array = [
+        ['src_{}_{}'.format(i, j) for j in range(4)] for i in range(3)
+    ]
     dst_strings = ['dest_' + str(i) for i in range(3)]
 
     copy_objects_iterator = CopyObjectsIterator(
         _ConstrcutNameExpansionIteratorDestinationTupleIterator(
-            src_strings_array,
-            dst_strings),
-        False)
+            src_strings_array, dst_strings), False)
 
     # Flatten the src dst arrays
-    src_dst_strings = [(src,
-                        dst) for src_strings,
-                       dst in zip(src_strings_array,
-                                  dst_strings) for src in src_strings]
+    src_dst_strings = [
+        (src, dst)
+        for src_strings, dst in zip(src_strings_array, dst_strings)
+        for src in src_strings
+    ]
 
     for (src_string, dst_string) in src_dst_strings:
       copy_object_info = next(copy_objects_iterator)
@@ -94,9 +90,7 @@ class TestCopyObjectsIterator(testcase.GsUtilUnitTestCase):
 
     copy_objects_iterator = CopyObjectsIterator(
         _ConstrcutNameExpansionIteratorDestinationTupleIterator(
-            src_strings_array,
-            dst_strings),
-        False)
+            src_strings_array, dst_strings), False)
 
     self.assertFalse(copy_objects_iterator.has_cloud_src)
     self.assertFalse(copy_objects_iterator.has_file_src)

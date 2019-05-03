@@ -49,10 +49,7 @@ class TestTrackerFile(GsUtilUnitTestCase):
 
   def test_RewriteTrackerFile(self):
     """Tests Rewrite tracker file functions."""
-    tracker_file_name = GetRewriteTrackerFilePath('bk1',
-                                                  'obj1',
-                                                  'bk2',
-                                                  'obj2',
+    tracker_file_name = GetRewriteTrackerFilePath('bk1', 'obj1', 'bk2', 'obj2',
                                                   self.test_api)
     # Should succeed regardless of whether it exists.
     DeleteTrackerFile(tracker_file_name)
@@ -67,28 +64,22 @@ class TestTrackerFile(GsUtilUnitTestCase):
     dst_obj_metadata = apitools_messages.Object(bucket='bk2', name='obj2')
     rewrite_token = 'token1'
     self.assertIsNone(
-        ReadRewriteTrackerFile(tracker_file_name,
-                               src_obj_metadata))
+        ReadRewriteTrackerFile(tracker_file_name, src_obj_metadata))
     rewrite_params_hash = HashRewriteParameters(src_obj_metadata,
-                                                dst_obj_metadata,
-                                                'full')
-    WriteRewriteTrackerFile(tracker_file_name,
-                            rewrite_params_hash,
+                                                dst_obj_metadata, 'full')
+    WriteRewriteTrackerFile(tracker_file_name, rewrite_params_hash,
                             rewrite_token)
     self.assertEqual(
-        ReadRewriteTrackerFile(tracker_file_name,
-                               rewrite_params_hash),
+        ReadRewriteTrackerFile(tracker_file_name, rewrite_params_hash),
         rewrite_token)
 
     # Tracker file for an updated source object (with non-matching etag/md5)
     # should return None.
     rewrite_params_hash2 = HashRewriteParameters(src_obj2_metadata,
-                                                 dst_obj_metadata,
-                                                 'full')
+                                                 dst_obj_metadata, 'full')
 
     self.assertIsNone(
-        ReadRewriteTrackerFile(tracker_file_name,
-                               rewrite_params_hash2))
+        ReadRewriteTrackerFile(tracker_file_name, rewrite_params_hash2))
     DeleteTrackerFile(tracker_file_name)
 
   def testReadGsutil416ParallelUploadTrackerFile(self):
@@ -98,25 +89,20 @@ class TestTrackerFile(GsUtilUnitTestCase):
     contents = '\n'.join([random_prefix] + objects) + '\n'
     fpath = self.CreateTempFile(file_name='foo', contents=contents.encode(UTF8))
     expected_objects = [
-        ObjectFromTracker(objects[2 * i],
-                          objects[2 * i + 1])
+        ObjectFromTracker(objects[2 * i], objects[2 * i + 1])
         for i in range(0,
                        len(objects) // 2)
     ]
-    (_,
-     actual_prefix,
-     actual_objects) = ReadParallelUploadTrackerFile(fpath,
-                                                     self.logger)
+    (_, actual_prefix,
+     actual_objects) = ReadParallelUploadTrackerFile(fpath, self.logger)
     self.assertEqual(random_prefix, actual_prefix)
     self.assertEqual(expected_objects, actual_objects)
 
   def testReadEmptyGsutil416ParallelUploadTrackerFile(self):
     """Tests reading an empty pre-gsutil 4.17 parallel upload tracker file."""
     fpath = self.CreateTempFile(file_name='foo', contents=b'')
-    (_,
-     actual_prefix,
-     actual_objects) = ReadParallelUploadTrackerFile(fpath,
-                                                     self.logger)
+    (_, actual_prefix,
+     actual_objects) = ReadParallelUploadTrackerFile(fpath, self.logger)
     self.assertEqual(None, actual_prefix)
     self.assertEqual([], actual_objects)
 
@@ -124,16 +110,12 @@ class TestTrackerFile(GsUtilUnitTestCase):
     fpath = self.CreateTempFile(file_name='foo')
     random_prefix = '123'
     objects = [
-        ObjectFromTracker('obj1',
-                          '42'),
-        ObjectFromTracker('obj2',
-                          '314159')
+        ObjectFromTracker('obj1', '42'),
+        ObjectFromTracker('obj2', '314159')
     ]
     WriteParallelUploadTrackerFile(fpath, random_prefix, objects)
-    (enc_key,
-     actual_prefix,
-     actual_objects) = ReadParallelUploadTrackerFile(fpath,
-                                                     self.logger)
+    (enc_key, actual_prefix,
+     actual_objects) = ReadParallelUploadTrackerFile(fpath, self.logger)
     self.assertEqual(random_prefix, actual_prefix)
     self.assertEqual(None, enc_key)
     self.assertEqual(objects, actual_objects)
@@ -143,19 +125,15 @@ class TestTrackerFile(GsUtilUnitTestCase):
     random_prefix = '123'
     enc_key = '456'
     objects = [
-        ObjectFromTracker('obj1',
-                          '42'),
-        ObjectFromTracker('obj2',
-                          '314159')
+        ObjectFromTracker('obj1', '42'),
+        ObjectFromTracker('obj2', '314159')
     ]
     WriteParallelUploadTrackerFile(fpath,
                                    random_prefix,
                                    objects,
                                    encryption_key_sha256=enc_key)
-    (actual_key,
-     actual_prefix,
-     actual_objects) = ReadParallelUploadTrackerFile(fpath,
-                                                     self.logger)
+    (actual_key, actual_prefix,
+     actual_objects) = ReadParallelUploadTrackerFile(fpath, self.logger)
     self.assertEqual(enc_key, actual_key)
     self.assertEqual(random_prefix, actual_prefix)
     self.assertEqual(objects, actual_objects)
@@ -166,10 +144,8 @@ class TestTrackerFile(GsUtilUnitTestCase):
     random_prefix = '123'
     enc_key = '456'
     objects = [
-        ObjectFromTracker('obj1',
-                          '42'),
-        ObjectFromTracker('obj2',
-                          '314159')
+        ObjectFromTracker('obj1', '42'),
+        ObjectFromTracker('obj2', '314159')
     ]
     WriteParallelUploadTrackerFile(fpath,
                                    random_prefix,
@@ -192,10 +168,8 @@ class TestTrackerFile(GsUtilUnitTestCase):
                                               self.logger,
                                               encryption_key_sha256='456')
 
-    (actual_key,
-     actual_prefix,
-     actual_objects) = ReadParallelUploadTrackerFile(fpath,
-                                                     self.logger)
+    (actual_key, actual_prefix,
+     actual_objects) = ReadParallelUploadTrackerFile(fpath, self.logger)
     self.assertEqual(enc_key, actual_key)
     self.assertEqual(random_prefix, actual_prefix)
     self.assertEqual(objects + [new_object], actual_objects)
@@ -206,10 +180,8 @@ class TestTrackerFile(GsUtilUnitTestCase):
     old_enc_key = '456'
     bucket_url = StorageUrlFromString('gs://foo')
     objects = [
-        ObjectFromTracker('obj1',
-                          '42'),
-        ObjectFromTracker('obj2',
-                          '314159')
+        ObjectFromTracker('obj1', '42'),
+        ObjectFromTracker('obj2', '314159')
     ]
     WriteParallelUploadTrackerFile(fpath,
                                    random_prefix,
@@ -237,18 +209,9 @@ class TestTrackerFile(GsUtilUnitTestCase):
 
     command_obj = MockCommandObject()
     # Validate with correct key should succeed.
-    (actual_prefix,
-     actual_objects) = ValidateParallelCompositeTrackerData(
-         fpath,
-         old_enc_key,
-         random_prefix,
-         objects,
-         old_enc_key,
-         bucket_url,
-         command_obj,
-         self.logger,
-         MockDeleteFunc,
-         MockDeleteExceptionHandler)
+    (actual_prefix, actual_objects) = ValidateParallelCompositeTrackerData(
+        fpath, old_enc_key, random_prefix, objects, old_enc_key, bucket_url,
+        command_obj, self.logger, MockDeleteFunc, MockDeleteExceptionHandler)
     self.assertEqual(False, command_obj.delete_called)
     self.assertEqual(random_prefix, actual_prefix)
     self.assertEqual(objects, actual_objects)
@@ -256,18 +219,9 @@ class TestTrackerFile(GsUtilUnitTestCase):
     new_enc_key = '789'
     command_obj = MockCommandObject()
 
-    (actual_prefix,
-     actual_objects) = ValidateParallelCompositeTrackerData(
-         fpath,
-         old_enc_key,
-         random_prefix,
-         objects,
-         new_enc_key,
-         bucket_url,
-         command_obj,
-         self.logger,
-         MockDeleteFunc,
-         MockDeleteExceptionHandler)
+    (actual_prefix, actual_objects) = ValidateParallelCompositeTrackerData(
+        fpath, old_enc_key, random_prefix, objects, new_enc_key, bucket_url,
+        command_obj, self.logger, MockDeleteFunc, MockDeleteExceptionHandler)
 
     self.assertEqual(True, command_obj.delete_called)
     self.assertEqual(None, actual_prefix)
