@@ -30,8 +30,10 @@ before_install:
 # command to install dependencies
 install:
   - pip install .
+  - pip install yapf
 
 # command to run tests
 script:
   - gsutil version -l
   - gsutil test -u
+  - "yapf style='{based_on_style: google, indent_width: 2}' -e 'third_party' -e 'gslib/vendored' -dr"
