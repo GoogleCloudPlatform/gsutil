@@ -109,12 +109,12 @@ class GsUtilTestCase(unittest.TestCase):
     name = '{name}-{rand}'.format(name=name, rand=self.MakeRandomTestString())
     total_name_len = len(name) + len(suffix)
     if suffix:
-      if kind == 'bucket' and totalNameLen > MAX_BUCKET_LENGTH:
+      if kind == 'bucket' and total_name_len > MAX_BUCKET_LENGTH:
         self.fail(
           'Tried to create a psuedo-random bucket name with a specific '
           'suffix, but the generated name was too long and there was not '
           'enough room for the suffix. Please use shorter strings or perform '
-          'name randomization manually.\nRequested name: ' + name + prefix)
+          'name randomization manually.\nRequested name: ' + name + suffix)
       name += suffix
 
     if kind == 'bucket':
