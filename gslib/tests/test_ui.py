@@ -180,9 +180,6 @@ def CheckBrokenUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
   description_string = _FindAppropriateDescriptionString(metadata)
   # We must not have transferred 100% of our data.
   test_case.assertNotIn('100% Done', content)
-  # 0 files should be completed.
-  no_files_string = str(0) + '/' + str(num_objects)
-  test_case.assertIn(no_files_string + description_string, content)
   # We cannot have completed a file.
   files_completed_string = str(num_objects) + '/' + str(num_objects)
   test_case.assertNotIn(files_completed_string + description_string, content)
