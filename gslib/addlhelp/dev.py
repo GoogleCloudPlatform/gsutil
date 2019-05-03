@@ -117,7 +117,12 @@ _DETAILED_HELP_TEXT = ("""
   9. Please consider contributing test code for your change, especially if the
      change impacts any of the core gsutil code (like the gsutil cp command).
 
-  10. When it's time to send us code, please submit a PR to the `gsutil GitHub
+  10. Please run the yapf linter with the config files in the root of the GitHub
+      repository.
+
+        yapf -irp .
+
+  11. When it's time to send us code, please submit a PR to the `gsutil GitHub
       repository <https://github.com/GoogleCloudPlatform/gsutil>`_. For help on
       making GitHub PRs, please refer to this
       `GitHub help document <https://help.github.com/en/articles/about-pull-requests>`_.
