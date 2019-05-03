@@ -56,26 +56,26 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(unit_util.MakeHumanReadable(0), '0 B')
     self.assertEqual(unit_util.MakeHumanReadable(1023), '1023 B')
     self.assertEqual(unit_util.MakeHumanReadable(1024), '1 KiB')
-    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 2), '1 MiB')
-    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 3), '1 GiB')
-    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 3 * 5.3), '5.3 GiB')
-    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 4 * 2.7), '2.7 TiB')
-    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 5), '1 PiB')
-    self.assertEqual(unit_util.MakeHumanReadable(1024 ** 6), '1 EiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024**2), '1 MiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024**3), '1 GiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024**3 * 5.3), '5.3 GiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024**4 * 2.7), '2.7 TiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024**5), '1 PiB')
+    self.assertEqual(unit_util.MakeHumanReadable(1024**6), '1 EiB')
 
   def testMakeBitsHumanReadable(self):
     """Tests converting bit counts to human-readable strings."""
     self.assertEqual(unit_util.MakeBitsHumanReadable(0), '0 bit')
     self.assertEqual(unit_util.MakeBitsHumanReadable(1023), '1023 bit')
     self.assertEqual(unit_util.MakeBitsHumanReadable(1024), '1 Kibit')
-    self.assertEqual(unit_util.MakeBitsHumanReadable(1024 ** 2), '1 Mibit')
-    self.assertEqual(unit_util.MakeBitsHumanReadable(1024 ** 3), '1 Gibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024**2), '1 Mibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024**3), '1 Gibit')
     self.assertEqual(
-        unit_util.MakeBitsHumanReadable(1024 ** 3 * 5.3), '5.3 Gibit')
+        unit_util.MakeBitsHumanReadable(1024**3 * 5.3), '5.3 Gibit')
     self.assertEqual(
-        unit_util.MakeBitsHumanReadable(1024 ** 4 * 2.7), '2.7 Tibit')
-    self.assertEqual(unit_util.MakeBitsHumanReadable(1024 ** 5), '1 Pibit')
-    self.assertEqual(unit_util.MakeBitsHumanReadable(1024 ** 6), '1 Eibit')
+        unit_util.MakeBitsHumanReadable(1024**4 * 2.7), '2.7 Tibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024**5), '1 Pibit')
+    self.assertEqual(unit_util.MakeBitsHumanReadable(1024**6), '1 Eibit')
 
   def testHumanReadableToBytes(self):
     """Tests converting human-readable strings to byte counts."""
@@ -90,26 +90,26 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(unit_util.HumanReadableToBytes('1 K'), 1024)
     self.assertEqual(unit_util.HumanReadableToBytes('1 KB'), 1024)
     self.assertEqual(unit_util.HumanReadableToBytes('1 KiB'), 1024)
-    self.assertEqual(unit_util.HumanReadableToBytes('1 m'), 1024 ** 2)
-    self.assertEqual(unit_util.HumanReadableToBytes('1 M'), 1024 ** 2)
-    self.assertEqual(unit_util.HumanReadableToBytes('1 MB'), 1024 ** 2)
-    self.assertEqual(unit_util.HumanReadableToBytes('1 MiB'), 1024 ** 2)
-    self.assertEqual(unit_util.HumanReadableToBytes('1 g'), 1024 ** 3)
-    self.assertEqual(unit_util.HumanReadableToBytes('1 G'), 1024 ** 3)
-    self.assertEqual(unit_util.HumanReadableToBytes('1 GB'), 1024 ** 3)
-    self.assertEqual(unit_util.HumanReadableToBytes('1 GiB'), 1024 ** 3)
-    self.assertEqual(unit_util.HumanReadableToBytes('1t'), 1024 ** 4)
-    self.assertEqual(unit_util.HumanReadableToBytes('1T'), 1024 ** 4)
-    self.assertEqual(unit_util.HumanReadableToBytes('1TB'), 1024 ** 4)
-    self.assertEqual(unit_util.HumanReadableToBytes('1TiB'), 1024 ** 4)
-    self.assertEqual(unit_util.HumanReadableToBytes('1\t   p'), 1024 ** 5)
-    self.assertEqual(unit_util.HumanReadableToBytes('1\t   P'), 1024 ** 5)
-    self.assertEqual(unit_util.HumanReadableToBytes('1\t   PB'), 1024 ** 5)
-    self.assertEqual(unit_util.HumanReadableToBytes('1\t   PiB'), 1024 ** 5)
-    self.assertEqual(unit_util.HumanReadableToBytes('1e'), 1024 ** 6)
-    self.assertEqual(unit_util.HumanReadableToBytes('1E'), 1024 ** 6)
-    self.assertEqual(unit_util.HumanReadableToBytes('1EB'), 1024 ** 6)
-    self.assertEqual(unit_util.HumanReadableToBytes('1EiB'), 1024 ** 6)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 m'), 1024**2)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 M'), 1024**2)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 MB'), 1024**2)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 MiB'), 1024**2)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 g'), 1024**3)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 G'), 1024**3)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 GB'), 1024**3)
+    self.assertEqual(unit_util.HumanReadableToBytes('1 GiB'), 1024**3)
+    self.assertEqual(unit_util.HumanReadableToBytes('1t'), 1024**4)
+    self.assertEqual(unit_util.HumanReadableToBytes('1T'), 1024**4)
+    self.assertEqual(unit_util.HumanReadableToBytes('1TB'), 1024**4)
+    self.assertEqual(unit_util.HumanReadableToBytes('1TiB'), 1024**4)
+    self.assertEqual(unit_util.HumanReadableToBytes('1\t   p'), 1024**5)
+    self.assertEqual(unit_util.HumanReadableToBytes('1\t   P'), 1024**5)
+    self.assertEqual(unit_util.HumanReadableToBytes('1\t   PB'), 1024**5)
+    self.assertEqual(unit_util.HumanReadableToBytes('1\t   PiB'), 1024**5)
+    self.assertEqual(unit_util.HumanReadableToBytes('1e'), 1024**6)
+    self.assertEqual(unit_util.HumanReadableToBytes('1E'), 1024**6)
+    self.assertEqual(unit_util.HumanReadableToBytes('1EB'), 1024**6)
+    self.assertEqual(unit_util.HumanReadableToBytes('1EiB'), 1024**6)
 
   def testCompareVersions(self):
     """Tests CompareVersions for various use cases."""
@@ -177,16 +177,19 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(pi1.proxy_pass, pi2.proxy_pass)
 
   def testMakeMetadataLine(self):
-    test_params = (
-        TestParams(args=('AFairlyShortKey', 'Value'),
-                   expected='    AFairlyShortKey:        Value'),
-        TestParams(args=('', 'Value'),
-                   expected='    :                       Value'),
-        TestParams(args=('AnotherKey', 'Value'),
-                   kwargs={'indent': 2},
-                   expected='        AnotherKey:         Value'),
-        TestParams(args=('AKeyMuchLongerThanTheLast', 'Value'),
-                   expected=('    AKeyMuchLongerThanTheLast:Value')))
+    test_params = (TestParams(
+        args=('AFairlyShortKey', 'Value'),
+        expected='    AFairlyShortKey:        Value'),
+                   TestParams(
+                       args=('', 'Value'),
+                       expected='    :                       Value'),
+                   TestParams(
+                       args=('AnotherKey', 'Value'),
+                       kwargs={'indent': 2},
+                       expected='        AnotherKey:         Value'),
+                   TestParams(
+                       args=('AKeyMuchLongerThanTheLast', 'Value'),
+                       expected=('    AKeyMuchLongerThanTheLast:Value')))
     for params in test_params:
       line = ls_helper.MakeMetadataLine(*(params.args), **(params.kwargs))
       self.assertEqual(line, params.expected)
@@ -212,32 +215,43 @@ class TestUtil(testcase.GsUtilUnitTestCase):
                     443 if env_var.lower().startswith('https') else 80))
             # Shouldn't populate info for other variables
             for other_env_var in valid_variables:
-              if other_env_var == env_var: continue
+              if other_env_var == env_var:
+                continue
               self._AssertProxyInfosEqual(
                   boto_util.ProxyInfoFromEnvironmentVar(other_env_var),
                   httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, None, 0))
-        for url_string in ['1.2.3.4:50', 'http://1.2.3.4:50',
-                           'https://1.2.3.4:50']:
+        for url_string in [
+            '1.2.3.4:50', 'http://1.2.3.4:50', 'https://1.2.3.4:50'
+        ]:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
                 boto_util.ProxyInfoFromEnvironmentVar(env_var),
                 httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, '1.2.3.4',
                                    50))
-        for url_string in ['foo:bar@1.2.3.4:50', 'http://foo:bar@1.2.3.4:50',
-                           'https://foo:bar@1.2.3.4:50']:
+        for url_string in [
+            'foo:bar@1.2.3.4:50', 'http://foo:bar@1.2.3.4:50',
+            'https://foo:bar@1.2.3.4:50'
+        ]:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
                 boto_util.ProxyInfoFromEnvironmentVar(env_var),
-                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP,
-                                   '1.2.3.4', 50, proxy_user='foo',
-                                   proxy_pass='bar'))
-        for url_string in ['bar@1.2.3.4:50', 'http://bar@1.2.3.4:50',
-                           'https://bar@1.2.3.4:50']:
+                httplib2.ProxyInfo(
+                    httplib2.socks.PROXY_TYPE_HTTP,
+                    '1.2.3.4',
+                    50,
+                    proxy_user='foo',
+                    proxy_pass='bar'))
+        for url_string in [
+            'bar@1.2.3.4:50', 'http://bar@1.2.3.4:50', 'https://bar@1.2.3.4:50'
+        ]:
           with SetEnvironmentForTest({env_var: url_string}):
             self._AssertProxyInfosEqual(
                 boto_util.ProxyInfoFromEnvironmentVar(env_var),
-                httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, '1.2.3.4',
-                                   50, proxy_pass='bar'))
+                httplib2.ProxyInfo(
+                    httplib2.socks.PROXY_TYPE_HTTP,
+                    '1.2.3.4',
+                    50,
+                    proxy_pass='bar'))
       for env_var in ['proxy', 'noproxy', 'garbage']:
         for url_string in ['1.2.3.4:50', 'http://1.2.3.4:50']:
           with SetEnvironmentForTest({env_var: url_string}):
@@ -283,28 +297,24 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual('25:02:10', PrettyTime(90130))
     self.assertEqual('01:00:00', PrettyTime(3600))
     self.assertEqual('00:59:59', PrettyTime(3599))
-    self.assertEqual('100+ hrs', PrettyTime(3600*100))
-    self.assertEqual('999+ hrs', PrettyTime(3600*10000))
+    self.assertEqual('100+ hrs', PrettyTime(3600 * 100))
+    self.assertEqual('999+ hrs', PrettyTime(3600 * 10000))
 
   def testUIHumanReadableWithDecimalPlaces(self):
     """Tests HumanReadableWithDecimalPlaces for UI."""
-    self.assertEqual('1.0 GiB', HumanReadableWithDecimalPlaces(1024**3 +
-                                                               1024**2 * 10,
-                                                               1))
+    self.assertEqual('1.0 GiB',
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 10, 1))
     self.assertEqual('1.0 GiB', HumanReadableWithDecimalPlaces(1024**3), 1)
-    self.assertEqual('1.01 GiB', HumanReadableWithDecimalPlaces(1024**3 +
-                                                                1024**2 * 10,
-                                                                2))
-    self.assertEqual('1.000 GiB', HumanReadableWithDecimalPlaces(1024**3 +
-                                                                 1024**2*5, 3))
-    self.assertEqual('1.10 GiB', HumanReadableWithDecimalPlaces(1024**3 +
-                                                                1024**2 * 100,
-                                                                2))
-    self.assertEqual('1.100 GiB', HumanReadableWithDecimalPlaces(1024**3 +
-                                                                 1024**2 * 100,
-                                                                 3))
-    self.assertEqual('10.00 MiB', HumanReadableWithDecimalPlaces(1024**2 *10,
-                                                                 2))
+    self.assertEqual('1.01 GiB',
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 10, 2))
+    self.assertEqual('1.000 GiB',
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 5, 3))
+    self.assertEqual('1.10 GiB',
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 100, 2))
+    self.assertEqual('1.100 GiB',
+                     HumanReadableWithDecimalPlaces(1024**3 + 1024**2 * 100, 3))
+    self.assertEqual('10.00 MiB',
+                     HumanReadableWithDecimalPlaces(1024**2 * 10, 2))
     # The test below is good for rounding.
     self.assertEqual('2.01 GiB', HumanReadableWithDecimalPlaces(2157969408, 2))
     self.assertEqual('2.0 GiB', HumanReadableWithDecimalPlaces(2157969408, 1))

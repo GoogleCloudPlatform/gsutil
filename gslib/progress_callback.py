@@ -24,10 +24,9 @@ import time
 from gslib.thread_message import ProgressMessage
 from gslib.utils import parallelism_framework_util
 
-
 # Default upper and lower bounds for progress callback frequency.
-_START_BYTES_PER_CALLBACK = 1024*256
-_MAX_BYTES_PER_CALLBACK = 1024*1024*100
+_START_BYTES_PER_CALLBACK = 1024 * 256
+_MAX_BYTES_PER_CALLBACK = 1024 * 1024 * 100
 _TIMEOUT_SECONDS = 1
 
 # Max width of URL to display in progress indicator. Wide enough to allow
@@ -42,19 +41,20 @@ class ProgressCallbackWithTimeout(object):
   overwhelming.
   """
 
-  def __init__(self, total_size, callback_func,
+  def __init__(self,
+               total_size,
+               callback_func,
                start_bytes_per_callback=_START_BYTES_PER_CALLBACK,
                timeout=_TIMEOUT_SECONDS):
     """Initializes the callback with timeout.
 
     Args:
-      total_size: Total bytes to process. If this is None, size is not known
-          at the outset.
-      callback_func: Func of (int: processed_so_far, int: total_bytes)
-          used to make callbacks.
+      total_size: Total bytes to process. If this is None, size is not known at
+        the outset.
+      callback_func: Func of (int: processed_so_far, int: total_bytes) used to
+        make callbacks.
       start_bytes_per_callback: Lower bound of bytes per callback.
       timeout: Number maximum of seconds without a callback.
-
     """
     self._bytes_per_callback = start_bytes_per_callback
     self._callback_func = callback_func
@@ -70,10 +70,9 @@ class ProgressCallbackWithTimeout(object):
     self._bytes_processed_since_callback += bytes_processed
     cur_time = time.time()
     if (self._bytes_processed_since_callback > self._bytes_per_callback or
-        (self._total_size is not None and
-         self._total_bytes_processed + self._bytes_processed_since_callback >=
-         self._total_size) or
-	(self._last_time - cur_time) > self._timeout):
+        (self._total_size is not None and self._total_bytes_processed +
+         self._bytes_processed_since_callback >= self._total_size) or
+        (self._last_time - cur_time) > self._timeout):
       self._total_bytes_processed += self._bytes_processed_since_callback
       # TODO: We check if >= total_size and truncate because JSON uploads count
       # multipart metadata during their send progress. If the size is unknown,
@@ -95,17 +94,19 @@ class ProgressCallbackWithBackoff(object):
   This prevents excessive log message output.
   """
 
-  def __init__(self, total_size, callback_func,
+  def __init__(self,
+               total_size,
+               callback_func,
                start_bytes_per_callback=_START_BYTES_PER_CALLBACK,
                max_bytes_per_callback=_MAX_BYTES_PER_CALLBACK,
                calls_per_exponent=10):
     """Initializes the callback with backoff.
 
     Args:
-      total_size: Total bytes to process. If this is None, size is not known
-          at the outset.
-      callback_func: Func of (int: processed_so_far, int: total_bytes)
-          used to make callbacks.
+      total_size: Total bytes to process. If this is None, size is not known at
+        the outset.
+      callback_func: Func of (int: processed_so_far, int: total_bytes) used to
+        make callbacks.
       start_bytes_per_callback: Lower bound of bytes per callback.
       max_bytes_per_callback: Upper bound of bytes per callback.
       calls_per_exponent: Number of calls to make before reducing rate.
@@ -152,9 +153,14 @@ class FileProgressCallbackHandler(object):
       UI Thread.
   """
 
-  def __init__(self, status_queue, start_byte=0,
-               override_total_size=None, src_url=None, component_num=None,
-               dst_url=None, operation_name=None):
+  def __init__(self,
+               status_queue,
+               start_byte=0,
+               override_total_size=None,
+               src_url=None,
+               component_num=None,
+               dst_url=None,
+               operation_name=None):
     """Initializes the callback handler.
 
     Args:
@@ -163,8 +169,8 @@ class FileProgressCallbackHandler(object):
       override_total_size: The size of the file component, if one is being used.
       src_url: FileUrl/CloudUrl representing the source file.
       component_num: Indicates the component number, if any.
-      dst_url: FileUrl/CloudUrl representing the destination file, or None
-        for unary operations like hashing.
+      dst_url: FileUrl/CloudUrl representing the destination file, or None for
+        unary operations like hashing.
       operation_name: String representing the operation name
     """
     self._status_queue = status_queue
@@ -178,16 +184,17 @@ class FileProgressCallbackHandler(object):
     self._last_byte_written = False
 
   # Function signature is in boto callback format, which cannot be changed.
-  def call(self,  # pylint: disable=invalid-name
-           last_byte_processed,
-           total_size):
+  def call(
+      self,  # pylint: disable=invalid-name
+      last_byte_processed,
+      total_size):
     """Gathers information describing the operation progress.
 
     Actual message is printed to stderr by UIThread.
 
     Args:
       last_byte_processed: The last byte processed in the file. For file
-                           components, this number should be in the range
+        components, this number should be in the range
                            [start_byte:start_byte + override_total_size].
       total_size: Total size of the ongoing operation.
     """
@@ -199,10 +206,13 @@ class FileProgressCallbackHandler(object):
 
     parallelism_framework_util.PutToQueueWithTimeout(
         self._status_queue,
-        ProgressMessage(total_size, last_byte_processed - self._start_byte,
-                        self._src_url, time.time(),
-                        component_num=self._component_num,
-                        operation_name=self._operation_name,
-                        dst_url=self._dst_url))
+        ProgressMessage(
+            total_size,
+            last_byte_processed - self._start_byte,
+            self._src_url,
+            time.time(),
+            component_num=self._component_num,
+            operation_name=self._operation_name,
+            dst_url=self._dst_url))
     if total_size and last_byte_processed - self._start_byte == total_size:
       self._last_byte_written = True

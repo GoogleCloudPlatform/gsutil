@@ -37,12 +37,12 @@ class RsyncDiffToApply(object):
 
     Args:
       src_url_str: (str or None) The source URL string, or None if diff_action
-          is REMOVE.
+        is REMOVE.
       dst_url_str: (str) The destination URL string.
       src_posix_attrs: (posix_util.POSIXAttributes) The source POSIXAttributes.
       diff_action: (DiffAction) DiffAction to be applied.
       copy_size: (int or None) The amount of bytes to copy, or None if
-          diff_action is REMOVE.
+        diff_action is REMOVE.
     """
     self.src_url_str = src_url_str
     self.dst_url_str = dst_url_str

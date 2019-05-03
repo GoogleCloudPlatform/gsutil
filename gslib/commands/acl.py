@@ -277,8 +277,9 @@ _CH_DESCRIPTION = """
     -u          Add or modify a user entity's role.
 """
 
-_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
-             _CH_SYNOPSIS.lstrip('\n') + '\n\n')
+_SYNOPSIS = (
+    _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + _CH_SYNOPSIS.lstrip('\n') +
+    '\n\n')
 
 _DESCRIPTION = ("""
   The acl command has three sub-commands:
@@ -321,14 +322,9 @@ class AclCommand(Command):
               CommandArgument.MakeFileURLOrCannedACLArgument(),
               CommandArgument.MakeZeroOrMoreCloudURLsArgument()
           ],
-          'get': [
-              CommandArgument.MakeNCloudURLsArgument(1)
-          ],
-          'ch': [
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-          ],
-      }
-  )
+          'get': [CommandArgument.MakeNCloudURLsArgument(1)],
+          'ch': [CommandArgument.MakeZeroOrMoreCloudURLsArgument()],
+      })
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='acl',
@@ -337,7 +333,10 @@ class AclCommand(Command):
       help_one_line_summary='Get, set, or change bucket and/or object ACLs',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
-          'get': _get_help_text, 'set': _set_help_text, 'ch': _ch_help_text},
+          'get': _get_help_text,
+          'set': _set_help_text,
+          'ch': _ch_help_text
+      },
   )
 
   def _CalculateUrlsStartArg(self):
@@ -400,9 +399,8 @@ class AclCommand(Command):
           self.RaiseInvalidArgumentException()
 
     if not self.changes:
-      raise CommandException(
-          'Please specify at least one access change '
-          'with the -g, -u, or -d flags')
+      raise CommandException('Please specify at least one access change '
+                             'with the -g, -u, or -d flags')
 
     if (not UrlsAreForSingleProvider(self.args) or
         StorageUrlFromString(self.args[0]).scheme != 'gs'):
@@ -412,8 +410,10 @@ class AclCommand(Command):
 
     self.everything_set_okay = True
     self.ApplyAclFunc(
-        _ApplyAclChangesWrapper, _ApplyExceptionHandler,
-        self.args, object_fields=['acl', 'generation', 'metageneration'])
+        _ApplyAclChangesWrapper,
+        _ApplyExceptionHandler,
+        self.args,
+        object_fields=['acl', 'generation', 'metageneration'])
     if not self.everything_set_okay:
       raise CommandException('ACLs for some objects could not be set.')
 
@@ -437,8 +437,10 @@ class AclCommand(Command):
 
     url = name_expansion_result.expanded_storage_url
     if url.IsBucket():
-      bucket = gsutil_api.GetBucket(url.bucket_name, provider=url.scheme,
-                                    fields=['acl', 'metageneration'])
+      bucket = gsutil_api.GetBucket(
+          url.bucket_name,
+          provider=url.scheme,
+          fields=['acl', 'metageneration'])
       current_acl = bucket.acl
     elif url.IsObject():
       gcs_object = encoding.JsonToMessage(apitools_messages.Object,
@@ -455,18 +457,26 @@ class AclCommand(Command):
       if url.IsBucket():
         preconditions = Preconditions(meta_gen_match=bucket.metageneration)
         bucket_metadata = apitools_messages.Bucket(acl=current_acl)
-        gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
-                               preconditions=preconditions,
-                               provider=url.scheme, fields=['id'])
+        gsutil_api.PatchBucket(
+            url.bucket_name,
+            bucket_metadata,
+            preconditions=preconditions,
+            provider=url.scheme,
+            fields=['id'])
       else:  # Object
-        preconditions = Preconditions(gen_match=gcs_object.generation,
-                                      meta_gen_match=gcs_object.metageneration)
+        preconditions = Preconditions(
+            gen_match=gcs_object.generation,
+            meta_gen_match=gcs_object.metageneration)
         object_metadata = apitools_messages.Object(acl=current_acl)
         try:
           gsutil_api.PatchObjectMetadata(
-              url.bucket_name, url.object_name, object_metadata,
-              preconditions=preconditions, provider=url.scheme,
-              generation=url.generation, fields=['id'])
+              url.bucket_name,
+              url.object_name,
+              object_metadata,
+              preconditions=preconditions,
+              provider=url.scheme,
+              generation=url.generation,
+              fields=['id'])
         except PreconditionException as e:
           # Special retry case where we want to do an additional step, the read
           # of the read-modify-write cycle, to fetch the correct object
@@ -490,7 +500,9 @@ class AclCommand(Command):
   def _RefetchObjectMetadataAndApplyAclChanges(self, url, gsutil_api):
     """Reattempts object ACL changes after a PreconditionException."""
     gcs_object = gsutil_api.GetObjectMetadata(
-        url.bucket_name, url.object_name, provider=url.scheme,
+        url.bucket_name,
+        url.object_name,
+        provider=url.scheme,
         fields=['acl', 'generation', 'metageneration'])
     current_acl = gcs_object.acl
 
@@ -499,18 +511,23 @@ class AclCommand(Command):
       return
 
     object_metadata = apitools_messages.Object(acl=current_acl)
-    preconditions = Preconditions(gen_match=gcs_object.generation,
-                                  meta_gen_match=gcs_object.metageneration)
+    preconditions = Preconditions(
+        gen_match=gcs_object.generation,
+        meta_gen_match=gcs_object.metageneration)
     gsutil_api.PatchObjectMetadata(
-        url.bucket_name, url.object_name, object_metadata,
-        preconditions=preconditions, provider=url.scheme,
-        generation=gcs_object.generation, fields=['id'])
+        url.bucket_name,
+        url.object_name,
+        object_metadata,
+        preconditions=preconditions,
+        provider=url.scheme,
+        generation=gcs_object.generation,
+        fields=['id'])
 
   def _ApplyAclChangesAndReturnChangeCount(self, storage_url, acl_message):
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(
-          storage_url, acl_message, 'acl', self.logger)
+      modification_count += change.Execute(storage_url, acl_message, 'acl',
+                                           self.logger)
     return modification_count
 
   def RunCommand(self):
@@ -532,8 +549,8 @@ class AclCommand(Command):
       metrics.LogCommandParams(subcommands=[action_subcommand])
       self._ChAcl()
     else:
-      raise CommandException(('Invalid subcommand "%s" for the %s command.\n'
-                              'See "gsutil help acl".') %
-                             (action_subcommand, self.command_name))
+      raise CommandException(
+          ('Invalid subcommand "%s" for the %s command.\n'
+           'See "gsutil help acl".') % (action_subcommand, self.command_name))
 
     return 0

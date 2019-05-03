@@ -35,7 +35,7 @@ from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
 # We do not buffer this many bytes in memory at a time - that is controlled by
 # DaisyChainWrapper.max_buffer_size. This is the upper bound of bytes that may
 # be unnecessarily downloaded if there is a break in the resumable upload.
-_DEFAULT_DOWNLOAD_CHUNK_SIZE = 1024*1024*100
+_DEFAULT_DOWNLOAD_CHUNK_SIZE = 1024 * 1024 * 100
 
 
 class BufferWrapper(object):
@@ -46,7 +46,7 @@ class BufferWrapper(object):
 
     Args:
       daisy_chain_wrapper: DaisyChainWrapper instance to use for buffer and
-                           locking.
+        locking.
     """
     self.daisy_chain_wrapper = daisy_chain_wrapper
 
@@ -87,8 +87,12 @@ class DaisyChainWrapper(object):
   size will be used.
   """
 
-  def __init__(self, src_url, src_obj_size, gsutil_api,
-               compressed_encoding=False, progress_callback=None,
+  def __init__(self,
+               src_url,
+               src_obj_size,
+               gsutil_api,
+               compressed_encoding=False,
+               progress_callback=None,
                download_chunk_size=_DEFAULT_DOWNLOAD_CHUNK_SIZE,
                decryption_key=None):
     """Initializes the daisy chain wrapper.
@@ -99,13 +103,13 @@ class DaisyChainWrapper(object):
       gsutil_api: gsutil Cloud API to use for the copy.
       compressed_encoding: If true, source object has content-encoding: gzip.
       progress_callback: Optional callback function for progress notifications
-          for the download thread. Receives calls with arguments
-          (bytes_transferred, total_size).
+        for the download thread. Receives calls with arguments
+        (bytes_transferred, total_size).
       download_chunk_size: Integer number of bytes to download per
-          GetObjectMedia request. This is the upper bound of bytes that may be
-          unnecessarily downloaded if there is a break in the resumable upload.
-      decryption_key: Base64-encoded decryption key for the source object,
-          if any.
+        GetObjectMedia request. This is the upper bound of bytes that may be
+        unnecessarily downloaded if there is a break in the resumable upload.
+      decryption_key: Base64-encoded decryption key for the source object, if
+        any.
     """
     # Current read position for the upload file pointer.
     self.position = 0
@@ -166,8 +170,8 @@ class DaisyChainWrapper(object):
       Args:
         start_byte: Byte from which to begin the download.
         progress_callback: Optional callback function for progress
-            notifications. Receives calls with arguments
-            (bytes_transferred, total_size).
+          notifications. Receives calls with arguments (bytes_transferred,
+          total_size).
       """
       # TODO: Support resumable downloads. This would require the BufferWrapper
       # object to support seek() and tell() which requires coordination with
@@ -176,13 +180,17 @@ class DaisyChainWrapper(object):
       try:
         while start_byte + self._download_chunk_size < self.src_obj_size:
           self.gsutil_api.GetObjectMedia(
-              self.src_url.bucket_name, self.src_url.object_name,
-              BufferWrapper(self), compressed_encoding=self.compressed_encoding,
+              self.src_url.bucket_name,
+              self.src_url.object_name,
+              BufferWrapper(self),
+              compressed_encoding=self.compressed_encoding,
               start_byte=start_byte,
               end_byte=start_byte + self._download_chunk_size - 1,
-              generation=self.src_url.generation, object_size=self.src_obj_size,
+              generation=self.src_url.generation,
+              object_size=self.src_obj_size,
               download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
-              provider=self.src_url.scheme, progress_callback=progress_callback,
+              provider=self.src_url.scheme,
+              progress_callback=progress_callback,
               decryption_tuple=self.decryption_tuple)
           if self.stop_download.is_set():
             # Download thread needs to be restarted, so exit.
@@ -190,12 +198,16 @@ class DaisyChainWrapper(object):
             return
           start_byte += self._download_chunk_size
         self.gsutil_api.GetObjectMedia(
-            self.src_url.bucket_name, self.src_url.object_name,
-            BufferWrapper(self), compressed_encoding=self.compressed_encoding,
-            start_byte=start_byte, generation=self.src_url.generation,
+            self.src_url.bucket_name,
+            self.src_url.object_name,
+            BufferWrapper(self),
+            compressed_encoding=self.compressed_encoding,
+            start_byte=start_byte,
+            generation=self.src_url.generation,
             object_size=self.src_obj_size,
             download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
-            provider=self.src_url.scheme, progress_callback=progress_callback,
+            provider=self.src_url.scheme,
+            progress_callback=progress_callback,
             decryption_tuple=self.decryption_tuple)
       # We catch all exceptions here because we want to store them.
       except Exception as e:  # pylint: disable=broad-except
@@ -206,8 +218,7 @@ class DaisyChainWrapper(object):
 
     # TODO: If we do gzip encoding transforms mid-transfer, this will fail.
     self.download_thread = threading.Thread(
-        target=PerformDownload,
-        args=(start_byte, progress_callback))
+        target=PerformDownload, args=(start_byte, progress_callback))
     self.download_thread.start()
 
   def read(self, amt=None):  # pylint: disable=invalid-name
@@ -303,8 +314,8 @@ class DaisyChainWrapper(object):
           self.bytes_buffered = 0
           self.last_position = 0
           self.last_data = None
-        self.StartDownloadThread(start_byte=offset,
-                                 progress_callback=self.progress_callback)
+        self.StartDownloadThread(
+            start_byte=offset, progress_callback=self.progress_callback)
     else:
       raise IOError('Daisy-chain download wrapper does not support '
                     'seek mode %s' % whence)

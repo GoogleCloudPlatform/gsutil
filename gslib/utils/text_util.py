@@ -37,21 +37,20 @@ from gslib.utils.constants import UTF8
 from gslib.utils.constants import WINDOWS_1252
 from gslib.utils.system_util import IS_CP1252
 
-
 if six.PY3:
   long = int
 
-
 STORAGE_CLASS_SHORTHAND_TO_FULL_NAME = {
-  # Values should remain uppercase, as required by non-gs providers.
-  'CL': 'COLDLINE',
-  'DRA': 'DURABLE_REDUCED_AVAILABILITY',
-  'NL': 'NEARLINE',
-  'S': 'STANDARD',
-  'STD': 'STANDARD'}
+    # Values should remain uppercase, as required by non-gs providers.
+    'CL': 'COLDLINE',
+    'DRA': 'DURABLE_REDUCED_AVAILABILITY',
+    'NL': 'NEARLINE',
+    'S': 'STANDARD',
+    'STD': 'STANDARD'
+}
 
-VERSION_MATCHER = LazyWrapper(
-  lambda: re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
+VERSION_MATCHER = LazyWrapper(lambda: re.compile(
+    r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
 
 
 def AddQueryParamToUrl(url_str, param_name, param_value):
@@ -84,7 +83,8 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
   query_params.append((param_name, param_value))
   new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
 
-  new_url = urllib.parse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
+  new_url = urllib.parse.urlunsplit(
+      (scheme, netloc, path, new_query_str, fragment))
   return new_url
 
 
@@ -143,7 +143,7 @@ def DecodeLongAsString(long_to_convert):
 
   Args:
     long_to_convert: long to convert to ASCII string. If this is already a
-                     string, it is simply returned.
+      string, it is simply returned.
 
   Returns:
     String decoded from the input long.
@@ -182,6 +182,7 @@ def FixWindowsEncodingIfNeeded(input_str):
 
   Args:
     input_str: (str or bytes) The input string.
+
   Returns:
     (unicode) The converted string or the original, if conversion wasn't needed.
   """
@@ -200,10 +201,10 @@ def InsistAscii(string, message):
   """Ensures that the string passed in consists of only ASCII values.
 
   Args:
-    string: Union[str, unicode, bytes] Text that will be checked for
-        ASCII values.
+    string: Union[str, unicode, bytes] Text that will be checked for ASCII
+      values.
     message: Union[str, unicode, bytes] Error message, passed into the
-        exception, in the event that the check on `string` fails.
+      exception, in the event that the check on `string` fails.
 
   Returns:
     None
@@ -255,7 +256,7 @@ def InsistOnOrOff(value, message):
   Args:
     value: (unicode) Unicode string that will be checked for correct text.
     message: Union[str, unicode, bytes] Error message passed into the exception
-        in the event that the check on value fails.
+      in the event that the check on value fails.
 
   Returns:
     None
@@ -293,15 +294,15 @@ def PrintableStr(input_val):
 
   Args:
     input_val: (unicode, str, or None) A string-like object or None. This method
-        simply calls encode() on `input_val` if it is not None; if `input_val`
-        is not of type "unicode", this will implicitly call decode() with the
-        default encoding for strings (for Python 2, this is ASCII), then call
-        encode().
+      simply calls encode() on `input_val` if it is not None; if `input_val` is
+      not of type "unicode", this will implicitly call decode() with the default
+      encoding for strings (for Python 2, this is ASCII), then call encode().
 
   Returns:
     (str) A UTF-8 encoded string, or None.
   """
   return input_val
+
 
 def print_to_fd(*objects, **kwargs):
   """A Python 2/3 compatible analogue to the print function.
@@ -312,6 +313,7 @@ def print_to_fd(*objects, **kwargs):
   Aguments and return values are the same as documented in
   the Python 2 print function.
   """
+
   def _get_args(**kwargs):
     """Validates keyword arguments that would be used in Print
 
@@ -321,26 +323,20 @@ def print_to_fd(*objects, **kwargs):
 
     Returns the above kwargs of the above types.
     """
-    expected_keywords = collections.OrderedDict([
-      ('sep', ' '),
-      ('end', '\n'),
-      ('file', sys.stdout)])
+    expected_keywords = collections.OrderedDict([('sep', ' '), ('end', '\n'),
+                                                 ('file', sys.stdout)])
 
     for key, value in kwargs.items():
       if key not in expected_keywords:
-        error_msg = (
-          '{} is not a valid keyword argument. '
-          'Please use one of: {}')
+        error_msg = ('{} is not a valid keyword argument. '
+                     'Please use one of: {}')
         raise KeyError(
-          error_msg.format(
-            key,
-            ' '.join(expected_keywords.keys())))
+            error_msg.format(key, ' '.join(expected_keywords.keys())))
       else:
         expected_keywords[key] = value
 
     return expected_keywords.values()
 
-  
   def _get_byte_strings(*objects):
     """Gets a `bytes` string for each item in a list of printable objects."""
     byte_objects = []
@@ -357,7 +353,7 @@ def print_to_fd(*objects, **kwargs):
         # will throw a TypeError.
         byte_objects.append(six.ensure_binary(item))
     return byte_objects
-    
+
   sep, end, file = _get_args(**kwargs)
   sep = six.ensure_binary(sep)
   end = six.ensure_binary(end)
@@ -396,8 +392,8 @@ def get_random_ascii_chars(size, seed=0):
 
   Args:
     size: Integer quantity of characters to generate.
-    seed: A seed may be specified for deterministic behavior.
-          Int 0 is used as the default value.
+    seed: A seed may be specified for deterministic behavior. Int 0 is used as
+      the default value.
 
   Returns:
     Binary encoded string representation of a list of characters of length

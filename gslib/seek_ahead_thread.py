@@ -41,11 +41,11 @@ class SeekAheadResult(object):
 
     Args:
       est_num_ops: Number of operations the iterated result represents.
-          Operation is loosely defined as a single API call for a single
-          object. The total number of API calls may not be known at the time of
-          iteration, so this number is approximate.
+        Operation is loosely defined as a single API call for a single object.
+        The total number of API calls may not be known at the time of iteration,
+        so this number is approximate.
       data_bytes: Number of data bytes that will be transferred (uploaded,
-          downloaded, or rewritten) for this iterated result.
+        downloaded, or rewritten) for this iterated result.
     """
     self.est_num_ops = est_num_ops
     self.data_bytes = data_bytes
@@ -81,9 +81,9 @@ class SeekAheadThread(threading.Thread):
 
     Args:
       seek_ahead_iterator: Iterator matching the ProducerThread's args_iterator,
-          but returning only object name and/or size in the result.
-      cancel_event: threading.Event for signaling the
-          seek-ahead iterator to terminate.
+        but returning only object name and/or size in the result.
+      cancel_event: threading.Event for signaling the seek-ahead iterator to
+        terminate.
       status_queue: Status queue for posting summary of fully iterated results.
     """
     super(SeekAheadThread, self).__init__()
@@ -122,6 +122,7 @@ class SeekAheadThread(threading.Thread):
     if self.cancel_event.isSet():
       return
 
-    _PutToQueueWithTimeout(self.status_queue,
-                          thread_message.SeekAheadMessage(
-                              num_objects, num_data_bytes, time.time()))
+    _PutToQueueWithTimeout(
+        self.status_queue,
+        thread_message.SeekAheadMessage(num_objects, num_data_bytes,
+                                        time.time()))

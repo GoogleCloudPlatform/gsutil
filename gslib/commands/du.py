@@ -38,7 +38,6 @@ from gslib.utils.text_util import print_to_fd
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils import text_util
 
-
 _SYNOPSIS = """
   gsutil du url...
 """
@@ -132,10 +131,7 @@ class DuCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
-  )
+      argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='du',
@@ -147,11 +143,13 @@ class DuCommand(Command):
   )
 
   def _PrintSummaryLine(self, num_bytes, name):
-    size_string = (MakeHumanReadable(num_bytes)
-                   if self.human_readable else six.text_type(num_bytes))
-    text_util.print_to_fd('{size:<11}  {name}'.format(
-        size=size_string,
-        name=six.ensure_text(name)), end=self.line_ending)
+    size_string = (
+        MakeHumanReadable(num_bytes)
+        if self.human_readable else six.text_type(num_bytes))
+    text_util.print_to_fd(
+        '{size:<11}  {name}'.format(
+            size=size_string, name=six.ensure_text(name)),
+        end=self.line_ending)
 
   def _PrintInfoAboutBucketListingRef(self, bucket_listing_ref):
     """Print listing info for given bucket_listing_ref.
@@ -167,15 +165,15 @@ class DuCommand(Command):
     """
     obj = bucket_listing_ref.root_object
     url_str = bucket_listing_ref.url_string
-    if (obj.metadata and S3_DELETE_MARKER_GUID in
-        obj.metadata.additionalProperties):
+    if (obj.metadata and
+        S3_DELETE_MARKER_GUID in obj.metadata.additionalProperties):
       size_string = '0'
       num_bytes = 0
       num_objs = 0
       url_str += '<DeleteMarker>'
     else:
-      size_string = (MakeHumanReadable(obj.size)
-                     if self.human_readable else str(obj.size))
+      size_string = (
+          MakeHumanReadable(obj.size) if self.human_readable else str(obj.size))
       num_bytes = obj.size
       num_objs = 1
 
@@ -241,17 +239,21 @@ class DuCommand(Command):
     for url_arg in self.args:
       top_level_storage_url = StorageUrlFromString(url_arg)
       if top_level_storage_url.IsFileUrl():
-        raise CommandException('Only cloud URLs are supported for %s'
-                               % self.command_name)
+        raise CommandException('Only cloud URLs are supported for %s' %
+                               self.command_name)
       bucket_listing_fields = ['size']
 
       listing_helper = ls_helper.LsHelper(
-          self.WildcardIterator, self.logger,
-          print_object_func=_PrintObjectLong, print_dir_func=_PrintNothing,
+          self.WildcardIterator,
+          self.logger,
+          print_object_func=_PrintObjectLong,
+          print_dir_func=_PrintNothing,
           print_dir_header_func=_PrintNothing,
           print_dir_summary_func=_PrintDirectory,
-          print_newline_func=_PrintNothing, all_versions=self.all_versions,
-          should_recurse=True, exclude_patterns=self.exclude_patterns,
+          print_newline_func=_PrintNothing,
+          all_versions=self.all_versions,
+          should_recurse=True,
+          exclude_patterns=self.exclude_patterns,
           fields=bucket_listing_fields)
 
       # LsHelper expands to objects and prefixes, so perform a top-level
@@ -259,8 +261,8 @@ class DuCommand(Command):
       if top_level_storage_url.IsProvider():
         # Provider URL: use bucket wildcard to iterate over all buckets.
         top_level_iter = self.WildcardIterator(
-            '%s://*' % top_level_storage_url.scheme).IterBuckets(
-                bucket_fields=['id'])
+            '%s://*' %
+            top_level_storage_url.scheme).IterBuckets(bucket_fields=['id'])
       elif top_level_storage_url.IsBucket():
         top_level_iter = self.WildcardIterator(
             '%s://%s' % (top_level_storage_url.scheme,

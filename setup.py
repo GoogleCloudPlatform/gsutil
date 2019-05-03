@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Setup installation module for gsutil."""
 
 import os
@@ -142,17 +141,13 @@ setup(
             # exclude vendored dependencies (under gslib/vendored), as our
             # vendored versions may differ slightly from the official versions.
             'third_party',
-        ],
-    ),
+        ],),
     include_package_data=True,
     entry_points={
-        'console_scripts': [
-            'gsutil = gslib.__main__:main',
-        ],
+        'console_scripts': ['gsutil = gslib.__main__:main',],
     },
     install_requires=requires,
     cmdclass={
         'build_py': CustomBuildPy,
         'sdist': CustomSDist,
-    }
-)
+    })

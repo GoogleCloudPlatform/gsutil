@@ -33,15 +33,10 @@ from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
 from gslib.utils.metadata_util import ObjectIsGzipEncoded
 from gslib.utils import text_util
 
-
-_CAT_BUCKET_LISTING_FIELDS = ['bucket',
-                              'contentEncoding',
-                              'crc32c',
-                              'customerEncryption',
-                              'generation',
-                              'md5Hash',
-                              'name',
-                              'size']
+_CAT_BUCKET_LISTING_FIELDS = [
+    'bucket', 'contentEncoding', 'crc32c', 'customerEncryption', 'generation',
+    'md5Hash', 'name', 'size'
+]
 
 
 class CatHelper(object):
@@ -72,20 +67,25 @@ class CatHelper(object):
         break
       text_util.write_to_fd(dst_fd, buf)
 
-  def CatUrlStrings(self, url_strings, show_header=False, start_byte=0,
-                    end_byte=None, cat_out_fd=None):
+  def CatUrlStrings(self,
+                    url_strings,
+                    show_header=False,
+                    start_byte=0,
+                    end_byte=None,
+                    cat_out_fd=None):
     """Prints each of the url strings to stdout.
 
     Args:
       url_strings: String iterable.
       show_header: If true, print a header per file.
       start_byte: Starting byte of the file to print, used for constructing
-                  range requests.
+        range requests.
       end_byte: Ending byte of the file to print; used for constructing range
-                requests. If this is negative, the start_byte is ignored and
+        requests. If this is negative, the start_byte is ignored and
                 and end range is sent over HTTP (such as range: bytes -9)
       cat_out_fd: File descriptor to which output should be written. Defaults to
-                 stdout if no file descriptor is supplied.
+        stdout if no file descriptor is supplied.
+
     Returns:
       0 on success.
 
@@ -112,17 +112,16 @@ class CatHelper(object):
           for blr in self.command_obj.WildcardIterator(url_str).IterObjects(
               bucket_listing_fields=_CAT_BUCKET_LISTING_FIELDS):
             decryption_keywrapper = None
-            if (blr.root_object and
-                blr.root_object.customerEncryption and
+            if (blr.root_object and blr.root_object.customerEncryption and
                 blr.root_object.customerEncryption.keySha256):
               decryption_key = FindMatchingCSEKInBotoConfig(
                   blr.root_object.customerEncryption.keySha256, config)
               if not decryption_key:
                 raise EncryptionException(
                     'Missing decryption key with SHA256 hash %s. No decryption '
-                    'key matches object %s' % (
-                        blr.root_object.customerEncryption.keySha256,
-                        blr.url_string))
+                    'key matches object %s' %
+                    (blr.root_object.customerEncryption.keySha256,
+                     blr.url_string))
               decryption_keywrapper = CryptoKeyWrapperFromKey(decryption_key)
 
             did_some_work = True
@@ -136,9 +135,12 @@ class CatHelper(object):
             if storage_url.IsCloudUrl():
               compressed_encoding = ObjectIsGzipEncoded(cat_object)
               self.command_obj.gsutil_api.GetObjectMedia(
-                  cat_object.bucket, cat_object.name, cat_out_fd,
+                  cat_object.bucket,
+                  cat_object.name,
+                  cat_out_fd,
                   compressed_encoding=compressed_encoding,
-                  start_byte=start_byte, end_byte=end_byte,
+                  start_byte=start_byte,
+                  end_byte=end_byte,
                   object_size=cat_object.size,
                   generation=storage_url.generation,
                   decryption_tuple=decryption_keywrapper,

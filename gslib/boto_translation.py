@@ -102,10 +102,8 @@ from gslib.utils.translation_helper import S3MarkerAclFromObjectMetadata
 from gslib.utils.translation_helper import UnaryDictToXml
 from gslib.utils.unit_util import TWO_MIB
 
-
 if six.PY3:
   long = int
-
 
 TRANSLATABLE_BOTO_EXCEPTIONS = (boto.exception.BotoServerError,
                                 boto.exception.InvalidUriError,
@@ -121,8 +119,8 @@ global boto_auth_initialized, boto_auth_initialized_lock
 boto_auth_initialized_lock = threading.Lock()
 boto_auth_initialized = False
 
-NON_EXISTENT_OBJECT_REGEX = re.compile(r'.*non-\s*existent\s*object',
-                                       flags=re.DOTALL)
+NON_EXISTENT_OBJECT_REGEX = re.compile(
+    r'.*non-\s*existent\s*object', flags=re.DOTALL)
 # Determines whether an etag is a valid MD5.
 MD5_REGEX = re.compile(r'^"*[a-fA-F0-9]{32}"*$')
 
@@ -173,29 +171,41 @@ class BotoTranslation(CloudApi):
   TODO: Support user_project.
   """
 
-  def __init__(self, bucket_storage_uri_class, logger, status_queue,
-               provider=None, credentials=None, debug=0, trace_token=None,
-               perf_trace_token=None, user_project=None):
+  def __init__(self,
+               bucket_storage_uri_class,
+               logger,
+               status_queue,
+               provider=None,
+               credentials=None,
+               debug=0,
+               trace_token=None,
+               perf_trace_token=None,
+               user_project=None):
     """Performs necessary setup for interacting with the cloud storage provider.
 
     Args:
       bucket_storage_uri_class: boto storage_uri class, used by APIs that
-                                provide boto translation or mocking.
+        provide boto translation or mocking.
       logger: logging.logger for outputting log messages.
       status_queue: Queue for relaying status to UI.
       provider: Provider prefix describing cloud storage provider to connect to.
-                'gs' and 's3' are supported. Function implementations ignore
-                the provider argument and use this one instead.
+        'gs' and 's3' are supported. Function implementations ignore the
+        provider argument and use this one instead.
       credentials: Unused.
       debug: Debug level for the API implementation (0..3).
       trace_token: Unused in this subclass.
       perf_trace_token: Performance trace token to use when making API calls
-          ('gs' provider only).
+        ('gs' provider only).
       user_project: Unused in this subclass
     """
     super(BotoTranslation, self).__init__(
-        bucket_storage_uri_class, logger, status_queue, provider=provider,
-        debug=debug, trace_token=trace_token, perf_trace_token=perf_trace_token)
+        bucket_storage_uri_class,
+        logger,
+        status_queue,
+        provider=provider,
+        debug=debug,
+        trace_token=trace_token,
+        perf_trace_token=perf_trace_token)
     _ = credentials
     # pylint: disable=global-variable-undefined, global-variable-not-assigned
     global boto_auth_initialized, boto_auth_initialized_lock
@@ -205,8 +215,8 @@ class BotoTranslation(CloudApi):
         boto_auth_initialized = True
       else:
         boto_auth_initialized.value = 1
-    self.api_version = boto.config.get_value(
-        'GSUtil', 'default_api_version', '1')
+    self.api_version = boto.config.get_value('GSUtil', 'default_api_version',
+                                             '1')
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
@@ -214,9 +224,8 @@ class BotoTranslation(CloudApi):
     bucket_uri = self._StorageUriForBucket(bucket_name)
     headers = self._CreateBaseHeaders()
     try:
-      return self._BotoBucketToBucket(bucket_uri.get_bucket(validate=True,
-                                                            headers=headers),
-                                      fields=fields)
+      return self._BotoBucketToBucket(
+          bucket_uri.get_bucket(validate=True, headers=headers), fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
@@ -244,8 +253,13 @@ class BotoTranslation(CloudApi):
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
-  def PatchBucket(self, bucket_name, metadata, canned_acl=None,
-                  canned_def_acl=None, preconditions=None, provider=None,
+  def PatchBucket(self,
+                  bucket_name,
+                  metadata,
+                  canned_acl=None,
+                  canned_def_acl=None,
+                  preconditions=None,
+                  provider=None,
                   fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
@@ -265,16 +279,15 @@ class BotoTranslation(CloudApi):
         canned_acls = bucket_uri.canned_acls()
         if canned_def_acl not in canned_acls:
           raise CommandException('Invalid canned ACL "%s".' % canned_def_acl)
-        bucket_uri.set_def_acl(canned_def_acl, bucket_uri.object_name,
-                               headers=headers)
+        bucket_uri.set_def_acl(
+            canned_def_acl, bucket_uri.object_name, headers=headers)
       if metadata.cors:
         if metadata.cors == REMOVE_CORS_CONFIG:
           metadata.cors = []
         boto_cors = CorsTranslation.BotoCorsFromMessage(metadata.cors)
         bucket_uri.set_cors(boto_cors, False, headers=headers)
       if metadata.defaultObjectAcl:
-        boto_acl = AclTranslation.BotoAclFromMessage(
-            metadata.defaultObjectAcl)
+        boto_acl = AclTranslation.BotoAclFromMessage(metadata.defaultObjectAcl)
         bucket_uri.set_def_xml_acl(boto_acl.to_xml(), headers=headers)
       if metadata.labels:
         boto_tags = LabelTranslation.BotoTagsFromMessage(metadata.labels)
@@ -295,27 +308,33 @@ class BotoTranslation(CloudApi):
         bucket_uri.configure_lifecycle(boto_lifecycle, False, headers=headers)
       if metadata.logging:
         if metadata.logging.logBucket and metadata.logging.logObjectPrefix:
-          bucket_uri.enable_logging(metadata.logging.logBucket,
-                                    metadata.logging.logObjectPrefix,
-                                    False, headers=headers)
+          bucket_uri.enable_logging(
+              metadata.logging.logBucket,
+              metadata.logging.logObjectPrefix,
+              False,
+              headers=headers)
         else:  # Logging field is present and empty.  Disable logging.
           bucket_uri.disable_logging(False, headers=headers)
       if metadata.storageClass:
         bucket_uri.set_storage_class(metadata.storageClass, headers=headers)
       if metadata.versioning:
-        bucket_uri.configure_versioning(metadata.versioning.enabled,
-                                        headers=headers)
+        bucket_uri.configure_versioning(
+            metadata.versioning.enabled, headers=headers)
       if metadata.website:
         main_page_suffix = metadata.website.mainPageSuffix
         error_page = metadata.website.notFoundPage
-        bucket_uri.set_website_config(main_page_suffix, error_page,
-                                      headers=headers)
+        bucket_uri.set_website_config(
+            main_page_suffix, error_page, headers=headers)
       return self.GetBucket(bucket_name, fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
-  def CreateBucket(self, bucket_name, project_id=None, metadata=None,
-                   provider=None, fields=None):
+  def CreateBucket(self,
+                   bucket_name,
+                   project_id=None,
+                   metadata=None,
+                   provider=None,
+                   fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
     bucket_uri = self._StorageUriForBucket(bucket_name)
@@ -335,8 +354,8 @@ class BotoTranslation(CloudApi):
         headers['x-goog-bucket-retention-period'] = str(
             metadata.retentionPolicy.retentionPeriod)
       try:
-        bucket_uri.create_bucket(headers=headers, location=location,
-                                 storage_class=storage_class)
+        bucket_uri.create_bucket(
+            headers=headers, location=location, storage_class=storage_class)
       except TRANSLATABLE_BOTO_EXCEPTIONS as e:
         self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
     else:
@@ -365,12 +384,13 @@ class BotoTranslation(CloudApi):
                   'VersionedBucketNotEmpty (%s). Currently, gsutil does not '
                   'support listing or removing S3 DeleteMarkers, so you may '
                   'need to delete these using another tool to successfully '
-                  'delete this bucket.' % bucket_name, status=e.status)
+                  'delete this bucket.' % bucket_name,
+                  status=e.status)
             raise NotEmptyException(
                 'VersionedBucketNotEmpty (%s)' % bucket_name, status=e.status)
           else:
-            raise NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
-                                    status=e.status)
+            raise NotEmptyException(
+                'BucketNotEmpty (%s)' % bucket_name, status=e.status)
         except TRANSLATABLE_BOTO_EXCEPTIONS as e2:
           self._TranslateExceptionAndRaise(e2, bucket_name=bucket_name)
       elif translated_exception and translated_exception.status == 404:
@@ -378,8 +398,13 @@ class BotoTranslation(CloudApi):
       else:
         self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
-  def ListObjects(self, bucket_name, prefix=None, delimiter=None,
-                  all_versions=None, provider=None, fields=None):
+  def ListObjects(self,
+                  bucket_name,
+                  prefix=None,
+                  delimiter=None,
+                  all_versions=None,
+                  provider=None,
+                  fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
     get_fields = ListToGetFields(list_fields=fields)
@@ -389,10 +414,11 @@ class BotoTranslation(CloudApi):
     yield_objects = fields is None or any(
         field.startswith('items/') for field in fields)
     try:
-      objects_iter = bucket_uri.list_bucket(prefix=prefix or '',
-                                            delimiter=delimiter or '',
-                                            all_versions=all_versions,
-                                            headers=headers)
+      objects_iter = bucket_uri.list_bucket(
+          prefix=prefix or '',
+          delimiter=delimiter or '',
+          all_versions=all_versions,
+          headers=headers)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
@@ -405,43 +431,51 @@ class BotoTranslation(CloudApi):
           key_to_convert = key
 
           # Listed keys are populated with these fields during bucket listing.
-          key_http_fields = set(['bucket', 'etag', 'name', 'updated',
-                                 'generation', 'metageneration', 'size'])
+          key_http_fields = set([
+              'bucket', 'etag', 'name', 'updated', 'generation',
+              'metageneration', 'size'
+          ])
 
           # When fields == None, the caller is requesting all possible fields.
           # If the caller requested any fields that are not populated by bucket
           # listing, we'll need to make a separate HTTP call for each object to
           # get its metadata and populate the remaining fields with the result.
-          if not get_fields or (get_fields and not
-                                get_fields.issubset(key_http_fields)):
+          if not get_fields or (get_fields and
+                                not get_fields.issubset(key_http_fields)):
 
             generation = None
             if getattr(key, 'generation', None):
               generation = key.generation
             if getattr(key, 'version_id', None):
               generation = key.version_id
-            key_to_convert = self._GetBotoKey(bucket_name, key.name,
-                                              generation=generation)
-          return_object = self._BotoKeyToObject(key_to_convert,
-                                                fields=get_fields)
+            key_to_convert = self._GetBotoKey(
+                bucket_name, key.name, generation=generation)
+          return_object = self._BotoKeyToObject(
+              key_to_convert, fields=get_fields)
 
           yield CloudApi.CsObjectOrPrefix(return_object,
                                           CloudApi.CsObjectOrPrefixType.OBJECT)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
-  def GetObjectMetadata(self, bucket_name, object_name, generation=None,
-                        provider=None, fields=None):
+  def GetObjectMetadata(self,
+                        bucket_name,
+                        object_name,
+                        generation=None,
+                        provider=None,
+                        fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
     try:
-      return self._BotoKeyToObject(self._GetBotoKey(bucket_name, object_name,
-                                                    generation=generation),
-                                   fields=fields)
+      return self._BotoKeyToObject(
+          self._GetBotoKey(bucket_name, object_name, generation=generation),
+          fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
-      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
-                                       object_name=object_name,
-                                       generation=generation)
+      self._TranslateExceptionAndRaise(
+          e,
+          bucket_name=bucket_name,
+          object_name=object_name,
+          generation=generation)
 
   def _CurryDigester(self, digester_object):
     """Curries a digester object into a form consumable by boto.
@@ -460,13 +494,21 @@ class BotoTranslation(CloudApi):
     """
     return lambda: digester_object
 
-  def GetObjectMedia(
-      self, bucket_name, object_name, download_stream, provider=None,
-      generation=None, object_size=None,
-      compressed_encoding=False,
-      download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
-      start_byte=0, end_byte=None, progress_callback=None,
-      serialization_data=None, digesters=None, decryption_tuple=None):
+  def GetObjectMedia(self,
+                     bucket_name,
+                     object_name,
+                     download_stream,
+                     provider=None,
+                     generation=None,
+                     object_size=None,
+                     compressed_encoding=False,
+                     download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
+                     start_byte=0,
+                     end_byte=None,
+                     progress_callback=None,
+                     serialization_data=None,
+                     digesters=None,
+                     decryption_tuple=None):
     """See CloudApi class for function doc strings."""
     # This implementation will get the object metadata first if we don't pass it
     # in via serialization_data.
@@ -501,29 +543,39 @@ class BotoTranslation(CloudApi):
       total_size = json.loads(serialization_data)['total_size']
 
     if total_size:
-      num_progress_callbacks = max(int(total_size) / TWO_MIB,
-                                   XML_PROGRESS_CALLBACKS)
+      num_progress_callbacks = max(
+          int(total_size) / TWO_MIB, XML_PROGRESS_CALLBACKS)
     else:
       num_progress_callbacks = XML_PROGRESS_CALLBACKS
 
     try:
       if download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
         self._PerformResumableDownload(
-            download_stream, start_byte, end_byte, key,
-            headers=headers, callback=progress_callback,
-            num_callbacks=num_progress_callbacks, hash_algs=hash_algs)
+            download_stream,
+            start_byte,
+            end_byte,
+            key,
+            headers=headers,
+            callback=progress_callback,
+            num_callbacks=num_progress_callbacks,
+            hash_algs=hash_algs)
       elif download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
         self._PerformSimpleDownload(
-            download_stream, key, progress_callback=progress_callback,
-            num_progress_callbacks=num_progress_callbacks, headers=headers,
+            download_stream,
+            key,
+            progress_callback=progress_callback,
+            num_progress_callbacks=num_progress_callbacks,
+            headers=headers,
             hash_algs=hash_algs)
       else:
         raise ArgumentException('Unsupported DownloadStrategy: %s' %
                                 download_strategy)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
-      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
-                                       object_name=object_name,
-                                       generation=generation)
+      self._TranslateExceptionAndRaise(
+          e,
+          bucket_name=bucket_name,
+          object_name=object_name,
+          generation=generation)
 
     if self.provider == 's3':
       if digesters:
@@ -544,9 +596,8 @@ class BotoTranslation(CloudApi):
 
         for alg_name in digesters:
           if ((download_strategy == CloudApi.DownloadStrategy.RESUMABLE and
-               start_byte != 0) or
-              not ((getattr(key, 'local_hashes', None) and
-                    alg_name in key.local_hashes))):
+               start_byte != 0) or not ((getattr(key, 'local_hashes', None) and
+                                         alg_name in key.local_hashes))):
             # For resumable downloads, boto does not provide a mechanism to
             # catch up the hash in the case of a partially complete download.
             # In this case or in the case where no digest was successfully
@@ -558,19 +609,34 @@ class BotoTranslation(CloudApi):
             # Use the on-the-fly hash.
             digesters[alg_name] = HashToDigester(key.local_hashes[alg_name])
 
-  def _PerformSimpleDownload(self, download_stream, key, progress_callback=None,
+  def _PerformSimpleDownload(self,
+                             download_stream,
+                             key,
+                             progress_callback=None,
                              num_progress_callbacks=XML_PROGRESS_CALLBACKS,
-                             headers=None, hash_algs=None):
+                             headers=None,
+                             hash_algs=None):
     try:
-      key.get_contents_to_file(download_stream, cb=progress_callback,
-                               num_cb=num_progress_callbacks, headers=headers,
-                               hash_algs=hash_algs)
+      key.get_contents_to_file(
+          download_stream,
+          cb=progress_callback,
+          num_cb=num_progress_callbacks,
+          headers=headers,
+          hash_algs=hash_algs)
     except TypeError:  # s3 and mocks do not support hash_algs
-      key.get_contents_to_file(download_stream, cb=progress_callback,
-                               num_cb=num_progress_callbacks, headers=headers)
+      key.get_contents_to_file(
+          download_stream,
+          cb=progress_callback,
+          num_cb=num_progress_callbacks,
+          headers=headers)
 
-  def _PerformResumableDownload(self, fp, start_byte, end_byte, key,
-                                headers=None, callback=None,
+  def _PerformResumableDownload(self,
+                                fp,
+                                start_byte,
+                                end_byte,
+                                key,
+                                headers=None,
+                                callback=None,
                                 num_callbacks=XML_PROGRESS_CALLBACKS,
                                 hash_algs=None):
     """Downloads bytes from key to fp, resuming as needed.
@@ -582,15 +648,14 @@ class BotoTranslation(CloudApi):
       key: Key object from which data is to be downloaded
       headers: Headers to send when retrieving the file
       callback: (optional) a callback function that will be called to report
-           progress on the download.  The callback should accept two integer
-           parameters.  The first integer represents the number of
-           bytes that have been successfully transmitted from the service.  The
-           second represents the total number of bytes that need to be
-           transmitted.
+        progress on the download.  The callback should accept two integer
+        parameters.  The first integer represents the number of bytes that have
+        been successfully transmitted from the service.  The second represents
+        the total number of bytes that need to be transmitted.
       num_callbacks: (optional) If a callback is specified with the callback
-           parameter, this determines the granularity of the callback
-           by defining the maximum number of times the callback will be
-           called during the file transfer.
+        parameter, this determines the granularity of the callback by defining
+        the maximum number of times the callback will be called during the file
+        transfer.
       hash_algs: Dict of hash algorithms to apply to downloaded bytes.
 
     Raises:
@@ -614,11 +679,20 @@ class BotoTranslation(CloudApi):
         # Disable AWSAuthConnection-level retry behavior, since that would
         # cause downloads to restart from scratch.
         try:
-          key.get_file(fp, headers, cb_handler.call, num_callbacks,
-                       override_num_retries=0, hash_algs=hash_algs)
+          key.get_file(
+              fp,
+              headers,
+              cb_handler.call,
+              num_callbacks,
+              override_num_retries=0,
+              hash_algs=hash_algs)
         except TypeError:
-          key.get_file(fp, headers, cb_handler.call, num_callbacks,
-                       override_num_retries=0)
+          key.get_file(
+              fp,
+              headers,
+              cb_handler.call,
+              num_callbacks,
+              override_num_retries=0)
         fp.flush()
         # Download succeeded.
         return
@@ -631,11 +705,20 @@ class BotoTranslation(CloudApi):
           # so we need to close and reopen the key before resuming
           # the download.
           if self.provider == 's3':
-            key.get_file(fp, headers, cb_handler.call, num_callbacks,
-                         override_num_retries=0)
+            key.get_file(
+                fp,
+                headers,
+                cb_handler.call,
+                num_callbacks,
+                override_num_retries=0)
           else:  # self.provider == 'gs'
-            key.get_file(fp, headers, cb_handler.call, num_callbacks,
-                         override_num_retries=0, hash_algs=hash_algs)
+            key.get_file(
+                fp,
+                headers,
+                cb_handler.call,
+                num_callbacks,
+                override_num_retries=0,
+                hash_algs=hash_algs)
       except boto.exception.ResumableDownloadException as e:
         if (e.disposition ==
             boto.exception.ResumableTransferDisposition.ABORT_CUR_PROCESS):
@@ -671,7 +754,7 @@ class BotoTranslation(CloudApi):
       except http_client.IncompleteRead:
         pass
 
-      sleep_time_secs = min(random.random() * (2 ** progress_less_iterations),
+      sleep_time_secs = min(random.random() * (2**progress_less_iterations),
                             GetMaxRetryDelay())
       if debug >= 1:
         self.logger.info(
@@ -680,13 +763,19 @@ class BotoTranslation(CloudApi):
             sleep_time_secs)
       time.sleep(sleep_time_secs)
 
-  def PatchObjectMetadata(self, bucket_name, object_name, metadata,
-                          canned_acl=None, generation=None, preconditions=None,
-                          provider=None, fields=None):
+  def PatchObjectMetadata(self,
+                          bucket_name,
+                          object_name,
+                          metadata,
+                          canned_acl=None,
+                          generation=None,
+                          preconditions=None,
+                          provider=None,
+                          fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
-    object_uri = self._StorageUriForObject(bucket_name, object_name,
-                                           generation=generation)
+    object_uri = self._StorageUriForObject(
+        bucket_name, object_name, generation=generation)
 
     headers = self._CreateBaseHeaders()
     meta_headers = HeadersFromObjectMetadata(metadata, self.provider)
@@ -705,44 +794,62 @@ class BotoTranslation(CloudApi):
 
     if metadata_changed:
       try:
-        object_uri.set_metadata(metadata_plus, metadata_minus, False,
-                                headers=headers)
+        object_uri.set_metadata(
+            metadata_plus, metadata_minus, False, headers=headers)
       except TRANSLATABLE_BOTO_EXCEPTIONS as e:
-        self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
-                                         object_name=object_name,
-                                         generation=generation)
+        self._TranslateExceptionAndRaise(
+            e,
+            bucket_name=bucket_name,
+            object_name=object_name,
+            generation=generation)
 
     if metadata.acl:
       boto_acl = AclTranslation.BotoAclFromMessage(metadata.acl)
       try:
-        object_uri.set_xml_acl(boto_acl.to_xml(), key_name=object_name,
-                               headers=headers)
+        object_uri.set_xml_acl(
+            boto_acl.to_xml(), key_name=object_name, headers=headers)
       except TRANSLATABLE_BOTO_EXCEPTIONS as e:
-        self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
-                                         object_name=object_name,
-                                         generation=generation)
+        self._TranslateExceptionAndRaise(
+            e,
+            bucket_name=bucket_name,
+            object_name=object_name,
+            generation=generation)
     if canned_acl:
       canned_acls = object_uri.canned_acls()
       if canned_acl not in canned_acls:
         raise CommandException('Invalid canned ACL "%s".' % canned_acl)
-      object_uri.set_acl(canned_acl, object_uri.object_name,
-                         headers=headers)
+      object_uri.set_acl(canned_acl, object_uri.object_name, headers=headers)
 
-    return self.GetObjectMetadata(bucket_name, object_name,
-                                  generation=generation, fields=fields)
+    return self.GetObjectMetadata(
+        bucket_name, object_name, generation=generation, fields=fields)
 
-  def _PerformSimpleUpload(self, dst_uri, upload_stream, md5=None,
-                           canned_acl=None, progress_callback=None,
+  def _PerformSimpleUpload(self,
+                           dst_uri,
+                           upload_stream,
+                           md5=None,
+                           canned_acl=None,
+                           progress_callback=None,
                            headers=None):
-    dst_uri.set_contents_from_file(upload_stream, md5=md5, policy=canned_acl,
-                                   cb=progress_callback, headers=headers,
-                                   rewind=True)
+    dst_uri.set_contents_from_file(
+        upload_stream,
+        md5=md5,
+        policy=canned_acl,
+        cb=progress_callback,
+        headers=headers,
+        rewind=True)
 
-  def _PerformStreamingUpload(self, dst_uri, upload_stream, canned_acl=None,
-                              progress_callback=None, headers=None):
+  def _PerformStreamingUpload(self,
+                              dst_uri,
+                              upload_stream,
+                              canned_acl=None,
+                              progress_callback=None,
+                              headers=None):
     if dst_uri.get_provider().supports_chunked_transfer():
-      dst_uri.set_contents_from_stream(upload_stream, policy=canned_acl,
-                                       cb=progress_callback, headers=headers)
+      dst_uri.set_contents_from_stream(
+          upload_stream,
+          policy=canned_acl,
+          cb=progress_callback,
+          headers=headers)
     else:
       # Provider doesn't support chunked transfer, so copy to a temporary
       # file.
@@ -754,21 +861,30 @@ class BotoTranslation(CloudApi):
             out_fp.write(stream_bytes)
             stream_bytes = upload_stream.read(DEFAULT_FILE_BUFFER_SIZE)
         with open(temp_path, 'rb') as in_fp:
-          dst_uri.set_contents_from_file(in_fp, policy=canned_acl,
-                                         headers=headers)
+          dst_uri.set_contents_from_file(
+              in_fp, policy=canned_acl, headers=headers)
       finally:
         os.close(temp_fh)
         os.unlink(temp_path)
 
-  def _PerformResumableUpload(self, key, upload_stream, upload_size,
-                              tracker_callback, canned_acl=None,
-                              serialization_data=None, progress_callback=None,
+  def _PerformResumableUpload(self,
+                              key,
+                              upload_stream,
+                              upload_size,
+                              tracker_callback,
+                              canned_acl=None,
+                              serialization_data=None,
+                              progress_callback=None,
                               headers=None):
     resumable_upload = BotoResumableUpload(
         tracker_callback, self.logger, resume_url=serialization_data)
-    resumable_upload.SendFile(key, upload_stream, upload_size,
-                              canned_acl=canned_acl, cb=progress_callback,
-                              headers=headers)
+    resumable_upload.SendFile(
+        key,
+        upload_stream,
+        upload_size,
+        canned_acl=canned_acl,
+        cb=progress_callback,
+        headers=headers)
 
   def _UploadSetup(self, object_metadata, preconditions=None):
     """Shared upload implementation.
@@ -787,18 +903,18 @@ class BotoTranslation(CloudApi):
 
     if object_metadata.crc32c:
       if 'x-goog-hash' in headers:
-        headers['x-goog-hash'] += (
-            ',crc32c=%s' % object_metadata.crc32c.rstrip('\n'))
+        headers['x-goog-hash'] += (',crc32c=%s' %
+                                   object_metadata.crc32c.rstrip('\n'))
       else:
-        headers['x-goog-hash'] = (
-            'crc32c=%s' % object_metadata.crc32c.rstrip('\n'))
+        headers['x-goog-hash'] = ('crc32c=%s' %
+                                  object_metadata.crc32c.rstrip('\n'))
     if object_metadata.md5Hash:
       if 'x-goog-hash' in headers:
-        headers['x-goog-hash'] += (
-            ',md5=%s' % object_metadata.md5Hash.rstrip('\n'))
+        headers['x-goog-hash'] += (',md5=%s' %
+                                   object_metadata.md5Hash.rstrip('\n'))
       else:
-        headers['x-goog-hash'] = (
-            'md5=%s' % object_metadata.md5Hash.rstrip('\n'))
+        headers['x-goog-hash'] = ('md5=%s' %
+                                  object_metadata.md5Hash.rstrip('\n'))
 
     if 'content-type' in headers and not headers['content-type']:
       headers['content-type'] = 'application/octet-stream'
@@ -831,10 +947,12 @@ class BotoTranslation(CloudApi):
       return self._BotoKeyToObject(dst_uri.get_key(), fields=fields)
     except boto.exception.InvalidUriError as e:
       if e.message and NON_EXISTENT_OBJECT_REGEX.match(e.message.encode(UTF8)):
-        raise CommandException('\n'.join(textwrap.wrap(
-            'Uploaded object (%s) was deleted or overwritten immediately '
-            'after it was uploaded. This can happen if you attempt to upload '
-            'to the same object multiple times concurrently.' % dst_uri.uri)))
+        raise CommandException('\n'.join(
+            textwrap.wrap(
+                'Uploaded object (%s) was deleted or overwritten immediately '
+                'after it was uploaded. This can happen if you attempt to upload '
+                'to the same object multiple times concurrently.' %
+                dst_uri.uri)))
       else:
         raise
 
@@ -849,113 +967,169 @@ class BotoTranslation(CloudApi):
       if s3_acl:
         dst_uri.set_xml_acl(s3_acl, headers=headers)
 
-  def UploadObjectResumable(
-      self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
-      size=None, serialization_data=None, tracker_callback=None,
-      progress_callback=None, encryption_tuple=None, provider=None,
-      fields=None, gzip_encoded=False):
+  def UploadObjectResumable(self,
+                            upload_stream,
+                            object_metadata,
+                            canned_acl=None,
+                            preconditions=None,
+                            size=None,
+                            serialization_data=None,
+                            tracker_callback=None,
+                            progress_callback=None,
+                            encryption_tuple=None,
+                            provider=None,
+                            fields=None,
+                            gzip_encoded=False):
     """See CloudApi class for function doc strings."""
     if gzip_encoded:
       raise NotImplementedError('XML API does not suport gzip-encoded uploads.')
     if self.provider == 's3':
       # Resumable uploads are not supported for s3.
       return self.UploadObject(
-          upload_stream, object_metadata, canned_acl=canned_acl,
-          preconditions=preconditions, fields=fields, size=size)
-    headers, dst_uri = self._UploadSetup(object_metadata,
-                                         preconditions=preconditions)
+          upload_stream,
+          object_metadata,
+          canned_acl=canned_acl,
+          preconditions=preconditions,
+          fields=fields,
+          size=size)
+    headers, dst_uri = self._UploadSetup(
+        object_metadata, preconditions=preconditions)
     if not tracker_callback:
       raise ArgumentException('No tracker callback function set for '
                               'resumable upload of %s' % dst_uri)
     try:
-      self._PerformResumableUpload(dst_uri.new_key(headers=headers),
-                                   upload_stream, size, tracker_callback,
-                                   canned_acl=canned_acl,
-                                   serialization_data=serialization_data,
-                                   progress_callback=progress_callback,
-                                   headers=headers)
-      return self._HandleSuccessfulUpload(dst_uri, object_metadata,
-                                          fields=fields)
+      self._PerformResumableUpload(
+          dst_uri.new_key(headers=headers),
+          upload_stream,
+          size,
+          tracker_callback,
+          canned_acl=canned_acl,
+          serialization_data=serialization_data,
+          progress_callback=progress_callback,
+          headers=headers)
+      return self._HandleSuccessfulUpload(
+          dst_uri, object_metadata, fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, object_metadata.bucket)
-      self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
-                                       object_name=object_metadata.name,
-                                       not_found_exception=not_found_exception)
+      self._TranslateExceptionAndRaise(
+          e,
+          bucket_name=object_metadata.bucket,
+          object_name=object_metadata.name,
+          not_found_exception=not_found_exception)
 
-  def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            canned_acl=None, progress_callback=None,
-                            preconditions=None, encryption_tuple=None,
-                            provider=None, fields=None, gzip_encoded=False):
+  def UploadObjectStreaming(self,
+                            upload_stream,
+                            object_metadata,
+                            canned_acl=None,
+                            progress_callback=None,
+                            preconditions=None,
+                            encryption_tuple=None,
+                            provider=None,
+                            fields=None,
+                            gzip_encoded=False):
     """See CloudApi class for function doc strings."""
     if gzip_encoded:
       raise NotImplementedError('XML API does not suport gzip-encoded uploads.')
-    headers, dst_uri = self._UploadSetup(object_metadata,
-                                         preconditions=preconditions)
+    headers, dst_uri = self._UploadSetup(
+        object_metadata, preconditions=preconditions)
 
     try:
       self._PerformStreamingUpload(
-          dst_uri, upload_stream, canned_acl=canned_acl,
-          progress_callback=progress_callback, headers=headers)
-      return self._HandleSuccessfulUpload(dst_uri, object_metadata,
-                                          fields=fields)
+          dst_uri,
+          upload_stream,
+          canned_acl=canned_acl,
+          progress_callback=progress_callback,
+          headers=headers)
+      return self._HandleSuccessfulUpload(
+          dst_uri, object_metadata, fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, object_metadata.bucket)
-      self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
-                                       object_name=object_metadata.name,
-                                       not_found_exception=not_found_exception)
+      self._TranslateExceptionAndRaise(
+          e,
+          bucket_name=object_metadata.bucket,
+          object_name=object_metadata.name,
+          not_found_exception=not_found_exception)
 
-  def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
-                   preconditions=None, size=None, progress_callback=None,
-                   encryption_tuple=None, provider=None, fields=None,
+  def UploadObject(self,
+                   upload_stream,
+                   object_metadata,
+                   canned_acl=None,
+                   preconditions=None,
+                   size=None,
+                   progress_callback=None,
+                   encryption_tuple=None,
+                   provider=None,
+                   fields=None,
                    gzip_encoded=False):
     """See CloudApi class for function doc strings."""
     if gzip_encoded:
       raise NotImplementedError('XML API does not suport gzip-encoded uploads.')
 
-    headers, dst_uri = self._UploadSetup(object_metadata,
-                                         preconditions=preconditions)
+    headers, dst_uri = self._UploadSetup(
+        object_metadata, preconditions=preconditions)
 
     try:
       md5 = None
       if object_metadata.md5Hash:
         # boto expects hex at index 0, base64 at index 1
-        md5 = [Base64ToHexHash(object_metadata.md5Hash),
-               object_metadata.md5Hash.strip('\n"\'')]
-      self._PerformSimpleUpload(dst_uri, upload_stream, md5=md5,
-                                canned_acl=canned_acl,
-                                progress_callback=progress_callback,
-                                headers=headers)
-      return self._HandleSuccessfulUpload(dst_uri, object_metadata,
-                                          fields=fields)
+        md5 = [
+            Base64ToHexHash(object_metadata.md5Hash),
+            object_metadata.md5Hash.strip('\n"\'')
+        ]
+      self._PerformSimpleUpload(
+          dst_uri,
+          upload_stream,
+          md5=md5,
+          canned_acl=canned_acl,
+          progress_callback=progress_callback,
+          headers=headers)
+      return self._HandleSuccessfulUpload(
+          dst_uri, object_metadata, fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
           self.provider, object_metadata.bucket)
-      self._TranslateExceptionAndRaise(e, bucket_name=object_metadata.bucket,
-                                       object_name=object_metadata.name,
-                                       not_found_exception=not_found_exception)
+      self._TranslateExceptionAndRaise(
+          e,
+          bucket_name=object_metadata.bucket,
+          object_name=object_metadata.name,
+          not_found_exception=not_found_exception)
 
-  def DeleteObject(self, bucket_name, object_name, preconditions=None,
-                   generation=None, provider=None):
+  def DeleteObject(self,
+                   bucket_name,
+                   object_name,
+                   preconditions=None,
+                   generation=None,
+                   provider=None):
     """See CloudApi class for function doc strings."""
     _ = provider
     headers = self._CreateBaseHeaders()
     self._AddPreconditionsToHeaders(preconditions, headers)
 
-    uri = self._StorageUriForObject(bucket_name, object_name,
-                                    generation=generation)
+    uri = self._StorageUriForObject(
+        bucket_name, object_name, generation=generation)
     try:
       uri.delete_key(validate=False, headers=headers)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
-      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
-                                       object_name=object_name,
-                                       generation=generation)
+      self._TranslateExceptionAndRaise(
+          e,
+          bucket_name=bucket_name,
+          object_name=object_name,
+          generation=generation)
 
-  def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
-                 canned_acl=None, preconditions=None, progress_callback=None,
-                 max_bytes_per_call=None, encryption_tuple=None,
-                 decryption_tuple=None, provider=None, fields=None):
+  def CopyObject(self,
+                 src_obj_metadata,
+                 dst_obj_metadata,
+                 src_generation=None,
+                 canned_acl=None,
+                 preconditions=None,
+                 progress_callback=None,
+                 max_bytes_per_call=None,
+                 encryption_tuple=None,
+                 decryption_tuple=None,
+                 provider=None,
+                 fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
 
@@ -993,23 +1167,35 @@ class BotoTranslation(CloudApi):
     dst_storage_class = dst_obj_metadata.storageClass or None
     try:
       new_key = dst_uri.copy_key(
-          src_obj_metadata.bucket, src_obj_metadata.name,
-          preserve_acl=preserve_acl, headers=headers,
+          src_obj_metadata.bucket,
+          src_obj_metadata.name,
+          preserve_acl=preserve_acl,
+          headers=headers,
           storage_class=dst_storage_class,
-          src_version_id=src_version_id, src_generation=src_generation)
+          src_version_id=src_version_id,
+          src_generation=src_generation)
 
       return self._BotoKeyToObject(new_key, fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       not_found_exception = CreateNotFoundExceptionForObjectWrite(
-          self.provider, dst_obj_metadata.bucket, src_provider=self.provider,
+          self.provider,
+          dst_obj_metadata.bucket,
+          src_provider=self.provider,
           src_bucket_name=src_obj_metadata.bucket,
-          src_object_name=src_obj_metadata.name, src_generation=src_generation)
-      self._TranslateExceptionAndRaise(e, bucket_name=dst_obj_metadata.bucket,
-                                       object_name=dst_obj_metadata.name,
-                                       not_found_exception=not_found_exception)
+          src_object_name=src_obj_metadata.name,
+          src_generation=src_generation)
+      self._TranslateExceptionAndRaise(
+          e,
+          bucket_name=dst_obj_metadata.bucket,
+          object_name=dst_obj_metadata.name,
+          not_found_exception=not_found_exception)
 
-  def ComposeObject(self, src_objs_metadata, dst_obj_metadata,
-                    preconditions=None, encryption_tuple=None, provider=None,
+  def ComposeObject(self,
+                    src_objs_metadata,
+                    dst_obj_metadata,
+                    preconditions=None,
+                    encryption_tuple=None,
+                    provider=None,
                     fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider
@@ -1032,15 +1218,15 @@ class BotoTranslation(CloudApi):
 
     src_components = []
     for src_obj in src_objs_metadata:
-      src_uri = self._StorageUriForObject(dst_bucket_name, src_obj.name,
-                                          generation=src_obj.generation)
+      src_uri = self._StorageUriForObject(
+          dst_bucket_name, src_obj.name, generation=src_obj.generation)
       src_components.append(src_uri)
 
     try:
       dst_uri.compose(src_components, headers=headers)
 
-      return self.GetObjectMetadata(dst_bucket_name, dst_obj_name,
-                                    fields=fields)
+      return self.GetObjectMetadata(
+          dst_bucket_name, dst_obj_name, fields=fields)
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, dst_obj_metadata.bucket,
                                        dst_obj_metadata.name)
@@ -1090,7 +1276,8 @@ class BotoTranslation(CloudApi):
         '%s://%s' % (self.provider, bucket),
         suppress_consec_slashes=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
-        debug=self.debug, validate=False)
+        debug=self.debug,
+        validate=False)
 
   def _StorageUriForObject(self, bucket, object_name, generation=None):
     """Returns a boto storage_uri for the given object.
@@ -1098,8 +1285,8 @@ class BotoTranslation(CloudApi):
     Args:
       bucket: Bucket name (string).
       object_name: Object name (string).
-      generation: Generation or version_id of object.  If None, live version
-                  of the object is used.
+      generation: Generation or version_id of object.  If None, live version of
+        the object is used.
 
     Returns:
       Boto storage_uri for the object.
@@ -1108,7 +1295,8 @@ class BotoTranslation(CloudApi):
     if generation:
       uri_string += '#%s' % generation
     return boto.storage_uri(
-        uri_string, suppress_consec_slashes=False,
+        uri_string,
+        suppress_consec_slashes=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         debug=self.debug)
 
@@ -1123,20 +1311,25 @@ class BotoTranslation(CloudApi):
     Returns:
       Boto key for the object.
     """
-    object_uri = self._StorageUriForObject(bucket_name, object_name,
-                                           generation=generation)
+    object_uri = self._StorageUriForObject(
+        bucket_name, object_name, generation=generation)
     try:
       headers = self._CreateBaseHeaders()
       key = object_uri.get_key(headers=headers)
       if not key:
-        raise CreateObjectNotFoundException('404', self.provider,
-                                            bucket_name, object_name,
-                                            generation=generation)
+        raise CreateObjectNotFoundException(
+            '404',
+            self.provider,
+            bucket_name,
+            object_name,
+            generation=generation)
       return key
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
-      self._TranslateExceptionAndRaise(e, bucket_name=bucket_name,
-                                       object_name=object_name,
-                                       generation=generation)
+      self._TranslateExceptionAndRaise(
+          e,
+          bucket_name=bucket_name,
+          object_name=object_name,
+          generation=generation)
 
   # pylint: disable=too-many-statements
   def _BotoBucketToBucket(self, bucket, fields=None):
@@ -1145,15 +1338,15 @@ class BotoTranslation(CloudApi):
     Args:
       bucket: Boto bucket.
       fields: If present, construct the apitools Bucket with only this set of
-              metadata fields.
+        metadata fields.
 
     Returns:
       apitools Bucket.
     """
     bucket_uri = self._StorageUriForBucket(bucket.name)
 
-    cloud_api_bucket = apitools_messages.Bucket(name=bucket.name,
-                                                id=bucket.name)
+    cloud_api_bucket = apitools_messages.Bucket(
+        name=bucket.name, id=bucket.name)
     headers = self._CreateBaseHeaders()
     if self.provider == 'gs':
       if not fields or 'storageClass' in fields:
@@ -1168,8 +1361,7 @@ class BotoTranslation(CloudApi):
           translated_exception = self._TranslateBotoException(
               e, bucket_name=bucket.name)
           if (translated_exception and
-              isinstance(translated_exception,
-                         AccessDeniedException)):
+              isinstance(translated_exception, AccessDeniedException)):
             # JSON API doesn't differentiate between a blank ACL list
             # and an access denied, so this is intentionally left blank.
             pass
@@ -1190,8 +1382,7 @@ class BotoTranslation(CloudApi):
           translated_exception = self._TranslateBotoException(
               e, bucket_name=bucket.name)
           if (translated_exception and
-              isinstance(translated_exception,
-                         AccessDeniedException)):
+              isinstance(translated_exception, AccessDeniedException)):
             # JSON API doesn't differentiate between a blank ACL list
             # and an access denied, so this is intentionally left blank.
             pass
@@ -1290,7 +1481,7 @@ class BotoTranslation(CloudApi):
     Args:
       key: Boto key to construct Object from.
       fields: If present, construct the apitools Object with only this set of
-              metadata fields.
+        metadata fields.
 
     Returns:
       apitools Object corresponding to key.
@@ -1390,8 +1581,8 @@ class BotoTranslation(CloudApi):
     if not fields or 'acl' in fields:
       generation_str = GenerationFromUrlAndString(
           StorageUrlFromString(self.provider), generation)
-      self._TranslateBotoKeyAcl(key, cloud_api_object,
-                                generation=generation_str)
+      self._TranslateBotoKeyAcl(
+          key, cloud_api_object, generation=generation_str)
 
     return cloud_api_object
 
@@ -1469,8 +1660,8 @@ class BotoTranslation(CloudApi):
 
   def _TranslateBotoKeyAcl(self, key, cloud_api_object, generation=None):
     """Updates cloud_api_object with the ACL from the boto key."""
-    storage_uri_for_key = self._StorageUriForObject(key.bucket.name, key.name,
-                                                    generation=generation)
+    storage_uri_for_key = self._StorageUriForObject(
+        key.bucket.name, key.name, generation=generation)
     headers = self._CreateBaseHeaders()
     try:
       if self.provider == 'gs':
@@ -1493,8 +1684,12 @@ class BotoTranslation(CloudApi):
       else:
         raise
 
-  def _TranslateExceptionAndRaise(self, e, bucket_name=None, object_name=None,
-                                  generation=None, not_found_exception=None):
+  def _TranslateExceptionAndRaise(self,
+                                  e,
+                                  bucket_name=None,
+                                  object_name=None,
+                                  generation=None,
+                                  not_found_exception=None):
     """Translates a Boto exception and raises the translated or original value.
 
     Args:
@@ -1509,15 +1704,22 @@ class BotoTranslation(CloudApi):
       translatable.
     """
     translated_exception = self._TranslateBotoException(
-        e, bucket_name=bucket_name, object_name=object_name,
-        generation=generation, not_found_exception=not_found_exception)
+        e,
+        bucket_name=bucket_name,
+        object_name=object_name,
+        generation=generation,
+        not_found_exception=not_found_exception)
     if translated_exception:
       raise translated_exception
     else:
       raise
 
-  def _TranslateBotoException(self, e, bucket_name=None, object_name=None,
-                              generation=None, not_found_exception=None):
+  def _TranslateBotoException(self,
+                              e,
+                              bucket_name=None,
+                              object_name=None,
+                              generation=None,
+                              not_found_exception=None):
     """Translates boto exceptions into their gsutil Cloud API equivalents.
 
     Args:
@@ -1546,16 +1748,19 @@ class BotoTranslation(CloudApi):
           return not_found_exception
         elif bucket_name:
           if object_name:
-            return CreateObjectNotFoundException(e.status, self.provider,
-                                                 bucket_name, object_name,
-                                                 generation=generation)
+            return CreateObjectNotFoundException(
+                e.status,
+                self.provider,
+                bucket_name,
+                object_name,
+                generation=generation)
           return CreateBucketNotFoundException(e.status, self.provider,
                                                bucket_name)
         return NotFoundException(e.message, status=e.status, body=e.body)
 
       elif e.status == 409 and e.code and 'BucketNotEmpty' in e.code:
-        return NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
-                                 status=e.status, body=e.body)
+        return NotEmptyException(
+            'BucketNotEmpty (%s)' % bucket_name, status=e.status, body=e.body)
       elif e.status == 410:
         # 410 errors should always cause us to start over - either the UploadID
         # has expired or there was a server-side problem that requires starting
@@ -1564,8 +1769,8 @@ class BotoTranslation(CloudApi):
       elif e.status == 412:
         return PreconditionException(e.code, status=e.status, body=e.body)
     if isinstance(e, boto.exception.StorageCreateError):
-      return ServiceException('Bucket already exists.', status=e.status,
-                              body=e.body)
+      return ServiceException(
+          'Bucket already exists.', status=e.status, body=e.body)
 
     if isinstance(e, boto.exception.BotoServerError):
       return ServiceException(e.message, status=e.status, body=e.body)
@@ -1595,7 +1800,8 @@ class BotoTranslation(CloudApi):
     """See CloudApiDelegator class for function doc strings."""
     try:
       uri = boto.storage_uri(
-          storage_url.url_string, suppress_consec_slashes=False,
+          storage_url.url_string,
+          suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       if def_obj_acl:
@@ -1605,13 +1811,17 @@ class BotoTranslation(CloudApi):
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
-  def XmlPassThroughSetAcl(self, acl_text, storage_url, canned=True,
+  def XmlPassThroughSetAcl(self,
+                           acl_text,
+                           storage_url,
+                           canned=True,
                            def_obj_acl=False):
     """See CloudApiDelegator class for function doc strings."""
     headers = self._CreateBaseHeaders()
     try:
       uri = boto.storage_uri(
-          storage_url.url_string, suppress_consec_slashes=False,
+          storage_url.url_string,
+          suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       if canned:
@@ -1646,13 +1856,15 @@ class BotoTranslation(CloudApi):
     try:
       xml.sax.parseString(cors_text, h)
     except SaxExceptions.SAXParseException as e:
-      raise CommandException('Requested CORS is invalid: %s at line %s, '
-                             'column %s' % (e.getMessage(), e.getLineNumber(),
-                                            e.getColumnNumber()))
+      raise CommandException(
+          'Requested CORS is invalid: %s at line %s, '
+          'column %s' %
+          (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
 
     try:
       uri = boto.storage_uri(
-          storage_url.url_string, suppress_consec_slashes=False,
+          storage_url.url_string,
+          suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       uri.set_cors(cors_obj, False, headers=headers)
@@ -1663,7 +1875,8 @@ class BotoTranslation(CloudApi):
     """See CloudApiDelegator class for function doc strings."""
     headers = self._CreateBaseHeaders()
     uri = boto.storage_uri(
-        storage_url.url_string, suppress_consec_slashes=False,
+        storage_url.url_string,
+        suppress_consec_slashes=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         debug=self.debug)
     try:
@@ -1680,7 +1893,8 @@ class BotoTranslation(CloudApi):
     headers = self._CreateBaseHeaders()
     try:
       uri = boto.storage_uri(
-          storage_url.url_string, suppress_consec_slashes=False,
+          storage_url.url_string,
+          suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       lifecycle = uri.get_lifecycle_config(False, headers=headers)
@@ -1709,7 +1923,8 @@ class BotoTranslation(CloudApi):
 
     try:
       uri = boto.storage_uri(
-          storage_url.url_string, suppress_consec_slashes=False,
+          storage_url.url_string,
+          suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       uri.configure_lifecycle(lifecycle_obj, False, headers=headers)
@@ -1721,11 +1936,12 @@ class BotoTranslation(CloudApi):
     headers = self._CreateBaseHeaders()
     try:
       uri = boto.storage_uri(
-          storage_url.url_string, suppress_consec_slashes=False,
+          storage_url.url_string,
+          suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
-      logging_config_xml = UnaryDictToXml(uri.get_logging_config(
-          headers=headers))
+      logging_config_xml = UnaryDictToXml(
+          uri.get_logging_config(headers=headers))
     except TRANSLATABLE_BOTO_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
@@ -1736,7 +1952,8 @@ class BotoTranslation(CloudApi):
     headers = self._CreateBaseHeaders()
     try:
       uri = boto.storage_uri(
-          storage_url.url_string, suppress_consec_slashes=False,
+          storage_url.url_string,
+          suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       # TODO: Define tags-related methods on storage_uri objects. In the
@@ -1761,7 +1978,8 @@ class BotoTranslation(CloudApi):
 
     try:
       uri = boto.storage_uri(
-          storage_url.url_string, suppress_consec_slashes=False,
+          storage_url.url_string,
+          suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       # TODO: Define tags-related methods on storage_uri objects. In the
@@ -1775,7 +1993,8 @@ class BotoTranslation(CloudApi):
     headers = self._CreateBaseHeaders()
     try:
       uri = boto.storage_uri(
-          storage_url.url_string, suppress_consec_slashes=False,
+          storage_url.url_string,
+          suppress_consec_slashes=False,
           bucket_storage_uri_class=self.bucket_storage_uri_class,
           debug=self.debug)
       web_config_xml = UnaryDictToXml(uri.get_website_config(headers=headers))

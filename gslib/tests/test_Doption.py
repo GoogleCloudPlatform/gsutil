@@ -46,8 +46,8 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     Args:
       name: (str) The header name, e.g. "Content-Length".
       value: (Union[str, None]) The header value, e.g. "4096". If no value is
-          expected for the header or the value is unknown, this argument should
-          be `None`.
+        expected for the header or the value is unknown, this argument should be
+        `None`.
       output: (str) The string in which to search for the specified header.
     """
     expected = 'header: %s:' % name
@@ -80,8 +80,8 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     for file_contents in (b'a1b2c3d4', b'a1b2c3d4\n'):
       fpath = self.CreateTempFile(contents=file_contents)
       bucket_uri = self.CreateBucket()
-      with SetBotoConfigForTest(
-          [('GSUtil', 'resumable_threshold', str(ONE_KIB))]):
+      with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', str(ONE_KIB))
+                                ]):
         stderr = self.RunGsUtil(
             ['-D', 'cp', fpath, suri(bucket_uri)], return_stderr=True)
         print('command line:' + ' '.join(['-D', 'cp', fpath, suri(bucket_uri)]))
@@ -97,11 +97,15 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     file_name = 'bar'
     fpath = self.CreateTempFile(file_name=file_name, contents=b'foo')
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(['-D', '--perf-trace-token=123', 'cp', fpath,
-                             suri(bucket_uri)], return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['-D', '--perf-trace-token=123', 'cp', fpath,
+         suri(bucket_uri)],
+        return_stderr=True)
     self.assertIn('\'cookie\': \'123\'', stderr)
-    stderr2 = self.RunGsUtil(['-D', '--perf-trace-token=123', 'cp',
-                              suri(bucket_uri, file_name), fpath],
+    stderr2 = self.RunGsUtil([
+        '-D', '--perf-trace-token=123', 'cp',
+        suri(bucket_uri, file_name), fpath
+    ],
                              return_stderr=True)
     self.assertIn('\'cookie\': \'123\'', stderr2)
 
@@ -119,8 +123,10 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     """Tests cat command with debug option."""
     key_uri = self.CreateObject(contents=b'0123456789')
     with SetBotoConfigForTest([('Boto', 'proxy_pass', 'secret')]):
-      (stdout, stderr) = self.RunGsUtil(
-          ['-D', 'cat', suri(key_uri)], return_stdout=True, return_stderr=True)
+      (stdout,
+       stderr) = self.RunGsUtil(['-D', 'cat', suri(key_uri)],
+                                return_stdout=True,
+                                return_stderr=True)
     # Check for log messages we output.
     self.assertIn('You are running gsutil with debug output enabled.', stderr)
     self.assertIn('config:', stderr)
@@ -132,28 +138,28 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     self.assertIn("reply: 'HTTP/1.1 200 OK", stderr)
     self.assert_header_in_output('Expires', None, stderr)
     self.assert_header_in_output('Date', None, stderr)
-    self.assert_header_in_output(
-        'Content-Type', 'application/octet-stream', stderr)
+    self.assert_header_in_output('Content-Type', 'application/octet-stream',
+                                 stderr)
     self.assert_header_in_output('Content-Length', '10', stderr)
 
     if self.test_api == ApiSelector.XML:
       self.assert_header_in_output('Cache-Control', None, stderr)
-      self.assert_header_in_output(
-          'ETag', '"781e5e245d69b566979b86e28d23f2c7"', stderr)
+      self.assert_header_in_output('ETag', '"781e5e245d69b566979b86e28d23f2c7"',
+                                   stderr)
       self.assert_header_in_output('Last-Modified', None, stderr)
       self.assert_header_in_output('x-goog-generation', None, stderr)
       self.assert_header_in_output('x-goog-metageneration', '1', stderr)
       self.assert_header_in_output('x-goog-hash', 'crc32c=KAwGng==', stderr)
-      self.assert_header_in_output(
-          'x-goog-hash', 'md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
+      self.assert_header_in_output('x-goog-hash',
+                                   'md5=eB5eJF1ptWaXm4bijSPyxw==', stderr)
       # Check request fields show correct segments.
-      regex_str = r'''send:\s+([b|u]')?HEAD /%s/%s HTTP/[^\\]*\\r\\n(.*)''' % (
+      regex_str = r"""send:\s+([b|u]')?HEAD /%s/%s HTTP/[^\\]*\\r\\n(.*)""" % (
           key_uri.bucket_name, key_uri.object_name)
       regex = re.compile(regex_str)
       match = regex.search(stderr)
       if not match:
-        self.fail('Did not find this regex in stderr:\nRegex: %s\nStderr: %s'
-                  % (regex_str, stderr))
+        self.fail('Did not find this regex in stderr:\nRegex: %s\nStderr: %s' %
+                  (regex_str, stderr))
       request_fields_str = match.group(2)
       self.assertIn('Content-Length: 0', request_fields_str)
       self.assertRegex(request_fields_str,
@@ -164,8 +170,7 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
       else:
         self.assertIn("md5Hash: 'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
       self.assert_header_in_output(
-          'Cache-Control',
-          'no-cache, no-store, max-age=0, must-revalidate',
+          'Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate',
           stderr)
       self.assertRegex(
           stderr, '.*GET.*b/%s/o/%s.*user-agent:.*gsutil/%s.Python/%s' %

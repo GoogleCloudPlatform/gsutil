@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Base classes for gsutil UI controller, UIThread and MainThreadUIQueue."""
 
 from __future__ import absolute_import
@@ -74,11 +73,12 @@ def BytesToFixedWidthString(num_bytes, decimal_places=1):
   Args:
     num_bytes: The number of bytes we must display.
     decimal_places: The standard number of decimal places.
+
   Returns:
     String of fixed width representing num_bytes.
   """
-  human_readable = HumanReadableWithDecimalPlaces(num_bytes,
-                                                  decimal_places=decimal_places)
+  human_readable = HumanReadableWithDecimalPlaces(
+      num_bytes, decimal_places=decimal_places)
   number_format = human_readable.split()
   if int(round(float(number_format[0]))) >= 1000:
     # If we are in the [1000:1024) range for the whole part of the number,
@@ -108,41 +108,42 @@ class StatusMessageManager(object):
       Args:
         progress: The current progress, in bytes/second or objects/second.
         report_time: Float representing when progress was reported (seconds
-            since Epoch).
+          since Epoch).
       """
       self.progress = progress
       self.time = report_time
 
-  def __init__(self, update_message_period=1, update_spinner_period=0.6,
-               sliding_throughput_period=5, first_throughput_latency=10,
-               quiet_mode=False, custom_time=None, verbose=False,
+  def __init__(self,
+               update_message_period=1,
+               update_spinner_period=0.6,
+               sliding_throughput_period=5,
+               first_throughput_latency=10,
+               quiet_mode=False,
+               custom_time=None,
+               verbose=False,
                console_width=80):
     """Instantiates a StatusMessageManager.
 
     Args:
-      update_message_period: Minimum period for refreshing and  displaying
-                             new information. A non-positive value will ignore
-                             any time restrictions imposed by this field, but
-                             it will affect throughput and time remaining
-                             estimations.
+      update_message_period: Minimum period for refreshing and  displaying new
+        information. A non-positive value will ignore any time restrictions
+        imposed by this field, but it will affect throughput and time remaining
+        estimations.
       update_spinner_period: Minimum period for refreshing and displaying the
-                             spinner. A non-positive value will ignore
-                             any time restrictions imposed by this field.
+        spinner. A non-positive value will ignore any time restrictions imposed
+        by this field.
       sliding_throughput_period: Sliding period for throughput calculation. A
-                                 non-positive value will make it impossible to
-                                 calculate the throughput.
+        non-positive value will make it impossible to calculate the throughput.
       first_throughput_latency: Minimum waiting time before actually displaying
-                                throughput info. A non-positive value will
-                                ignore any time restrictions imposed by this
-                                field.
-      quiet_mode: If True, do not print status messages (but still process
-                  them for analytics reporting as necessary).
+        throughput info. A non-positive value will ignore any time restrictions
+        imposed by this field.
+      quiet_mode: If True, do not print status messages (but still process them
+        for analytics reporting as necessary).
       custom_time: If a custom start_time is desired. Used for testing.
       verbose: Tells whether or not the operation is on verbose mode.
       console_width: Width to display on console. This should not adjust the
-                     visual output, just the space padding. For proper
-                     visualization, we recommend setting this field to at least
-                     80.
+        visual output, just the space padding. For proper visualization, we
+        recommend setting this field to at least 80.
     """
     self.update_message_period = update_message_period
     self.update_spinner_period = update_spinner_period
@@ -163,8 +164,8 @@ class StatusMessageManager(object):
     self.total_size = 0
 
     # Time at last info update displayed.
-    self.refresh_message_time = (self.custom_time if self.custom_time
-                                 else time.time())
+    self.refresh_message_time = (
+        self.custom_time if self.custom_time else time.time())
     self.start_time = self.refresh_message_time
     # Time at last spinner update.
     self.refresh_spinner_time = self.refresh_message_time
@@ -260,6 +261,7 @@ class StatusMessageManager(object):
 
     Args:
       cur_time: current time.
+
     Returns:
       Whether or not we should track the throughput.
     """
@@ -270,6 +272,7 @@ class StatusMessageManager(object):
 
     Args:
       cur_time: current time.
+
     Returns:
       Whether or not we should print the progress.
     """
@@ -278,26 +281,27 @@ class StatusMessageManager(object):
     # Don't report if we aren't actually going to do anything (for example,
     # an rsync that will sync 0 objects).
     nonzero_report = self.num_objects
-    return (sufficient_time_elapsed or self.object_report_change) and (
-        nonzero_report)
+    return (sufficient_time_elapsed or
+            self.object_report_change) and (nonzero_report)
 
   def ShouldPrintSpinner(self, cur_time):
     """Decides whether or not it is time for updating the spinner character.
 
     Args:
       cur_time: Current time.
+
     Returns:
       Whether or not we should update and print the spinner.
     """
-    return (cur_time - self.refresh_spinner_time >
-            self.update_spinner_period and self.total_size)
+    return (cur_time - self.refresh_spinner_time > self.update_spinner_period
+            and self.total_size)
 
   def PrintSpinner(self, stream=sys.stderr):
     """Prints a spinner character.
 
     Args:
-      stream: Stream to print messages. Usually sys.stderr, but customizable
-              for testing.
+      stream: Stream to print messages. Usually sys.stderr, but customizable for
+        testing.
     """
     self.UpdateSpinner()
     if not self.quiet_mode:
@@ -317,13 +321,13 @@ class StatusMessageManager(object):
 
     Args:
       cur_time: Current time to check whether or not it is time for a new
-                throughput measurement.
+        throughput measurement.
       cur_progress: The current progress, in number of objects finished or in
-                    bytes.
+        bytes.
     """
-    while (len(self.old_progress) > 1 and
-           cur_time - self.old_progress[0].time >
-           self.sliding_throughput_period):
+    while (
+        len(self.old_progress) > 1 and
+        cur_time - self.old_progress[0].time > self.sliding_throughput_period):
       self.old_progress.popleft()
 
     if not self.old_progress:
@@ -335,8 +339,7 @@ class StatusMessageManager(object):
     # If old-progress is not empty and the time of oldest_progress does not
     # match the last_progress_time, we can safely calculate the throughput.
     self.throughput = ((cur_progress - oldest_progress.progress) /
-                       (self.last_progress_time -
-                        oldest_progress.time))
+                       (self.last_progress_time - oldest_progress.time))
     # Just to avoid -0.00 B/s.
     self.throughput = max(0, self.throughput)
 
@@ -344,14 +347,14 @@ class StatusMessageManager(object):
     """Prints a final message to indicate operation succeeded.
 
     Args:
-      stream: Stream to print messages. Usually sys.stderr, but customizable
-              for testing.
+      stream: Stream to print messages. Usually sys.stderr, but customizable for
+        testing.
     """
-    string_to_print = ('Operation completed over %s objects'
-                       % DecimalShort(self.num_objects))
+    string_to_print = ('Operation completed over %s objects' %
+                       DecimalShort(self.num_objects))
     if self.total_size:
-      string_to_print += (
-          '/%s' % HumanReadableWithDecimalPlaces(self.total_size))
+      string_to_print += ('/%s' %
+                          HumanReadableWithDecimalPlaces(self.total_size))
     remaining_width = self.console_width - len(string_to_print)
     if not self.quiet_mode:
       stream.write(('\n' + string_to_print + '.' +
@@ -369,9 +372,14 @@ class MetadataManager(StatusMessageManager):
   to the UI.
   """
 
-  def __init__(self, update_message_period=1, update_spinner_period=0.6,
-               sliding_throughput_period=5, first_throughput_latency=10,
-               quiet_mode=False, custom_time=None, verbose=False,
+  def __init__(self,
+               update_message_period=1,
+               update_spinner_period=0.6,
+               sliding_throughput_period=5,
+               first_throughput_latency=10,
+               quiet_mode=False,
+               custom_time=None,
+               verbose=False,
                console_width=80):
     # pylint: disable=g-doc-args
     """Instantiates a MetadataManager.
@@ -384,7 +392,9 @@ class MetadataManager(StatusMessageManager):
         update_spinner_period=update_spinner_period,
         sliding_throughput_period=sliding_throughput_period,
         first_throughput_latency=first_throughput_latency,
-        quiet_mode=quiet_mode, custom_time=custom_time, verbose=verbose,
+        quiet_mode=quiet_mode,
+        custom_time=custom_time,
+        verbose=verbose,
         console_width=console_width)
 
   def GetProgress(self):
@@ -441,8 +451,8 @@ class MetadataManager(StatusMessageManager):
     (in objects/second) and estimated time remaining.
 
     Args:
-      stream: Stream to print messages. Usually sys.stderr, but customizable
-              for testing.
+      stream: Stream to print messages. Usually sys.stderr, but customizable for
+        testing.
     """
     # Time to update all information
     total_remaining = self.num_objects - self.objects_finished
@@ -459,8 +469,9 @@ class MetadataManager(StatusMessageManager):
       if self.num_objects == self.objects_finished:
         percentage = '100'
       else:
-        percentage = ('%3d' % min(99, int(100 * float(self.objects_finished) /
-                                          self.num_objects)))
+        percentage = (
+            '%3d' %
+            min(99, int(100 * float(self.objects_finished) / self.num_objects)))
       percentage_completed = percentage + '% Done'
     else:
       # An example of objects_completed here would be ' [2 objects]'.
@@ -487,8 +498,10 @@ class MetadataManager(StatusMessageManager):
     format_str = ('{char_to_print} {objects_completed} {percentage_completed}'
                   ' {throughput} {time_remaining_str}')
     string_to_print = format_str.format(
-        char_to_print=char_to_print, objects_completed=objects_completed,
-        percentage_completed=percentage_completed, throughput=throughput,
+        char_to_print=char_to_print,
+        objects_completed=objects_completed,
+        percentage_completed=percentage_completed,
+        throughput=throughput,
         time_remaining_str=time_remaining_str)
     remaining_width = self.console_width - len(string_to_print)
     if not self.quiet_mode:
@@ -499,14 +512,15 @@ class MetadataManager(StatusMessageManager):
 
     Args:
       status_message: The StatusMessage object to be analyzed.
+
     Returns:
       True if this message can be properly handled by this manager,
       False otherwise.
     """
-    if isinstance(status_message, (SeekAheadMessage, ProducerThreadMessage,
-                                   MetadataMessage, FinalMessage,
-                                   RetryableErrorMessage,
-                                   PerformanceSummaryMessage)):
+    if isinstance(
+        status_message,
+        (SeekAheadMessage, ProducerThreadMessage, MetadataMessage, FinalMessage,
+         RetryableErrorMessage, PerformanceSummaryMessage)):
       return True
     return False
 
@@ -548,9 +562,14 @@ class DataManager(StatusMessageManager):
       # The total size for the file
       self.size = size
 
-  def __init__(self, update_message_period=1, update_spinner_period=0.6,
-               sliding_throughput_period=5, first_throughput_latency=10,
-               quiet_mode=False, custom_time=None, verbose=False,
+  def __init__(self,
+               update_message_period=1,
+               update_spinner_period=0.6,
+               sliding_throughput_period=5,
+               first_throughput_latency=10,
+               quiet_mode=False,
+               custom_time=None,
+               verbose=False,
                console_width=None):
     # pylint: disable=g-doc-args
     """Instantiates a DataManager.
@@ -563,7 +582,9 @@ class DataManager(StatusMessageManager):
         update_spinner_period=update_spinner_period,
         sliding_throughput_period=sliding_throughput_period,
         first_throughput_latency=first_throughput_latency,
-        quiet_mode=quiet_mode, custom_time=custom_time, verbose=verbose,
+        quiet_mode=quiet_mode,
+        custom_time=custom_time,
+        verbose=verbose,
         console_width=console_width)
 
     self.first_item = True
@@ -628,8 +649,8 @@ class DataManager(StatusMessageManager):
       self.objects_finished += 1
       file_name = status_message.src_url.url_string
       file_progress = self.individual_file_progress[file_name]
-      total_bytes_transferred = (file_progress.new_progress_sum +
-                                 file_progress.existing_progress_sum)
+      total_bytes_transferred = (
+          file_progress.new_progress_sum + file_progress.existing_progress_sum)
       # Ensures total_progress has the right value.
       self.total_progress += file_progress.size - total_bytes_transferred
       self.new_progress += file_progress.size - total_bytes_transferred
@@ -648,6 +669,7 @@ class DataManager(StatusMessageManager):
 
     Args:
       file_message: The FileMessage to be analyzed.
+
     Returns:
       Whether or not this represents a file.
     """
@@ -711,8 +733,8 @@ class DataManager(StatusMessageManager):
         self.total_progress += status_message.size - sum(last_update)
         self.new_progress += status_message.size - sum(last_update)
         self.last_progress_time = status_message.time
-        file_progress.new_progress_sum += (status_message.size -
-                                           sum(last_update))
+        file_progress.new_progress_sum += (
+            status_message.size - sum(last_update))
         file_progress.dict[key] = (status_message.size - last_update[1],
                                    last_update[1])
 
@@ -798,8 +820,8 @@ class DataManager(StatusMessageManager):
     number of files and total size.
 
     Args:
-      stream: Stream to print messages. Usually sys.stderr, but customizable
-              for testing.
+      stream: Stream to print messages. Usually sys.stderr, but customizable for
+        testing.
     """
     # Time to update all information.
     total_remaining = self.total_size - self.total_progress
@@ -820,16 +842,16 @@ class DataManager(StatusMessageManager):
       objects_completed = '[' + DecimalShort(self.objects_finished) + ' files]'
 
     # An example of bytes_progress would be '[101.0 MiB/1.0 GiB]'.
-    bytes_progress = (
-        '[%s/%s]' % (BytesToFixedWidthString(self.total_progress),
-                     BytesToFixedWidthString(self.total_size)))
+    bytes_progress = ('[%s/%s]' % (BytesToFixedWidthString(
+        self.total_progress), BytesToFixedWidthString(self.total_size)))
 
     if self.total_size_source <= EstimationSource.SEEK_AHEAD_THREAD:
       if self.num_objects == self.objects_finished:
         percentage = '100'
       else:
-        percentage = ('%3d' % min(99, int(100 * float(self.total_progress) /
-                                          self.total_size)))
+        percentage = (
+            '%3d' %
+            min(99, int(100 * float(self.total_progress) / self.total_size)))
       percentage_completed = percentage + '% Done'
     else:
       percentage_completed = ''
@@ -854,10 +876,12 @@ class DataManager(StatusMessageManager):
     format_str = ('{char_to_print} {objects_completed}{bytes_progress}'
                   ' {percentage_completed} {throughput} {time_remaining_str}')
     string_to_print = format_str.format(
-        char_to_print=char_to_print, objects_completed=objects_completed,
+        char_to_print=char_to_print,
+        objects_completed=objects_completed,
         bytes_progress=bytes_progress,
         percentage_completed=percentage_completed,
-        throughput=throughput, time_remaining_str=time_remaining_str)
+        throughput=throughput,
+        time_remaining_str=time_remaining_str)
     remaining_width = self.console_width - len(string_to_print)
     if not self.quiet_mode:
       stream.write(string_to_print + (max(remaining_width, 0) * ' ') + '\r')
@@ -867,14 +891,15 @@ class DataManager(StatusMessageManager):
 
     Args:
       status_message: The StatusMessage object to be analyzed.
+
     Returns:
       True if this message can be properly handled by this manager,
       False otherwise.
     """
-    if isinstance(status_message, (SeekAheadMessage, ProducerThreadMessage,
-                                   FileMessage, ProgressMessage, FinalMessage,
-                                   RetryableErrorMessage,
-                                   PerformanceSummaryMessage)):
+    if isinstance(
+        status_message,
+        (SeekAheadMessage, ProducerThreadMessage, FileMessage, ProgressMessage,
+         FinalMessage, RetryableErrorMessage, PerformanceSummaryMessage)):
       return True
     return False
 
@@ -887,31 +912,35 @@ class UIController(object):
   them.
   """
 
-  def __init__(self, update_message_period=1, update_spinner_period=0.6,
-               sliding_throughput_period=5, first_throughput_latency=10,
-               quiet_mode=False, custom_time=None, verbose=False,
+  def __init__(self,
+               update_message_period=1,
+               update_spinner_period=0.6,
+               sliding_throughput_period=5,
+               first_throughput_latency=10,
+               quiet_mode=False,
+               custom_time=None,
+               verbose=False,
                dump_status_messages_file=None):
     """Instantiates a UIController.
 
     Args:
-      update_message_period: Minimum period for refreshing and  displaying
-          new information. A non-positive value will ignore any time
-          restrictions imposed by this field.
+      update_message_period: Minimum period for refreshing and  displaying new
+        information. A non-positive value will ignore any time restrictions
+        imposed by this field.
       update_spinner_period: Minimum period for refreshing and displaying the
-          spinner. A non-positive value will ignore any time restrictions
-          imposed by this field.
+        spinner. A non-positive value will ignore any time restrictions imposed
+        by this field.
       sliding_throughput_period: Sliding period for throughput calculation. A
-          non-positive value will make it impossible to calculate the
-          throughput.
+        non-positive value will make it impossible to calculate the throughput.
       first_throughput_latency: Minimum waiting time before actually displaying
-          throughput info. A non-positive value will ignore any time
-          restrictions imposed by this field.
-      quiet_mode: If True, do not print status messages (but still process
-          them for analytics reporting as necessary).
+        throughput info. A non-positive value will ignore any time restrictions
+        imposed by this field.
+      quiet_mode: If True, do not print status messages (but still process them
+        for analytics reporting as necessary).
       custom_time: If a custom start_time is desired. Used for testing.
       verbose: Tells whether or not the operation is on verbose mode.
       dump_status_messages_file: File path for logging all received status
-          messages, for debugging purposes.
+        messages, for debugging purposes.
     """
     self.verbose = verbose
     self.update_message_period = update_message_period
@@ -936,11 +965,11 @@ class UIController(object):
 
     Args:
       status_message: Message to be processed. Could be None if UIThread cannot
-                      retrieve message from status_queue.
-      stream: stream to print messages. Usually sys.stderr, but customizable
-              for testing.
-      cur_time: Message time. Used to determine if it is time to refresh
-                output, or calculate throughput.
+        retrieve message from status_queue.
+      stream: stream to print messages. Usually sys.stderr, but customizable for
+        testing.
+      cur_time: Message time. Used to determine if it is time to refresh output,
+        or calculate throughput.
     """
     self.manager.ProcessMessage(status_message, stream)
     if self.manager.ShouldPrintProgress(cur_time):
@@ -951,10 +980,8 @@ class UIController(object):
     if self.manager.ShouldPrintSpinner(cur_time):
       self.manager.PrintSpinner(stream)
       self.manager.refresh_spinner_time = cur_time
-    if ((isinstance(status_message, FinalMessage) or
-         self.manager.final_message)
-        and self.manager.num_objects
-        and not self.printed_final_message):
+    if ((isinstance(status_message, FinalMessage) or self.manager.final_message)
+        and self.manager.num_objects and not self.printed_final_message):
       self.printed_final_message = True
       LogPerformanceSummaryParams(
           num_objects_transferred=self.manager.num_objects)
@@ -965,11 +992,11 @@ class UIController(object):
 
     Args:
       status_message: Message to be processed. Could be None if UIThread cannot
-                      retrieve message from status_queue.
-      stream: Stream to print messages. Usually sys.stderr, but customizable
-              for testing.
-      cur_time: Message time. Used to determine if it is time to refresh
-                output, or calculate throughput.
+        retrieve message from status_queue.
+      stream: Stream to print messages. Usually sys.stderr, but customizable for
+        testing.
+      cur_time: Message time. Used to determine if it is time to refresh output,
+        or calculate throughput.
     """
     if not isinstance(status_message, StatusMessage):
       if status_message == _ZERO_TASKS_TO_DO_ARGUMENT and not self.manager:
@@ -980,11 +1007,13 @@ class UIController(object):
                 update_spinner_period=self.update_spinner_period,
                 sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
-                quiet_mode=self.quiet_mode, custom_time=self.custom_time,
-                verbose=self.verbose, console_width=self.console_width))
+                quiet_mode=self.quiet_mode,
+                custom_time=self.custom_time,
+                verbose=self.verbose,
+                console_width=self.console_width))
         for estimation_message in self.early_estimation_messages:
-          self._HandleMessage(estimation_message, stream,
-                              cur_time=estimation_message.time)
+          self._HandleMessage(
+              estimation_message, stream, cur_time=estimation_message.time)
       return
     if self.dump_status_message_fp:
       # TODO: Add Unicode support to string methods on message classes.
@@ -1006,8 +1035,10 @@ class UIController(object):
                 update_spinner_period=self.update_spinner_period,
                 sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
-                quiet_mode=self.quiet_mode, custom_time=self.custom_time,
-                verbose=self.verbose, console_width=self.console_width))
+                quiet_mode=self.quiet_mode,
+                custom_time=self.custom_time,
+                verbose=self.verbose,
+                console_width=self.console_width))
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
       else:
@@ -1017,8 +1048,10 @@ class UIController(object):
                 update_spinner_period=self.update_spinner_period,
                 sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
-                quiet_mode=self.quiet_mode, custom_time=self.custom_time,
-                verbose=self.verbose, console_width=self.console_width))
+                quiet_mode=self.quiet_mode,
+                custom_time=self.custom_time,
+                verbose=self.verbose,
+                console_width=self.console_width))
 
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
@@ -1039,7 +1072,8 @@ class UIController(object):
                 update_spinner_period=self.update_spinner_period,
                 sliding_throughput_period=self.sliding_throughput_period,
                 first_throughput_latency=self.first_throughput_latency,
-                custom_time=self.custom_time, verbose=self.verbose,
+                custom_time=self.custom_time,
+                verbose=self.verbose,
                 console_width=self.console_width))
         for estimation_message in self.early_estimation_messages:
           self._HandleMessage(estimation_message, stream, cur_time)
@@ -1079,6 +1113,7 @@ class MainThreadUIQueue(object):
   # pylint: disable=invalid-name, unused-argument
   def put(self, status_message, timeout=None):
     self.ui_controller.Call(status_message, self.stream)
+
   # pylint: enable=invalid-name, unused-argument
 
 

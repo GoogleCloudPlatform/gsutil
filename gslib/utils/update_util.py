@@ -65,8 +65,9 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
         elif re.match(r'recursive-include \w+ \*', line):
           manifest_lines.append(line.split()[1])
   except IOError:
-    logging.getLogger().warn('MANIFEST.in not found in %s.\nSkipping user data '
-                             'check.\n', directory)
+    logging.getLogger().warn(
+        'MANIFEST.in not found in %s.\nSkipping user data '
+        'check.\n', directory)
     return
 
   # Look just at top-level directory. We don't try to catch data dropped into
@@ -74,16 +75,17 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
   # MANFFEST.in, and most users who drop data into gsutil dir do so at the top
   # level directory.
   for filename in os.listdir(directory):
-    if (filename.endswith('.pyc') or filename == '__pycache__'
-        or filename == '.travis.yml' or (IS_OSX and filename == '.DS_Store')):
+    if (filename.endswith('.pyc') or filename == '__pycache__' or
+        filename == '.travis.yml' or (IS_OSX and filename == '.DS_Store')):
       # Ignore compiled code and travis config and macOS's .DS_Store file.
       continue
     if filename not in manifest_lines:
-      raise CommandException('\n'.join(textwrap.wrap(
-          'A file (%s) that is not distributed with gsutil was found in '
-          'the gsutil directory. The update command cannot run with user '
-          'data in the gsutil directory.' %
-          os.path.join(gslib.GSUTIL_DIR, filename))))
+      raise CommandException('\n'.join(
+          textwrap.wrap(
+              'A file (%s) that is not distributed with gsutil was found in '
+              'the gsutil directory. The update command cannot run with user '
+              'data in the gsutil directory.' %
+              os.path.join(gslib.GSUTIL_DIR, filename))))
 
 
 def LookUpGsutilVersion(gsutil_api, url_str):
@@ -101,9 +103,11 @@ def LookUpGsutilVersion(gsutil_api, url_str):
   """
   url = StorageUrlFromString(url_str)
   if url.IsCloudUrl():
-    obj = gsutil_api.GetObjectMetadata(url.bucket_name, url.object_name,
-                                       provider=url.scheme,
-                                       fields=['metadata'])
+    obj = gsutil_api.GetObjectMetadata(
+        url.bucket_name,
+        url.object_name,
+        provider=url.scheme,
+        fields=['metadata'])
     if obj.metadata and obj.metadata.additionalProperties:
       for prop in obj.metadata.additionalProperties:
         if prop.key == 'gsutil_version':

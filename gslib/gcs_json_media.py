@@ -43,10 +43,8 @@ from gslib.utils import text_util
 import httplib2
 from httplib2 import parse_uri
 
-
 if six.PY3:
   long = int
-
 
 # A regex for matching any series of decimal digits.
 DECIMAL_REGEX = LazyWrapper(lambda: (re.compile(r'\d+')))
@@ -83,10 +81,13 @@ class UploadCallbackConnectionClassFactory(object):
   hash digestion during upload.
   """
 
-  def __init__(self, bytes_uploaded_container,
+  def __init__(self,
+               bytes_uploaded_container,
                buffer_size=TRANSFER_BUFFER_SIZE,
-               total_size=0, progress_callback=None,
-               logger=None, debug=0):
+               total_size=0,
+               progress_callback=None,
+               logger=None,
+               debug=0):
     self.bytes_uploaded_container = bytes_uploaded_container
     self.buffer_size = buffer_size
     self.total_size = total_size
@@ -212,8 +213,8 @@ class UploadCallbackConnectionClassFactory(object):
             pass
         # If the content header is gzip, and a range and length are set,
         # update the modifier.
-        if (self.header_encoding == 'gzip' and self.header_length
-            and self.header_range):
+        if (self.header_encoding == 'gzip' and self.header_length and
+            self.header_range):
           # Update the modifier
           self.size_modifier = self.header_range / float(self.header_length)
           # Reset the headers
@@ -222,9 +223,8 @@ class UploadCallbackConnectionClassFactory(object):
           self.header_range = None
           # Log debug information to catch in tests.
           if outer_debug == DEBUGLEVEL_DUMP_REQUESTS and outer_logger:
-            outer_logger.debug(
-                'send: Setting progress modifier to %s.'
-                % (self.size_modifier))
+            outer_logger.debug('send: Setting progress modifier to %s.' %
+                               (self.size_modifier))
         # Propagate header values.
         http_client.HTTPSConnection.putheader(self, header, *values)
 
@@ -233,8 +233,8 @@ class UploadCallbackConnectionClassFactory(object):
 
         Args:
           data: string or file-like object (implements read()) of data to send.
-          num_metadata_bytes: number of bytes that consist of metadata
-              (headers, etc.) not representing the data being uploaded.
+          num_metadata_bytes: number of bytes that consist of metadata (headers,
+            etc.) not representing the data being uploaded.
         """
         if not self.processed_initial_bytes:
           self.processed_initial_bytes = True
@@ -259,7 +259,8 @@ class UploadCallbackConnectionClassFactory(object):
             if isinstance(partial_buffer, bytes):
               httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer)
             else:
-              httplib2.HTTPSConnectionWithTimeout.send(self, partial_buffer.encode(UTF8))
+              httplib2.HTTPSConnectionWithTimeout.send(
+                  self, partial_buffer.encode(UTF8))
           sent_data_bytes = len(partial_buffer)
           if num_metadata_bytes:
             if num_metadata_bytes <= sent_data_bytes:
@@ -293,16 +294,25 @@ def WrapUploadHttpRequest(upload_http):
     upload_http: httplib2.Http instance to wrap
   """
   request_orig = upload_http.request
-  def NewRequest(uri, method='GET', body=None, headers=None,
+
+  def NewRequest(uri,
+                 method='GET',
+                 body=None,
+                 headers=None,
                  redirections=httplib2.DEFAULT_MAX_REDIRECTS,
                  connection_type=None):
     if method == 'PUT' or method == 'POST':
       override_connection_type = connection_type
     else:
       override_connection_type = None
-    return request_orig(uri, method=method, body=body,
-                        headers=headers, redirections=redirections,
-                        connection_type=override_connection_type)
+    return request_orig(
+        uri,
+        method=method,
+        body=body,
+        headers=headers,
+        redirections=redirections,
+        connection_type=override_connection_type)
+
   # Replace the request method with our own closure.
   upload_http.request = NewRequest
 
@@ -318,9 +328,12 @@ class DownloadCallbackConnectionClassFactory(object):
   gzip hash in the cloud.
   """
 
-  def __init__(self, bytes_downloaded_container,
-               buffer_size=TRANSFER_BUFFER_SIZE, total_size=0,
-               progress_callback=None, digesters=None):
+  def __init__(self,
+               bytes_downloaded_container,
+               buffer_size=TRANSFER_BUFFER_SIZE,
+               total_size=0,
+               progress_callback=None,
+               digesters=None):
     self.buffer_size = buffer_size
     self.total_size = total_size
     self.progress_callback = progress_callback
@@ -355,7 +368,8 @@ class DownloadCallbackConnectionClassFactory(object):
           HTTPResponse object with wrapped read function.
         """
         orig_response = http_client.HTTPConnection.getresponse(self)
-        if orig_response.status not in (http_client.OK, http_client.PARTIAL_CONTENT):
+        if orig_response.status not in (http_client.OK,
+                                        http_client.PARTIAL_CONTENT):
           return orig_response
         orig_read_func = orig_response.read
 
@@ -366,8 +380,8 @@ class DownloadCallbackConnectionClassFactory(object):
 
           Args:
             amt: Integer n where 0 < n <= TRANSFER_BUFFER_SIZE. This is a
-                 keyword argument to match the read function it overrides,
-                 but it is required.
+              keyword argument to match the read function it overrides, but it
+              is required.
 
           Returns:
             Data read from HTTPConnection.
@@ -395,9 +409,11 @@ class DownloadCallbackConnectionClassFactory(object):
             for alg in self.outer_digesters:
               self.outer_digesters[alg].update(data)
           return data
+
         orig_response.read = read
 
         return orig_response
+
     return DownloadCallbackConnection
 
 
@@ -421,14 +437,15 @@ def WrapDownloadHttpRequest(download_http):
   # pylint: disable=g-equals-none,g-doc-return-or-yield
   # pylint: disable=g-short-docstring-punctuation,g-doc-args
   # pylint: disable=too-many-statements
-  def OverrideRequest(self, conn, host, absolute_uri, request_uri, method,
-                      body, headers, redirections, cachekey):
+  def OverrideRequest(self, conn, host, absolute_uri, request_uri, method, body,
+                      headers, redirections, cachekey):
     """Do the actual request using the connection object.
 
     Also follow one level of redirects if necessary.
     """
 
-    auths = ([(auth.depth(request_uri), auth) for auth in self.authorizations
+    auths = ([(auth.depth(request_uri), auth)
+              for auth in self.authorizations
               if auth.inscope(host, request_uri)])
     auth = auths and sorted(auths)[0][1] or None
     if auth:
@@ -445,8 +462,8 @@ def WrapDownloadHttpRequest(download_http):
         response._stale_digest = 1
 
     if response.status == 401:
-      for authorization in self._auth_from_challenge(
-          host, request_uri, headers, response, content):
+      for authorization in self._auth_from_challenge(host, request_uri, headers,
+                                                     response, content):
         authorization.request(method, request_uri, headers, body)
         (response, content) = self._conn_request(conn, request_uri, method,
                                                  body, headers)
@@ -455,24 +472,24 @@ def WrapDownloadHttpRequest(download_http):
           authorization.response(response, body)
           break
 
-    if (self.follow_all_redirects or (method in ["GET", "HEAD"])
-        or response.status == 303):
-      if self.follow_redirects and response.status in [300, 301, 302,
-                                                       303, 307]:
+    if (self.follow_all_redirects or (method in ['GET', 'HEAD']) or
+        response.status == 303):
+      if self.follow_redirects and response.status in [300, 301, 302, 303, 307]:
         # Pick out the location header and basically start from the beginning
         # remembering first to strip the ETag header and decrement our 'depth'
         if redirections:
           if 'location' not in response and response.status != 300:
             raise httplib2.RedirectMissingLocation(
-                "Redirected but the response is missing a Location: header.",
+                'Redirected but the response is missing a Location: header.',
                 response, content)
           # Fix-up relative redirects (which violate an RFC 2616 MUST)
           if 'location' in response:
             location = response['location']
             (scheme, authority, path, query, fragment) = parse_uri(location)
             if authority is None:
-              response['location'] = urllib.parse.urljoin(absolute_uri, location)
-          if response.status == 301 and method in ["GET", "HEAD"]:
+              response['location'] = urllib.parse.urljoin(
+                  absolute_uri, location)
+          if response.status == 301 and method in ['GET', 'HEAD']:
             response['-x-permanent-redirect-url'] = response['location']
             if 'content-location' not in response:
               response['content-location'] = absolute_uri
@@ -492,25 +509,27 @@ def WrapDownloadHttpRequest(download_http):
               old_response['content-location'] = absolute_uri
             redirect_method = method
             if response.status in [302, 303]:
-              redirect_method = "GET"
+              redirect_method = 'GET'
               body = None
             (response, content) = self.request(
-                location, redirect_method, body=body, headers=headers,
-                redirections=redirections-1,
+                location,
+                redirect_method,
+                body=body,
+                headers=headers,
+                redirections=redirections - 1,
                 # BUGFIX (see comments at the top of this function):
                 connection_type=conn.__class__)
             response.previous = old_response
         else:
           raise httplib2.RedirectLimit(
-              "Redirected more times than redirection_limit allows.",
-              response, content)
-      elif response.status in [200, 203] and method in ["GET", "HEAD"]:
+              'Redirected more times than redirection_limit allows.', response,
+              content)
+      elif response.status in [200, 203] and method in ['GET', 'HEAD']:
         # Don't cache 206's since we aren't going to handle byte range
         # requests
         if 'content-location' in response:
           response['content-location'] = absolute_uri
-        httplib2._updateCache(headers, response, content, self.cache,
-                              cachekey)
+        httplib2._updateCache(headers, response, content, self.cache, cachekey)
 
     return (response, content)
 
@@ -518,17 +537,29 @@ def WrapDownloadHttpRequest(download_http):
   # on POSTS, which are used to refresh oauth tokens. We don't want to
   # process the data received in those requests.
   request_orig = download_http.request
-  def NewRequest(uri, method='GET', body=None, headers=None,
+
+  def NewRequest(uri,
+                 method='GET',
+                 body=None,
+                 headers=None,
                  redirections=httplib2.DEFAULT_MAX_REDIRECTS,
                  connection_type=None):
     if method == 'POST':
-      return request_orig(uri, method=method, body=body,
-                          headers=headers, redirections=redirections,
-                          connection_type=None)
+      return request_orig(
+          uri,
+          method=method,
+          body=body,
+          headers=headers,
+          redirections=redirections,
+          connection_type=None)
     else:
-      return request_orig(uri, method=method, body=body,
-                          headers=headers, redirections=redirections,
-                          connection_type=connection_type)
+      return request_orig(
+          uri,
+          method=method,
+          body=body,
+          headers=headers,
+          redirections=redirections,
+          connection_type=connection_type)
 
   # Replace the request methods with our own closures.
   download_http._request = types.MethodType(OverrideRequest, download_http)
@@ -561,8 +592,8 @@ class HttpWithNoRetries(httplib2.Http):
       raise
     except socket.gaierror:
       conn.close()
-      raise httplib2.ServerNotFoundError(
-          'Unable to find the server at %s' % conn.host)
+      raise httplib2.ServerNotFoundError('Unable to find the server at %s' %
+                                         conn.host)
     except httplib2.ssl.SSLError:
       conn.close()
       raise
@@ -631,8 +662,8 @@ class HttpWithDownloadStream(httplib2.Http):
       raise
     except socket.gaierror:
       conn.close()
-      raise httplib2.ServerNotFoundError(
-          'Unable to find the server at %s' % conn.host)
+      raise httplib2.ServerNotFoundError('Unable to find the server at %s' %
+                                         conn.host)
     except httplib2.ssl.SSLError:
       conn.close()
       raise
@@ -698,4 +729,5 @@ class HttpWithDownloadStream(httplib2.Http):
         # pylint: disable=protected-access
         content = httplib2._decompressContent(response, content)
     return (response, content)
+
   # pylint: enable=too-many-statements

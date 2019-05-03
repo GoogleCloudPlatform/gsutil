@@ -80,7 +80,7 @@ class AtomicDict(object):
 
     Args:
       manager: (multiprocessing.Manager or None) Manager instance (required for
-          cross-process safety), or none if cross-process safety is not needed.
+        cross-process safety), or none if cross-process safety is not needed.
     """
     if manager:
       self.lock = manager.Lock()
@@ -195,9 +195,8 @@ def _IncreaseSoftLimitForResource(resource_name, fallback_value):
 
   Args:
     resource_name: Name of the resource to increase the soft limit for.
-    fallback_value: Fallback value to be used if we couldn't set the
-                    soft value to the hard value (e.g., if the hard value
-                    is "unlimited").
+    fallback_value: Fallback value to be used if we couldn't set the soft value
+      to the hard value (e.g., if the hard value is "unlimited").
 
   Returns:
     Current soft limit for the resource (after any changes we were able to
@@ -265,16 +264,16 @@ def ShouldProhibitMultiprocessing():
       return (False, 'Unknown')
   except IOError as e:
     if e.errno == errno.ENOENT:
-      logging.debug('Unable to open /etc/os-release to determine whether OS '
-                    'supports multiprocessing: errno=%d, message=%s'
-                    % (e.errno, str(e)))
+      logging.debug(
+          'Unable to open /etc/os-release to determine whether OS '
+          'supports multiprocessing: errno=%d, message=%s', e.errno, str(e))
       return (False, 'Unknown')
     else:
       raise
   except Exception as exc:
     logging.debug('Something went wrong while trying to determine '
                   'multiprocessing capabilities.\nMessage: {0}'.format(
-      str(exc)))
+                      str(exc)))
     return (False, 'Unknown')
 
 
@@ -320,8 +319,8 @@ parallelism will be executed with multiple threads in a single process only.
 """ % os_name
     if logger:
       logger.warn(message)
-    return MultiprocessingIsAvailableResult(is_available=False,
-                                            stack_trace=None)
+    return MultiprocessingIsAvailableResult(
+        is_available=False, stack_trace=None)
 
   stack_trace = None
   multiprocessing_is_available = True
@@ -442,4 +441,6 @@ def PutToQueueWithTimeout(queue, msg, timeout=STATUS_QUEUE_OP_TIMEOUT):
       put_success = True
     except Queue.Full:
       pass
+
+
 # pylint: enable=invalid-name

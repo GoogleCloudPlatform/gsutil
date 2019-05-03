@@ -51,10 +51,8 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.constants import S3_ACL_MARKER_GUID
 from gslib.utils.constants import S3_MARKER_GUIDS
 
-
 if six.PY3:
   long = int
-
 
 CACHE_CONTROL_REGEX = re.compile(r'^cache-control', re.I)
 CONTENT_DISPOSITION_REGEX = re.compile(r'^content-disposition', re.I)
@@ -64,8 +62,8 @@ CONTENT_MD5_REGEX = re.compile(r'^content-md5', re.I)
 CONTENT_TYPE_REGEX = re.compile(r'^content-type', re.I)
 GOOG_API_VERSION_REGEX = re.compile(r'^x-goog-api-version', re.I)
 GOOG_GENERATION_MATCH_REGEX = re.compile(r'^x-goog-if-generation-match', re.I)
-GOOG_METAGENERATION_MATCH_REGEX = re.compile(
-    r'^x-goog-if-metageneration-match', re.I)
+GOOG_METAGENERATION_MATCH_REGEX = re.compile(r'^x-goog-if-metageneration-match',
+                                             re.I)
 CUSTOM_GOOG_METADATA_REGEX = re.compile(r'^x-goog-meta-(?P<header_key>.*)',
                                         re.I)
 CUSTOM_AMZ_METADATA_REGEX = re.compile(r'^x-amz-meta-(?P<header_key>.*)', re.I)
@@ -86,8 +84,10 @@ DEFAULT_CONTENT_TYPE = 'application/octet-stream'
 # signifies that we should nullify the CORS configuration.
 # A value of [] means don't modify the CORS configuration.
 # A value of REMOVE_CORS_CONFIG means remove the CORS configuration.
-REMOVE_CORS_CONFIG = [apitools_messages.Bucket.CorsValueListEntry(
-    maxAgeSeconds=-1, method=['REMOVE_CORS_CONFIG'])]
+REMOVE_CORS_CONFIG = [
+    apitools_messages.Bucket.CorsValueListEntry(
+        maxAgeSeconds=-1, method=['REMOVE_CORS_CONFIG'])
+]
 
 # Similar to CORS above, we need a sentinel value allowing us to specify
 # when a default object ACL should be private (containing no entries).
@@ -153,8 +153,8 @@ def ObjectMetadataFromHeaders(headers):
       elif custom_amz_header_match:
         # If we got here we are guaranteed by the prior statement that this is
         # not an x-amz-meta- header.
-        header_key = (S3_HEADER_PREFIX +
-                      custom_amz_header_match.group('header_key'))
+        header_key = (
+            S3_HEADER_PREFIX + custom_amz_header_match.group('header_key'))
       if header_key:
         if header_key.lower() == 'x-goog-content-language':
           # Work around content-language being inserted into custom metadata.
@@ -167,8 +167,8 @@ def ObjectMetadataFromHeaders(headers):
             apitools_messages.Object.MetadataValue.AdditionalProperty(
                 key=header_key, value=value))
       else:
-        raise ArgumentException(
-            'Invalid header specified: %s:%s' % (header, value))
+        raise ArgumentException('Invalid header specified: %s:%s' %
+                                (header, value))
   return obj_metadata
 
 
@@ -260,9 +260,8 @@ def CopyObjectMetadata(src_obj_metadata, dst_obj_metadata, override=False):
   Args:
     src_obj_metadata: Metadata from source object.
     dst_obj_metadata: Initialized metadata for destination object.
-    override: If true, will overwrite metadata in destination object.
-              If false, only writes metadata for values that don't already
-              exist.
+    override: If true, will overwrite metadata in destination object. If false,
+      only writes metadata for values that don't already exist.
   """
   if override or not dst_obj_metadata.cacheControl:
     dst_obj_metadata.cacheControl = src_obj_metadata.cacheControl
@@ -285,9 +284,8 @@ def CopyCustomMetadata(src_obj_metadata, dst_obj_metadata, override=False):
   Args:
     src_obj_metadata: Metadata from source object.
     dst_obj_metadata: Initialized metadata for destination object.
-    override: If true, will overwrite metadata in destination object.
-              If false, only writes metadata for values that don't already
-              exist.
+    override: If true, will overwrite metadata in destination object. If false,
+      only writes metadata for values that don't already exist.
   """
   # TODO: Apitools should ideally treat metadata like a real dictionary instead
   # of a list of key/value pairs (with an O(N^2) lookup).  In practice the
@@ -317,8 +315,8 @@ def CopyCustomMetadata(src_obj_metadata, dst_obj_metadata, override=False):
     dst_obj_metadata.metadata.additionalProperties = []
     for k, v in six.iteritems(dst_metadata_dict):
       dst_obj_metadata.metadata.additionalProperties.append(
-          apitools_messages.Object.MetadataValue.AdditionalProperty(key=k,
-                                                                    value=v))
+          apitools_messages.Object.MetadataValue.AdditionalProperty(
+              key=k, value=v))
 
 
 def PreconditionsFromHeaders(headers):
@@ -346,9 +344,12 @@ def PreconditionsFromHeaders(headers):
   return return_preconditions
 
 
-def CreateNotFoundExceptionForObjectWrite(
-    dst_provider, dst_bucket_name, src_provider=None,
-    src_bucket_name=None, src_object_name=None, src_generation=None):
+def CreateNotFoundExceptionForObjectWrite(dst_provider,
+                                          dst_bucket_name,
+                                          src_provider=None,
+                                          src_bucket_name=None,
+                                          src_object_name=None,
+                                          src_generation=None):
   """Creates a NotFoundException for an object upload or copy.
 
   This is necessary because 404s don't necessarily specify which resource
@@ -381,12 +382,16 @@ def CreateNotFoundExceptionForObjectWrite(
 
 
 def CreateBucketNotFoundException(code, provider, bucket_name):
-  return BucketNotFoundException('%s://%s bucket does not exist.' %
-                                 (provider, bucket_name), bucket_name,
-                                 status=code)
+  return BucketNotFoundException(
+      '%s://%s bucket does not exist.' % (provider, bucket_name),
+      bucket_name,
+      status=code)
 
 
-def CreateObjectNotFoundException(code, provider, bucket_name, object_name,
+def CreateObjectNotFoundException(code,
+                                  provider,
+                                  bucket_name,
+                                  object_name,
                                   generation=None):
   uri_string = '%s://%s/%s' % (provider, bucket_name, object_name)
   if generation:
@@ -398,13 +403,14 @@ def CheckForXmlConfigurationAndRaise(config_type_string, json_txt):
   """Checks a JSON parse exception for provided XML configuration."""
   try:
     xml.etree.ElementTree.fromstring(str(json_txt))
-    raise ArgumentException('\n'.join(textwrap.wrap(
-        'XML {0} data provided; Google Cloud Storage {0} configuration '
-        'now uses JSON format. To convert your {0}, set the desired XML '
-        'ACL using \'gsutil {1} set ...\' with gsutil version 3.x. Then '
-        'use \'gsutil {1} get ...\' with gsutil version 4 or greater to '
-        'get the corresponding JSON {0}.'.format(config_type_string,
-                                                 config_type_string.lower()))))
+    raise ArgumentException('\n'.join(
+        textwrap.wrap(
+            'XML {0} data provided; Google Cloud Storage {0} configuration '
+            'now uses JSON format. To convert your {0}, set the desired XML '
+            'ACL using \'gsutil {1} set ...\' with gsutil version 3.x. Then '
+            'use \'gsutil {1} get ...\' with gsutil version 4 or greater to '
+            'get the corresponding JSON {0}.'.format(
+                config_type_string, config_type_string.lower()))))
   except XmlParseError:
     pass
   raise ArgumentException('JSON %s data could not be loaded '
@@ -445,7 +451,8 @@ class LifecycleTranslation(object):
                 str(rule_message.condition.isLive).lower())
           if rule_message.condition.matchesStorageClass:
             boto_rule.conditions[boto.gs.lifecycle.MATCHES_STORAGE_CLASS] = [
-                str(sc) for sc in rule_message.condition.matchesStorageClass]
+                str(sc) for sc in rule_message.condition.matchesStorageClass
+            ]
           if rule_message.condition.numNewerVersions is not None:
             boto_rule.conditions[boto.gs.lifecycle.NUM_NEWER_VERSIONS] = (
                 str(rule_message.condition.numNewerVersions))
@@ -461,18 +468,19 @@ class LifecycleTranslation(object):
       for boto_rule in boto_lifecycle:
         lifecycle_rule = (
             apitools_messages.Bucket.LifecycleValue.RuleValueListEntry())
-        lifecycle_rule.condition = (apitools_messages.Bucket.LifecycleValue.
-                                    RuleValueListEntry.ConditionValue())
+        lifecycle_rule.condition = (
+            apitools_messages.Bucket.LifecycleValue.RuleValueListEntry
+            .ConditionValue())
         if boto_rule.action:
           if boto_rule.action == boto.gs.lifecycle.DELETE:
-            lifecycle_rule.action = (apitools_messages.Bucket.LifecycleValue.
-                                     RuleValueListEntry.ActionValue(
-                                         type='Delete'))
+            lifecycle_rule.action = (
+                apitools_messages.Bucket.LifecycleValue.RuleValueListEntry
+                .ActionValue(type='Delete'))
           elif boto_rule.action == boto.gs.lifecycle.SET_STORAGE_CLASS:
-            lifecycle_rule.action = (apitools_messages.Bucket.LifecycleValue.
-                                     RuleValueListEntry.ActionValue(
-                                         type='SetStorageClass',
-                                         storageClass=boto_rule.action_text))
+            lifecycle_rule.action = (
+                apitools_messages.Bucket.LifecycleValue.RuleValueListEntry
+                .ActionValue(
+                    type='SetStorageClass', storageClass=boto_rule.action_text))
         if boto.gs.lifecycle.AGE in boto_rule.conditions:
           lifecycle_rule.condition.age = int(
               boto_rule.conditions[boto.gs.lifecycle.AGE])
@@ -546,8 +554,8 @@ class CorsTranslation(object):
     for collection_message in cors_message:
       collection_elements = []
       if collection_message.maxAgeSeconds:
-        collection_elements.append((boto.gs.cors.MAXAGESEC,
-                                    str(collection_message.maxAgeSeconds)))
+        collection_elements.append(
+            (boto.gs.cors.MAXAGESEC, str(collection_message.maxAgeSeconds)))
       if collection_message.method:
         method_elements = []
         for method in collection_message.method:
@@ -616,8 +624,9 @@ class CorsTranslation(object):
 
     cors = []
     for cors_entry in deserialized_cors:
-      cors.append(encoding.DictToMessage(
-          cors_entry, apitools_messages.Bucket.CorsValueListEntry))
+      cors.append(
+          encoding.DictToMessage(cors_entry,
+                                 apitools_messages.Bucket.CorsValueListEntry))
     return cors
 
   @classmethod
@@ -725,16 +734,17 @@ class LabelTranslation(object):
   def JsonFromMessage(cls, message, pretty_print=False):
     json_str = encoding.MessageToJson(message)
     if pretty_print:
-      return json.dumps(json.loads(json_str),
-                        sort_keys=True,
-                        indent=2,
-                        separators=(',', ': '))
+      return json.dumps(
+          json.loads(json_str),
+          sort_keys=True,
+          indent=2,
+          separators=(',', ': '))
     return json_str
 
   @classmethod
   def DictToMessage(cls, label_dict):
-    return encoding.DictToMessage(
-        label_dict, apitools_messages.Bucket.LabelsValue)
+    return encoding.DictToMessage(label_dict,
+                                  apitools_messages.Bucket.LabelsValue)
 
 
 class AclTranslation(object):
@@ -744,10 +754,16 @@ class AclTranslation(object):
     and apitools Message objects.
   """
 
-  JSON_TO_XML_ROLES = {'READER': 'READ', 'WRITER': 'WRITE',
-                       'OWNER': 'FULL_CONTROL'}
-  XML_TO_JSON_ROLES = {'READ': 'READER', 'WRITE': 'WRITER',
-                       'FULL_CONTROL': 'OWNER'}
+  JSON_TO_XML_ROLES = {
+      'READER': 'READ',
+      'WRITER': 'WRITE',
+      'OWNER': 'FULL_CONTROL'
+  }
+  XML_TO_JSON_ROLES = {
+      'READ': 'READER',
+      'WRITE': 'WRITER',
+      'FULL_CONTROL': 'OWNER'
+  }
 
   @classmethod
   def BotoAclFromJson(cls, acl_json):
@@ -794,8 +810,9 @@ class AclTranslation(object):
   def BotoEntriesFromJson(cls, acl_json, parent):
     entries = Entries(parent)
     entries.parent = parent
-    entries.entry_list = [cls.BotoEntryFromJson(entry_json)
-                          for entry_json in acl_json]
+    entries.entry_list = [
+        cls.BotoEntryFromJson(entry_json) for entry_json in acl_json
+    ]
     return entries
 
   @classmethod
@@ -819,20 +836,22 @@ class AclTranslation(object):
         scope_type = USER_BY_EMAIL
       elif entity.startswith('group'):
         scope_type = GROUP_BY_EMAIL
-      return Entry(type=scope_type, email_address=entry_json['email'],
-                   permission=permission)
+      return Entry(
+          type=scope_type,
+          email_address=entry_json['email'],
+          permission=permission)
     elif 'entityId' in entry_json:
       if entity.startswith('user'):
         scope_type = USER_BY_ID
       elif entity.startswith('group'):
         scope_type = GROUP_BY_ID
-      return Entry(type=scope_type, id=entry_json['entityId'],
-                   permission=permission)
+      return Entry(
+          type=scope_type, id=entry_json['entityId'], permission=permission)
     elif 'domain' in entry_json:
       if entity.startswith('domain'):
         scope_type = GROUP_BY_DOMAIN
-      return Entry(type=scope_type, domain=entry_json['domain'],
-                   permission=permission)
+      return Entry(
+          type=scope_type, domain=entry_json['domain'], permission=permission)
     raise CommandException('Failed to translate JSON ACL to XML.')
 
   @classmethod
@@ -873,8 +892,8 @@ class AclTranslation(object):
 
     Args:
       json_data: String of JSON to convert.
-      message_type: Which type of access control entries to return,
-                    either ObjectAccessControl or BucketAccessControl.
+      message_type: Which type of access control entries to return, either
+        ObjectAccessControl or BucketAccessControl.
 
     Raises:
       ArgumentException on invalid JSON data.
@@ -914,5 +933,5 @@ class AclTranslation(object):
         acl_entry.selfLink = None
         acl_entry.etag = None
         serializable_acl.append(encoding.MessageToDict(acl_entry))
-    return json.dumps(serializable_acl, sort_keys=True,
-                      indent=2, separators=(',', ': '))
+    return json.dumps(
+        serializable_acl, sort_keys=True, indent=2, separators=(',', ': '))

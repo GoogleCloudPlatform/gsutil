@@ -24,10 +24,8 @@ import re
 
 import six
 
-
 if six.PY3:
   long = int
-
 
 # Binary exponentiation strings.
 _EXP_STRINGS = [
@@ -40,13 +38,8 @@ _EXP_STRINGS = [
     (60, 'EiB', 'Eibit', 'E'),
 ]
 
-_EXP_TEN_STRING = [
-    (3, 'k'),
-    (6, 'm'),
-    (9, 'b'),
-    (12, 't'),
-    (15, 'q')
-]
+_EXP_TEN_STRING = [(3, 'k'), (6, 'm'), (9, 'b'), (12, 't'), (15, 'q')]
+
 
 # Define this method before constants below, as some call it to init themselves.
 def _GenerateSuffixRegex():
@@ -81,9 +74,9 @@ SUFFIX_TO_SI, MATCH_HUMAN_BYTES = _GenerateSuffixRegex()
 
 def _RoundToNearestExponent(num):
   i = 0
-  while i + 1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
+  while i + 1 < len(_EXP_STRINGS) and num >= (2**_EXP_STRINGS[i + 1][0]):
     i += 1
-  return i, round(float(num) / 2.0 ** _EXP_STRINGS[i][0], 2)
+  return i, round(float(num) / 2.0**_EXP_STRINGS[i][0], 2)
 
 
 def CalculateThroughput(total_bytes_transferred, total_elapsed_time):
@@ -106,6 +99,7 @@ def DecimalShort(num):
 
   Args:
     num: The number of objects to be shortened.
+
   Returns:
     shortened string version for this number. It takes the largest
     scale (thousand, million or billion) smaller than the number and divides it
@@ -144,6 +138,7 @@ def HumanReadableToBytes(human_string):
 
   Args:
     human_string: A string supplied by user, e.g. '1M', '3 GiB'.
+
   Returns:
     An integer containing the number of bytes.
   Raises:
@@ -155,7 +150,7 @@ def HumanReadableToBytes(human_string):
     num = float(m.group('num'))
     if m.group('suffix'):
       power = _EXP_STRINGS[SUFFIX_TO_SI[m.group('suffix')]][0]
-      num *= (2.0 ** power)
+      num *= (2.0**power)
     num = int(round(num))
     return num
   raise ValueError('Invalid byte string specified: %s' % human_string)
@@ -167,6 +162,7 @@ def HumanReadableWithDecimalPlaces(number, decimal_places=1):
   Args:
     number: The number of bytes.
     decimal_places: The number of decimal places.
+
   Returns:
     String representing a readable format for number with decimal_places
      decimal places.
@@ -174,13 +170,15 @@ def HumanReadableWithDecimalPlaces(number, decimal_places=1):
   number_format = MakeHumanReadable(number).split()
   num = str(int(round(10**decimal_places * float(number_format[0]))))
   if num == '0':
-    number_format[0] = ('0' + (('.' + ('0' * decimal_places)) if decimal_places
-                               else ''))
+    number_format[0] = ('0' +
+                        (('.' +
+                          ('0' * decimal_places)) if decimal_places else ''))
   else:
     num_length = len(num)
     if decimal_places:
-      num = (num[:num_length-decimal_places] + '.' +
-             num[num_length-decimal_places:])
+      num = (
+          num[:num_length - decimal_places] + '.' +
+          num[num_length - decimal_places:])
     number_format[0] = num
   return ' '.join(number_format)
 
@@ -218,10 +216,10 @@ def Percentile(values, percent, key=lambda x: x):
 
   Args:
     values: a list of numeric values. Note that the values MUST BE already
-            sorted.
+      sorted.
     percent: a float value from 0.0 to 1.0.
-    key: optional key function to compute value from each element of the list
-         of values.
+    key: optional key function to compute value from each element of the list of
+      values.
 
   Returns:
     The percentile of the values.
@@ -245,8 +243,9 @@ def PrettyTime(remaining_time):
     more suitable for a datetime object, rather than just a number of
     seconds remaining.
   Args:
-    remaining_time: The number of seconds remaining as a float, or a
-      string/None value indicating time was not correctly calculated.
+    remaining_time: The number of seconds remaining as a float, or a string/None
+      value indicating time was not correctly calculated.
+
   Returns:
     if remaining_time is a valid float, %H:%M:%D time remaining format with
     the nearest integer from remaining_time (%H might be higher than 23).
@@ -262,5 +261,5 @@ def PrettyTime(remaining_time):
   minutes = remaining_time // 60
   remaining_time -= (60 * minutes)
   seconds = remaining_time
-  return (str('%02d' % hours) + ':' + str('%02d' % minutes)+':' +
+  return (str('%02d' % hours) + ':' + str('%02d' % minutes) + ':' +
           str('%02d' % seconds))

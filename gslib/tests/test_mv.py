@@ -47,8 +47,10 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket2_uri, 0)
 
     # Move two objects from bucket1 to bucket2.
-    objs = [bucket1_uri.clone_replace_key(key).versionless_uri
-            for key in bucket1_uri.list_bucket()]
+    objs = [
+        bucket1_uri.clone_replace_key(key).versionless_uri
+        for key in bucket1_uri.list_bucket()
+    ]
     cmd = (['-m', 'mv'] + objs + [suri(bucket2_uri)])
     stderr = self.RunGsUtil(cmd, return_stderr=True)
     # Rewrite API may output an additional 'Copying' progress notification.
@@ -69,8 +71,10 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket2_uri, 2)
 
     # Remove one of the objects.
-    objs = [bucket2_uri.clone_replace_key(key).versionless_uri
-            for key in bucket2_uri.list_bucket()]
+    objs = [
+        bucket2_uri.clone_replace_key(key).versionless_uri
+        for key in bucket2_uri.list_bucket()
+    ]
     obj1 = objs[0]
     self.RunGsUtil(['rm', obj1])
 
@@ -78,8 +82,10 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.AssertNObjectsInBucket(bucket2_uri, 1)
 
     # Move the 1 remaining object back.
-    objs = [suri(bucket2_uri.clone_replace_key(key))
-            for key in bucket2_uri.list_bucket()]
+    objs = [
+        suri(bucket2_uri.clone_replace_key(key))
+        for key in bucket2_uri.list_bucket()
+    ]
     cmd = (['-m', 'mv'] + objs + [suri(bucket1_uri)])
     stderr = self.RunGsUtil(cmd, return_stderr=True)
     # Rewrite API may output an additional 'Copying' progress notification.
@@ -131,6 +137,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
       self.assertIn(os.path.basename(fpath1), stdout)
       self.assertIn(os.path.basename(fpath2), stdout)
       self.assertNumLines(stdout, 2)
+
     _Check1()
 
   def test_mv_no_clobber(self):
@@ -138,8 +145,8 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     fpath1 = self.CreateTempFile(contents=b'data1')
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'data2')
-    stderr = self.RunGsUtil(['mv', '-n', fpath1, suri(object_uri)],
-                            return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['mv', '-n', fpath1, suri(object_uri)], return_stderr=True)
     # Copy should be skipped and source file should not be removed.
     self.assertIn('Skipping existing item: %s' % suri(object_uri), stderr)
     self.assertNotIn('Removing %s' % suri(fpath1), stderr)
@@ -148,8 +155,8 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(contents, 'data2')
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(
+      UsingCrcmodExtension(crcmod), 'Test requires fast crcmod.')
   def test_mv_preserve_posix_bucket_to_dir_no_errors(self):
     """Tests use of the -P flag with mv from a bucket to a local dir.
 
@@ -170,8 +177,8 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir()
 
-    obj = self.CreateObject(bucket_uri=bucket_uri, object_name='obj',
-                            contents=b'obj')
+    obj = self.CreateObject(
+        bucket_uri=bucket_uri, object_name='obj', contents=b'obj')
     TestCpMvPOSIXBucketToLocalErrors(self, bucket_uri, obj, tmpdir, is_cp=False)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
@@ -188,8 +195,9 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
     bucket_uri = self.CreateBucket(storage_class='NEARLINE')
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'obj')
-    stderr = self.RunGsUtil(['mv', suri(object_uri), suri(bucket_uri, 'foo')],
-                            return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['mv', suri(object_uri),
+         suri(bucket_uri, 'foo')], return_stderr=True)
     self.assertIn(
         'Warning: moving nearline object %s may incur an early deletion '
         'charge, because the original object is less than 30 days old '

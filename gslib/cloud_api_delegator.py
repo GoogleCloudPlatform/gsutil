@@ -44,9 +44,16 @@ class CloudApiDelegator(CloudApi):
   multiple threads is unsafe.
   """
 
-  def __init__(self, bucket_storage_uri_class, gsutil_api_map, logger,
-               status_queue, provider=None, debug=0, trace_token=None,
-               perf_trace_token=None, user_project=None):
+  def __init__(self,
+               bucket_storage_uri_class,
+               gsutil_api_map,
+               logger,
+               status_queue,
+               provider=None,
+               debug=0,
+               trace_token=None,
+               perf_trace_token=None,
+               user_project=None):
     """Performs necessary setup for delegating cloud storage requests.
 
     This function has different arguments than the gsutil Cloud API __init__
@@ -54,24 +61,27 @@ class CloudApiDelegator(CloudApi):
 
     Args:
       bucket_storage_uri_class: boto storage_uri class, used by APIs that
-                                provide boto translation or mocking.
+        provide boto translation or mocking.
       gsutil_api_map: Map of providers and API selector tuples to api classes
-                      which can be used to communicate with those providers.
+        which can be used to communicate with those providers.
       logger: logging.logger for outputting log messages.
       status_queue: Queue for relaying status to UI.
       provider: Default provider prefix describing cloud storage provider to
-                connect to.
+        connect to.
       debug: Debug level for the API implementation (0..3).
       trace_token: Apiary trace token to pass to API.
       perf_trace_token: Performance trace token to use when making API calls.
       user_project: Project to be billed for this project.
     """
-    super(CloudApiDelegator, self).__init__(bucket_storage_uri_class, logger,
-                                            status_queue,
-                                            provider=provider, debug=debug,
-                                            trace_token=trace_token,
-                                            perf_trace_token=perf_trace_token,
-                                            user_project=user_project)
+    super(CloudApiDelegator, self).__init__(
+        bucket_storage_uri_class,
+        logger,
+        status_queue,
+        provider=provider,
+        debug=debug,
+        trace_token=trace_token,
+        perf_trace_token=perf_trace_token,
+        user_project=user_project)
     self.api_map = gsutil_api_map
     self.prefer_api = boto.config.get('GSUtil', 'prefer_api', '').upper()
     self.loaded_apis = {}
@@ -139,7 +149,7 @@ class CloudApiDelegator(CloudApi):
 
     Args:
       provider: Provider to return the ApiSelector for.  If None, class-wide
-                default is used.
+        default is used.
 
     Returns:
       cs_api_map.ApiSelector that will be used for calls to the delegator
@@ -164,15 +174,14 @@ class CloudApiDelegator(CloudApi):
     using_gs_hmac = (
         provider == 'gs' and
         not config.has_option('Credentials', 'gs_oauth2_refresh_token') and
-        not (config.has_option('Credentials', 'gs_service_client_id')
-             and config.has_option('Credentials', 'gs_service_key_file')) and
-        (config.has_option('Credentials', 'gs_access_key_id')
-         and config.has_option('Credentials', 'gs_secret_access_key')))
+        not (config.has_option('Credentials', 'gs_service_client_id') and
+             config.has_option('Credentials', 'gs_service_key_file')) and
+        (config.has_option('Credentials', 'gs_access_key_id') and
+         config.has_option('Credentials', 'gs_secret_access_key')))
 
     configured_encryption = (
-        provider == 'gs' and
-        (config.has_option('GSUtil', 'encryption_key') or
-         config.has_option('GSUtil', 'decryption_key1')))
+        provider == 'gs' and (config.has_option('GSUtil', 'encryption_key') or
+                              config.has_option('GSUtil', 'decryption_key1')))
 
     if using_gs_hmac and configured_encryption:
       raise CommandException(
@@ -198,8 +207,8 @@ class CloudApiDelegator(CloudApi):
     elif configured_encryption:
       api = ApiSelector.JSON
     # Try to force the user's preference to a supported API.
-    elif self.prefer_api in (self.api_map[ApiMapConstants.SUPPORT_MAP]
-                             [selected_provider]):
+    elif self.prefer_api in (
+        self.api_map[ApiMapConstants.SUPPORT_MAP][selected_provider]):
       api = self.prefer_api
     return api
 
@@ -214,136 +223,256 @@ class CloudApiDelegator(CloudApi):
     return self._GetApi(provider).SetBucketIamPolicy(bucket_name, policy)
 
   def ListBuckets(self, project_id=None, provider=None, fields=None):
-    return self._GetApi(provider).ListBuckets(project_id=project_id,
-                                              fields=fields)
+    return self._GetApi(provider).ListBuckets(
+        project_id=project_id, fields=fields)
 
-  def PatchBucket(self, bucket_name, metadata, canned_acl=None,
-                  canned_def_acl=None, preconditions=None, provider=None,
+  def PatchBucket(self,
+                  bucket_name,
+                  metadata,
+                  canned_acl=None,
+                  canned_def_acl=None,
+                  preconditions=None,
+                  provider=None,
                   fields=None):
     return self._GetApi(provider).PatchBucket(
-        bucket_name, metadata, canned_acl=canned_acl,
-        canned_def_acl=canned_def_acl, preconditions=preconditions,
+        bucket_name,
+        metadata,
+        canned_acl=canned_acl,
+        canned_def_acl=canned_def_acl,
+        preconditions=preconditions,
         fields=fields)
 
   def LockRetentionPolicy(self, bucket_name, metageneration, provider=None):
     return self._GetApi(provider).LockRetentionPolicy(
-        bucket_name,
-        metageneration,
-        provider=provider)
+        bucket_name, metageneration, provider=provider)
 
-  def CreateBucket(self, bucket_name, project_id=None, metadata=None,
-                   provider=None, fields=None):
+  def CreateBucket(self,
+                   bucket_name,
+                   project_id=None,
+                   metadata=None,
+                   provider=None,
+                   fields=None):
     return self._GetApi(provider).CreateBucket(
         bucket_name, project_id=project_id, metadata=metadata, fields=fields)
 
   def DeleteBucket(self, bucket_name, preconditions=None, provider=None):
-    return self._GetApi(provider).DeleteBucket(bucket_name,
-                                               preconditions=preconditions)
+    return self._GetApi(provider).DeleteBucket(
+        bucket_name, preconditions=preconditions)
 
-  def GetObjectIamPolicy(self, bucket_name, object_name,
-                         generation=None, provider=None, fields=None):
+  def GetObjectIamPolicy(self,
+                         bucket_name,
+                         object_name,
+                         generation=None,
+                         provider=None,
+                         fields=None):
     return self._GetApi(provider).GetObjectIamPolicy(
         bucket_name, object_name, generation, fields=fields)
 
-  def SetObjectIamPolicy(self, bucket_name, object_name, policy,
-                         generation=None, provider=None):
-    return self._GetApi(provider).SetObjectIamPolicy(
-        bucket_name, object_name, policy, generation)
+  def SetObjectIamPolicy(self,
+                         bucket_name,
+                         object_name,
+                         policy,
+                         generation=None,
+                         provider=None):
+    return self._GetApi(provider).SetObjectIamPolicy(bucket_name, object_name,
+                                                     policy, generation)
 
-  def ListObjects(self, bucket_name, prefix=None, delimiter=None,
-                  all_versions=None, provider=None, fields=None):
+  def ListObjects(self,
+                  bucket_name,
+                  prefix=None,
+                  delimiter=None,
+                  all_versions=None,
+                  provider=None,
+                  fields=None):
     return self._GetApi(provider).ListObjects(
-        bucket_name, prefix=prefix, delimiter=delimiter,
-        all_versions=all_versions, fields=fields)
+        bucket_name,
+        prefix=prefix,
+        delimiter=delimiter,
+        all_versions=all_versions,
+        fields=fields)
 
-  def GetObjectMetadata(self, bucket_name, object_name, generation=None,
-                        provider=None, fields=None):
+  def GetObjectMetadata(self,
+                        bucket_name,
+                        object_name,
+                        generation=None,
+                        provider=None,
+                        fields=None):
     return self._GetApi(provider).GetObjectMetadata(
         bucket_name, object_name, generation=generation, fields=fields)
 
-  def PatchObjectMetadata(self, bucket_name, object_name, metadata,
-                          canned_acl=None, generation=None, preconditions=None,
-                          provider=None, fields=None):
+  def PatchObjectMetadata(self,
+                          bucket_name,
+                          object_name,
+                          metadata,
+                          canned_acl=None,
+                          generation=None,
+                          preconditions=None,
+                          provider=None,
+                          fields=None):
     return self._GetApi(provider).PatchObjectMetadata(
-        bucket_name, object_name, metadata, canned_acl=canned_acl,
-        generation=generation, preconditions=preconditions, fields=fields)
-
-  def GetObjectMedia(
-      self, bucket_name, object_name, download_stream, provider=None,
-      generation=None, object_size=None,
-      compressed_encoding=False,
-      download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
-      start_byte=0, end_byte=None, progress_callback=None,
-      serialization_data=None, digesters=None, decryption_tuple=None):
-    return self._GetApi(provider).GetObjectMedia(
-        bucket_name, object_name, download_stream,
-        compressed_encoding=compressed_encoding,
-        download_strategy=download_strategy, start_byte=start_byte,
-        end_byte=end_byte, generation=generation, object_size=object_size,
-        progress_callback=progress_callback,
-        serialization_data=serialization_data, digesters=digesters,
-        decryption_tuple=decryption_tuple)
-
-  def UploadObject(self, upload_stream, object_metadata, size=None,
-                   canned_acl=None, preconditions=None, progress_callback=None,
-                   encryption_tuple=None, provider=None, fields=None,
-                   gzip_encoded=False):
-    return self._GetApi(provider).UploadObject(
-        upload_stream, object_metadata, size=size, canned_acl=canned_acl,
-        preconditions=preconditions, progress_callback=progress_callback,
-        encryption_tuple=encryption_tuple, fields=fields,
-        gzip_encoded=gzip_encoded)
-
-  def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            canned_acl=None, preconditions=None,
-                            progress_callback=None, encryption_tuple=None,
-                            provider=None, fields=None, gzip_encoded=False):
-    return self._GetApi(provider).UploadObjectStreaming(
-        upload_stream, object_metadata, canned_acl=canned_acl,
-        preconditions=preconditions, progress_callback=progress_callback,
-        encryption_tuple=encryption_tuple, fields=fields,
-        gzip_encoded=gzip_encoded)
-
-  def UploadObjectResumable(
-      self, upload_stream, object_metadata, canned_acl=None, preconditions=None,
-      size=None, serialization_data=None, tracker_callback=None,
-      progress_callback=None, encryption_tuple=None, provider=None,
-      fields=None, gzip_encoded=False):
-    return self._GetApi(provider).UploadObjectResumable(
-        upload_stream, object_metadata, canned_acl=canned_acl,
-        preconditions=preconditions, size=size,
-        serialization_data=serialization_data,
-        tracker_callback=tracker_callback, progress_callback=progress_callback,
-        encryption_tuple=encryption_tuple, fields=fields,
-        gzip_encoded=gzip_encoded)
-
-  def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
-                 canned_acl=None, preconditions=None, progress_callback=None,
-                 max_bytes_per_call=None, encryption_tuple=None,
-                 decryption_tuple=None, provider=None, fields=None):
-    return self._GetApi(provider).CopyObject(
-        src_obj_metadata, dst_obj_metadata, src_generation=src_generation,
-        canned_acl=canned_acl, preconditions=preconditions,
-        progress_callback=progress_callback,
-        max_bytes_per_call=max_bytes_per_call,
-        encryption_tuple=encryption_tuple, decryption_tuple=decryption_tuple,
+        bucket_name,
+        object_name,
+        metadata,
+        canned_acl=canned_acl,
+        generation=generation,
+        preconditions=preconditions,
         fields=fields)
 
-  def ComposeObject(self, src_objs_metadata, dst_obj_metadata,
-                    preconditions=None, encryption_tuple=None, provider=None,
+  def GetObjectMedia(self,
+                     bucket_name,
+                     object_name,
+                     download_stream,
+                     provider=None,
+                     generation=None,
+                     object_size=None,
+                     compressed_encoding=False,
+                     download_strategy=CloudApi.DownloadStrategy.ONE_SHOT,
+                     start_byte=0,
+                     end_byte=None,
+                     progress_callback=None,
+                     serialization_data=None,
+                     digesters=None,
+                     decryption_tuple=None):
+    return self._GetApi(provider).GetObjectMedia(
+        bucket_name,
+        object_name,
+        download_stream,
+        compressed_encoding=compressed_encoding,
+        download_strategy=download_strategy,
+        start_byte=start_byte,
+        end_byte=end_byte,
+        generation=generation,
+        object_size=object_size,
+        progress_callback=progress_callback,
+        serialization_data=serialization_data,
+        digesters=digesters,
+        decryption_tuple=decryption_tuple)
+
+  def UploadObject(self,
+                   upload_stream,
+                   object_metadata,
+                   size=None,
+                   canned_acl=None,
+                   preconditions=None,
+                   progress_callback=None,
+                   encryption_tuple=None,
+                   provider=None,
+                   fields=None,
+                   gzip_encoded=False):
+    return self._GetApi(provider).UploadObject(
+        upload_stream,
+        object_metadata,
+        size=size,
+        canned_acl=canned_acl,
+        preconditions=preconditions,
+        progress_callback=progress_callback,
+        encryption_tuple=encryption_tuple,
+        fields=fields,
+        gzip_encoded=gzip_encoded)
+
+  def UploadObjectStreaming(self,
+                            upload_stream,
+                            object_metadata,
+                            canned_acl=None,
+                            preconditions=None,
+                            progress_callback=None,
+                            encryption_tuple=None,
+                            provider=None,
+                            fields=None,
+                            gzip_encoded=False):
+    return self._GetApi(provider).UploadObjectStreaming(
+        upload_stream,
+        object_metadata,
+        canned_acl=canned_acl,
+        preconditions=preconditions,
+        progress_callback=progress_callback,
+        encryption_tuple=encryption_tuple,
+        fields=fields,
+        gzip_encoded=gzip_encoded)
+
+  def UploadObjectResumable(self,
+                            upload_stream,
+                            object_metadata,
+                            canned_acl=None,
+                            preconditions=None,
+                            size=None,
+                            serialization_data=None,
+                            tracker_callback=None,
+                            progress_callback=None,
+                            encryption_tuple=None,
+                            provider=None,
+                            fields=None,
+                            gzip_encoded=False):
+    return self._GetApi(provider).UploadObjectResumable(
+        upload_stream,
+        object_metadata,
+        canned_acl=canned_acl,
+        preconditions=preconditions,
+        size=size,
+        serialization_data=serialization_data,
+        tracker_callback=tracker_callback,
+        progress_callback=progress_callback,
+        encryption_tuple=encryption_tuple,
+        fields=fields,
+        gzip_encoded=gzip_encoded)
+
+  def CopyObject(self,
+                 src_obj_metadata,
+                 dst_obj_metadata,
+                 src_generation=None,
+                 canned_acl=None,
+                 preconditions=None,
+                 progress_callback=None,
+                 max_bytes_per_call=None,
+                 encryption_tuple=None,
+                 decryption_tuple=None,
+                 provider=None,
+                 fields=None):
+    return self._GetApi(provider).CopyObject(
+        src_obj_metadata,
+        dst_obj_metadata,
+        src_generation=src_generation,
+        canned_acl=canned_acl,
+        preconditions=preconditions,
+        progress_callback=progress_callback,
+        max_bytes_per_call=max_bytes_per_call,
+        encryption_tuple=encryption_tuple,
+        decryption_tuple=decryption_tuple,
+        fields=fields)
+
+  def ComposeObject(self,
+                    src_objs_metadata,
+                    dst_obj_metadata,
+                    preconditions=None,
+                    encryption_tuple=None,
+                    provider=None,
                     fields=None):
     return self._GetApi(provider).ComposeObject(
-        src_objs_metadata, dst_obj_metadata, preconditions=preconditions,
-        encryption_tuple=encryption_tuple, fields=fields)
+        src_objs_metadata,
+        dst_obj_metadata,
+        preconditions=preconditions,
+        encryption_tuple=encryption_tuple,
+        fields=fields)
 
-  def DeleteObject(self, bucket_name, object_name, preconditions=None,
-                   generation=None, provider=None):
+  def DeleteObject(self,
+                   bucket_name,
+                   object_name,
+                   preconditions=None,
+                   generation=None,
+                   provider=None):
     return self._GetApi(provider).DeleteObject(
-        bucket_name, object_name, preconditions=preconditions,
+        bucket_name,
+        object_name,
+        preconditions=preconditions,
         generation=generation)
 
-  def WatchBucket(self, bucket_name, address, channel_id, token=None,
-                  provider=None, fields=None):
+  def WatchBucket(self,
+                  bucket_name,
+                  address,
+                  channel_id,
+                  token=None,
+                  provider=None,
+                  fields=None):
     return self._GetApi(provider).WatchBucket(
         bucket_name, address, channel_id, token=token, fields=fields)
 
@@ -356,15 +485,19 @@ class CloudApiDelegator(CloudApi):
   def GetProjectServiceAccount(self, project_number, provider=None):
     return self._GetApi(provider).GetProjectServiceAccount(project_number)
 
-  def CreateNotificationConfig(
-      self, bucket_name, pubsub_topic, payload_format, event_types=None,
-      custom_attributes=None, object_name_prefix=None, provider=None):
+  def CreateNotificationConfig(self,
+                               bucket_name,
+                               pubsub_topic,
+                               payload_format,
+                               event_types=None,
+                               custom_attributes=None,
+                               object_name_prefix=None,
+                               provider=None):
     return self._GetApi(provider).CreateNotificationConfig(
         bucket_name, pubsub_topic, payload_format, event_types,
         custom_attributes, object_name_prefix)
 
-  def DeleteNotificationConfig(
-      self, bucket_name, notification, provider=None):
+  def DeleteNotificationConfig(self, bucket_name, notification, provider=None):
     return self._GetApi(provider).DeleteNotificationConfig(
         bucket_name, notification)
 
@@ -375,8 +508,8 @@ class CloudApiDelegator(CloudApi):
     return self._GetApi(provider).ListBucketAccessControls(bucket_name)
 
   def ListObjectAccessControls(self, bucket_name, object_name, provider=None):
-    return self._GetApi(provider).ListObjectAccessControls(bucket_name,
-                                                           object_name)
+    return self._GetApi(provider).ListObjectAccessControls(
+        bucket_name, object_name)
 
   def XmlPassThroughGetAcl(self, storage_url, def_obj_acl=False, provider=None):
     """XML compatibility function for getting ACLs.
@@ -385,7 +518,7 @@ class CloudApiDelegator(CloudApi):
       storage_url: StorageUrl object.
       def_obj_acl: If true, get the default object ACL on a bucket.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -394,11 +527,15 @@ class CloudApiDelegator(CloudApi):
     Returns:
       ACL XML for the resource specified by storage_url.
     """
-    return self._GetApi(provider).XmlPassThroughGetAcl(storage_url,
-                                                       def_obj_acl=def_obj_acl)
+    return self._GetApi(provider).XmlPassThroughGetAcl(
+        storage_url, def_obj_acl=def_obj_acl)
 
-  def XmlPassThroughSetAcl(self, acl_text, storage_url, canned=True,
-                           def_obj_acl=False, provider=None):
+  def XmlPassThroughSetAcl(self,
+                           acl_text,
+                           storage_url,
+                           canned=True,
+                           def_obj_acl=False,
+                           provider=None):
     """XML compatibility function for setting ACLs.
 
     Args:
@@ -407,7 +544,7 @@ class CloudApiDelegator(CloudApi):
       canned: If true, acl_text is treated as a canned ACL string.
       def_obj_acl: If true, set the default object ACL on a bucket.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -425,7 +562,7 @@ class CloudApiDelegator(CloudApi):
     Args:
       storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -443,7 +580,7 @@ class CloudApiDelegator(CloudApi):
       cors_text: Raw CORS XML string.
       storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -460,7 +597,7 @@ class CloudApiDelegator(CloudApi):
     Args:
       storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -471,7 +608,9 @@ class CloudApiDelegator(CloudApi):
     """
     return self._GetApi(provider).XmlPassThroughGetLifecycle(storage_url)
 
-  def XmlPassThroughSetLifecycle(self, lifecycle_text, storage_url,
+  def XmlPassThroughSetLifecycle(self,
+                                 lifecycle_text,
+                                 storage_url,
                                  provider=None):
     """XML compatibility function for setting lifecycle config on a bucket.
 
@@ -479,7 +618,7 @@ class CloudApiDelegator(CloudApi):
       lifecycle_text: Raw lifecycle configuration XML string.
       storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -497,7 +636,7 @@ class CloudApiDelegator(CloudApi):
     Args:
       storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -518,7 +657,7 @@ class CloudApiDelegator(CloudApi):
       tags_text: Raw tagging configuration XML string.
       storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -536,7 +675,7 @@ class CloudApiDelegator(CloudApi):
     Args:
       storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -553,7 +692,7 @@ class CloudApiDelegator(CloudApi):
     Args:
       storage_url: StorageUrl object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -563,4 +702,3 @@ class CloudApiDelegator(CloudApi):
       Website configuration XML for the bucket specified by storage_url.
     """
     return self._GetApi(provider).XmlPassThroughGetWebsite(storage_url)
-

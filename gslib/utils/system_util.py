@@ -62,32 +62,31 @@ def CheckFreeSpace(path):
   if IS_WINDOWS:
     try:
       # pylint: disable=invalid-name
-      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_wchar_p,
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64))
+      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_wchar_p, POINTER(c_uint64),
+                                           POINTER(c_uint64), POINTER(c_uint64))
       get_disk_free_space_ex = get_disk_free_space_ex(
           ('GetDiskFreeSpaceExW', windll.kernel32), (
               (1, 'lpszPathName'),
               (2, 'lpFreeUserSpace'),
               (2, 'lpTotalSpace'),
-              (2, 'lpFreeSpace'),))
+              (2, 'lpFreeSpace'),
+          ))
     except AttributeError:
-      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_char_p,
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64),
-                                           POINTER(c_uint64))
+      get_disk_free_space_ex = WINFUNCTYPE(c_int, c_char_p, POINTER(c_uint64),
+                                           POINTER(c_uint64), POINTER(c_uint64))
       get_disk_free_space_ex = get_disk_free_space_ex(
           ('GetDiskFreeSpaceExA', windll.kernel32), (
               (1, 'lpszPathName'),
               (2, 'lpFreeUserSpace'),
               (2, 'lpTotalSpace'),
-              (2, 'lpFreeSpace'),))
+              (2, 'lpFreeSpace'),
+          ))
 
     def GetDiskFreeSpaceExErrCheck(result, unused_func, args):
       if not result:
         raise WinError()
       return args[1].value
+
     get_disk_free_space_ex.errcheck = GetDiskFreeSpaceExErrCheck
 
     return get_disk_free_space_ex(os.getenv('SystemDrive'))
@@ -185,11 +184,13 @@ def GetGsutilClientIdAndSecret():
   """
   if InvokedViaCloudSdk() and CloudSdkCredPassingEnabled():
     # Cloud SDK installs have a separate client ID / secret.
-    return ('32555940559.apps.googleusercontent.com',  # Cloud SDK client ID
-            'ZmssLNjJy2998hD4CTg2ejr2')                # Cloud SDK secret
+    return (
+        '32555940559.apps.googleusercontent.com',  # Cloud SDK client ID
+        'ZmssLNjJy2998hD4CTg2ejr2')  # Cloud SDK secret
 
-  return ('909320924072.apps.googleusercontent.com',   # gsutil client ID
-          'p3RlpR10xMFh9ZXBS/ZNLYUu')                  # gsutil secret
+  return (
+      '909320924072.apps.googleusercontent.com',  # gsutil client ID
+      'p3RlpR10xMFh9ZXBS/ZNLYUu')  # gsutil secret
 
 
 def GetStreamFromFileUrl(storage_url, mode='rb'):
@@ -203,15 +204,14 @@ def GetTermLines():
   """Returns number of terminal lines."""
   # fcntl isn't supported in Windows.
   try:
-    import fcntl    # pylint: disable=g-import-not-at-top
+    import fcntl  # pylint: disable=g-import-not-at-top
     import termios  # pylint: disable=g-import-not-at-top
   except ImportError:
     return _DEFAULT_NUM_TERM_LINES
 
   def ioctl_GWINSZ(fd):  # pylint: disable=invalid-name
     try:
-      return struct.unpack(
-          'hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))[0]
+      return struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))[0]
     except:  # pylint: disable=bare-except
       return 0  # Failure (so will retry on different file descriptor below).
 
@@ -253,10 +253,9 @@ def MonkeyPatchHttp():
   # Checking for and applying monkeypatch for Python versions:
   # 3.0 - 3.6.6, 3.7.0
   if ver.major == 3:
-    if (ver.minor < 6 or
-      (ver.minor == 6 and ver.micro < 7) or
-      (ver.minor == 7 and ver.micro == 0)):
-        _MonkeyPatchHttpForPython_3x()
+    if (ver.minor < 6 or (ver.minor == 6 and ver.micro < 7) or
+        (ver.minor == 7 and ver.micro == 0)):
+      _MonkeyPatchHttpForPython_3x()
 
 
 def _MonkeyPatchHttpForPython_3x():
@@ -279,7 +278,7 @@ def _MonkeyPatchHttpForPython_3x():
     old_begin(self)
     if self.debuglevel > 0:
       for hdr, val in self.headers.items():
-        print("header:", hdr + ":", val)
+        print('header:', hdr + ':', val)
 
   http.client.HTTPResponse.begin = PatchedBegin
 
@@ -293,9 +292,11 @@ def StdinIterator():
 
 class StdinIteratorCls(six.Iterator):
   """An iterator that returns lines from stdin.
+
      This is needed because Python 3 balks at pickling the
      generator version above.
   """
+
   def __iter__(self):
     return self
 

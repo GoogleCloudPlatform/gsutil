@@ -95,8 +95,7 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
         position += len(data)
       wrapper.read(initial_position - position)
       wrapper.seek(initial_position - seek_back_amount)
-      self.assertEqual(wrapper.tell(),
-                       initial_position - seek_back_amount)
+      self.assertEqual(wrapper.tell(), initial_position - seek_back_amount)
       data = wrapper.read()
       self.assertEqual(
           len(data), tmp_file_len - (initial_position - seek_back_amount))
@@ -105,14 +104,10 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
     self.assertEqual(actual, digesters['md5'].hexdigest())
 
   def testSeekToBeginning(self):
-    for num_bytes in (TRANSFER_BUFFER_SIZE - 1,
-                      TRANSFER_BUFFER_SIZE,
-                      TRANSFER_BUFFER_SIZE + 1,
-                      TRANSFER_BUFFER_SIZE * 2 - 1,
-                      TRANSFER_BUFFER_SIZE * 2,
-                      TRANSFER_BUFFER_SIZE * 2 + 1,
-                      TRANSFER_BUFFER_SIZE * 3 - 1,
-                      TRANSFER_BUFFER_SIZE * 3,
+    for num_bytes in (TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE,
+                      TRANSFER_BUFFER_SIZE + 1, TRANSFER_BUFFER_SIZE * 2 - 1,
+                      TRANSFER_BUFFER_SIZE * 2, TRANSFER_BUFFER_SIZE * 2 + 1,
+                      TRANSFER_BUFFER_SIZE * 3 - 1, TRANSFER_BUFFER_SIZE * 3,
                       TRANSFER_BUFFER_SIZE * 3 + 1):
       self._testSeekBack(num_bytes, num_bytes)
 
@@ -124,8 +119,7 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
                              TRANSFER_BUFFER_SIZE * 3 - 1,
                              TRANSFER_BUFFER_SIZE * 3,
                              TRANSFER_BUFFER_SIZE * 3 + 1):
-      for seek_back_amount in (TRANSFER_BUFFER_SIZE - 1,
-                               TRANSFER_BUFFER_SIZE,
+      for seek_back_amount in (TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE,
                                TRANSFER_BUFFER_SIZE + 1):
         self._testSeekBack(initial_position, seek_back_amount)
 
@@ -174,11 +168,8 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
     self.assertEqual(actual, digesters['md5'].hexdigest())
 
   def testSeekForward(self):
-    for initial_seek in (0,
-                         TRANSFER_BUFFER_SIZE - 1,
-                         TRANSFER_BUFFER_SIZE,
-                         TRANSFER_BUFFER_SIZE + 1,
-                         TRANSFER_BUFFER_SIZE * 2 - 1,
+    for initial_seek in (0, TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE,
+                         TRANSFER_BUFFER_SIZE + 1, TRANSFER_BUFFER_SIZE * 2 - 1,
                          TRANSFER_BUFFER_SIZE * 2,
                          TRANSFER_BUFFER_SIZE * 2 + 1):
       self._testSeekForward(initial_seek)
@@ -221,11 +212,8 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
     self.assertEqual(actual, digesters['md5'].hexdigest())
 
   def testValidSeekAway(self):
-    for initial_read in (0,
-                         TRANSFER_BUFFER_SIZE - 1,
-                         TRANSFER_BUFFER_SIZE,
-                         TRANSFER_BUFFER_SIZE + 1,
-                         TRANSFER_BUFFER_SIZE * 2 - 1,
+    for initial_read in (0, TRANSFER_BUFFER_SIZE - 1, TRANSFER_BUFFER_SIZE,
+                         TRANSFER_BUFFER_SIZE + 1, TRANSFER_BUFFER_SIZE * 2 - 1,
                          TRANSFER_BUFFER_SIZE * 2,
                          TRANSFER_BUFFER_SIZE * 2 + 1):
       self._testSeekAway(initial_read)

@@ -211,9 +211,15 @@ def _DurationToTimeDelta(duration):
   return ret
 
 
-def _GenSignedUrl(key, client_id, method, duration,
-                  gcs_path, logger, region,
-                  content_type=None, string_to_sign_debug=False):
+def _GenSignedUrl(key,
+                  client_id,
+                  method,
+                  duration,
+                  gcs_path,
+                  logger,
+                  region,
+                  content_type=None,
+                  string_to_sign_debug=False):
   """Construct a string to sign with the provided key.
 
   Args:
@@ -222,14 +228,14 @@ def _GenSignedUrl(key, client_id, method, duration,
     method: The HTTP method to be used with the signed URL.
     duration: timedelta for which the constructed signed URL should be valid.
     gcs_path: String path to the bucket of object for signing, in the form
-        'bucket' or 'bucket/object'.
+      'bucket' or 'bucket/object'.
     logger: logging.Logger for warning and debug output.
     region: Geographic region in which the requested resource resides.
     content_type: Optional Content-Type for the signed URL. HTTP requests using
-        the URL must match this Content-Type.
-    string_to_sign_debug: If true AND logger is enabled for debug level,
-        print string to sign to debug. Used to differentiate user's
-        signed URL from the probing permissions-check signed URL.
+      the URL must match this Content-Type.
+    string_to_sign_debug: If true AND logger is enabled for debug level, print
+      string to sign to debug. Used to differentiate user's signed URL from the
+      probing permissions-check signed URL.
 
   Returns:
     The complete url (string).
@@ -256,26 +262,31 @@ def _GenSignedUrl(key, client_id, method, duration,
       date=canonical_day, region=region)
 
   signed_query_params = {
-    'x-goog-algorithm': _SIGNING_ALGO,
-    'x-goog-credential': client_id + '/' + canonical_scope,
-    'x-goog-date': canonical_time,
-    'x-goog-signedheaders': ';'.join(sorted(signed_headers.keys())),
-    'x-goog-expires': '%d' % duration.total_seconds()
+      'x-goog-algorithm': _SIGNING_ALGO,
+      'x-goog-credential': client_id + '/' + canonical_scope,
+      'x-goog-date': canonical_time,
+      'x-goog-signedheaders': ';'.join(sorted(signed_headers.keys())),
+      'x-goog-expires': '%d' % duration.total_seconds()
   }
 
   canonical_resource = '/{}'.format(gcs_path)
-  canonical_query_string = '&'.join(
-      ['{}={}'.format(param, urllib.parse.quote_plus(signed_query_params[param]))
-       for param in sorted(signed_query_params.keys())])
-  canonical_headers = '\n'.join(
-      ['{}:{}'.format(header.lower(), signed_headers[header])
-       for header in sorted(signed_headers.keys())]) + '\n'
+  canonical_query_string = '&'.join([
+      '{}={}'.format(param, urllib.parse.quote_plus(signed_query_params[param]))
+      for param in sorted(signed_query_params.keys())
+  ])
+  canonical_headers = '\n'.join([
+      '{}:{}'.format(header.lower(), signed_headers[header])
+      for header in sorted(signed_headers.keys())
+  ]) + '\n'
   canonical_signed_headers = ';'.join(sorted(signed_headers.keys()))
 
   canonical_request = _CANONICAL_REQUEST_FORMAT.format(
-      method=method, resource=canonical_resource,
-      query_string=canonical_query_string, headers=canonical_headers,
-      signed_headers=canonical_signed_headers, hashed_payload=_UNSIGNED_PAYLOAD)
+      method=method,
+      resource=canonical_resource,
+      query_string=canonical_query_string,
+      headers=canonical_headers,
+      signed_headers=canonical_signed_headers,
+      hashed_payload=_UNSIGNED_PAYLOAD)
 
   if six.PY3:
     canonical_request = canonical_request.encode(UTF8)
@@ -286,14 +297,17 @@ def _GenSignedUrl(key, client_id, method, duration,
       canonical_request_hasher.digest()).lower().decode(UTF8)
 
   string_to_sign = _STRING_TO_SIGN_FORMAT.format(
-      signing_algo=_SIGNING_ALGO, request_time=canonical_time,
-      credential_scope=canonical_scope, hashed_request=hashed_canonical_request)
+      signing_algo=_SIGNING_ALGO,
+      request_time=canonical_time,
+      credential_scope=canonical_scope,
+      hashed_request=hashed_canonical_request)
 
   if string_to_sign_debug and logger:
-    logger.debug('Canonical request (ignore opening/closing brackets): [[[%s]]]'
-                 % canonical_request)
-    logger.debug('String to sign (ignore opening/closing brackets): [[[%s]]]'
-                 % string_to_sign)
+    logger.debug(
+        'Canonical request (ignore opening/closing brackets): [[[%s]]]' %
+        canonical_request)
+    logger.debug('String to sign (ignore opening/closing brackets): [[[%s]]]' %
+                 string_to_sign)
 
   if six.PY2:
     digest = b'RSA-SHA256'
@@ -302,11 +316,13 @@ def _GenSignedUrl(key, client_id, method, duration,
     # https://github.com/pyca/pyopenssl/issues/741
     digest = 'RSA-SHA256'
 
-  signature = base64.b16encode(
-      sign(key, string_to_sign, digest)).lower().decode()
+  signature = base64.b16encode(sign(key, string_to_sign,
+                                    digest)).lower().decode()
 
   final_url = _SIGNED_URL_FORMAT.format(
-      host=gs_host, path=gcs_path, sig=signature,
+      host=gs_host,
+      path=gcs_path,
+      sig=signature,
       query_string=canonical_query_string)
 
   return final_url
@@ -314,10 +330,9 @@ def _GenSignedUrl(key, client_id, method, duration,
 
 def _ReadKeystore(ks_contents, passwd):
   ks = load_pkcs12(ks_contents, passwd)
-  client_email = (ks.get_certificate()
-                  .get_subject()
-                  .CN.replace('.apps.googleusercontent.com',
-                              '@developer.gserviceaccount.com'))
+  client_email = (
+      ks.get_certificate().get_subject().CN.replace(
+          '.apps.googleusercontent.com', '@developer.gserviceaccount.com'))
 
   return ks.get_privatekey(), client_email
 
@@ -332,8 +347,8 @@ def _ReadJSONKeystore(ks_contents, passwd=None):
 
   Arguments:
     ks_contents: JSON formatted string representing the keystore contents. Must
-                 be a valid JSON string and contain the fields 'private_key'
-                 and 'client_email'.
+      be a valid JSON string and contain the fields 'private_key' and
+      'client_email'.
     passwd: Passphrase for encrypted private keys.
 
   Returns:
@@ -379,8 +394,7 @@ class UrlSignCommand(Command):
       argparse_arguments=[
           CommandArgument.MakeNFileURLsArgument(1),
           CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
-  )
+      ])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='signurl',
@@ -454,8 +468,8 @@ class UrlSignCommand(Command):
       if http_error.has_attr('response'):
         error_response = http_error.response
         error_string = ('Unexpected HTTP response code %s while querying '
-                        'object readability. Is your system clock accurate?'
-                        % error_response.status_code)
+                        'object readability. Is your system clock accurate?' %
+                        error_response.status_code)
         if error_response.content:
           error_string += ' Content: %s' % error_response.content
       else:
@@ -489,8 +503,8 @@ class UrlSignCommand(Command):
     key = None
     client_email = None
     try:
-      key, client_email = _ReadJSONKeystore(open(self.args[0], 'rb').read(),
-                                            passwd)
+      key, client_email = _ReadJSONKeystore(
+          open(self.args[0], 'rb').read(), passwd)
     except ValueError:
       # Ignore and try parsing as a pkcs12.
       if not passwd:
@@ -519,8 +533,8 @@ class UrlSignCommand(Command):
       else:
         # Need to url encode the object name as Google Cloud Storage does when
         # computing the string to sign when checking the signature.
-        gcs_path = '{0}/{1}'.format(url.bucket_name,
-                                    urllib.parse.quote(url.object_name.encode(UTF8)))
+        gcs_path = '{0}/{1}'.format(
+            url.bucket_name, urllib.parse.quote(url.object_name.encode(UTF8)))
 
       if region == _AUTO_DETECT_REGION:
         if url.bucket_name in region_cache:
@@ -539,10 +553,16 @@ class UrlSignCommand(Command):
           region_cache[url.bucket_name] = bucket_region
       else:
         bucket_region = region
-      final_url = _GenSignedUrl(key, client_email,
-                                method, delta, gcs_path, self.logger,
-                                bucket_region, content_type,
-                                string_to_sign_debug=True)
+      final_url = _GenSignedUrl(
+          key,
+          client_email,
+          method,
+          delta,
+          gcs_path,
+          self.logger,
+          bucket_region,
+          content_type,
+          string_to_sign_debug=True)
 
       expiration = calendar.timegm((datetime.utcnow() + delta).utctimetuple())
       expiration_dt = datetime.fromtimestamp(expiration)
@@ -552,8 +572,8 @@ class UrlSignCommand(Command):
       if six.PY2:
         time_str = time_str.decode(UTF8)
 
-      url_info_str = '{0}\t{1}\t{2}\t{3}'.format(
-          url.url_string, method, time_str, final_url)
+      url_info_str = '{0}\t{1}\t{2}\t{3}'.format(url.url_string, method,
+                                                 time_str, final_url)
 
       # TODO(PY3-ONLY): Delete this if block.
       if six.PY2:
@@ -561,15 +581,16 @@ class UrlSignCommand(Command):
 
       print(url_info_str)
 
-      response_code = self._ProbeObjectAccessWithClient(
-          key, client_email, gcs_path, self.logger, bucket_region)
+      response_code = self._ProbeObjectAccessWithClient(key, client_email,
+                                                        gcs_path, self.logger,
+                                                        bucket_region)
 
       if response_code == 404:
         if url.IsBucket() and method != 'PUT':
           raise CommandException(
               'Bucket {0} does not exist. Please create a bucket with '
-              'that name before a creating signed URL to access it.'
-              .format(url))
+              'that name before a creating signed URL to access it.'.format(
+                  url))
         else:
           if method != 'PUT' and method != 'RESUMABLE':
             raise CommandException(

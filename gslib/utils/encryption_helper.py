@@ -30,11 +30,11 @@ from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper
 
 MAX_DECRYPTION_KEYS = 100
-VALID_CMEK_RE =  LazyWrapper(
-    lambda: re.compile('projects/([^/]+)/'
-                       'locations/([a-zA-Z0-9_-]{1,63})/'
-                       'keyRings/([a-zA-Z0-9_-]{1,63})/'
-                       'cryptoKeys/([a-zA-Z0-9_-]{1,63})$'))
+VALID_CMEK_RE = LazyWrapper(lambda: re.compile(
+    'projects/([^/]+)/'
+    'locations/([a-zA-Z0-9_-]{1,63})/'
+    'keyRings/([a-zA-Z0-9_-]{1,63})/'
+    'cryptoKeys/([a-zA-Z0-9_-]{1,63})$'))
 
 
 class CryptoKeyType(object):
@@ -54,7 +54,7 @@ class CryptoKeyWrapper(object):
 
     Args:
       crypto_key: Base64-encoded string of a CSEK, or the name of a Cloud KMS
-          CMEK.
+        CMEK.
 
     Raises:
       CommandException: The specified crypto key was neither a CMEK key name nor
@@ -96,7 +96,7 @@ def FindMatchingCSEKInBotoConfig(key_sha256, boto_config):
   Args:
     key_sha256: (str) Base64-encoded SHA256 hash of the AES256 encryption key.
     boto_config: (boto.pyami.config.Config) The boto config in which to check
-        for a matching encryption key.
+      for a matching encryption key.
 
   Returns:
     (str) Base64-encoded encryption key string if a match is found, None
@@ -135,7 +135,7 @@ def GetEncryptionKeyWrapper(boto_config):
 
   Args:
     boto_config: (boto.pyami.config.Config) The boto config in which to check
-        for a matching encryption key.
+      for a matching encryption key.
 
   Returns:
     CryptoKeyWrapper for the specified encryption key, or None if no encryption
@@ -182,7 +182,7 @@ def _GetAndVerifyBase64EncryptionKey(boto_config):
 
   Args:
     boto_config: (boto.pyami.config.Config) The boto config in which to check
-        for a matching encryption key.
+      for a matching encryption key.
 
   Returns:
     (str) Base64-encoded encryption key string, or None if no encryption key

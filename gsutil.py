@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Wrapper module for running gslib.__main__.main() from the command line."""
 
 from __future__ import absolute_import
@@ -29,13 +28,13 @@ import warnings
 
 ver = sys.version_info
 if (ver.major == 2 and ver.minor < 7) or (ver.major == 3 and ver.minor < 5):
-    sys.exit('gsutil requires python 2.7 or 3.5+.')
+  sys.exit('gsutil requires python 2.7 or 3.5+.')
 
 # setup a string to load the correct httplib2
 if sys.version_info.major == 2:
-    submodule_pyvers = 'python2'
+  submodule_pyvers = 'python2'
 else:
-    submodule_pyvers = 'python3'
+  submodule_pyvers = 'python3'
 
 
 def UsingCrcmodExtension(crcmod_module):
@@ -64,10 +63,14 @@ MEASURING_TIME_ACTIVE = False
 
 # Filter out "module was already imported" warnings that get printed after we
 # add our bundled version of modules to the Python path.
-warnings.filterwarnings('ignore', category=UserWarning,
-                        message=r'.* httplib2 was already imported from')
-warnings.filterwarnings('ignore', category=UserWarning,
-                        message=r'.* oauth2client was already imported from')
+warnings.filterwarnings(
+    'ignore',
+    category=UserWarning,
+    message=r'.* httplib2 was already imported from')
+warnings.filterwarnings(
+    'ignore',
+    category=UserWarning,
+    message=r'.* oauth2client was already imported from')
 
 # List of third-party libraries. The first element of the tuple is the name of
 # the directory under third_party and the second element is the subdirectory
@@ -84,11 +87,11 @@ THIRD_PARTY_LIBS = [
     ('rsa', ''),  # oauth2client dependency
     ('apitools', ''),
     ('gcs-oauth2-boto-plugin', ''),
-    ('fasteners', ''), # oauth2client and apitools dependency
-    ('monotonic', ''), # fasteners dependency
+    ('fasteners', ''),  # oauth2client and apitools dependency
+    ('monotonic', ''),  # fasteners dependency
     ('httplib2', submodule_pyvers),
     ('retry-decorator', ''),
-    ('six', ''), # Python 2 / 3 compatibility dependency
+    ('six', ''),  # Python 2 / 3 compatibility dependency
     ('socksipy-branch', ''),
 ]
 
@@ -104,8 +107,8 @@ for libdir, subdir in THIRD_PARTY_LIBS:
     OutputAndExit(
         'There is no %s library under the gsutil third-party directory (%s).\n'
         'The gsutil command cannot work properly when installed this way.\n'
-        'Please re-install gsutil per the installation instructions.' % (
-            libdir, THIRD_PARTY_DIR))
+        'Please re-install gsutil per the installation instructions.' %
+        (libdir, THIRD_PARTY_DIR))
   sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
 
 CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', submodule_pyvers)
@@ -117,9 +120,8 @@ except ImportError:
   # Note: the bundled crcmod module under THIRD_PARTY_DIR does not include its
   # compiled C extension, but we still add it to sys.path because other parts of
   # gsutil assume that at least the core crcmod module will be available.
-  local_crcmod_path = (CRCMOD_OSX_PATH
-                       if 'darwin' in str(sys.platform).lower()
-                       else CRCMOD_PATH)
+  local_crcmod_path = (
+      CRCMOD_OSX_PATH if 'darwin' in str(sys.platform).lower() else CRCMOD_PATH)
   sys.path.insert(0, local_crcmod_path)
 
 
@@ -127,6 +129,7 @@ def RunMain():
   # pylint: disable=g-import-not-at-top
   import gslib.__main__
   sys.exit(gslib.__main__.main())
+
 
 if __name__ == '__main__':
   RunMain()

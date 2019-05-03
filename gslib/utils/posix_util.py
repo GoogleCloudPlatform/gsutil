@@ -81,7 +81,11 @@ USER_GROUPS = set()
 class POSIXAttributes(object):
   """Class to hold POSIX attributes for a file/object."""
 
-  def __init__(self, atime=NA_TIME, mtime=NA_TIME, uid=NA_ID, gid=NA_ID,
+  def __init__(self,
+               atime=NA_TIME,
+               mtime=NA_TIME,
+               uid=NA_ID,
+               gid=NA_ID,
                mode=None):
     """Constructor for POSIXAttributes class which holds relevant data.
 
@@ -154,7 +158,8 @@ def DeserializeFileAttributesFromObjectMetadata(obj_metadata, url_str):
   return posix_attrs
 
 
-def SerializeFileAttributesToObjectMetadata(posix_attrs, custom_metadata,
+def SerializeFileAttributesToObjectMetadata(posix_attrs,
+                                            custom_metadata,
                                             preserve_posix=False):
   """Takes a POSIXAttributes object and serializes it into custom metadata.
 
@@ -162,26 +167,29 @@ def SerializeFileAttributesToObjectMetadata(posix_attrs, custom_metadata,
     posix_attrs: A POSIXAttributes object.
     custom_metadata: A custom metadata object to serialize values into.
     preserve_posix: Whether or not to preserve POSIX attributes other than
-                    mtime.
+      mtime.
   """
   # mtime will always be needed in the object metadata for rsync.
   if posix_attrs.mtime != NA_TIME:
-    CreateCustomMetadata(entries={MTIME_ATTR: posix_attrs.mtime},
-                         custom_metadata=custom_metadata)
+    CreateCustomMetadata(
+        entries={MTIME_ATTR: posix_attrs.mtime},
+        custom_metadata=custom_metadata)
   # Only add other POSIX attributes if the preserve_posix flag is set.
   if preserve_posix:
     if posix_attrs.atime != NA_TIME:
-      CreateCustomMetadata(entries={ATIME_ATTR: posix_attrs.atime},
-                           custom_metadata=custom_metadata)
+      CreateCustomMetadata(
+          entries={ATIME_ATTR: posix_attrs.atime},
+          custom_metadata=custom_metadata)
     if posix_attrs.uid != NA_ID:
-      CreateCustomMetadata(entries={UID_ATTR: posix_attrs.uid},
-                           custom_metadata=custom_metadata)
+      CreateCustomMetadata(
+          entries={UID_ATTR: posix_attrs.uid}, custom_metadata=custom_metadata)
     if posix_attrs.gid != NA_ID:
-      CreateCustomMetadata(entries={GID_ATTR: posix_attrs.gid},
-                           custom_metadata=custom_metadata)
+      CreateCustomMetadata(
+          entries={GID_ATTR: posix_attrs.gid}, custom_metadata=custom_metadata)
     if posix_attrs.mode.permissions != NA_MODE:
-      CreateCustomMetadata(entries={MODE_ATTR: posix_attrs.mode.permissions},
-                           custom_metadata=custom_metadata)
+      CreateCustomMetadata(
+          entries={MODE_ATTR: posix_attrs.mode.permissions},
+          custom_metadata=custom_metadata)
 
 
 def DeserializeIDAttribute(obj_metadata, attr, url_str, posix_attrs):
@@ -248,18 +256,17 @@ def NeedsPOSIXAttributeUpdate(src_atime, dst_atime, src_mtime, dst_mtime,
     posix_attrs.gid = src_gid
   if has_src_mode and not has_dst_mode:
     posix_attrs.mode.permissions = src_mode
-  return posix_attrs, ((has_src_atime and not has_dst_atime)
-                       or (has_src_mtime and not has_dst_mtime)
-                       or (has_src_uid and not has_dst_uid)
-                       or (has_src_gid and not has_dst_gid)
-                       or (has_src_mode and not has_dst_mode))
+  return posix_attrs, ((has_src_atime and not has_dst_atime) or
+                       (has_src_mtime and not has_dst_mtime) or
+                       (has_src_uid and not has_dst_uid) or
+                       (has_src_gid and not has_dst_gid) or
+                       (has_src_mode and not has_dst_mode))
 
 
 def GetDefaultMode():
   """Gets the default POSIX mode using os.umask.
 
-  Args:
-    None
+  Args: None
 
   Returns:
     The default POSIX mode as a 3-character string.
@@ -287,9 +294,8 @@ def ValidatePOSIXMode(mode):
   Returns:
     True/False
   """
-  return MODE_REGEX.match(oct(mode)[-3:]) and (mode & U_R
-                                               or mode & G_R
-                                               or mode & O_R)
+  return MODE_REGEX.match(oct(mode)[-3:]) and (mode & U_R or mode & G_R or
+                                               mode & O_R)
 
 
 def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
@@ -335,14 +341,14 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
     try:
       pwd.getpwuid(uid)
     except (KeyError, OverflowError):
-      return (False, 'UID for %s doesn\'t exist on current system. uid: %d'
-              % (url_str, uid))
+      return (False, 'UID for %s doesn\'t exist on current system. uid: %d' %
+              (url_str, uid))
   if gid_present:
     try:
       grp.getgrgid(gid)
     except (KeyError, OverflowError):
-      return (False, 'GID for %s doesn\'t exist on current system. gid: %d'
-              % (url_str, gid))
+      return (False, 'GID for %s doesn\'t exist on current system. gid: %d' %
+              (url_str, gid))
 
   # uid at this point must exist, but isn't necessarily the current user.
   # Likewise, gid must also exist at this point.
@@ -363,15 +369,13 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
             'mode: %s' % (url_str, gid, oct(mode)[-3:]))
   if uid_is_current_user:
     valid = bool(mode & U_R)
-    return (valid,
-            '' if valid
-            else 'Insufficient access with uid/gid/mode for %s, uid: %d, '
+    return (valid, '' if valid else
+            'Insufficient access with uid/gid/mode for %s, uid: %d, '
             'mode: %s' % (url_str, uid, oct(mode)[-3:]))
   elif int(gid) in USER_GROUPS:
     valid = bool(mode & G_R)
-    return (valid,
-            '' if valid
-            else 'Insufficient access with uid/gid/mode for %s, gid: %d, '
+    return (valid, '' if valid else
+            'Insufficient access with uid/gid/mode for %s, gid: %d, '
             'mode: %s' % (url_str, gid, oct(mode)[-3:]))
   elif mode & O_R:
     return True, ''
@@ -380,7 +384,9 @@ def ValidateFilePermissionAccess(url_str, uid=NA_ID, gid=NA_ID, mode=NA_MODE):
   return False, 'There was a problem validating %s.' % url_str
 
 
-def ParseAndSetPOSIXAttributes(path, obj_metadata, is_rsync=False,
+def ParseAndSetPOSIXAttributes(path,
+                               obj_metadata,
+                               is_rsync=False,
                                preserve_posix=False):
   """Parses POSIX attributes from obj_metadata and sets them.
 
@@ -390,11 +396,11 @@ def ParseAndSetPOSIXAttributes(path, obj_metadata, is_rsync=False,
 
   Args:
     path: The local filesystem path for the file. Valid metadata attributes will
-          be set for the file located at path, some attributes will only be set
-          if preserve_posix is set to True.
+      be set for the file located at path, some attributes will only be set if
+      preserve_posix is set to True.
     obj_metadata: The metadata for the file/object.
     is_rsync: Whether or not the caller is the rsync command. Used to determine
-              if timeCreated should be used.
+      if timeCreated should be used.
     preserve_posix: Whether or not all POSIX attributes should be set.
   """
   if obj_metadata is None:
@@ -402,16 +408,16 @@ def ParseAndSetPOSIXAttributes(path, obj_metadata, is_rsync=False,
     # thrown unless there are unexpected code changes.
     raise CommandException('obj_metadata cannot be None for %s' % path)
   try:
-    found_at, atime = GetValueFromObjectCustomMetadata(obj_metadata, ATIME_ATTR,
-                                                       default_value=NA_TIME)
-    found_mt, mtime = GetValueFromObjectCustomMetadata(obj_metadata, MTIME_ATTR,
-                                                       default_value=NA_TIME)
-    found_uid, uid = GetValueFromObjectCustomMetadata(obj_metadata, UID_ATTR,
-                                                      default_value=NA_ID)
-    found_gid, gid = GetValueFromObjectCustomMetadata(obj_metadata, GID_ATTR,
-                                                      default_value=NA_ID)
-    found_mode, mode = GetValueFromObjectCustomMetadata(obj_metadata, MODE_ATTR,
-                                                        default_value=NA_MODE)
+    found_at, atime = GetValueFromObjectCustomMetadata(
+        obj_metadata, ATIME_ATTR, default_value=NA_TIME)
+    found_mt, mtime = GetValueFromObjectCustomMetadata(
+        obj_metadata, MTIME_ATTR, default_value=NA_TIME)
+    found_uid, uid = GetValueFromObjectCustomMetadata(
+        obj_metadata, UID_ATTR, default_value=NA_ID)
+    found_gid, gid = GetValueFromObjectCustomMetadata(
+        obj_metadata, GID_ATTR, default_value=NA_ID)
+    found_mode, mode = GetValueFromObjectCustomMetadata(
+        obj_metadata, MODE_ATTR, default_value=NA_MODE)
     if not found_mode:
       mode = int(GetDefaultMode())
     if found_mt:
@@ -459,8 +465,8 @@ def ParseAndSetPOSIXAttributes(path, obj_metadata, is_rsync=False,
       mode = int(str(mode), 8)
       os.chmod(path, mode)
   except ValueError:
-    raise CommandException('Check POSIX attribute values for %s'
-                           % obj_metadata.name)
+    raise CommandException('Check POSIX attribute values for %s' %
+                           obj_metadata.name)
 
 
 def WarnNegativeAttribute(attr_name, url_str):
@@ -492,8 +498,9 @@ def WarnFutureTimestamp(attr_name, url_str):
     attr_name: The name of the attribute to log.
     url_str: The path of the file for context.
   """
-  logging.getLogger().warn('%s has an %s more than 1 day from current system'
-                           ' time', url_str, attr_name)
+  logging.getLogger().warn(
+      '%s has an %s more than 1 day from current system'
+      ' time', url_str, attr_name)
 
 
 def ConvertDatetimeToPOSIX(dt):
@@ -525,5 +532,4 @@ def InitializeUserGroups():
       # Primary group
       [pwd.getpwuid(user_id).pw_gid] +
       # Secondary groups
-      [g.gr_gid for g in grp.getgrall()
-       if user_name in g.gr_mem])
+      [g.gr_gid for g in grp.getgrall() if user_name in g.gr_mem])

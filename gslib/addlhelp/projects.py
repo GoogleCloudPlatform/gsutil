@@ -108,7 +108,8 @@ class CommandOptions(HelpProvider):
       help_name='projects',
       help_name_aliases=[
           'apis console', 'cloud console', 'console', 'dev console', 'project',
-          'proj', 'project-id'],
+          'proj', 'project-id'
+      ],
       help_type='additional_help',
       help_one_line_summary='Working With Projects',
       help_text=_DETAILED_HELP_TEXT,

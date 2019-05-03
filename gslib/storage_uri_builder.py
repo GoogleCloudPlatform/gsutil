@@ -37,7 +37,7 @@ class StorageUriBuilder(object):
     Args:
       debug: Debug level to pass in to boto connection (range 0..3).
       bucket_storage_uri_class: Class to instantiate for cloud StorageUris.
-                                Settable for testing/mocking.
+        Settable for testing/mocking.
     """
     self.bucket_storage_uri_class = bucket_storage_uri_class
     self.debug = debug
@@ -55,6 +55,9 @@ class StorageUriBuilder(object):
       InvalidUriError: if uri_str not valid.
     """
     return boto.storage_uri(
-        uri_str, 'file', debug=self.debug, validate=False,
+        uri_str,
+        'file',
+        debug=self.debug,
+        validate=False,
         bucket_storage_uri_class=self.bucket_storage_uri_class,
         suppress_consec_slashes=False)

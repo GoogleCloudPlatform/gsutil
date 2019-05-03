@@ -56,15 +56,14 @@ except:  # pylint: disable=bare-except
           pass
 
         # pylint: disable=invalid-name
-        def request(self, endpoint, method=None, body=None,
-                    headers=None):
+        def request(self, endpoint, method=None, body=None, headers=None):
           # Strip 'https://'
           https_con = http_client.HTTPSConnection(endpoint[8:].split('/')[0])
-          https_con.request(method, endpoint, body=body,
-                            headers=headers)
+          https_con.request(method, endpoint, body=body, headers=headers)
           response = https_con.getresponse()
           # Return status like an httplib2 response.
           return ({'status': response.status},)
+
         # pylint: enable=invalid-name
 
       return HttplibReporter()
@@ -95,16 +94,14 @@ def ReportMetrics(metrics_file_path, log_level, log_file_path=None):
       log_file_path: str, The file that this module should write its logs to.
         This parameter is intended for use by tests that need to evaluate the
         contents of the file at this path.
-
   """
   logger = logging.getLogger()
   if log_file_path is not None:
     # Use a separate logger so that we don't add another handler to the default
     # module-level logger. This is intended to prevent multiple calls from tests
     # running in parallel from writing output to the same file.
-    new_name = '%s.%s' % (
-        logger.name,
-        ''.join(random.choice(string.ascii_lowercase) for _ in range(8)))
+    new_name = '%s.%s' % (logger.name, ''.join(
+        random.choice(string.ascii_lowercase) for _ in range(8)))
     logger = logging.getLogger(new_name)
 
   log_file_path = log_file_path or LOG_FILE_PATH
@@ -124,10 +121,11 @@ def ReportMetrics(metrics_file_path, log_level, log_file_path=None):
   for metric in metrics:
     try:
       headers = {'User-Agent': metric.user_agent}
-      response = http.request(metric.endpoint,
-                              method=metric.method,
-                              body=metric.body,
-                              headers=headers)
+      response = http.request(
+          metric.endpoint,
+          method=metric.method,
+          body=metric.body,
+          headers=headers)
       logger.debug(metric)
       logger.debug('RESPONSE: %s', response[0]['status'])
     except Exception as e:  # pylint: disable=broad-except

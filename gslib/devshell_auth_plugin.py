@@ -46,4 +46,3 @@ class DevshellAuth(AuthHandler):
   def add_auth(self, http_request):
     http_request.headers['Authorization'] = ('Bearer %s' %
                                              self.creds.access_token)
-

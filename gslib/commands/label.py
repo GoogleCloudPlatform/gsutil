@@ -114,8 +114,9 @@ _CH_DESCRIPTION = """
     -d          Remove the label with the specified key.
 """
 
-_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
-             _CH_SYNOPSIS.lstrip('\n') + '\n\n')
+_SYNOPSIS = (
+    _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + _CH_SYNOPSIS.lstrip('\n') +
+    '\n\n')
 
 _DESCRIPTION = """
   Gets, sets, or changes the label configuration (also called the tagging
@@ -157,14 +158,9 @@ class LabelCommand(Command):
               CommandArgument.MakeNFileURLsArgument(1),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
-          'get': [
-              CommandArgument.MakeNCloudURLsArgument(1)
-          ],
-          'ch': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
-          ],
-      }
-  )
+          'get': [CommandArgument.MakeNCloudURLsArgument(1)],
+          'ch': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
+      })
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='label',
@@ -174,7 +170,10 @@ class LabelCommand(Command):
           'Get, set, or change the label configuration of a bucket.'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
-          'get': _get_help_text, 'set': _set_help_text, 'ch': _ch_help_text},
+          'get': _get_help_text,
+          'set': _set_help_text,
+          'ch': _ch_help_text
+      },
   )
 
   def _CalculateUrlsStartArg(self):
@@ -210,8 +209,7 @@ class LabelCommand(Command):
         # avoid race conditions (supported for GS buckets only).
         metageneration = None
         new_label_json = json.loads(label_text)
-        if (self.gsutil_api.GetApiSelector(url.scheme) ==
-            ApiSelector.JSON):
+        if (self.gsutil_api.GetApiSelector(url.scheme) == ApiSelector.JSON):
           # Perform a read-modify-write so that we can specify which
           # existing labels need to be deleted.
           (_, bucket_metadata) = self.GetSingleBucketUrlFromArg(
@@ -233,11 +231,12 @@ class LabelCommand(Command):
 
         preconditions = Preconditions(meta_gen_match=metageneration)
         bucket_metadata = apitools_messages.Bucket(labels=labels_message)
-        self.gsutil_api.PatchBucket(url.bucket_name,
-                                    bucket_metadata,
-                                    preconditions=preconditions,
-                                    provider=url.scheme,
-                                    fields=['id'])
+        self.gsutil_api.PatchBucket(
+            url.bucket_name,
+            bucket_metadata,
+            preconditions=preconditions,
+            provider=url.scheme,
+            fields=['id'])
 
     some_matched = False
     url_args = self.args[1:]
@@ -289,8 +288,7 @@ class LabelCommand(Command):
       # When performing a read-modify-write cycle, include metageneration to
       # avoid race conditions (supported for GS buckets only).
       metageneration = None
-      if (self.gsutil_api.GetApiSelector(url.scheme) ==
-          ApiSelector.JSON):
+      if (self.gsutil_api.GetApiSelector(url.scheme) == ApiSelector.JSON):
         # The JSON API's PATCH semantics allow us to skip read-modify-write,
         # with the exception of one edge case - attempting to delete a
         # nonexistent label returns an error iff no labels previously existed
@@ -327,11 +325,13 @@ class LabelCommand(Command):
 
       preconditions = Preconditions(meta_gen_match=metageneration)
       bucket_metadata = apitools_messages.Bucket(labels=labels_message)
-      self.gsutil_api.PatchBucket(url.bucket_name,
-                                  bucket_metadata,
-                                  preconditions=preconditions,
-                                  provider=url.scheme,
-                                  fields=['id'])
+      self.gsutil_api.PatchBucket(
+          url.bucket_name,
+          bucket_metadata,
+          preconditions=preconditions,
+          provider=url.scheme,
+          fields=['id'])
+
     some_matched = False
     url_args = self.args
     if not url_args:
@@ -379,6 +379,6 @@ class LabelCommand(Command):
       self._ChLabel()
     else:
       raise CommandException(
-          'Invalid subcommand "%s" for the %s command.\nSee "gsutil help %s".'
-          % (action_subcommand, self.command_name, self.command_name))
+          'Invalid subcommand "%s" for the %s command.\nSee "gsutil help %s".' %
+          (action_subcommand, self.command_name, self.command_name))
     return 0

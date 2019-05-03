@@ -88,11 +88,10 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
 
-    self.RunGsUtil([
-        '-m', 'retention', 'set', '1y',
-        suri(bucket1_uri),
-        suri(bucket2_uri)
-    ])
+    self.RunGsUtil(
+        ['-m', 'retention', 'set', '1y',
+         suri(bucket1_uri),
+         suri(bucket2_uri)])
 
     self.VerifyRetentionPolicy(
         bucket1_uri, expected_retention_period_in_seconds=_SECONDS_IN_YEAR)
@@ -114,8 +113,7 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucketWithRetentionPolicy(
         retention_period_in_seconds=_SECONDS_IN_MONTH)
     self.RunGsUtil(
-        ['retention', 'set',
-         '{}s'.format(_SECONDS_IN_DAY),
+        ['retention', 'set', '{}s'.format(_SECONDS_IN_DAY),
          suri(bucket_uri)])
     self.VerifyRetentionPolicy(
         bucket_uri, expected_retention_period_in_seconds=_SECONDS_IN_DAY)
@@ -134,8 +132,7 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   def test_set_retention_unlocked_invalid_arg(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(
-        ['retention', 'set', '1a',
-         suri(bucket_uri)],
+        ['retention', 'set', '1a', suri(bucket_uri)],
         expected_status=1,
         return_stderr=True)
     self.assertRegexpMatches(stderr, r'Incorrect retention period specified')
@@ -202,10 +199,10 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   def test_increase_retention_locked(self):
     bucket_uri = self.CreateBucketWithRetentionPolicy(
         retention_period_in_seconds=_SECONDS_IN_DAY, is_locked=True)
-    self.RunGsUtil(
-        ['retention', 'set',
-         '{}s'.format(_SECONDS_IN_DAY + 1),
-         suri(bucket_uri)])
+    self.RunGsUtil([
+        'retention', 'set', '{}s'.format(_SECONDS_IN_DAY + 1),
+        suri(bucket_uri)
+    ])
     self.VerifyRetentionPolicy(
         bucket_uri,
         expected_retention_period_in_seconds=_SECONDS_IN_DAY + 1,
@@ -216,15 +213,15 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   def test_decrease_retention_locked(self):
     bucket_uri = self.CreateBucketWithRetentionPolicy(
         retention_period_in_seconds=_SECONDS_IN_DAY, is_locked=True)
-    stderr = self.RunGsUtil(
-        ['retention', 'set',
-         '{}s'.format(_SECONDS_IN_DAY - 1),
-         suri(bucket_uri)],
-        expected_status=1,
-        return_stderr=True)
-    self.assertRegexpMatches(stderr,
-                             '403 Cannot reduce retention duration of a '
-                             'locked Retention Policy for bucket')
+    stderr = self.RunGsUtil([
+        'retention', 'set', '{}s'.format(_SECONDS_IN_DAY - 1),
+        suri(bucket_uri)
+    ],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertRegexpMatches(
+        stderr, '403 Cannot reduce retention duration of a '
+        'locked Retention Policy for bucket')
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -298,11 +295,10 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('Retention is not supported for XML API')
   def test_set_temporary_hold_invalid_arg(self):
     object_uri = self.CreateObject()
-    stderr = self.RunGsUtil(
-        ['retention', 'temp', 'held',
-         suri(object_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['retention', 'temp', 'held',
+                             suri(object_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertRegexpMatches(
         stderr, r'Invalid subcommand ".*" for the "retention temp" command')
 
@@ -396,11 +392,10 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('Retention is not supported for XML API')
   def test_set_event_based_hold_invalid_arg(self):
     object_uri = self.CreateObject()
-    stderr = self.RunGsUtil(
-        ['retention', 'event', 'rel',
-         suri(object_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['retention', 'event', 'rel',
+                             suri(object_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertRegexpMatches(
         stderr, r'Invalid subcommand ".*" for the "retention event" command')
 

@@ -158,7 +158,8 @@ class CommandOptions(HelpProvider):
       help_name='subdirs',
       help_name_aliases=[
           'dirs', 'directory', 'directories', 'folder', 'folders', 'hierarchy',
-          'subdir', 'subdirectory', 'subdirectories'],
+          'subdir', 'subdirectory', 'subdirectories'
+      ],
       help_type='additional_help',
       help_one_line_summary='How Subdirectories Work',
       help_text=_DETAILED_HELP_TEXT,

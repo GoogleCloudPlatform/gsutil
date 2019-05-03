@@ -202,8 +202,9 @@ _CH_DESCRIPTION = """
                 set when invoking the gsutil -m option.
 """
 
-_SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
-             _CH_SYNOPSIS.lstrip('\n') + '\n\n')
+_SYNOPSIS = (
+    _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + _CH_SYNOPSIS.lstrip('\n') +
+    '\n\n')
 
 _DESCRIPTION = """
   The iam command has three sub-commands:
@@ -262,9 +263,7 @@ class IamCommand(Command):
       gs_api_support=[ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
-          'get': [
-              CommandArgument.MakeNCloudURLsArgument(1)
-          ],
+          'get': [CommandArgument.MakeNCloudURLsArgument(1)],
           'set': [
               CommandArgument.MakeNFileURLsArgument(1),
               CommandArgument.MakeZeroOrMoreCloudURLsArgument()
@@ -284,20 +283,20 @@ class IamCommand(Command):
                              ' bucket and/or object IAM permissions.'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
-          'get': _get_help_text, 'set': _set_help_text, 'ch': _ch_help_text,
-      }
-  )
+          'get': _get_help_text,
+          'set': _set_help_text,
+          'ch': _ch_help_text,
+      })
 
   def GetIamHelper(self, storage_url, thread_state=None):
     """Gets an IAM policy for a single, resolved bucket / object URL.
 
     Args:
-      storage_url: A CloudUrl instance with no wildcards, pointing to a
-                   specific bucket or object.
+      storage_url: A CloudUrl instance with no wildcards, pointing to a specific
+        bucket or object.
       thread_state: CloudApiDelegator instance which is passed from
-                    command.WorkerThread.__init__() if the global -m flag is
-                    specified. Will use self.gsutil_api if thread_state is set
-                    to None.
+        command.WorkerThread.__init__() if the global -m flag is specified. Will
+        use self.gsutil_api if thread_state is set to None.
 
     Returns:
       Policy instance.
@@ -327,8 +326,7 @@ class IamCommand(Command):
     pattern = self.args[0]
 
     matches = PluralityCheckableIterator(
-        self.WildcardIterator(pattern).IterAll(bucket_listing_fields=['name'])
-    )
+        self.WildcardIterator(pattern).IterAll(bucket_listing_fields=['name']))
     if matches.IsEmpty():
       raise CommandException('%s matched no URLs' % pattern)
     if matches.HasPlurality():
@@ -338,20 +336,22 @@ class IamCommand(Command):
 
     storage_url = StorageUrlFromString(list(matches)[0].url_string)
     policy = self.GetIamHelper(storage_url, thread_state=thread_state)
-    print(json.dumps(
-        json.loads(protojson.encode_message(policy)), sort_keys=True, indent=2))
+    print(
+        json.dumps(
+            json.loads(protojson.encode_message(policy)),
+            sort_keys=True,
+            indent=2))
 
   def _SetIamHelperInternal(self, storage_url, policy, thread_state=None):
     """Sets IAM policy for a single, resolved bucket / object URL.
 
     Args:
-      storage_url: A CloudUrl instance with no wildcards, pointing to a
-                   specific bucket or object.
+      storage_url: A CloudUrl instance with no wildcards, pointing to a specific
+        bucket or object.
       policy: A Policy object to set on the bucket / object.
       thread_state: CloudApiDelegator instance which is passed from
-                    command.WorkerThread.__init__() if the -m flag is
-                    specified. Will use self.gsutil_api if thread_state is set
-                    to None.
+        command.WorkerThread.__init__() if the -m flag is specified. Will use
+        self.gsutil_api if thread_state is set to None.
 
     Raises:
       ServiceException passed from the API call if an HTTP error was returned.
@@ -368,22 +368,23 @@ class IamCommand(Command):
           storage_url.bucket_name, policy, provider=storage_url.scheme)
     else:
       gsutil_api.SetObjectIamPolicy(
-          storage_url.bucket_name, storage_url.object_name, policy,
-          generation=storage_url.generation, provider=storage_url.scheme)
+          storage_url.bucket_name,
+          storage_url.object_name,
+          policy,
+          generation=storage_url.generation,
+          provider=storage_url.scheme)
 
   def SetIamHelper(self, storage_url, policy, thread_state=None):
     """Handles the potential exception raised by the internal set function."""
     try:
-      self._SetIamHelperInternal(
-          storage_url, policy, thread_state=thread_state)
+      self._SetIamHelperInternal(storage_url, policy, thread_state=thread_state)
     except ServiceException:
       if self.continue_on_error:
         self.everything_set_okay = False
       else:
         raise
 
-  def PatchIamHelper(
-      self, storage_url, bindings_tuples, thread_state=None):
+  def PatchIamHelper(self, storage_url, bindings_tuples, thread_state=None):
     """Patches an IAM policy for a single, resolved bucket / object URL.
 
     The patch is applied by altering the policy from an IAM get request, and
@@ -392,13 +393,12 @@ class IamCommand(Command):
     times before success.
 
     Args:
-      storage_url: A CloudUrl instance with no wildcards, pointing to a
-                   specific bucket or object.
+      storage_url: A CloudUrl instance with no wildcards, pointing to a specific
+        bucket or object.
       bindings_tuples: A list of BindingsTuple instances.
       thread_state: CloudApiDelegator instance which is passed from
-                    command.WorkerThread.__init__() if the -m flag is
-                    specified. Will use self.gsutil_api if thread_state is set
-                    to None.
+        command.WorkerThread.__init__() if the -m flag is specified. Will use
+        self.gsutil_api if thread_state is set to None.
     """
     try:
       self._PatchIamHelperInternal(
@@ -416,10 +416,11 @@ class IamCommand(Command):
       else:
         raise CommandException(e.message)
 
-
   @Retry(PreconditionException, tries=3, timeout_secs=1.0)
-  def _PatchIamHelperInternal(
-      self, storage_url, bindings_tuples, thread_state=None):
+  def _PatchIamHelperInternal(self,
+                              storage_url,
+                              bindings_tuples,
+                              thread_state=None):
 
     policy = self.GetIamHelper(storage_url, thread_state=thread_state)
     (etag, bindings) = (policy.etag, policy.bindings)
@@ -431,10 +432,11 @@ class IamCommand(Command):
       if binding.condition:
         message = 'Could not patch IAM policy for %s.' % storage_url
         message += '\n'
-        message += '\n'.join(textwrap.wrap(
-            'The resource had conditions present in its IAM policy bindings, '
-            'which is not supported by "iam ch". %s' %
-            IAM_CH_CONDITIONS_WORKAROUND_MSG))
+        message += '\n'.join(
+            textwrap.wrap(
+                'The resource had conditions present in its IAM policy bindings, '
+                'which is not supported by "iam ch". %s' %
+                IAM_CH_CONDITIONS_WORKAROUND_MSG))
         raise IamChOnResourceWithConditionsException(message)
 
     # Create a backup which is untainted by any references to the original
@@ -453,8 +455,7 @@ class IamCommand(Command):
     # We explicitly wish for etag mismatches to raise an error and allow this
     # function to error out, so we are bypassing the exception handling offered
     # by IamCommand.SetIamHelper in lieu of our own handling (@Retry).
-    self._SetIamHelperInternal(
-        storage_url, policy, thread_state=thread_state)
+    self._SetIamHelperInternal(storage_url, policy, thread_state=thread_state)
 
   def _PatchIam(self):
     self.continue_on_error = False
@@ -484,8 +485,7 @@ class IamCommand(Command):
         patterns.append(token)
         break
       if token == '-d':
-        patch_bindings_tuples.append(
-            BindingStringToTuple(False, next(it)))
+        patch_bindings_tuples.append(BindingStringToTuple(False, next(it)))
       else:
         patch_bindings_tuples.append(BindingStringToTuple(True, token))
     if not patch_bindings_tuples:
@@ -514,30 +514,34 @@ class IamCommand(Command):
         if set(surl.object_name).issubset(set('-Rrf')):
           error_msg += (
               ' This resource handle looks like a flag, which must appear '
-              'before all bindings. See "gsutil help iam ch" for more details.'
-          )
+              'before all bindings. See "gsutil help iam ch" for more details.')
         raise CommandException(error_msg)
 
     if threaded_wildcards:
       name_expansion_iterator = NameExpansionIterator(
-          self.command_name, self.debug,
-          self.logger, self.gsutil_api,
-          threaded_wildcards, self.recursion_requested,
+          self.command_name,
+          self.debug,
+          self.logger,
+          self.gsutil_api,
+          threaded_wildcards,
+          self.recursion_requested,
           all_versions=self.all_versions,
           continue_on_error=self.continue_on_error or self.parallel_operations,
           bucket_listing_fields=['name'])
 
       seek_ahead_iterator = SeekAheadNameExpansionIterator(
-          self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
-          threaded_wildcards, self.recursion_requested,
+          self.command_name,
+          self.debug,
+          self.GetSeekAheadGsutilApi(),
+          threaded_wildcards,
+          self.recursion_requested,
           all_versions=self.all_versions)
 
       serialized_bindings_tuples_it = itertools.repeat(
           [SerializeBindingsTuple(t) for t in patch_bindings_tuples])
       self.Apply(
           _PatchIamWrapper,
-          zip(
-              serialized_bindings_tuples_it, name_expansion_iterator),
+          zip(serialized_bindings_tuples_it, name_expansion_iterator),
           _PatchIamExceptionHandler,
           fail_on_error=not self.continue_on_error,
           seek_ahead_iterator=seek_ahead_iterator)
@@ -549,10 +553,11 @@ class IamCommand(Command):
       msg = 'Some IAM policies could not be patched.'
       if self.tried_ch_on_resource_with_conditions:
         msg += '\n'
-        msg += '\n'.join(textwrap.wrap(
-           'Some resources had conditions present in their IAM policy '
-           'bindings, which is not supported by "iam ch". %s' % (
-               IAM_CH_CONDITIONS_WORKAROUND_MSG)))
+        msg += '\n'.join(
+            textwrap.wrap(
+                'Some resources had conditions present in their IAM policy '
+                'bindings, which is not supported by "iam ch". %s' %
+                (IAM_CH_CONDITIONS_WORKAROUND_MSG)))
       raise CommandException(msg)
 
   # TODO(iam-beta): Add an optional flag to specify etag and edit the policy
@@ -588,12 +593,11 @@ class IamCommand(Command):
       with open(file_url, 'r') as fp:
         policy = json.loads(fp.read())
     except IOError:
-      raise ArgumentException(
-          'Specified IAM policy file "%s" does not exist.' % file_url)
+      raise ArgumentException('Specified IAM policy file "%s" does not exist.' %
+                              file_url)
     except ValueError as e:
       self.logger.debug('Invalid IAM policy file, ValueError:\n', e)
-      raise ArgumentException(
-          'Invalid IAM policy file "%s".' % file_url)
+      raise ArgumentException('Invalid IAM policy file "%s".' % file_url)
 
     bindings = policy.get('bindings', [])
     if not force_etag:
@@ -603,8 +607,8 @@ class IamCommand(Command):
     try:
       policy = protojson.decode_message(apitools_messages.Policy, policy_json)
     except DecodeError:
-      raise ArgumentException(
-          'Invalid IAM policy file "%s" or etag "%s".' % (file_url, etag))
+      raise ArgumentException('Invalid IAM policy file "%s" or etag "%s".' %
+                              (file_url, etag))
 
     self.everything_set_okay = True
 
@@ -630,22 +634,30 @@ class IamCommand(Command):
     # wildcard expansions (access denied if bucket cannot be listed, etc.).
     if threaded_wildcards:
       name_expansion_iterator = NameExpansionIterator(
-          self.command_name, self.debug,
-          self.logger, self.gsutil_api,
-          threaded_wildcards, self.recursion_requested,
+          self.command_name,
+          self.debug,
+          self.logger,
+          self.gsutil_api,
+          threaded_wildcards,
+          self.recursion_requested,
           all_versions=self.all_versions,
           continue_on_error=self.continue_on_error or self.parallel_operations,
           bucket_listing_fields=['name'])
 
       seek_ahead_iterator = SeekAheadNameExpansionIterator(
-          self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
-          threaded_wildcards, self.recursion_requested,
+          self.command_name,
+          self.debug,
+          self.GetSeekAheadGsutilApi(),
+          threaded_wildcards,
+          self.recursion_requested,
           all_versions=self.all_versions)
 
       policy_it = itertools.repeat(protojson.encode_message(policy))
       self.Apply(
-          _SetIamWrapper, zip(policy_it, name_expansion_iterator),
-          _SetIamExceptionHandler, fail_on_error=not self.continue_on_error,
+          _SetIamWrapper,
+          zip(policy_it, name_expansion_iterator),
+          _SetIamExceptionHandler,
+          fail_on_error=not self.continue_on_error,
           seek_ahead_iterator=seek_ahead_iterator)
 
       self.everything_set_okay &= not GetFailureCount() > 0
@@ -672,8 +684,8 @@ class IamCommand(Command):
       LogCommandParams(subcommands=[action_subcommand])
       self._PatchIam()
     else:
-      raise CommandException(
-          'Invalid subcommand "%s" for the %s command.\n'
-          'See "gsutil help iam".' % (action_subcommand, self.command_name))
+      raise CommandException('Invalid subcommand "%s" for the %s command.\n'
+                             'See "gsutil help iam".' %
+                             (action_subcommand, self.command_name))
 
     return 0

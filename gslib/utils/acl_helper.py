@@ -38,8 +38,8 @@ class AclChange(object):
   email_scopes = ['UserByEmail', 'GroupByEmail']
   domain_scopes = ['GroupByDomain']
   project_scopes = ['Project']
-  scope_types = (public_scopes + id_scopes + email_scopes + domain_scopes
-                 + project_scopes)
+  scope_types = (
+      public_scopes + id_scopes + email_scopes + domain_scopes + project_scopes)
 
   public_entity_all_users = 'allUsers'
   public_entity_all_auth_users = 'allAuthenticatedUsers'
@@ -59,16 +59,16 @@ class AclChange(object):
       'READ': 'READER',
       'WRITE': 'WRITER',
       'FULL_CONTROL': 'OWNER'
-      }
+  }
 
   def __init__(self, acl_change_descriptor, scope_type):
     """Creates an AclChange object.
 
     Args:
       acl_change_descriptor: An acl change as described in the "ch" section of
-                             the "acl" command's help.
+        the "acl" command's help.
       scope_type: Either ChangeType.USER or ChangeType.GROUP or
-                  ChangeType.PROJECT, specifying the extent of the scope.
+        ChangeType.PROJECT, specifying the extent of the scope.
     """
     self.identifier = ''
 
@@ -77,8 +77,8 @@ class AclChange(object):
     self._Validate()
 
   def __str__(self):
-    return 'AclChange<{0}|{1}|{2}>'.format(
-        self.scope_type, self.perm, self.identifier)
+    return 'AclChange<{0}|{1}|{2}>'.format(self.scope_type, self.perm,
+                                           self.identifier)
 
   def _Parse(self, change_descriptor, scope_type):
     """Parses an ACL Change descriptor."""
@@ -91,14 +91,14 @@ class AclChange(object):
           'Id': r'^[0-9A-Fa-f]{64}$',
           'Domain': r'^[^@]+\.[^@]+$',
           'Project': r'(owners|editors|viewers)\-.+$',
-          }
+      }
       for type_string, regex in re_map.items():
         if re.match(regex, text, re.IGNORECASE):
           return type_string
 
     if change_descriptor.count(':') != 1:
-      raise CommandException('{0} is an invalid change description.'
-                             .format(change_descriptor))
+      raise CommandException(
+          '{0} is an invalid change description.'.format(change_descriptor))
 
     scope_string, perm_token = change_descriptor.split(':')
 
@@ -133,8 +133,8 @@ class AclChange(object):
     """Validates a parsed AclChange object."""
 
     def _ThrowError(msg):
-      raise CommandException('{0} is not a valid ACL change\n{1}'
-                             .format(self.raw_descriptor, msg))
+      raise CommandException('{0} is not a valid ACL change\n{1}'.format(
+          self.raw_descriptor, msg))
 
     if self.scope_type not in self.scope_types:
       _ThrowError('{0} is not a valid scope type'.format(self.scope_type))
@@ -160,26 +160,24 @@ class AclChange(object):
 
     Args:
       current_acl: A list of apitools_messages.BucketAccessControls or
-                   ObjectAccessControls which will be searched for matching
-                   entries.
+        ObjectAccessControls which will be searched for matching entries.
 
     Yields:
       An apitools_messages.BucketAccessControl or ObjectAccessControl.
     """
     for entry in current_acl:
-      if (self.scope_type in ('UserById', 'GroupById') and
-          entry.entityId and self.identifier == entry.entityId):
+      if (self.scope_type in ('UserById', 'GroupById') and entry.entityId and
+          self.identifier == entry.entityId):
         yield entry
-      elif (self.scope_type in ('UserByEmail', 'GroupByEmail')
-            and entry.email and self.identifier == entry.email):
+      elif (self.scope_type in ('UserByEmail', 'GroupByEmail') and
+            entry.email and self.identifier == entry.email):
         yield entry
-      elif (self.scope_type == 'GroupByDomain' and
-            entry.domain and self.identifier == entry.domain):
+      elif (self.scope_type == 'GroupByDomain' and entry.domain and
+            self.identifier == entry.domain):
         yield entry
-      elif (self.scope_type == 'Project' and
-            entry.projectTeam and
-            self.identifier == '%s-%s' % (entry.projectTeam.team,
-                                          entry.projectTeam.projectNumber)):
+      elif (self.scope_type == 'Project' and entry.projectTeam and
+            self.identifier == '%s-%s' %
+            (entry.projectTeam.team, entry.projectTeam.projectNumber)):
         yield entry
       elif (self.scope_type == 'AllUsers' and
             entry.entity.lower() == self.public_entity_all_users.lower()):
@@ -191,26 +189,38 @@ class AclChange(object):
   def _AddEntry(self, current_acl, entry_class):
     """Adds an entry to current_acl."""
     if self.scope_type == 'UserById':
-      entry = entry_class(entityId=self.identifier, role=self.perm,
-                          entity=self.user_entity_prefix + self.identifier)
+      entry = entry_class(
+          entityId=self.identifier,
+          role=self.perm,
+          entity=self.user_entity_prefix + self.identifier)
     elif self.scope_type == 'GroupById':
-      entry = entry_class(entityId=self.identifier, role=self.perm,
-                          entity=self.group_entity_prefix + self.identifier)
+      entry = entry_class(
+          entityId=self.identifier,
+          role=self.perm,
+          entity=self.group_entity_prefix + self.identifier)
     elif self.scope_type == 'Project':
-      entry = entry_class(entityId=self.identifier, role=self.perm,
-                          entity=self.project_entity_prefix + self.identifier)
+      entry = entry_class(
+          entityId=self.identifier,
+          role=self.perm,
+          entity=self.project_entity_prefix + self.identifier)
     elif self.scope_type == 'UserByEmail':
-      entry = entry_class(email=self.identifier, role=self.perm,
-                          entity=self.user_entity_prefix + self.identifier)
+      entry = entry_class(
+          email=self.identifier,
+          role=self.perm,
+          entity=self.user_entity_prefix + self.identifier)
     elif self.scope_type == 'GroupByEmail':
-      entry = entry_class(email=self.identifier, role=self.perm,
-                          entity=self.group_entity_prefix + self.identifier)
+      entry = entry_class(
+          email=self.identifier,
+          role=self.perm,
+          entity=self.group_entity_prefix + self.identifier)
     elif self.scope_type == 'GroupByDomain':
-      entry = entry_class(domain=self.identifier, role=self.perm,
-                          entity=self.domain_entity_prefix + self.identifier)
+      entry = entry_class(
+          domain=self.identifier,
+          role=self.perm,
+          entity=self.domain_entity_prefix + self.identifier)
     elif self.scope_type == 'AllAuthenticatedUsers':
-      entry = entry_class(entity=self.public_entity_all_auth_users,
-                          role=self.perm)
+      entry = entry_class(
+          entity=self.public_entity_all_auth_users, role=self.perm)
     elif self.scope_type == 'AllUsers':
       entry = entry_class(entity=self.public_entity_all_users, role=self.perm)
     else:
@@ -231,22 +241,21 @@ class AclChange(object):
 
     Args:
       storage_url: StorageUrl representing the object to change.
-      current_acl: A list of ObjectAccessControls or
-                   BucketAccessControls to permute.
+      current_acl: A list of ObjectAccessControls or BucketAccessControls to
+        permute.
       command_name: String name of comamnd being run (e.g., 'acl').
       logger: An instance of logging.Logger.
 
     Returns:
       The number of changes that were made.
     """
-    logger.debug(
-        'Executing %s %s on %s', command_name, self.raw_descriptor, storage_url)
+    logger.debug('Executing %s %s on %s', command_name, self.raw_descriptor,
+                 storage_url)
 
     if self.perm == 'WRITER':
       if command_name == 'acl' and storage_url.IsObject():
-        logger.warning(
-            'Skipping %s on %s, as WRITER does not apply to objects',
-            self.raw_descriptor, storage_url)
+        logger.warning('Skipping %s on %s, as WRITER does not apply to objects',
+                       self.raw_descriptor, storage_url)
         return 0
       elif command_name == 'defacl':
         raise CommandException('WRITER cannot be set as a default object ACL '
@@ -289,8 +298,7 @@ class AclDel(object):
 
     Args:
       current_acl: An instance of apitools_messages.BucketAccessControls or
-                   ObjectAccessControls which will be searched for matching
-                   entries.
+        ObjectAccessControls which will be searched for matching entries.
 
     Yields:
       An apitools_messages.BucketAccessControl or ObjectAccessControl.
@@ -302,9 +310,8 @@ class AclDel(object):
         yield entry
       elif entry.domain and self.identifier.lower() == entry.domain.lower():
         yield entry
-      elif (entry.projectTeam and
-            self.identifier.lower() == '%s-%s'.lower() % (
-                entry.projectTeam.team, entry.projectTeam.projectNumber)):
+      elif (entry.projectTeam and self.identifier.lower() == '%s-%s'.lower() %
+            (entry.projectTeam.team, entry.projectTeam.projectNumber)):
         yield entry
       elif entry.entity.lower() == 'allusers' and self.identifier == 'AllUsers':
         yield entry
@@ -313,8 +320,8 @@ class AclDel(object):
         yield entry
 
   def Execute(self, storage_url, current_acl, command_name, logger):
-    logger.debug(
-        'Executing %s %s on %s', command_name, self.raw_descriptor, storage_url)
+    logger.debug('Executing %s %s on %s', command_name, self.raw_descriptor,
+                 storage_url)
     matching_entries = list(self._YieldMatchingEntries(current_acl))
     for entry in matching_entries:
       current_acl.remove(entry)

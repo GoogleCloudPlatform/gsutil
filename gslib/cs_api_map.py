@@ -56,13 +56,8 @@ class GsutilApiClassMapFactory(object):
         ApiSelector.XML: BotoTranslation,
         ApiSelector.JSON: GcsJsonApi
     }
-    s3_class_map = {
-        ApiSelector.XML: BotoTranslation
-    }
-    class_map = {
-        'gs': gs_class_map,
-        's3': s3_class_map
-    }
+    s3_class_map = {ApiSelector.XML: BotoTranslation}
+    class_map = {'gs': gs_class_map, 's3': s3_class_map}
     return class_map
 
 
@@ -91,8 +86,7 @@ class GsutilApiMapFactory(object):
 
     Args:
       gsutil_api_class_map_factory: Factory defining a GetClassMap() function
-                                    adhering to GsutilApiClassMapFactory
-                                    semantics.
+        adhering to GsutilApiClassMapFactory semantics.
       support_map: Entries for ApiMapConstants.SUPPORT_MAP as described above.
       default_map: Entries for ApiMapConstants.DEFAULT_MAP as described above.
 

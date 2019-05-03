@@ -41,7 +41,7 @@ class StatusMessage(object):
     Args:
       message_time: Time that this message was created (since Epoch).
       process_id: Process ID that produced this message (overridable for
-          testing).
+        testing).
       thread_id: Thread ID that produced this message (overridable for testing).
     """
     self.time = message_time
@@ -50,9 +50,9 @@ class StatusMessage(object):
 
   def __str__(self):
     """Returns a string with a valid constructor for this message."""
-    return ('%s(%s, process_id=%s, thread_id=%s)' %
-            (self.__class__.__name__, self.time, self.process_id,
-             self.thread_id))
+    return (
+        '%s(%s, process_id=%s, thread_id=%s)' %
+        (self.__class__.__name__, self.time, self.process_id, self.thread_id))
 
 
 class RetryableErrorMessage(StatusMessage):
@@ -62,23 +62,27 @@ class RetryableErrorMessage(StatusMessage):
   report to analytics collection and to display in the UI.
   """
 
-  def __init__(self, exception, message_time, num_retries=0,
-               total_wait_sec=0, process_id=None, thread_id=None):
+  def __init__(self,
+               exception,
+               message_time,
+               num_retries=0,
+               total_wait_sec=0,
+               process_id=None,
+               thread_id=None):
     """Creates a RetryableErrorMessage.
 
     Args:
       exception: The retryable error that was thrown.
       message_time: Float representing when message was created (seconds since
-          Epoch).
+        Epoch).
       num_retries: The number of retries consumed so far.
       total_wait_sec: The total amount of time waited so far in retrying.
       process_id: Process ID that produced this message (overridable for
-          testing).
+        testing).
       thread_id: Thread ID that produced this message (overridable for testing).
     """
-    super(RetryableErrorMessage, self).__init__(message_time,
-                                                process_id=process_id,
-                                                thread_id=thread_id)
+    super(RetryableErrorMessage, self).__init__(
+        message_time, process_id=process_id, thread_id=thread_id)
 
     self.error_type = exception.__class__.__name__
     # The socket module error class names aren't descriptive enough, so we
@@ -118,7 +122,7 @@ class FinalMessage(StatusMessage):
 
     Args:
       message_time: Float representing when message was created (seconds since
-          Epoch).
+        Epoch).
     """
     super(FinalMessage, self).__init__(message_time)
 
@@ -136,7 +140,7 @@ class MetadataMessage(StatusMessage):
 
     Args:
       message_time: Float representing when message was created (seconds since
-          Epoch).
+        Epoch).
     """
     super(MetadataMessage, self).__init__(message_time)
 
@@ -167,31 +171,39 @@ class FileMessage(StatusMessage):
   COMPONENT_TO_DOWNLOAD = 10
   EXISTING_OBJECT_TO_DELETE = 11
 
-  def __init__(self, src_url, dst_url, message_time, size=None, finished=False,
-               component_num=None, message_type=None,
-               bytes_already_downloaded=None, process_id=None, thread_id=None):
+  def __init__(self,
+               src_url,
+               dst_url,
+               message_time,
+               size=None,
+               finished=False,
+               component_num=None,
+               message_type=None,
+               bytes_already_downloaded=None,
+               process_id=None,
+               thread_id=None):
     """Creates a FileMessage.
 
     Args:
       src_url: FileUrl/CloudUrl representing the source file.
       dst_url: FileUrl/CloudUrl representing the destination file.
       message_time: Float representing when message was created (seconds since
-          Epoch).
+        Epoch).
       size: Total size of this file/component, in bytes.
-      finished: Boolean to indicate whether this is starting or finishing
-          a file/component transfer.
+      finished: Boolean to indicate whether this is starting or finishing a
+        file/component transfer.
       component_num: Component number, if dealing with a component.
       message_type: Type of the file/component.
       bytes_already_downloaded: Specific field for resuming downloads. When
-          starting a component download, it tells how many bytes were already
-          downloaded.
+        starting a component download, it tells how many bytes were already
+        downloaded.
       process_id: Process ID that produced this message (overridable for
-          testing).
+        testing).
       thread_id: Thread ID that produced this message (overridable for testing).
     """
 
-    super(FileMessage, self).__init__(message_time, process_id=process_id,
-                                      thread_id=thread_id)
+    super(FileMessage, self).__init__(
+        message_time, process_id=process_id, thread_id=thread_id)
     self.src_url = src_url
     self.dst_url = dst_url
     self.size = size
@@ -205,10 +217,9 @@ class FileMessage(StatusMessage):
     return ('%s(\'%s\', \'%s\', %s, size=%s, finished=%s, component_num=%s, '
             'message_type=%s, bytes_already_downloaded=%s, process_id=%s, '
             'thread_id=%s)' %
-            (self.__class__.__name__, self.src_url, self.dst_url,
-             self.time, self.size, self.finished, self.component_num,
-             self.message_type, self.bytes_already_downloaded, self.process_id,
-             self.thread_id))
+            (self.__class__.__name__, self.src_url, self.dst_url, self.time,
+             self.size, self.finished, self.component_num, self.message_type,
+             self.bytes_already_downloaded, self.process_id, self.thread_id))
 
 
 class ProgressMessage(StatusMessage):
@@ -218,25 +229,32 @@ class ProgressMessage(StatusMessage):
   cloud object or single component.
   """
 
-  def __init__(self, size, processed_bytes, src_url, message_time,
-               dst_url=None, component_num=None, operation_name=None,
-               process_id=None, thread_id=None):
+  def __init__(self,
+               size,
+               processed_bytes,
+               src_url,
+               message_time,
+               dst_url=None,
+               component_num=None,
+               operation_name=None,
+               process_id=None,
+               thread_id=None):
     """Creates a ProgressMessage.
 
     Args:
       size: Integer for total size of this file/component, in bytes.
       processed_bytes: Integer for number of bytes already processed from that
-          specific component, which means processed_bytes <= size.
+        specific component, which means processed_bytes <= size.
       src_url: FileUrl/CloudUrl representing the source file.
       message_time: Float representing when message was created (seconds since
-          Epoch).
-      dst_url: FileUrl/CloudUrl representing the destination file, or None
-          for unary operations like hashing.
+        Epoch).
+      dst_url: FileUrl/CloudUrl representing the destination file, or None for
+        unary operations like hashing.
       component_num: Indicates the component number, if any.
       operation_name: Name of the operation that is being made over that
-          component.
+        component.
       process_id: Process ID that produced this message (overridable for
-          testing).
+        testing).
       thread_id: Thread ID that produced this message (overridable for testing).
     """
     super(ProgressMessage, self).__init__(message_time)
@@ -275,9 +293,9 @@ class SeekAheadMessage(StatusMessage):
     Args:
       num_objects: Number of total objects that the SeekAheadThread estimates.
       size: Total size corresponding to the sum of the size of objects iterated
-          by SeekAheadThread.
+        by SeekAheadThread.
       message_time: Float representing when message was created (seconds since
-          Epoch).
+        Epoch).
     """
     super(SeekAheadMessage, self).__init__(message_time)
     self.num_objects = num_objects
@@ -286,8 +304,8 @@ class SeekAheadMessage(StatusMessage):
   def __str__(self):
     """Returns a string with a valid constructor for this message."""
     return ('%s(%s, %s, %s, process_id=%s, thread_id=%s)' %
-            (self.__class__.__name__, self.num_objects, self.size,
-             self.time, self.process_id, self.thread_id))
+            (self.__class__.__name__, self.num_objects, self.size, self.time,
+             self.process_id, self.thread_id))
 
 
 class ProducerThreadMessage(StatusMessage):
@@ -304,13 +322,13 @@ class ProducerThreadMessage(StatusMessage):
     Args:
       num_objects: Number of total objects that the task_queue has.
       size: Total size corresponding to the sum of the size of objects iterated
-          by the task_queue
+        by the task_queue
       message_time: Float representing when message was created (seconds since
-          Epoch).
+        Epoch).
       finished: Boolean to indicate whether this is the final message from the
-          ProducerThread. The difference is that this message displays
-          the correct total size and number of objects, whereas the
-          previous ones were periodic (on the number of files) updates.
+        ProducerThread. The difference is that this message displays the correct
+        total size and number of objects, whereas the previous ones were
+        periodic (on the number of files) updates.
     """
     super(ProducerThreadMessage, self).__init__(message_time)
     self.num_objects = num_objects
@@ -320,8 +338,8 @@ class ProducerThreadMessage(StatusMessage):
   def __str__(self):
     """Returns a string with a valid constructor for this message."""
     return ('%s(%s, %s, %s, finished=%s)' %
-            (self.__class__.__name__, self.num_objects, self.size,
-             self.time, self.finished))
+            (self.__class__.__name__, self.num_objects, self.size, self.time,
+             self.finished))
 
 
 class PerformanceSummaryMessage(StatusMessage):
@@ -336,12 +354,11 @@ class PerformanceSummaryMessage(StatusMessage):
 
     Args:
       message_time: Float representing when message was created (seconds since
-          Epoch).
+        Epoch).
       uses_slice: True if the command uses slice parallelism.
     """
-    super(PerformanceSummaryMessage, self).__init__(message_time,
-                                                    process_id=None,
-                                                    thread_id=None)
+    super(PerformanceSummaryMessage, self).__init__(
+        message_time, process_id=None, thread_id=None)
     self.uses_slice = uses_slice
 
   def __str__(self):

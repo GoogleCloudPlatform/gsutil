@@ -26,7 +26,6 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-
 from hashlib import md5
 import os
 import pickle
@@ -91,6 +90,7 @@ def JoinThreadAndRaiseOnTimeout(ui_thread, thread_wait_time=THREAD_WAIT_TIME):
   Args:
     ui_thread: the UIThread to be joined.
     thread_wait_time: the time to wait to join
+
   Raises:
     Exception: Warns UIThread is still alive.
   """
@@ -104,6 +104,7 @@ def _FindAppropriateDescriptionString(metadata):
 
   Args:
     metadata: Describes whether this is a metadata operation.
+
   Returns:
     ' objects' if a metadata operation; ' files' otherwise.
   """
@@ -113,7 +114,10 @@ def _FindAppropriateDescriptionString(metadata):
 # TODO: migrate CheckUiOutput functions to integration_testcase
 # and call them directly from the adapted tests so we do not have to duplicate
 # code.
-def CheckUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
+def CheckUiOutputWithMFlag(test_case,
+                           content,
+                           num_objects,
+                           total_size=0,
                            metadata=False):
   """Checks if the UI output works as expected with the -m flag enabled.
 
@@ -122,7 +126,7 @@ def CheckUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
     content: The output provided by the UI.
     num_objects: The number of objects processed.
     total_size: The total size transferred in the operation. Used for data
-                operations only.
+      operations only.
     metadata: Indicates whether this is a metadata operation.
   """
   description_string = _FindAppropriateDescriptionString(metadata)
@@ -140,7 +144,10 @@ def CheckUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
   test_case.assertIn(final_message, content)
 
 
-def CheckUiOutputWithNoMFlag(test_case, content, num_objects, total_size=0,
+def CheckUiOutputWithNoMFlag(test_case,
+                             content,
+                             num_objects,
+                             total_size=0,
                              metadata=False):
   """Checks if the UI output works as expected with the -m flag not enabled.
 
@@ -149,7 +156,7 @@ def CheckUiOutputWithNoMFlag(test_case, content, num_objects, total_size=0,
     content: The output provided by the UI.
     num_objects: The number of objects processed.
     total_size: The total size transferred in the operation. Used for data
-                operations only.
+      operations only.
     metadata: Indicates whether this is a metadata operation.
   """
   description_string = _FindAppropriateDescriptionString(metadata)
@@ -165,7 +172,10 @@ def CheckUiOutputWithNoMFlag(test_case, content, num_objects, total_size=0,
   test_case.assertIn(final_message, content)
 
 
-def CheckBrokenUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
+def CheckBrokenUiOutputWithMFlag(test_case,
+                                 content,
+                                 num_objects,
+                                 total_size=0,
                                  metadata=False):
   """Checks if the UI output fails as expected with the -m flag enabled.
 
@@ -174,7 +184,7 @@ def CheckBrokenUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
     content: The output provided by the UI.
     num_objects: The number of objects processed.
     total_size: The total size transferred in the operation. Used for data
-                operations only.
+      operations only.
     metadata: Indicates whether this is a metadata operation.
   """
   description_string = _FindAppropriateDescriptionString(metadata)
@@ -194,8 +204,11 @@ def CheckBrokenUiOutputWithMFlag(test_case, content, num_objects, total_size=0,
   test_case.assertNotIn(final_message_prefix, content)
 
 
-def CheckBrokenUiOutputWithNoMFlag(test_case, content, num_objects,
-                                   total_size=0, metadata=False):
+def CheckBrokenUiOutputWithNoMFlag(test_case,
+                                   content,
+                                   num_objects,
+                                   total_size=0,
+                                   metadata=False):
   """Checks if the UI output fails as expected with the -m flag not enabled.
 
   Args:
@@ -203,7 +216,7 @@ def CheckBrokenUiOutputWithNoMFlag(test_case, content, num_objects,
     content: The output provided by the UI.
     num_objects: The number of objects processed.
     total_size: The total size transferred in the operation. Used for data
-                operations only.
+      operations only.
     metadata: Indicates whether this is a metadata operation.
   """
   description_string = _FindAppropriateDescriptionString(metadata)
@@ -235,8 +248,8 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     bucket_uri = self.CreateBucket()
     file_contents = b'd' * DOWNLOAD_SIZE
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents=file_contents)
+    object_uri = self.CreateObject(
+        bucket_uri=bucket_uri, object_name='foo', contents=file_contents)
     fpath = self.CreateTempFile()
     stderr = self.RunGsUtil(['-m', 'cp', suri(object_uri), fpath],
                             return_stderr=True)
@@ -251,11 +264,10 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     bucket_uri = self.CreateBucket()
     file_contents = b'd' * DOWNLOAD_SIZE
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents=file_contents)
+    object_uri = self.CreateObject(
+        bucket_uri=bucket_uri, object_name='foo', contents=file_contents)
     fpath = self.CreateTempFile()
-    stderr = self.RunGsUtil(['cp', suri(object_uri), fpath],
-                            return_stderr=True)
+    stderr = self.RunGsUtil(['cp', suri(object_uri), fpath], return_stderr=True)
     CheckUiOutputWithNoMFlag(self, stderr, 1, total_size=DOWNLOAD_SIZE)
 
   def test_ui_upload_single_object_with_m_flag(self):
@@ -266,10 +278,10 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     bucket_uri = self.CreateBucket()
     file_contents = b'u' * UPLOAD_SIZE
-    fpath = self.CreateTempFile(file_name='sample-file.txt',
-                                contents=file_contents)
-    stderr = self.RunGsUtil(['-m', 'cp', suri(fpath), suri(bucket_uri)],
-                            return_stderr=True)
+    fpath = self.CreateTempFile(
+        file_name='sample-file.txt', contents=file_contents)
+    stderr = self.RunGsUtil(
+        ['-m', 'cp', suri(fpath), suri(bucket_uri)], return_stderr=True)
 
     CheckUiOutputWithMFlag(self, stderr, 1, total_size=UPLOAD_SIZE)
 
@@ -282,10 +294,10 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     bucket_uri = self.CreateBucket()
     file_contents = b'u' * UPLOAD_SIZE
-    fpath = self.CreateTempFile(file_name='sample-file.txt',
-                                contents=file_contents)
-    stderr = self.RunGsUtil(['cp', suri(fpath), suri(bucket_uri)],
-                            return_stderr=True)
+    fpath = self.CreateTempFile(
+        file_name='sample-file.txt', contents=file_contents)
+    stderr = self.RunGsUtil(
+        ['cp', suri(fpath), suri(bucket_uri)], return_stderr=True)
 
     CheckUiOutputWithNoMFlag(self, stderr, 1, total_size=UPLOAD_SIZE)
 
@@ -302,16 +314,16 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     for i in range(num_objects):
       file_size = DOWNLOAD_SIZE // 3
       file_contents = b'd' * file_size
-      object_uri = self.CreateObject(bucket_uri=bucket_uri,
-                                     object_name='foo' + str(i),
-                                     contents=file_contents)
+      object_uri = self.CreateObject(
+          bucket_uri=bucket_uri,
+          object_name='foo' + str(i),
+          contents=file_contents)
       total_size += file_size
       argument_list.append(suri(object_uri))
 
     fpath = self.CreateTempDir()
     argument_list.append(fpath)
-    stderr = self.RunGsUtil(argument_list,
-                            return_stderr=True)
+    stderr = self.RunGsUtil(argument_list, return_stderr=True)
 
     CheckUiOutputWithMFlag(self, stderr, num_objects, total_size=total_size)
 
@@ -329,16 +341,16 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     for i in range(num_objects):
       file_size = DOWNLOAD_SIZE // 3
       file_contents = b'd' * file_size
-      object_uri = self.CreateObject(bucket_uri=bucket_uri,
-                                     object_name='foo' + str(i),
-                                     contents=file_contents)
+      object_uri = self.CreateObject(
+          bucket_uri=bucket_uri,
+          object_name='foo' + str(i),
+          contents=file_contents)
       total_size += file_size
       argument_list.append(suri(object_uri))
 
     fpath = self.CreateTempDir()
     argument_list.append(fpath)
-    stderr = self.RunGsUtil(argument_list,
-                            return_stderr=True)
+    stderr = self.RunGsUtil(argument_list, return_stderr=True)
 
     CheckUiOutputWithNoMFlag(self, stderr, num_objects, total_size=total_size)
 
@@ -355,14 +367,13 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     for i in range(num_objects):
       file_size = UPLOAD_SIZE // 3
       file_contents = b'u' * file_size
-      fpath = self.CreateTempFile(file_name='foo' + str(i),
-                                  contents=file_contents)
+      fpath = self.CreateTempFile(
+          file_name='foo' + str(i), contents=file_contents)
       total_size += file_size
       argument_list.append(suri(fpath))
 
     argument_list.append(suri(bucket_uri))
-    stderr = self.RunGsUtil(argument_list,
-                            return_stderr=True)
+    stderr = self.RunGsUtil(argument_list, return_stderr=True)
 
     CheckUiOutputWithMFlag(self, stderr, num_objects, total_size=total_size)
 
@@ -380,14 +391,13 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     for i in range(num_objects):
       file_size = UPLOAD_SIZE // 3
       file_contents = b'u' * file_size
-      fpath = self.CreateTempFile(file_name='foo' + str(i),
-                                  contents=file_contents)
+      fpath = self.CreateTempFile(
+          file_name='foo' + str(i), contents=file_contents)
       total_size += file_size
       argument_list.append(suri(fpath))
 
     argument_list.append(suri(bucket_uri))
-    stderr = self.RunGsUtil(argument_list,
-                            return_stderr=True)
+    stderr = self.RunGsUtil(argument_list, return_stderr=True)
 
     CheckUiOutputWithNoMFlag(self, stderr, num_objects, total_size=total_size)
 
@@ -401,19 +411,22 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'a' * HALT_SIZE)
     boto_config_for_test = [
         ('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-        ('GSUtil', 'parallel_composite_upload_component_size', str(ONE_KIB))]
+        ('GSUtil', 'parallel_composite_upload_component_size', str(ONE_KIB))
+    ]
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(HaltingCopyCallbackHandler(True, 5)))
 
     with SetBotoConfigForTest(boto_config_for_test):
-      stderr = self.RunGsUtil(['-m', 'cp', '--testcallbackfile',
-                               test_callback_file,
-                               fpath, suri(bucket_uri)],
-                              expected_status=1, return_stderr=True)
+      stderr = self.RunGsUtil([
+          '-m', 'cp', '--testcallbackfile', test_callback_file, fpath,
+          suri(bucket_uri)
+      ],
+                              expected_status=1,
+                              return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
       CheckBrokenUiOutputWithMFlag(self, stderr, 1, total_size=HALT_SIZE)
-      stderr = self.RunGsUtil(['-m', 'cp', fpath, suri(bucket_uri)],
-                              return_stderr=True)
+      stderr = self.RunGsUtil(
+          ['-m', 'cp', fpath, suri(bucket_uri)], return_stderr=True)
       self.assertIn('Resuming upload', stderr)
       CheckUiOutputWithMFlag(self, stderr, 1, total_size=HALT_SIZE)
 
@@ -427,14 +440,18 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'a' * HALT_SIZE)
     boto_config_for_test = [
         ('GSUtil', 'resumable_threshold', str(ONE_KIB)),
-        ('GSUtil', 'parallel_composite_upload_component_size', str(ONE_KIB))]
+        ('GSUtil', 'parallel_composite_upload_component_size', str(ONE_KIB))
+    ]
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(HaltingCopyCallbackHandler(True, 5)))
 
     with SetBotoConfigForTest(boto_config_for_test):
-      stderr = self.RunGsUtil(['cp', '--testcallbackfile', test_callback_file,
-                               fpath, suri(bucket_uri)],
-                              expected_status=1, return_stderr=True)
+      stderr = self.RunGsUtil([
+          'cp', '--testcallbackfile', test_callback_file, fpath,
+          suri(bucket_uri)
+      ],
+                              expected_status=1,
+                              return_stderr=True)
       self.assertIn('Artifically halting upload', stderr)
       CheckBrokenUiOutputWithNoMFlag(self, stderr, 1, total_size=HALT_SIZE)
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
@@ -442,7 +459,8 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Resuming upload', stderr)
       CheckUiOutputWithNoMFlag(self, stderr, 1, total_size=HALT_SIZE)
 
-  def _test_ui_resumable_download_break_helper(self, boto_config,
+  def _test_ui_resumable_download_break_helper(self,
+                                               boto_config,
                                                gsutil_flags=None):
     """Helper function for testing UI on a resumable download break.
 
@@ -450,25 +468,27 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
 
     Args:
       boto_config: List of boto configuration tuples for use with
-          SetBotoConfigForTest.
+        SetBotoConfigForTest.
       gsutil_flags: List of flags to run gsutil with, or None.
     """
     if not gsutil_flags:
       gsutil_flags = []
     bucket_uri = self.CreateBucket()
     file_contents = b'a' * HALT_SIZE
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents=file_contents)
+    object_uri = self.CreateObject(
+        bucket_uri=bucket_uri, object_name='foo', contents=file_contents)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(HaltingCopyCallbackHandler(False, 5)))
 
     with SetBotoConfigForTest(boto_config):
-      gsutil_args = (gsutil_flags + ['cp', '--testcallbackfile',
-                                     test_callback_file,
-                                     suri(object_uri), fpath])
-      stderr = self.RunGsUtil(gsutil_args, expected_status=1,
-                              return_stderr=True)
+      gsutil_args = (
+          gsutil_flags + [
+              'cp', '--testcallbackfile', test_callback_file,
+              suri(object_uri), fpath
+          ])
+      stderr = self.RunGsUtil(
+          gsutil_args, expected_status=1, return_stderr=True)
       self.assertIn('Artifically halting download.', stderr)
       if '-q' not in gsutil_flags:
         if '-m' in gsutil_flags:
@@ -505,8 +525,9 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
 
     This was adapted from test_cp_resumable_download_break.
     """
-    self._test_ui_resumable_download_break_helper(
-        [('GSUtil', 'resumable_threshold', str(ONE_KIB))])
+    self._test_ui_resumable_download_break_helper([
+        ('GSUtil', 'resumable_threshold', str(ONE_KIB))
+    ])
 
   def test_ui_resumable_download_break_with_q_flag(self):
     """Tests UI on a resumable download break with -q flag but no -m flag.
@@ -546,8 +567,9 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
 
     # Simulate an upload that had occurred by writing a tracker file
     # that points to a previously uploaded component.
-    tracker_file_name = GetTrackerFilePath(
-        dst_url, TrackerFileType.PARALLEL_UPLOAD, self.test_api, src_url)
+    tracker_file_name = GetTrackerFilePath(dst_url,
+                                           TrackerFileType.PARALLEL_UPLOAD,
+                                           self.test_api, src_url)
     tracker_prefix = '123'
 
     # Create component 0 to be used in the resume; it must match the name
@@ -556,30 +578,32 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     content_md5 = md5()
     content_md5.update(encoded_name)
     digest = content_md5.hexdigest()
-    component_object_name = (tracker_prefix + PARALLEL_UPLOAD_TEMP_NAMESPACE +
-                             digest + '_0')
+    component_object_name = (
+        tracker_prefix + PARALLEL_UPLOAD_TEMP_NAMESPACE + digest + '_0')
 
     component_size = 3
     object_uri = self.CreateObject(
-        bucket_uri=bucket_uri, object_name=component_object_name,
+        bucket_uri=bucket_uri,
+        object_name=component_object_name,
         contents=file_contents[:component_size])
     existing_component = ObjectFromTracker(component_object_name,
                                            str(object_uri.generation))
     existing_components = [existing_component]
 
-    WriteParallelUploadTrackerFile(
-        tracker_file_name, tracker_prefix, existing_components)
+    WriteParallelUploadTrackerFile(tracker_file_name, tracker_prefix,
+                                   existing_components)
 
     try:
       # Now "resume" the upload.
       with SetBotoConfigForTest([
           ('GSUtil', 'parallel_composite_upload_threshold', '1'),
           ('GSUtil', 'parallel_composite_upload_component_size',
-           str(component_size))]):
-        gsutil_args = (gsutil_flags +
-                       ['cp', source_file, suri(bucket_uri, 'foo')])
-        stderr = self.RunGsUtil(gsutil_args,
-                                return_stderr=True)
+           str(component_size))
+      ]):
+        gsutil_args = (
+            gsutil_flags +
+            ['cp', source_file, suri(bucket_uri, 'foo')])
+        stderr = self.RunGsUtil(gsutil_args, return_stderr=True)
         self.assertIn('Found 1 existing temporary components to reuse.', stderr)
         self.assertFalse(
             os.path.exists(tracker_file_name),
@@ -590,8 +614,8 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
         if '-m' in gsutil_flags:
           CheckUiOutputWithMFlag(self, stderr, 1, total_size=len(file_contents))
         else:
-          CheckUiOutputWithNoMFlag(self, stderr, 1,
-                                   total_size=len(file_contents))
+          CheckUiOutputWithNoMFlag(
+              self, stderr, 1, total_size=len(file_contents))
     finally:
       # Clean up if something went wrong.
       DeleteTrackerFile(tracker_file_name)
@@ -603,12 +627,11 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('No resumable upload support for S3.')
   def test_ui_composite_upload_resume_with_no_m_flag(self):
-    """Tests UI on a resumable upload with finished components and no -m flag.
-    """
+    """Tests UI on a resumable upload with finished components and no -m flag."""
     self._test_ui_composite_upload_resume_helper()
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Sliced download requires fast crcmod.')
+  @unittest.skipUnless(
+      UsingCrcmodExtension(crcmod), 'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def _test_ui_sliced_download_partial_resume_helper(self, gsutil_flags=None):
     """Helps testing UI for sliced download with some finished components.
@@ -621,8 +644,8 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     if not gsutil_flags:
       gsutil_flags = []
     bucket_uri = self.CreateBucket()
-    object_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo',
-                                   contents=b'abc' * HALT_SIZE)
+    object_uri = self.CreateObject(
+        bucket_uri=bucket_uri, object_name='foo', contents=b'abc' * HALT_SIZE)
     fpath = self.CreateTempFile()
     test_callback_file = self.CreateTempFile(
         contents=pickle.dumps(HaltOneComponentCopyCallbackHandler(5)))
@@ -630,21 +653,24 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     boto_config_for_test = [
         ('GSUtil', 'resumable_threshold', str(HALT_SIZE)),
         ('GSUtil', 'sliced_object_download_threshold', str(HALT_SIZE)),
-        ('GSUtil', 'sliced_object_download_max_components', '3')]
+        ('GSUtil', 'sliced_object_download_max_components', '3')
+    ]
 
     with SetBotoConfigForTest(boto_config_for_test):
-      gsutil_args = gsutil_flags + ['cp', '--testcallbackfile',
-                                    test_callback_file, suri(object_uri),
-                                    suri(fpath)]
+      gsutil_args = gsutil_flags + [
+          'cp', '--testcallbackfile', test_callback_file,
+          suri(object_uri),
+          suri(fpath)
+      ]
 
-      stderr = self.RunGsUtil(gsutil_args, return_stderr=True,
-                              expected_status=1)
+      stderr = self.RunGsUtil(
+          gsutil_args, return_stderr=True, expected_status=1)
       if '-m' in gsutil_args:
-        CheckBrokenUiOutputWithMFlag(self, stderr, 1,
-                                     total_size=(len('abc') * HALT_SIZE))
+        CheckBrokenUiOutputWithMFlag(
+            self, stderr, 1, total_size=(len('abc') * HALT_SIZE))
       else:
-        CheckBrokenUiOutputWithNoMFlag(self, stderr, 1,
-                                       total_size=(len('abc') * HALT_SIZE))
+        CheckBrokenUiOutputWithNoMFlag(
+            self, stderr, 1, total_size=(len('abc') * HALT_SIZE))
       # Each tracker file should exist.
       tracker_filenames = GetSlicedDownloadTrackerFilePaths(
           StorageUrlFromString(fpath), self.test_api)
@@ -663,25 +689,22 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
         self.assertFalse(os.path.isfile(tracker_filename))
 
       with open(fpath, 'r') as f:
-        self.assertEqual(f.read(), 'abc' * HALT_SIZE,
-                         'File contents differ')
+        self.assertEqual(f.read(), 'abc' * HALT_SIZE, 'File contents differ')
       if '-m' in gsutil_args:
-        CheckUiOutputWithMFlag(self, stderr, 1,
-                               total_size=(len('abc') * HALT_SIZE))
+        CheckUiOutputWithMFlag(
+            self, stderr, 1, total_size=(len('abc') * HALT_SIZE))
       else:
-        CheckUiOutputWithNoMFlag(self, stderr, 1,
-                                 total_size=(len('abc') * HALT_SIZE))
+        CheckUiOutputWithNoMFlag(
+            self, stderr, 1, total_size=(len('abc') * HALT_SIZE))
 
   @SkipForS3('No resumable upload support for S3.')
   def test_ui_sliced_download_partial_resume_helper_with_m_flag(self):
-    """Tests UI on a resumable download with finished components and -m flag.
-    """
+    """Tests UI on a resumable download with finished components and -m flag."""
     self._test_ui_sliced_download_partial_resume_helper(gsutil_flags=['-m'])
 
   @SkipForS3('No resumable upload support for S3.')
   def _test_ui_sliced_download_partial_resume_helper_with_no_m_flag(self):
-    """Tests UI on a resumable upload with finished components and no -m flag.
-    """
+    """Tests UI on a resumable upload with finished components and no -m flag."""
     self._test_ui_sliced_download_partial_resume_helper()
 
   def test_ui_hash_mutliple_objects_with_no_m_flag(self):
@@ -696,13 +719,12 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     for i in range(num_objects):
       file_size = UPLOAD_SIZE // 3
       file_contents = b'u' * file_size
-      fpath = self.CreateTempFile(file_name='foo' + str(i),
-                                  contents=file_contents)
+      fpath = self.CreateTempFile(
+          file_name='foo' + str(i), contents=file_contents)
       total_size += file_size
       argument_list.append(suri(fpath))
 
-    stderr = self.RunGsUtil(argument_list,
-                            return_stderr=True)
+    stderr = self.RunGsUtil(argument_list, return_stderr=True)
     CheckUiOutputWithNoMFlag(self, stderr, num_objects, total_size)
 
   def test_ui_rewrite_with_m_flag(self):
@@ -712,15 +734,15 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(contents=b'bar',
-                                   encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(
+        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
     stdin_arg = suri(object_uri)
 
-    boto_config_for_test = [
-        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
-        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY1)]
+    boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
+                            ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY1)]
     with SetBotoConfigForTest(boto_config_for_test):
-      stderr = self.RunGsUtil(['-m', 'rewrite', '-k', '-I'], stdin=stdin_arg,
+      stderr = self.RunGsUtil(['-m', 'rewrite', '-k', '-I'],
+                              stdin=stdin_arg,
                               return_stderr=True)
     self.AssertObjectUsesCSEK(stdin_arg, TEST_ENCRYPTION_KEY2)
     num_objects = 1
@@ -734,15 +756,15 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    object_uri = self.CreateObject(contents=b'bar',
-                                   encryption_key=TEST_ENCRYPTION_KEY1)
+    object_uri = self.CreateObject(
+        contents=b'bar', encryption_key=TEST_ENCRYPTION_KEY1)
     stdin_arg = suri(object_uri)
 
-    boto_config_for_test = [
-        ('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
-        ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY1)]
+    boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY2),
+                            ('GSUtil', 'decryption_key1', TEST_ENCRYPTION_KEY1)]
     with SetBotoConfigForTest(boto_config_for_test):
-      stderr = self.RunGsUtil(['rewrite', '-k', '-I'], stdin=stdin_arg,
+      stderr = self.RunGsUtil(['rewrite', '-k', '-I'],
+                              stdin=stdin_arg,
                               return_stderr=True)
     self.AssertObjectUsesCSEK(stdin_arg, TEST_ENCRYPTION_KEY2)
     num_objects = 1
@@ -757,9 +779,12 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
-    stderr = self.RunGsUtil(['-m', 'setmeta', '-h',
-                             'content-type:footype', suri(object1_uri),
-                             suri(object2_uri)], return_stderr=True)
+    stderr = self.RunGsUtil([
+        '-m', 'setmeta', '-h', 'content-type:footype',
+        suri(object1_uri),
+        suri(object2_uri)
+    ],
+                            return_stderr=True)
 
     for obj_uri in [object1_uri, object2_uri]:
       stdout = self.RunGsUtil(['stat', suri(obj_uri)], return_stdout=True)
@@ -774,8 +799,11 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     object1_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     object2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
-    stderr = self.RunGsUtil(['setmeta', '-h', 'content-type:footype',
-                             suri(object1_uri), suri(object2_uri)],
+    stderr = self.RunGsUtil([
+        'setmeta', '-h', 'content-type:footype',
+        suri(object1_uri),
+        suri(object2_uri)
+    ],
                             return_stderr=True)
 
     for obj_uri in [object1_uri, object2_uri]:
@@ -791,19 +819,16 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     get_acl_prefix = ['-m', 'acl', 'get']
     set_acl_prefix = ['-m', 'acl', 'set']
     obj_uri = suri(self.CreateObject(contents=b'foo'))
-    acl_string = self.RunGsUtil(get_acl_prefix + [obj_uri],
-                                return_stdout=True)
+    acl_string = self.RunGsUtil(get_acl_prefix + [obj_uri], return_stdout=True)
     inpath = self.CreateTempFile(contents=acl_string.encode(UTF8))
-    stderr = self.RunGsUtil(set_acl_prefix + ['public-read', obj_uri],
-                            return_stderr=True)
+    stderr = self.RunGsUtil(
+        set_acl_prefix + ['public-read', obj_uri], return_stderr=True)
     CheckUiOutputWithMFlag(self, stderr, 1, metadata=True)
-    acl_string2 = self.RunGsUtil(get_acl_prefix + [obj_uri],
-                                 return_stdout=True)
-    stderr = self.RunGsUtil(set_acl_prefix + [inpath, obj_uri],
-                            return_stderr=True)
+    acl_string2 = self.RunGsUtil(get_acl_prefix + [obj_uri], return_stdout=True)
+    stderr = self.RunGsUtil(
+        set_acl_prefix + [inpath, obj_uri], return_stderr=True)
     CheckUiOutputWithMFlag(self, stderr, 1, metadata=True)
-    acl_string3 = self.RunGsUtil(get_acl_prefix + [obj_uri],
-                                 return_stdout=True)
+    acl_string3 = self.RunGsUtil(get_acl_prefix + [obj_uri], return_stdout=True)
 
     self.assertNotEqual(acl_string, acl_string2)
     self.assertEqual(acl_string, acl_string3)
@@ -816,19 +841,16 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     get_acl_prefix = ['acl', 'get']
     set_acl_prefix = ['acl', 'set']
     obj_uri = suri(self.CreateObject(contents=b'foo'))
-    acl_string = self.RunGsUtil(get_acl_prefix + [obj_uri],
-                                return_stdout=True)
+    acl_string = self.RunGsUtil(get_acl_prefix + [obj_uri], return_stdout=True)
     inpath = self.CreateTempFile(contents=acl_string.encode(UTF8))
-    stderr = self.RunGsUtil(set_acl_prefix + ['public-read', obj_uri],
-                            return_stderr=True)
+    stderr = self.RunGsUtil(
+        set_acl_prefix + ['public-read', obj_uri], return_stderr=True)
     CheckUiOutputWithNoMFlag(self, stderr, 1, metadata=True)
-    acl_string2 = self.RunGsUtil(get_acl_prefix + [obj_uri],
-                                 return_stdout=True)
-    stderr = self.RunGsUtil(set_acl_prefix + [inpath, obj_uri],
-                            return_stderr=True)
+    acl_string2 = self.RunGsUtil(get_acl_prefix + [obj_uri], return_stdout=True)
+    stderr = self.RunGsUtil(
+        set_acl_prefix + [inpath, obj_uri], return_stderr=True)
     CheckUiOutputWithNoMFlag(self, stderr, 1, metadata=True)
-    acl_string3 = self.RunGsUtil(get_acl_prefix + [obj_uri],
-                                 return_stdout=True)
+    acl_string3 = self.RunGsUtil(get_acl_prefix + [obj_uri], return_stdout=True)
 
     self.assertNotEqual(acl_string, acl_string2)
     self.assertEqual(acl_string, acl_string3)
@@ -837,9 +859,8 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """Helper class to test UI output for rsync command.
 
     Args:
-      gsutil_flags: List of flags to run gsutil with, or None.
-
-    Adapted from test_bucket_to_bucket in test_rsync.
+      gsutil_flags: List of flags to run gsutil with, or None.  Adapted from
+        test_bucket_to_bucket in test_rsync.
     """
     if not gsutil_flags:
       gsutil_flags = []
@@ -850,30 +871,42 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     # that we detect and properly copy in that case.
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
-    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj1',
-                      contents=b'obj1')
-    self.CreateObject(bucket_uri=bucket1_uri, object_name='.obj2',
-                      contents=b'.obj2', mtime=10)
-    self.CreateObject(bucket_uri=bucket1_uri, object_name='subdir/obj3',
-                      contents=b'subdir/obj3')
-    self.CreateObject(bucket_uri=bucket1_uri, object_name='obj6',
-                      contents=b'obj6_', mtime=100)
+    self.CreateObject(
+        bucket_uri=bucket1_uri, object_name='obj1', contents=b'obj1')
+    self.CreateObject(
+        bucket_uri=bucket1_uri,
+        object_name='.obj2',
+        contents=b'.obj2',
+        mtime=10)
+    self.CreateObject(
+        bucket_uri=bucket1_uri,
+        object_name='subdir/obj3',
+        contents=b'subdir/obj3')
+    self.CreateObject(
+        bucket_uri=bucket1_uri,
+        object_name='obj6',
+        contents=b'obj6_',
+        mtime=100)
     # .obj2 will be replaced and have mtime of 10
-    self.CreateObject(bucket_uri=bucket2_uri, object_name='.obj2',
-                      contents=b'.OBJ2')
-    self.CreateObject(bucket_uri=bucket2_uri, object_name='obj4',
-                      contents=b'obj4')
-    self.CreateObject(bucket_uri=bucket2_uri, object_name='subdir/obj5',
-                      contents=b'subdir/obj5')
-    self.CreateObject(bucket_uri=bucket2_uri, object_name='obj6',
-                      contents=b'obj6', mtime=100)
+    self.CreateObject(
+        bucket_uri=bucket2_uri, object_name='.obj2', contents=b'.OBJ2')
+    self.CreateObject(
+        bucket_uri=bucket2_uri, object_name='obj4', contents=b'obj4')
+    self.CreateObject(
+        bucket_uri=bucket2_uri,
+        object_name='subdir/obj5',
+        contents=b'subdir/obj5')
+    self.CreateObject(
+        bucket_uri=bucket2_uri, object_name='obj6', contents=b'obj6', mtime=100)
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Tests rsync works as expected."""
-      gsutil_args = (gsutil_flags +
-                     ['rsync', suri(bucket1_uri), suri(bucket2_uri)])
+      gsutil_args = (
+          gsutil_flags +
+          ['rsync', suri(bucket1_uri),
+           suri(bucket2_uri)])
       stderr = self.RunGsUtil(gsutil_args, return_stderr=True)
       num_objects = 3
       total_size = len('obj1') + len('.obj2') + len('obj6_')
@@ -881,22 +914,29 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(suri(bucket1_uri), self.FlatListBucket(bucket1_uri))
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
-      self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3',
-                                       '/obj6']))
+      self.assertEquals(listing1,
+                        set(['/obj1', '/.obj2', '/subdir/obj3', '/obj6']))
       # Second bucket should have new objects added from source bucket (without
       # removing extraneeous object found in dest bucket), and without the
       # subdir objects synchronized.
-      self.assertEquals(listing2, set(['/obj1', '/.obj2', '/obj4',
-                                       '/subdir/obj5', '/obj6']))
+      self.assertEquals(
+          listing2, set(['/obj1', '/.obj2', '/obj4', '/subdir/obj5', '/obj6']))
       # Assert that the src/dest objects that had same length but different
       # content were correctly synchronized (bucket to bucket rsync uses
       # checksums).
-      self.assertEquals('.obj2', self.RunGsUtil(
-          ['cat', suri(bucket1_uri, '.obj2')], return_stdout=True))
-      self.assertEquals('.obj2', self.RunGsUtil(
-          ['cat', suri(bucket2_uri, '.obj2')], return_stdout=True))
-      self.assertEquals('obj6_', self.RunGsUtil(
-          ['cat', suri(bucket2_uri, 'obj6')], return_stdout=True))
+      self.assertEquals(
+          '.obj2',
+          self.RunGsUtil(['cat', suri(bucket1_uri, '.obj2')],
+                         return_stdout=True))
+      self.assertEquals(
+          '.obj2',
+          self.RunGsUtil(['cat', suri(bucket2_uri, '.obj2')],
+                         return_stdout=True))
+      self.assertEquals(
+          'obj6_',
+          self.RunGsUtil(['cat', suri(bucket2_uri, 'obj6')],
+                         return_stdout=True))
+
     _Check1()
 
   def test_ui_rsync_bucket_to_bucket_with_m_flag(self):
@@ -924,25 +964,31 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     ui_thread = UIThread(status_queue, stream, ui_controller)
     num_objects = 10
     total_size = 1024**3
-    PutToQueueWithTimeout(
-        status_queue,
-        SeekAheadMessage(num_objects, total_size, start_time))
+    PutToQueueWithTimeout(status_queue,
+                          SeekAheadMessage(num_objects, total_size, start_time))
 
     # Adds a file. Because this message was already theoretically processed
     # by the SeekAheadThread, the number of files reported by the UIController
     # should not change.
-    fpath = self.CreateTempFile(file_name='sample-file.txt',
-                                contents=b'foo')
+    fpath = self.CreateTempFile(file_name='sample-file.txt', contents=b'foo')
     PutToQueueWithTimeout(
         status_queue,
-        FileMessage(StorageUrlFromString(suri(fpath)), None, start_time + 10,
-                    size=UPLOAD_SIZE, message_type=FileMessage.FILE_UPLOAD,
-                    finished=False))
+        FileMessage(
+            StorageUrlFromString(suri(fpath)),
+            None,
+            start_time + 10,
+            size=UPLOAD_SIZE,
+            message_type=FileMessage.FILE_UPLOAD,
+            finished=False))
     PutToQueueWithTimeout(
         status_queue,
-        FileMessage(StorageUrlFromString(suri(fpath)), None, start_time + 20,
-                    size=UPLOAD_SIZE, message_type=FileMessage.FILE_UPLOAD,
-                    finished=True))
+        FileMessage(
+            StorageUrlFromString(suri(fpath)),
+            None,
+            start_time + 20,
+            size=UPLOAD_SIZE,
+            message_type=FileMessage.FILE_UPLOAD,
+            finished=True))
 
     PutToQueueWithTimeout(status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
     JoinThreadAndRaiseOnTimeout(ui_thread)
@@ -970,23 +1016,25 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       current_time_ms += 200
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(StorageUrlFromString('gs://foo%s' % i),
-                      StorageUrlFromString('bar%s' % i),
-                      current_time_ms,
-                      message_type=FileMessage.FILE_DOWNLOAD))
+          FileMessage(
+              StorageUrlFromString('gs://foo%s' % i),
+              StorageUrlFromString('bar%s' % i),
+              current_time_ms,
+              message_type=FileMessage.FILE_DOWNLOAD))
     for i in range(100):
       current_time_ms += 200
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(StorageUrlFromString('gs://foo%s' % i),
-                      StorageUrlFromString('bar%s' % i),
-                      current_time_ms,
-                      finished=True, message_type=FileMessage.FILE_DOWNLOAD))
+          FileMessage(
+              StorageUrlFromString('gs://foo%s' % i),
+              StorageUrlFromString('bar%s' % i),
+              current_time_ms,
+              finished=True,
+              message_type=FileMessage.FILE_DOWNLOAD))
     PutToQueueWithTimeout(
         status_queue,
         ProducerThreadMessage(100, 0, current_time_ms, finished=True))
-    PutToQueueWithTimeout(status_queue,
-                          FinalMessage(current_time_ms))
+    PutToQueueWithTimeout(status_queue, FinalMessage(current_time_ms))
     PutToQueueWithTimeout(status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
     JoinThreadAndRaiseOnTimeout(ui_thread)
     self.assertIn('100/100', stream.getvalue())
@@ -1024,20 +1072,26 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     PutToQueueWithTimeout(
         main_thread_ui_queue,
         ProducerThreadMessage(1, UPLOAD_SIZE, start_time, finished=True))
-    fpath = self.CreateTempFile(file_name='sample-file.txt',
-                                contents=b'foo')
+    fpath = self.CreateTempFile(file_name='sample-file.txt', contents=b'foo')
     PutToQueueWithTimeout(
         ui_thread_status_queue,
-        FileMessage(StorageUrlFromString(suri(fpath)), None, start_time + 10,
-                    size=UPLOAD_SIZE, message_type=FileMessage.FILE_UPLOAD,
-                    finished=False))
+        FileMessage(
+            StorageUrlFromString(suri(fpath)),
+            None,
+            start_time + 10,
+            size=UPLOAD_SIZE,
+            message_type=FileMessage.FILE_UPLOAD,
+            finished=False))
     PutToQueueWithTimeout(
         ui_thread_status_queue,
-        FileMessage(StorageUrlFromString(suri(fpath)), None, start_time + 20,
-                    size=UPLOAD_SIZE, message_type=FileMessage.FILE_UPLOAD,
-                    finished=True))
-    PutToQueueWithTimeout(ui_thread_status_queue,
-                          FinalMessage(start_time + 50))
+        FileMessage(
+            StorageUrlFromString(suri(fpath)),
+            None,
+            start_time + 20,
+            size=UPLOAD_SIZE,
+            message_type=FileMessage.FILE_UPLOAD,
+            finished=True))
+    PutToQueueWithTimeout(ui_thread_status_queue, FinalMessage(start_time + 50))
     PutToQueueWithTimeout(ui_thread_status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
     JoinThreadAndRaiseOnTimeout(ui_thread)
     content = stream.getvalue()
@@ -1057,20 +1111,19 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # slightly smaller than 2 to ensure messages that are 2 seconds apart from
     # one another will be enough to calculate throughput.
     start_time = self.start_time
-    ui_controller = UIController(sliding_throughput_period=2,
-                                 update_message_period=1,
-                                 first_throughput_latency=0,
-                                 custom_time=start_time)
+    ui_controller = UIController(
+        sliding_throughput_period=2,
+        update_message_period=1,
+        first_throughput_latency=0,
+        custom_time=start_time)
     # We use start_time to have a reasonable set of values for the time messages
     # processed by the UIController. However, the start_time does not influence
     # this test, as the throughput is calculated based on the time
     # difference between two messages, which is fixed in this test.
 
     ui_thread = UIThread(status_queue, stream, ui_controller)
-    fpath1 = self.CreateTempFile(file_name='sample-file.txt',
-                                 contents=b'foo')
-    fpath2 = self.CreateTempFile(file_name='sample-file2.txt',
-                                 contents=b'FOO')
+    fpath1 = self.CreateTempFile(file_name='sample-file.txt', contents=b'foo')
+    fpath2 = self.CreateTempFile(file_name='sample-file2.txt', contents=b'FOO')
 
     def _CreateFileVariables(alpha, component_number, src_url):
       """Creates size and component_size for a given file."""
@@ -1088,38 +1141,55 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
         _CreateFileVariables(10, 4, StorageUrlFromString(suri(fpath2))))
 
     for file_message_type, component_message_type, operation_name in (
-        (FileMessage.FILE_UPLOAD, FileMessage.COMPONENT_TO_UPLOAD, 'Uploading'),
-        (FileMessage.FILE_DOWNLOAD, FileMessage.COMPONENT_TO_DOWNLOAD,
-         'Downloading')):
+        (FileMessage.FILE_UPLOAD, FileMessage.COMPONENT_TO_UPLOAD,
+         'Uploading'), (FileMessage.FILE_DOWNLOAD,
+                        FileMessage.COMPONENT_TO_DOWNLOAD, 'Downloading')):
       # Testing for uploads and downloads
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url1, None, start_time + 100, size=size1,
-                      message_type=file_message_type))
+          FileMessage(
+              src_url1,
+              None,
+              start_time + 100,
+              size=size1,
+              message_type=file_message_type))
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url2, None, start_time + 150, size=size2,
-                      message_type=file_message_type))
+          FileMessage(
+              src_url2,
+              None,
+              start_time + 150,
+              size=size2,
+              message_type=file_message_type))
 
       for i in range(component_num_file1):
         PutToQueueWithTimeout(
             status_queue,
-            FileMessage(src_url1, None, start_time + 200 + i,
-                        size=component_size_file1, component_num=i,
-                        message_type=component_message_type))
+            FileMessage(
+                src_url1,
+                None,
+                start_time + 200 + i,
+                size=component_size_file1,
+                component_num=i,
+                message_type=component_message_type))
       for i in range(component_num_file2):
         PutToQueueWithTimeout(
             status_queue,
-            FileMessage(src_url2, None, start_time + 250 + i,
-                        size=component_size_file2, component_num=i,
-                        message_type=component_message_type))
+            FileMessage(
+                src_url2,
+                None,
+                start_time + 250 + i,
+                size=component_size_file2,
+                component_num=i,
+                message_type=component_message_type))
 
       progress_calls_number = 4
       for j in range(1, progress_calls_number + 1):
         # We will send progress_calls_number ProgressMessages for each
         # component.
-        base_start_time = (start_time + 300 +
-                           (j - 1)*(component_num_file1 + component_num_file2))
+        base_start_time = (
+            start_time + 300 + (j - 1) *
+            (component_num_file1 + component_num_file2))
 
         for i in range(component_num_file1):
           # Each component has size equal to
@@ -1127,8 +1197,11 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
           PutToQueueWithTimeout(
               status_queue,
               ProgressMessage(
-                  size1, j * component_size_file1 / progress_calls_number,
-                  src_url1, base_start_time + i, component_num=i,
+                  size1,
+                  j * component_size_file1 / progress_calls_number,
+                  src_url1,
+                  base_start_time + i,
+                  component_num=i,
                   operation_name=operation_name))
 
         for i in range(component_num_file2):
@@ -1137,34 +1210,55 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
           PutToQueueWithTimeout(
               status_queue,
               ProgressMessage(
-                  size2, j * component_size_file2 / progress_calls_number,
-                  src_url2, base_start_time + component_num_file1 + i,
-                  component_num=i, operation_name=operation_name))
+                  size2,
+                  j * component_size_file2 / progress_calls_number,
+                  src_url2,
+                  base_start_time + component_num_file1 + i,
+                  component_num=i,
+                  operation_name=operation_name))
 
       # Time to finish the components and files.
       for i in range(component_num_file1):
         PutToQueueWithTimeout(
             status_queue,
-            FileMessage(src_url1, None, start_time + 500 + i,
-                        finished=True, size=component_size_file1,
-                        component_num=i, message_type=component_message_type))
+            FileMessage(
+                src_url1,
+                None,
+                start_time + 500 + i,
+                finished=True,
+                size=component_size_file1,
+                component_num=i,
+                message_type=component_message_type))
       for i in range(component_num_file2):
         PutToQueueWithTimeout(
             status_queue,
-            FileMessage(src_url2, None, start_time + 600 + i,
-                        finished=True, size=component_size_file2,
-                        component_num=i, message_type=component_message_type))
+            FileMessage(
+                src_url2,
+                None,
+                start_time + 600 + i,
+                finished=True,
+                size=component_size_file2,
+                component_num=i,
+                message_type=component_message_type))
 
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url1, None, start_time + 700, size=size1,
-                      finished=True,
-                      message_type=file_message_type))
+          FileMessage(
+              src_url1,
+              None,
+              start_time + 700,
+              size=size1,
+              finished=True,
+              message_type=file_message_type))
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url2, None, start_time + 800, size=size2,
-                      finished=True,
-                      message_type=file_message_type))
+          FileMessage(
+              src_url2,
+              None,
+              start_time + 800,
+              size=size2,
+              finished=True,
+              message_type=file_message_type))
 
       PutToQueueWithTimeout(status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
       JoinThreadAndRaiseOnTimeout(ui_thread)
@@ -1174,16 +1268,14 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       # to ensure that any changes to the function are applied here as well.
       zero = BytesToFixedWidthString(0)
       self.assertIn(zero + '/s', content)
-      file1_progress = (size1 / (component_num_file1*progress_calls_number))
-      file2_progress = (size2 / (component_num_file2*progress_calls_number))
+      file1_progress = (size1 / (component_num_file1 * progress_calls_number))
+      file2_progress = (size2 / (component_num_file2 * progress_calls_number))
       # There were 2-second periods when only two progresses from file1
       # were reported. The throughput here will be file1_progress.
-      self.assertIn(BytesToFixedWidthString(file1_progress) + '/s',
-                    content)
+      self.assertIn(BytesToFixedWidthString(file1_progress) + '/s', content)
       # There were 2-second periods when only two progresses from file2
       # were reported. The throughput here will be file2_progress.
-      self.assertIn(BytesToFixedWidthString(file2_progress) + '/s',
-                    content)
+      self.assertIn(BytesToFixedWidthString(file2_progress) + '/s', content)
       # For each loop iteration, there are two 2-second periods when
       # one progress from each file is reported: in the middle of the
       # iteration, and in the end of the iteration along with the beginning
@@ -1191,10 +1283,10 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       # 2 * progress_calls_number - 1 occurrences (-1 due to only 1 occurrence
       # on the last iteration).
       # The throughput here will be (file1_progress + file2_progress) / 2.
-      average_progress = BytesToFixedWidthString((file1_progress +
-                                                  file2_progress) / 2)
-      self.assertEquals(content.count(average_progress + '/s'),
-                        2 * progress_calls_number - 1)
+      average_progress = BytesToFixedWidthString(
+          (file1_progress + file2_progress) / 2)
+      self.assertEquals(
+          content.count(average_progress + '/s'), 2 * progress_calls_number - 1)
 
   def test_ui_throughput_calculation_with_no_components(self):
     """Tests throughput calculation in the UI.
@@ -1210,20 +1302,19 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # than 2 to ensure messages that are 2 seconds apart from one another will
     # be enough to calculate throughput.
     start_time = self.start_time
-    ui_controller = UIController(sliding_throughput_period=2,
-                                 update_message_period=1,
-                                 first_throughput_latency=0,
-                                 custom_time=start_time)
+    ui_controller = UIController(
+        sliding_throughput_period=2,
+        update_message_period=1,
+        first_throughput_latency=0,
+        custom_time=start_time)
     # We use start_time to have a reasonable set of values for the time messages
     # processed by the UIController. However, the start_time does not influence
     # much this test, as the throughput is calculated based on the time
     # difference between two messages, which is fixed in this text.
 
     ui_thread = UIThread(status_queue, stream, ui_controller)
-    fpath1 = self.CreateTempFile(file_name='sample-file.txt',
-                                 contents=b'foo')
-    fpath2 = self.CreateTempFile(file_name='sample-file2.txt',
-                                 contents=b'FOO')
+    fpath1 = self.CreateTempFile(file_name='sample-file.txt', contents=b'foo')
+    fpath2 = self.CreateTempFile(file_name='sample-file2.txt', contents=b'FOO')
 
     # Note: size1 and size2 do not actually correspond to the actual sizes of
     # fpath1 and fpath2. However, the UIController only uses the size sent on
@@ -1233,43 +1324,66 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     size2 = 1024**2 * 600
     src_url2 = StorageUrlFromString(suri(fpath2))
 
-    for file_message_type, operation_name in (
-        (FileMessage.FILE_UPLOAD, 'Uploading'),
-        (FileMessage.FILE_DOWNLOAD, 'Downloading')):
+    for file_message_type, operation_name in ((FileMessage.FILE_UPLOAD,
+                                               'Uploading'),
+                                              (FileMessage.FILE_DOWNLOAD,
+                                               'Downloading')):
       # Testing for uploads and downloads
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url1, None, start_time + 200, size=size1,
-                      message_type=file_message_type))
+          FileMessage(
+              src_url1,
+              None,
+              start_time + 200,
+              size=size1,
+              message_type=file_message_type))
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url2, None, start_time + 301, size=size2,
-                      message_type=file_message_type))
+          FileMessage(
+              src_url2,
+              None,
+              start_time + 301,
+              size=size2,
+              message_type=file_message_type))
       progress_calls_number = 4
       for j in range(1, progress_calls_number + 1):
         # We will send progress_calls_number ProgressMessages for each file.
         PutToQueueWithTimeout(
             status_queue,
             ProgressMessage(
-                size1, j * size1 / 4, src_url1,
+                size1,
+                j * size1 / 4,
+                src_url1,
                 start_time + 300 + j * 2,
                 operation_name=operation_name))
         PutToQueueWithTimeout(
             status_queue,
             ProgressMessage(
-                size2, j * size2 / 4, src_url2,
+                size2,
+                j * size2 / 4,
+                src_url2,
                 start_time + 300 + j * 2 + 1,
                 operation_name=operation_name))
 
       # Time to finish the files.
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url1, None, start_time + 700, size=size1,
-                      finished=True, message_type=file_message_type))
+          FileMessage(
+              src_url1,
+              None,
+              start_time + 700,
+              size=size1,
+              finished=True,
+              message_type=file_message_type))
       PutToQueueWithTimeout(
           status_queue,
-          FileMessage(src_url2, None, start_time + 800, size=size2,
-                      finished=True, message_type=file_message_type))
+          FileMessage(
+              src_url2,
+              None,
+              start_time + 800,
+              size=size2,
+              finished=True,
+              message_type=file_message_type))
 
       PutToQueueWithTimeout(status_queue, ZERO_TASKS_TO_DO_ARGUMENT)
       JoinThreadAndRaiseOnTimeout(ui_thread)
@@ -1288,10 +1402,10 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       # 2 * progress_calls_number - 1 occurrences (-1 due to only 1 occurrence
       # on the last iteration).
       # The throughput here will be (file1_progress + file2_progress) / 2.
-      average_progress = BytesToFixedWidthString((file1_progress +
-                                                  file2_progress) / 2)
-      self.assertEquals(content.count(average_progress + '/s'),
-                        2 * progress_calls_number - 1)
+      average_progress = BytesToFixedWidthString(
+          (file1_progress + file2_progress) / 2)
+      self.assertEquals(
+          content.count(average_progress + '/s'), 2 * progress_calls_number - 1)
 
   def test_ui_metadata_message_passing(self):
     """Tests that MetadataMessages are being correctly received and processed.
@@ -1307,10 +1421,11 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # than 2 to ensure messages that are 2 seconds apart from one another will
     # be enough to calculate throughput.
     start_time = self.start_time
-    ui_controller = UIController(sliding_throughput_period=2,
-                                 update_message_period=1,
-                                 first_throughput_latency=0,
-                                 custom_time=start_time)
+    ui_controller = UIController(
+        sliding_throughput_period=2,
+        update_message_period=1,
+        first_throughput_latency=0,
+        custom_time=start_time)
     num_objects = 200
     ui_thread = UIThread(status_queue, stream, ui_controller)
     for i in range(num_objects):
@@ -1338,8 +1453,8 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
           # Sends a final ProducerThreadMessage
           PutToQueueWithTimeout(
               status_queue,
-              ProducerThreadMessage(200, 0, start_time + 16.1 + 0.5 * (i - 130),
-                                    finished=True))
+              ProducerThreadMessage(
+                  200, 0, start_time + 16.1 + 0.5 * (i - 130), finished=True))
         PutToQueueWithTimeout(status_queue,
                               MetadataMessage(start_time + 26 + (i - 150)))
     PutToQueueWithTimeout(status_queue, FinalMessage(start_time + 100))
@@ -1387,9 +1502,9 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     PutToQueueWithTimeout(status_queue, MetadataMessage(start_time + 1))
     # Now we have a MetadataManager.
     self.assertIsInstance(ui_controller.manager, MetadataManager)
-    PutToQueueWithTimeout(status_queue,
-                          FileMessage(StorageUrlFromString('foo'), None,
-                                      start_time + 2))
+    PutToQueueWithTimeout(
+        status_queue,
+        FileMessage(StorageUrlFromString('foo'), None, start_time + 2))
     # Now we have a DataManager since the DataManager overwrites the
     # MetadataManager.
     self.assertIsInstance(ui_controller.manager, DataManager)
@@ -1398,56 +1513,63 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     """Tests the correctness of BytesToFixedWidthString."""
     self.assertEquals('    0.0 B', BytesToFixedWidthString(0, decimal_places=1))
     self.assertEquals('   0.00 B', BytesToFixedWidthString(0, decimal_places=2))
-    self.assertEquals('  2.3 KiB', BytesToFixedWidthString(2.27 * 1024,
-                                                           decimal_places=1))
-    self.assertEquals(' 1023 KiB', BytesToFixedWidthString(1023.2 * 1024,
-                                                           decimal_places=1))
-    self.assertEquals('  1.0 MiB', BytesToFixedWidthString(1024 ** 2,
-                                                           decimal_places=1))
-    self.assertEquals('999.1 MiB', BytesToFixedWidthString(999.1 * 1024 ** 2,
-                                                           decimal_places=1))
+    self.assertEquals('  2.3 KiB',
+                      BytesToFixedWidthString(2.27 * 1024, decimal_places=1))
+    self.assertEquals(' 1023 KiB',
+                      BytesToFixedWidthString(1023.2 * 1024, decimal_places=1))
+    self.assertEquals('  1.0 MiB',
+                      BytesToFixedWidthString(1024**2, decimal_places=1))
+    self.assertEquals(
+        '999.1 MiB', BytesToFixedWidthString(999.1 * 1024**2, decimal_places=1))
 
   def test_ui_spinner(self):
     stream = six.StringIO()
     start_time = self.start_time
-    ui_controller = UIController(update_spinner_period=1,
-                                 custom_time=start_time)
+    ui_controller = UIController(
+        update_spinner_period=1, custom_time=start_time)
     status_queue = MainThreadUIQueue(stream, ui_controller)
-    PutToQueueWithTimeout(status_queue, ProducerThreadMessage(1, len('foo'),
-                                                              start_time))
     PutToQueueWithTimeout(status_queue,
-                          FileMessage(StorageUrlFromString('foo'), None,
-                                      start_time,
-                                      message_type=FileMessage.FILE_UPLOAD))
+                          ProducerThreadMessage(1, len('foo'), start_time))
+    PutToQueueWithTimeout(
+        status_queue,
+        FileMessage(
+            StorageUrlFromString('foo'),
+            None,
+            start_time,
+            message_type=FileMessage.FILE_UPLOAD))
     current_spinner = ui_controller.manager.GetSpinner()
-    PutToQueueWithTimeout(status_queue,
-                          ProgressMessage(1, len('foo'),
-                                          StorageUrlFromString('foo'),
-                                          start_time + 1.2))
+    PutToQueueWithTimeout(
+        status_queue,
+        ProgressMessage(1, len('foo'), StorageUrlFromString('foo'),
+                        start_time + 1.2))
     old_spinner1 = current_spinner
     current_spinner = ui_controller.manager.GetSpinner()
     # Spinner must have changed since more than 1 second has passed.
     self.assertNotEquals(old_spinner1, current_spinner)
-    PutToQueueWithTimeout(status_queue,
-                          ProgressMessage(2, len('foo'),
-                                          StorageUrlFromString('foo'),
-                                          start_time + 2))
+    PutToQueueWithTimeout(
+        status_queue,
+        ProgressMessage(2, len('foo'), StorageUrlFromString('foo'),
+                        start_time + 2))
     old_spinner2 = current_spinner
     current_spinner = ui_controller.manager.GetSpinner()
     # Spinner must not have changed since less than 1 second has passed.
     self.assertEquals(old_spinner2, current_spinner)
-    PutToQueueWithTimeout(status_queue,
-                          ProgressMessage(3, len('foo'),
-                                          StorageUrlFromString('foo'),
-                                          start_time + 2.5))
+    PutToQueueWithTimeout(
+        status_queue,
+        ProgressMessage(3, len('foo'), StorageUrlFromString('foo'),
+                        start_time + 2.5))
     old_spinner3 = current_spinner
     current_spinner = ui_controller.manager.GetSpinner()
     # Spinner must have changed since more than 1 second has passed.
     self.assertNotEquals(old_spinner3, current_spinner)
-    PutToQueueWithTimeout(status_queue,
-                          FileMessage(StorageUrlFromString('foo'), None,
-                                      start_time + 5, finished=True,
-                                      message_type=FileMessage.FILE_UPLOAD))
+    PutToQueueWithTimeout(
+        status_queue,
+        FileMessage(
+            StorageUrlFromString('foo'),
+            None,
+            start_time + 5,
+            finished=True,
+            message_type=FileMessage.FILE_UPLOAD))
     old_spinner4 = current_spinner
     current_spinner = ui_controller.manager.GetSpinner()
     # Spinner must have changed since more than 1 second has passed.
@@ -1457,4 +1579,3 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # old_spinner3.
     self.assertNotEquals(old_spinner3, current_spinner)
     self.assertNotEquals(old_spinner1, current_spinner)
-    

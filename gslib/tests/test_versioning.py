@@ -46,6 +46,7 @@ class TestVersioning(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(
           self._get_ver_cmd + [suri(bucket_uri)], return_stdout=True)
       self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket_uri))
+
     _Check1()
 
   def test_turning_off(self):
@@ -58,6 +59,7 @@ class TestVersioning(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(
           self._get_ver_cmd + [suri(bucket_uri)], return_stdout=True)
       self.assertEqual(stdout.strip(), '%s: Enabled' % suri(bucket_uri))
+
     _Check1()
 
     self.RunGsUtil(self._set_ver_cmd + ['off', suri(bucket_uri)])
@@ -68,22 +70,24 @@ class TestVersioning(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(
           self._get_ver_cmd + [suri(bucket_uri)], return_stdout=True)
       self.assertEqual(stdout.strip(), '%s: Suspended' % suri(bucket_uri))
+
     _Check2()
 
   def testTooFewArgumentsFails(self):
     """Ensures versioning commands fail with too few arguments."""
     # No arguments for set, but valid subcommand.
-    stderr = self.RunGsUtil(self._set_ver_cmd, return_stderr=True,
-                            expected_status=1)
+    stderr = self.RunGsUtil(
+        self._set_ver_cmd, return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(self._get_ver_cmd, return_stderr=True,
-                            expected_status=1)
+    stderr = self.RunGsUtil(
+        self._get_ver_cmd, return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # Neither arguments nor subcommand.
-    stderr = self.RunGsUtil(['versioning'], return_stderr=True,
+    stderr = self.RunGsUtil(['versioning'],
+                            return_stderr=True,
                             expected_status=1)
     self.assertIn('command requires at least', stderr)
 

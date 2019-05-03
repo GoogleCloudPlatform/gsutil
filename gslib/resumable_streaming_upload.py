@@ -44,8 +44,8 @@ class ResumableStreamingJsonUploadWrapper(object):
     Args:
       stream: Input stream.
       max_buffer_size: Maximum size of internal buffer; should be >= the chunk
-          size of the resumable upload API to ensure that at least one full
-          chunk write can be replayed in the event of a server error.
+        size of the resumable upload API to ensure that at least one full chunk
+        write can be replayed in the event of a server error.
       test_small_buffer: Skip check for buffer size vs. chunk size, for testing.
     """
     self._orig_fp = stream
@@ -55,8 +55,8 @@ class ResumableStreamingJsonUploadWrapper(object):
                              'size %s, JSON resumable upload chunk size %s. '
                              'Buffer size must be >= JSON resumable upload '
                              'chunk size to ensure that uploads can be '
-                             'resumed.' % (max_buffer_size,
-                                           GetJsonResumableChunkSize()))
+                             'resumed.' %
+                             (max_buffer_size, GetJsonResumableChunkSize()))
 
     self._max_buffer_size = max_buffer_size
     self._buffer = collections.deque()
@@ -69,7 +69,7 @@ class ResumableStreamingJsonUploadWrapper(object):
 
     Args:
       size: The amount of bytes to read. If omitted or negative, the entire
-          contents of the stream will be read and returned.
+        contents of the stream will be read and returned.
 
     Returns:
       Bytes from the wrapped stream.
@@ -105,9 +105,9 @@ class ResumableStreamingJsonUploadWrapper(object):
         offset_from_position = self._position - pos_in_buffer
         bytes_available_this_buffer = buffer_len - offset_from_position
         read_size = min(bytes_available_this_buffer, bytes_remaining)
-        buffered_data.append(
-            self._buffer[buffer_index]
-            [offset_from_position:offset_from_position + read_size])
+        buffered_data.append(self._buffer[buffer_index]
+                             [offset_from_position:offset_from_position +
+                              read_size])
         bytes_remaining -= read_size
         pos_in_buffer += buffer_len
         buffer_index += 1
@@ -149,8 +149,8 @@ class ResumableStreamingJsonUploadWrapper(object):
           oldest_data = self._buffer.popleft()
           self._buffer_start += len(oldest_data)
         if oldest_data:
-          refill_amount = self._max_buffer_size - (self._buffer_end -
-                                                   self._buffer_start)
+          refill_amount = self._max_buffer_size - (
+              self._buffer_end - self._buffer_start)
           if refill_amount:
             self._buffer.appendleft(oldest_data[-refill_amount:])
             self._buffer_start -= refill_amount
@@ -158,8 +158,9 @@ class ResumableStreamingJsonUploadWrapper(object):
       if six.PY3:
         if buffered_data:
           buffered_data = [
-            bd.encode(UTF8) if isinstance(bd, str) else bd
-            for bd in buffered_data]
+              bd.encode(UTF8) if isinstance(bd, str) else bd
+              for bd in buffered_data
+          ]
       data = b''.join(buffered_data) if buffered_data else b''
 
     return data

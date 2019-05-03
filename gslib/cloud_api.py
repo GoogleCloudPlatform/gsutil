@@ -29,21 +29,27 @@ class CloudApi(object):
   a separate instance of the gsutil Cloud API should be instantiated per-thread.
   """
 
-  def __init__(self, bucket_storage_uri_class, logger, status_queue,
-               provider=None, debug=0, trace_token=None,
-               perf_trace_token=None, user_project=None):
+  def __init__(self,
+               bucket_storage_uri_class,
+               logger,
+               status_queue,
+               provider=None,
+               debug=0,
+               trace_token=None,
+               perf_trace_token=None,
+               user_project=None):
     """Performs necessary setup for interacting with the cloud storage provider.
 
     Args:
       bucket_storage_uri_class: boto storage_uri class, used by APIs that
-                                provide boto translation or mocking.
+        provide boto translation or mocking.
       logger: logging.logger for outputting log messages.
       status_queue: Queue for relaying status to UI.
       provider: Default provider prefix describing cloud storage provider to
-                connect to.
+        connect to.
       debug: Debug level for the API implementation (0..3).
-      trace_token: Google internal trace token to pass to the API
-                   implementation (string).
+      trace_token: Google internal trace token to pass to the API implementation
+        (string).
       perf_trace_token: Performance trace token to use when making API calls.
       user_project: Project to be billed for this request.
     """
@@ -62,9 +68,9 @@ class CloudApi(object):
     Args:
       bucket_name: Name of the bucket.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
-      fields: If present, return only these Bucket metadata fields, for
-              example, ['logging', 'defaultObjectAcl']
+        class-wide default is used.
+      fields: If present, return only these Bucket metadata fields, for example,
+        ['logging', 'defaultObjectAcl']
 
     Raises:
       ArgumentException for errors during input validation.
@@ -81,7 +87,7 @@ class CloudApi(object):
     Args:
       bucket_name: Name of the bucket.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only the IAM policy fields specified.
 
     Raises:
@@ -100,7 +106,7 @@ class CloudApi(object):
       bucket_name: Name of the bucket.
       policy: A Policy object describing the IAM policy.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -117,16 +123,15 @@ class CloudApi(object):
     Args:
       project_id: Project owning the buckets, default from config if None.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these metadata fields for the listing,
-              for example:
-              ['items/logging', 'items/defaultObjectAcl'].
-              Note that the WildcardIterator class should be used to list
-              buckets instead of calling this function directly.  It amends
-              the fields definition from get-like syntax such as
-              ['logging', 'defaultObjectAcl'] so that the caller does not
-              need to prepend 'items/' or specify fields necessary for listing
-              (like nextPageToken).
+              for example: ['items/logging', 'items/defaultObjectAcl']. Note
+                that the WildcardIterator class should be used to list buckets
+                instead of calling this function directly.  It amends the fields
+                definition from get-like syntax such as ['logging',
+                'defaultObjectAcl'] so that the caller does not need to prepend
+                'items/' or specify fields necessary for listing (like
+                nextPageToken).
 
     Raises:
       ArgumentException for errors during input validation.
@@ -137,8 +142,13 @@ class CloudApi(object):
     """
     raise NotImplementedError('ListBuckets must be overloaded')
 
-  def PatchBucket(self, bucket_name, metadata, canned_acl=None,
-                  canned_def_acl=None, preconditions=None, provider=None,
+  def PatchBucket(self,
+                  bucket_name,
+                  metadata,
+                  canned_acl=None,
+                  canned_def_acl=None,
+                  preconditions=None,
+                  provider=None,
                   fields=None):
     """Updates bucket metadata for the bucket with patch semantics.
 
@@ -149,7 +159,7 @@ class CloudApi(object):
       canned_def_acl: Canned default object ACL to apply to the bucket.
       preconditions: Preconditions for the request.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these Bucket metadata fields.
 
     Raises:
@@ -167,8 +177,8 @@ class CloudApi(object):
     Args:
       bucket_name: Name of bucket to update.
       metageneration: Bucket metageneration to use as a precondition.
-      provider: Cloud storage provider to connect to. If not present,
-                class-wide default is used.
+      provider: Cloud storage provider to connect to. If not present, class-wide
+        default is used.
 
     Raises:
       ServiceException for errors interacting with cloud storage providers.
@@ -178,8 +188,12 @@ class CloudApi(object):
     """
     raise NotImplementedError('LockRetentionPolicy must be overloaded')
 
-  def CreateBucket(self, bucket_name, project_id=None, metadata=None,
-                   provider=None, fields=None):
+  def CreateBucket(self,
+                   bucket_name,
+                   project_id=None,
+                   metadata=None,
+                   provider=None,
+                   fields=None):
     """Creates a new bucket with the specified metadata.
 
     Args:
@@ -187,7 +201,7 @@ class CloudApi(object):
       project_id: Project owner of the new bucket, default from config if None.
       metadata: Bucket object defining new bucket metadata.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these Bucket metadata fields.
 
     Raises:
@@ -206,7 +220,7 @@ class CloudApi(object):
       bucket_name: Name of the bucket to delete.
       preconditions: Preconditions for the request.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -235,8 +249,13 @@ class CloudApi(object):
       self.data = data
       self.datatype = datatype
 
-  def ListObjects(self, bucket_name, prefix=None, delimiter=None,
-                  all_versions=None, provider=None, fields=None):
+  def ListObjects(self,
+                  bucket_name,
+                  prefix=None,
+                  delimiter=None,
+                  all_versions=None,
+                  provider=None,
+                  fields=None):
     """Lists objects (with metadata) and prefixes in a bucket.
 
     Args:
@@ -245,16 +264,15 @@ class CloudApi(object):
       delimiter: Delimiter for directory-like behavior.
       all_versions: If true, list all object versions.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these metadata fields for the listing,
-              for example:
-              ['items/acl', 'items/updated', 'prefixes'].
-              Note that the WildcardIterator class should be used to list
-              objects instead of calling this function directly.  It amends
-              the fields definition from get-like syntax such as
-              ['acl', 'updated'] so that the caller does not need to
-              prepend 'items/' or specify any fields necessary for listing
-              (such as prefixes or nextPageToken).
+              for example: ['items/acl', 'items/updated', 'prefixes']. Note that
+                the WildcardIterator class should be used to list objects
+                instead of calling this function directly.  It amends the fields
+                definition from get-like syntax such as ['acl', 'updated'] so
+                that the caller does not need to prepend 'items/' or specify any
+                fields necessary for listing (such as prefixes or
+                nextPageToken).
 
     Raises:
       ArgumentException for errors during input validation.
@@ -265,8 +283,12 @@ class CloudApi(object):
     """
     raise NotImplementedError('ListObjects must be overloaded')
 
-  def GetObjectIamPolicy(self, bucket_name, object_name, generation=None,
-                         provider=None, fields=None):
+  def GetObjectIamPolicy(self,
+                         bucket_name,
+                         object_name,
+                         generation=None,
+                         provider=None,
+                         fields=None):
     """Gets IAM policy for specified Object.
 
     Args:
@@ -274,7 +296,7 @@ class CloudApi(object):
       object_name: Name of the object.
       generation: Generation of the object to retrieve.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only the IAM policy fields specified.
 
     Raises:
@@ -286,8 +308,12 @@ class CloudApi(object):
     """
     raise NotImplementedError('GetObjectIamPolicy must be overloaded')
 
-  def SetObjectIamPolicy(self, bucket_name, object_name, policy,
-                         generation=None, provider=None):
+  def SetObjectIamPolicy(self,
+                         bucket_name,
+                         object_name,
+                         policy,
+                         generation=None,
+                         provider=None):
     """Sets IAM policy for specified Object.
 
     Args:
@@ -295,8 +321,8 @@ class CloudApi(object):
       object_name: Name of the object.
       policy: IAM Policy object.
       generation: Generation of the object to which the IAM policy will apply.
-      provider: Cloud storage provider to connect to. If not present,
-                class-wide default is used.
+      provider: Cloud storage provider to connect to. If not present, class-wide
+        default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -307,8 +333,12 @@ class CloudApi(object):
     """
     raise NotImplementedError('SetObjectIamPolicy must be overloaded')
 
-  def GetObjectMetadata(self, bucket_name, object_name, generation=None,
-                        provider=None, fields=None):
+  def GetObjectMetadata(self,
+                        bucket_name,
+                        object_name,
+                        generation=None,
+                        provider=None,
+                        fields=None):
     """Gets object metadata.
 
     If decryption is supported by the implementing class, this function will
@@ -320,9 +350,9 @@ class CloudApi(object):
       object_name: Object name.
       generation: Generation of the object to retrieve.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
-      fields: If present, return only these Object metadata fields, for
-              example, ['acl', 'updated'].
+        class-wide default is used.
+      fields: If present, return only these Object metadata fields, for example,
+        ['acl', 'updated'].
 
     Raises:
       ArgumentException for errors during input validation.
@@ -333,9 +363,15 @@ class CloudApi(object):
     """
     raise NotImplementedError('GetObjectMetadata must be overloaded')
 
-  def PatchObjectMetadata(self, bucket_name, object_name, metadata,
-                          canned_acl=None, generation=None, preconditions=None,
-                          provider=None, fields=None):
+  def PatchObjectMetadata(self,
+                          bucket_name,
+                          object_name,
+                          metadata,
+                          canned_acl=None,
+                          generation=None,
+                          preconditions=None,
+                          provider=None,
+                          fields=None):
     """Updates object metadata with patch semantics.
 
     Args:
@@ -346,7 +382,7 @@ class CloudApi(object):
       generation: Generation (or version) of the object to update.
       preconditions: Preconditions for the request.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these Object metadata fields.
 
     Raises:
@@ -365,12 +401,20 @@ class CloudApi(object):
 
   # TODO: Change {de,en}cryption_tuple field names, as they don't actually
   # accept tuples.
-  def GetObjectMedia(self, bucket_name, object_name, download_stream,
-                     provider=None, generation=None, object_size=None,
+  def GetObjectMedia(self,
+                     bucket_name,
+                     object_name,
+                     download_stream,
+                     provider=None,
+                     generation=None,
+                     object_size=None,
                      compressed_encoding=False,
-                     download_strategy=DownloadStrategy.ONE_SHOT, start_byte=0,
-                     end_byte=None, progress_callback=None,
-                     serialization_data=None, digesters=None,
+                     download_strategy=DownloadStrategy.ONE_SHOT,
+                     start_byte=0,
+                     end_byte=None,
+                     progress_callback=None,
+                     serialization_data=None,
+                     digesters=None,
                      decryption_tuple=None):
     """Gets object data.
 
@@ -379,28 +423,27 @@ class CloudApi(object):
       object_name: Object name.
       download_stream: Stream to send the object data to.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       generation: Generation of the object to retrieve.
       object_size: Total size of the object being downloaded.
       compressed_encoding: If true, object is stored with a compressed encoding.
       download_strategy: Cloud API download strategy to use for download.
-      start_byte: Starting point for download (for resumable downloads and
-                  range requests). Can be set to negative to request a range
+      start_byte: Starting point for download (for resumable downloads and range
+        requests). Can be set to negative to request a range
                   of bytes (python equivalent of [:-3])
       end_byte: Ending byte number, inclusive, for download (for range
-                requests). If None, download the rest of the object.
+        requests). If None, download the rest of the object.
       progress_callback: Optional callback function for progress notifications.
-                         Receives calls with arguments
-                         (bytes_transferred, total_size).
+        Receives calls with arguments (bytes_transferred, total_size).
       serialization_data: Implementation-specific JSON string of a dict
-                          containing serialization information for the download.
+        containing serialization information for the download.
       digesters: Dict of {string : digester}, where string is a name of a hash
-                 algorithm, and digester is a validation digester that supports
-                 update(bytes) and digest() using that algorithm.
-                 Implementation can set the digester value to None to indicate
-                 bytes were not successfully digested on-the-fly.
+        algorithm, and digester is a validation digester that supports
+        update(bytes) and digest() using that algorithm. Implementation can set
+        the digester value to None to indicate bytes were not successfully
+        digested on-the-fly.
       decryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
-                        decrypting an encrypted object.
+        decrypting an encrypted object.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -412,27 +455,33 @@ class CloudApi(object):
     """
     raise NotImplementedError('GetObjectMedia must be overloaded')
 
-  def UploadObject(self, upload_stream, object_metadata, canned_acl=None,
-                   size=None, preconditions=None, progress_callback=None,
-                   encryption_tuple=None, provider=None, fields=None,
+  def UploadObject(self,
+                   upload_stream,
+                   object_metadata,
+                   canned_acl=None,
+                   size=None,
+                   preconditions=None,
+                   progress_callback=None,
+                   encryption_tuple=None,
+                   provider=None,
+                   fields=None,
                    gzip_encoded=False):
     """Uploads object data and metadata.
 
     Args:
       upload_stream: Seekable stream of object data.
-      object_metadata: Object metadata for new object.  Must include bucket
-                       and object name.
-      canned_acl: Optional canned ACL to apply to object. Overrides ACL set
-                  in object_metadata.
+      object_metadata: Object metadata for new object.  Must include bucket and
+        object name.
+      canned_acl: Optional canned ACL to apply to object. Overrides ACL set in
+        object_metadata.
       size: Optional object size.
       preconditions: Preconditions for the request.
       progress_callback: Optional callback function for progress notifications.
-                         Receives calls with arguments
-                         (bytes_transferred, total_size).
+        Receives calls with arguments (bytes_transferred, total_size).
       encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
-                        encrypting the uploaded object.
+        encrypting the uploaded object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these Object metadata fields.
       gzip_encoded: Whether to use gzip transport encoding for the upload.
 
@@ -445,27 +494,32 @@ class CloudApi(object):
     """
     raise NotImplementedError('UploadObject must be overloaded')
 
-  def UploadObjectStreaming(self, upload_stream, object_metadata,
-                            canned_acl=None, preconditions=None,
-                            progress_callback=None, encryption_tuple=None,
-                            provider=None, fields=None, gzip_encoded=False):
+  def UploadObjectStreaming(self,
+                            upload_stream,
+                            object_metadata,
+                            canned_acl=None,
+                            preconditions=None,
+                            progress_callback=None,
+                            encryption_tuple=None,
+                            provider=None,
+                            fields=None,
+                            gzip_encoded=False):
     """Uploads object data and metadata.
 
     Args:
       upload_stream: Stream of object data. May not be seekable.
-      object_metadata: Object metadata for new object.  Must include bucket
-                       and object name.
-      canned_acl: Optional canned ACL to apply to object. Overrides ACL set
-                  in object_metadata.
+      object_metadata: Object metadata for new object.  Must include bucket and
+        object name.
+      canned_acl: Optional canned ACL to apply to object. Overrides ACL set in
+        object_metadata.
       preconditions: Preconditions for the request.
       progress_callback: Optional callback function for progress notifications.
-                         Receives calls with arguments
-                         (bytes_transferred, total_size), but fills in only
-                         bytes_transferred.
+        Receives calls with arguments (bytes_transferred, total_size), but fills
+        in only bytes_transferred.
       encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
-                        encrypting the uploaded object.
+        encrypting the uploaded object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these Object metadata fields.
       gzip_encoded: Whether to use gzip transport encoding for the upload.
 
@@ -478,37 +532,43 @@ class CloudApi(object):
     """
     raise NotImplementedError('UploadObjectStreaming must be overloaded')
 
-  def UploadObjectResumable(
-      self, upload_stream, object_metadata, canned_acl=None,
-      size=None, preconditions=None, serialization_data=None,
-      tracker_callback=None, progress_callback=None, encryption_tuple=None,
-      provider=None, fields=None, gzip_encoded=False):
+  def UploadObjectResumable(self,
+                            upload_stream,
+                            object_metadata,
+                            canned_acl=None,
+                            size=None,
+                            preconditions=None,
+                            serialization_data=None,
+                            tracker_callback=None,
+                            progress_callback=None,
+                            encryption_tuple=None,
+                            provider=None,
+                            fields=None,
+                            gzip_encoded=False):
     """Uploads object data and metadata using a resumable upload strategy.
 
     Args:
       upload_stream: Seekable stream of object data.
-      object_metadata: Object metadata for new object.  Must include bucket
-                       and object name.
-      canned_acl: Optional canned ACL to apply to object. Overrides ACL set
-                  in object_metadata.
+      object_metadata: Object metadata for new object.  Must include bucket and
+        object name.
+      canned_acl: Optional canned ACL to apply to object. Overrides ACL set in
+        object_metadata.
       size: Total size of the object.
       preconditions: Preconditions for the request.
-      serialization_data: Dict of {'url' : UploadURL} allowing for uploads to
-                          be resumed.
-      tracker_callback: Callback function taking a upload URL string.
-                        Guaranteed to be called when the implementation gets an
-                        upload URL, allowing the caller to resume the upload
-                        across process breaks by saving the upload URL in
-                        a tracker file.
+      serialization_data: Dict of {'url' : UploadURL} allowing for uploads to be
+        resumed.
+      tracker_callback: Callback function taking a upload URL string. Guaranteed
+        to be called when the implementation gets an upload URL, allowing the
+        caller to resume the upload across process breaks by saving the upload
+        URL in a tracker file.
       progress_callback: Optional callback function for progress notifications.
-                         Receives calls with arguments
-                         (bytes_transferred, total_size).
+        Receives calls with arguments (bytes_transferred, total_size).
       encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
-                        encrypting the uploaded object.
+        encrypting the uploaded object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these Object metadata fields when the
-              upload is complete.
+        upload is complete.
       gzip_encoded: Whether to use gzip transport encoding for the upload.
 
     Raises:
@@ -522,34 +582,40 @@ class CloudApi(object):
 
   # TODO: Change {de,en}cryption_tuple field names, as they don't actually
   # accept tuples.
-  def CopyObject(self, src_obj_metadata, dst_obj_metadata, src_generation=None,
-                 canned_acl=None, preconditions=None, progress_callback=None,
-                 max_bytes_per_call=None, encryption_tuple=None,
-                 decryption_tuple=None, provider=None, fields=None):
+  def CopyObject(self,
+                 src_obj_metadata,
+                 dst_obj_metadata,
+                 src_generation=None,
+                 canned_acl=None,
+                 preconditions=None,
+                 progress_callback=None,
+                 max_bytes_per_call=None,
+                 encryption_tuple=None,
+                 decryption_tuple=None,
+                 provider=None,
+                 fields=None):
     """Copies an object in the cloud.
 
     Args:
-      src_obj_metadata: Object metadata for source object.  Must include
-                        bucket name, object name, and etag.
-      dst_obj_metadata: Object metadata for new object.  Must include bucket
-                        and object name.
+      src_obj_metadata: Object metadata for source object.  Must include bucket
+        name, object name, and etag.
+      dst_obj_metadata: Object metadata for new object.  Must include bucket and
+        object name.
       src_generation: Generation of the source object to copy.
       canned_acl: Optional canned ACL to apply to destination object. Overrides
-                  ACL set in dst_obj_metadata.
+        ACL set in dst_obj_metadata.
       preconditions: Destination object preconditions for the request.
       progress_callback: Optional callback function for progress notifications.
-                         Receives calls with arguments
-                         (bytes_transferred, total_size).
-      max_bytes_per_call: Integer describing maximum number of bytes
-                          to rewrite per service call.
+        Receives calls with arguments (bytes_transferred, total_size).
+      max_bytes_per_call: Integer describing maximum number of bytes to rewrite
+        per service call.
       encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
-                        encrypting the destination object.
+        encrypting the destination object.
       decryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
-                        decrypting the source object. If supplied without
-                        encryption_tuple, destination object will be written
-                        without customer-supplied encryption.
+        decrypting the source object. If supplied without encryption_tuple,
+        destination object will be written without customer-supplied encryption.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these Object metadata fields.
 
     Raises:
@@ -561,22 +627,25 @@ class CloudApi(object):
     """
     raise NotImplementedError('CopyObject must be overloaded')
 
-  def ComposeObject(self, src_objs_metadata, dst_obj_metadata,
-                    preconditions=None, encryption_tuple=None,
-                    provider=None, fields=None):
+  def ComposeObject(self,
+                    src_objs_metadata,
+                    dst_obj_metadata,
+                    preconditions=None,
+                    encryption_tuple=None,
+                    provider=None,
+                    fields=None):
     """Composes an object in the cloud.
 
     Args:
       src_objs_metadata: List of ComposeRequest.SourceObjectsValueListEntries
-                         specifying the objects to compose.
-      dst_obj_metadata: Metadata for the destination object including bucket
-                        and object name.
+        specifying the objects to compose.
+      dst_obj_metadata: Metadata for the destination object including bucket and
+        object name.
       preconditions: Destination object preconditions for the request.
       encryption_tuple: Optional utils.encryption_helper.CryptoKeyWrapper for
-                        decrypting source objects and encrypting the destination
-                        object.
+        decrypting source objects and encrypting the destination object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these Object metadata fields.
 
     Raises:
@@ -588,8 +657,12 @@ class CloudApi(object):
     """
     raise NotImplementedError('ComposeObject must be overloaded')
 
-  def DeleteObject(self, bucket_name, object_name, preconditions=None,
-                   generation=None, provider=None):
+  def DeleteObject(self,
+                   bucket_name,
+                   object_name,
+                   preconditions=None,
+                   generation=None,
+                   provider=None):
     """Deletes an object.
 
     Args:
@@ -597,9 +670,9 @@ class CloudApi(object):
       object_name: Name of the object to delete.
       preconditions: Preconditions for the request.
       generation: Generation (or version) of the object to delete; if None,
-                  deletes the live object.
+        deletes the live object.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -610,8 +683,13 @@ class CloudApi(object):
     """
     raise NotImplementedError('DeleteObject must be overloaded')
 
-  def WatchBucket(self, bucket_name, address, channel_id, token=None,
-                  provider=None, fields=None):
+  def WatchBucket(self,
+                  bucket_name,
+                  address,
+                  channel_id,
+                  token=None,
+                  provider=None,
+                  fields=None):
     """Creates a notification subscription for changes to objects in a bucket.
 
     Args:
@@ -620,7 +698,7 @@ class CloudApi(object):
       channel_id: Unique ID string for the channel.
       token: If present, token string is delivered with each notification.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
       fields: If present, return only these Channel metadata fields.
 
     Raises:
@@ -639,7 +717,7 @@ class CloudApi(object):
       channel_id: Unique ID string for the channel.
       resource_id: Version-agnostic ID string for the channel.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -671,7 +749,7 @@ class CloudApi(object):
     Args:
       project_number: the project in question.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ServiceException for errors interacting with cloud storage providers.
@@ -681,15 +759,14 @@ class CloudApi(object):
     """
     raise NotImplementedError('GetProjectServiceAccount must be overloaded')
 
-  def CreateNotificationConfig(
-      self,
-      bucket_name,
-      pubsub_topic,
-      payload_format,
-      event_types=None,
-      custom_attributes=None,
-      object_name_prefix=None,
-      provider=None):
+  def CreateNotificationConfig(self,
+                               bucket_name,
+                               pubsub_topic,
+                               payload_format,
+                               event_types=None,
+                               custom_attributes=None,
+                               object_name_prefix=None,
+                               provider=None):
     """Creates a new notification with the specified parameters.
 
     Args:
@@ -700,7 +777,7 @@ class CloudApi(object):
       custom_attributes: (Opt) Dictionary of custom attributes.
       object_name_prefix: (Opt) Filter on object name.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -711,18 +788,14 @@ class CloudApi(object):
     """
     raise NotImplementedError('CreateNotificationConfig must be overloaded')
 
-  def DeleteNotificationConfig(
-      self,
-      bucket_name,
-      notification,
-      provider=None):
+  def DeleteNotificationConfig(self, bucket_name, notification, provider=None):
     """Deletes a notification.
 
     Args:
       bucket_name: (Required) Name of the bucket.
       notification: (Required) Integer name of the notification.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -733,16 +806,13 @@ class CloudApi(object):
     """
     raise NotImplementedError('DeleteNotificationConfig must be overloaded')
 
-  def ListNotificationConfigs(
-      self,
-      bucket_name,
-      provider=None):
+  def ListNotificationConfigs(self, bucket_name, provider=None):
     """Lists notification configs in a bucket.
 
     Args:
       bucket_name: Name of the bucket.
       provider: Cloud storage provider to connect to.  If not present,
-                class-wide default is used.
+        class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -761,10 +831,10 @@ class Preconditions(object):
     """Instantiates a Preconditions object.
 
     Args:
-      gen_match: Perform request only if generation of target object
-                 matches the given integer. Ignored for bucket requests.
+      gen_match: Perform request only if generation of target object matches the
+        given integer. Ignored for bucket requests.
       meta_gen_match: Perform request only if metageneration of target
-                      object/bucket matches the given integer.
+        object/bucket matches the given integer.
     """
     self.gen_match = gen_match
     self.meta_gen_match = meta_gen_match
@@ -857,8 +927,8 @@ class BucketNotFoundException(NotFoundException):
   """Exception raised when a bucket resource is not found (404)."""
 
   def __init__(self, reason, bucket_name, status=None, body=None):
-    super(BucketNotFoundException, self).__init__(reason, status=status,
-                                                  body=body)
+    super(BucketNotFoundException, self).__init__(
+        reason, status=status, body=body)
     self.bucket_name = bucket_name
 
 
@@ -889,4 +959,3 @@ class PublishPermissionDeniedException(ServiceException):
     Cloud Pub/Sub topic, but their GCS bucket does not have permission to
     publish to the specified topic.
   """
-

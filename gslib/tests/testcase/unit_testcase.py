@@ -57,18 +57,12 @@ class GsutilApiUnitTestClassMapFactory(object):
         ApiSelector.XML: BotoTranslation,
         ApiSelector.JSON: BotoTranslation
     }
-    s3_class_map = {
-        ApiSelector.XML: BotoTranslation
-    }
-    class_map = {
-        'gs': gs_class_map,
-        's3': s3_class_map
-    }
+    s3_class_map = {ApiSelector.XML: BotoTranslation}
+    class_map = {'gs': gs_class_map, 's3': s3_class_map}
     return class_map
 
 
-@unittest.skipUnless(util.RUN_UNIT_TESTS,
-                     'Not running integration tests.')
+@unittest.skipUnless(util.RUN_UNIT_TESTS, 'Not running integration tests.')
 class GsUtilUnitTestCase(base.GsUtilTestCase):
   """Base class for gsutil unit tests."""
 
@@ -154,9 +148,15 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       sys.stderr.write(log_output)
       sys.stderr.write('==== end log output ====\n')
 
-  def RunCommand(self, command_name, args=None, headers=None, debug=0,
-                 return_stdout=False, return_stderr=False,
-                 return_log_handler=False, cwd=None):
+  def RunCommand(self,
+                 command_name,
+                 args=None,
+                 headers=None,
+                 debug=0,
+                 return_stdout=False,
+                 return_stderr=False,
+                 return_log_handler=False,
+                 cwd=None):
     """Method for calling gslib.command_runner.CommandRunner.
 
     Passes parallel_operations=False for all tests, optionally saving/returning
@@ -173,11 +173,11 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       return_stdout: If True, will save and return stdout produced by command.
       return_stderr: If True, will save and return stderr produced by command.
       return_log_handler: If True, will return a MockLoggingHandler instance
-           that was attached to the command's logger while running.
+        that was attached to the command's logger while running.
       cwd: The working directory that should be switched to before running the
-           command. The working directory will be reset back to its original
-           value after running the command. If not specified, the working
-           directory is left unchanged.
+        command. The working directory will be reset back to its original value
+        after running the command. If not specified, the working directory is
+        left unchanged.
 
     Returns:
       One or a tuple of requested return values, depending on whether
@@ -217,8 +217,12 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     try:
       with WorkingDirectory(cwd):
         self.command_runner.RunNamedCommand(
-            command_name, args=args, headers=headers, debug=debug,
-            parallel_operations=False, do_shutdown=False)
+            command_name,
+            args=args,
+            headers=headers,
+            debug=debug,
+            parallel_operations=False,
+            do_shutdown=False)
     finally:
       sys.stdout.seek(0)
       sys.stderr.seek(0)
@@ -244,18 +248,18 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
       _id = six.ensure_text(self.id())
       if self.is_debugging and log_output:
-        self.stderr_save.write(
-            '==== logging RunCommand {} {} ====\n'.format(_id, command_line))
+        self.stderr_save.write('==== logging RunCommand {} {} ====\n'.format(
+            _id, command_line))
         self.stderr_save.write(log_output)
         self.stderr_save.write('\n==== end logging ====\n')
       if self.is_debugging and stdout:
-        self.stderr_save.write(
-            '==== stdout RunCommand {} {} ====\n'.format(_id, command_line))
+        self.stderr_save.write('==== stdout RunCommand {} {} ====\n'.format(
+            _id, command_line))
         self.stderr_save.write(stdout)
         self.stderr_save.write('==== end stdout ====\n')
       if self.is_debugging and stderr:
-        self.stderr_save.write(
-            '==== stderr RunCommand {} {} ====\n'.format(_id, command_line))
+        self.stderr_save.write('==== stderr RunCommand {} {} ====\n'.format(
+            _id, command_line))
         self.stderr_save.write(stderr)
         self.stderr_save.write('==== end stderr ====\n')
 
@@ -280,8 +284,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
   @classmethod
   def MakeGsUtilApi(cls, debug=0):
     gsutil_api_map = {
-        ApiMapConstants.API_MAP: (
-            cls.mock_gsutil_api_class_map_factory.GetClassMap()),
+        ApiMapConstants.API_MAP:
+            (cls.mock_gsutil_api_class_map_factory.GetClassMap()),
         ApiMapConstants.SUPPORT_MAP: {
             'gs': [ApiSelector.XML, ApiSelector.JSON],
             's3': [ApiSelector.XML]
@@ -293,8 +297,11 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     }
 
     return CloudApiDelegator(
-        cls.mock_bucket_storage_uri, gsutil_api_map, cls.logger,
-        DiscardMessagesQueue(), debug=debug)
+        cls.mock_bucket_storage_uri,
+        gsutil_api_map,
+        cls.logger,
+        DiscardMessagesQueue(),
+        debug=debug)
 
   @classmethod
   def _test_wildcard_iterator(cls, uri_or_str, debug=0):
@@ -320,12 +327,11 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     if hasattr(uri_or_str, 'uri'):
       uri_string = uri_or_str.uri
 
-    return wildcard_iterator.CreateWildcardIterator(
-        uri_string, cls.MakeGsUtilApi())
+    return wildcard_iterator.CreateWildcardIterator(uri_string,
+                                                    cls.MakeGsUtilApi())
 
   @staticmethod
-  def _test_storage_uri(uri_str, default_scheme='file', debug=0,
-                        validate=True):
+  def _test_storage_uri(uri_str, default_scheme='file', debug=0, validate=True):
     """Convenience method for instantiating a testing instance of StorageUri.
 
     This makes it unnecessary to specify
@@ -348,7 +354,10 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     return boto.storage_uri(uri_str, default_scheme, debug, validate,
                             util.GSMockBucketStorageUri)
 
-  def CreateBucket(self, bucket_name=None, test_objects=0, storage_class=None,
+  def CreateBucket(self,
+                   bucket_name=None,
+                   test_objects=0,
+                   storage_class=None,
                    provider='gs'):
     """Creates a test bucket.
 
@@ -356,10 +365,9 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     Args:
       bucket_name: Create the bucket with this name. If not provided, a
-                   temporary test bucket name is constructed.
+        temporary test bucket name is constructed.
       test_objects: The number of objects that should be placed in the bucket or
-                    a list of object names to place in the bucket. Defaults to
-                    0.
+        a list of object names to place in the bucket. Defaults to 0.
       storage_class: storage class to use. If not provided we us standard.
       provider: string provider to use, default gs.
 
@@ -378,8 +386,10 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     except TypeError:
       test_objects = [self.MakeTempName('obj') for _ in range(test_objects)]
     for i, name in enumerate(test_objects):
-      self.CreateObject(bucket_uri=bucket_uri, object_name=name,
-                        contents='test {}'.format(i).encode(UTF8))
+      self.CreateObject(
+          bucket_uri=bucket_uri,
+          object_name=name,
+          contents='test {}'.format(i).encode(UTF8))
     return bucket_uri
 
   def CreateObject(self, bucket_uri=None, object_name=None, contents=None):
@@ -387,12 +397,12 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     Args:
       bucket_uri: The URI of the bucket to place the object in. If not
-                  specified, a new temporary bucket is created.
+        specified, a new temporary bucket is created.
       object_name: The name to use for the object. If not specified, a temporary
-                   test object name is constructed.
+        test object name is constructed.
       contents: The contents to write to the object. If not specified, the key
-                is not written to, which means that it isn't actually created
-                yet on the server.
+        is not written to, which means that it isn't actually created yet on the
+        server.
 
     Returns:
       A StorageUri for the created object.

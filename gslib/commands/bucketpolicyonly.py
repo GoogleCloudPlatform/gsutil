@@ -97,9 +97,7 @@ class BucketPolicyOnlyCommand(Command):
       gs_api_support=[ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
-          'get': [
-              CommandArgument.MakeNCloudURLsArgument(1),
-          ],
+          'get': [CommandArgument.MakeNCloudURLsArgument(1),],
           'set': [
               CommandArgument('mode', choices=['on', 'off']),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
@@ -136,8 +134,10 @@ class BucketPolicyOnlyCommand(Command):
     iam_config = bucket_metadata.iamConfiguration
     bucket_policy_only = iam_config.bucketPolicyOnly
 
-    fields = {'bucket': str(bucket_url).rstrip('/'),
-              'enabled': bucket_policy_only.enabled}
+    fields = {
+        'bucket': str(bucket_url).rstrip('/'),
+        'enabled': bucket_policy_only.enabled
+    }
 
     locked_time_line = ''
     if bucket_policy_only.lockedTime:
@@ -146,8 +146,7 @@ class BucketPolicyOnlyCommand(Command):
 
     if bucket_policy_only:
       print(('Bucket Policy Only setting for {bucket}:\n'
-             '  Enabled: {enabled}\n' +
-             locked_time_line).format(**fields))
+             '  Enabled: {enabled}\n' + locked_time_line).format(**fields))
 
   def _SetBucketPolicyOnly(self, blr, setting_arg):
     """Sets the Bucket Policy Only setting for a bucket on or off."""
@@ -158,12 +157,11 @@ class BucketPolicyOnlyCommand(Command):
     iam_config.bucketPolicyOnly = BucketPolicyOnlyValue()
     iam_config.bucketPolicyOnly.enabled = (setting_arg == 'on')
 
-    bucket_metadata = apitools_messages.Bucket(
-        iamConfiguration=iam_config)
+    bucket_metadata = apitools_messages.Bucket(iamConfiguration=iam_config)
 
     setting_verb = 'Enabling' if setting_arg == 'on' else 'Disabling'
-    print('%s Bucket Policy Only for %s...'
-          % (setting_verb, str(bucket_url).rstrip('/')))
+    print('%s Bucket Policy Only for %s...' %
+          (setting_verb, str(bucket_url).rstrip('/')))
 
     self.gsutil_api.PatchBucket(
         bucket_url.bucket_name,
@@ -211,9 +209,10 @@ class BucketPolicyOnlyCommand(Command):
   def RunCommand(self):
     """Command entry point for the bucketpolicyonly command."""
     if self.gsutil_api.GetApiSelector(provider='gs') != ApiSelector.JSON:
-      raise CommandException('\n'.join(textwrap.wrap(
-          'The "%s" command can only be used with the Cloud Storage JSON API.'
-          % self.command_name)))
+      raise CommandException('\n'.join(
+          textwrap.wrap(
+              'The "%s" command can only be used with the Cloud Storage JSON API.'
+              % self.command_name)))
 
     action_subcommand = self.args[0]
     self.ParseSubOpts(check_args=True)

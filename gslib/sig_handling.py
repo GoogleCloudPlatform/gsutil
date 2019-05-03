@@ -59,10 +59,10 @@ def RegisterSignalHandler(signal_num, handler, is_final_handler=False):
     signal_num: The signal number with which to associate handler.
     handler: The handler.
     is_final_handler: Bool indicator whether handler should be called last among
-                      all the handlers for this signal_num. The last handler to
-                      register this way survives; other handlers registered with
-                      is_final_handler=True will not be called when the signal
-                      is received.
+      all the handlers for this signal_num. The last handler to register this
+      way survives; other handlers registered with is_final_handler=True will
+      not be called when the signal is received.
+
   Raises:
     RuntimeError: if attempt is made to register a signal_num not in
         GetCaughtSignals.
@@ -157,4 +157,6 @@ def MultithreadedMainSignalHandler(signal_num, cur_stack_frame):
 def ChildProcessSignalHandler(signal_num, cur_stack_frame):
   """Final signal handler for child processes."""
   KillProcess(os.getpid())
+
+
 # pylint: enable=unused-argument

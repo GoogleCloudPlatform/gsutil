@@ -250,8 +250,9 @@ _TEMP_DESCRIPTION = """
     gsutil -m retention temp set gs://bucket/*.jpg
 """
 
-_SYNOPSIS = (_SET_SYNOPSIS + _CLEAR_SYNOPSIS +  _GET_SYNOPSIS + _LOCK_SYNOPSIS +
-             _EVENT_DEFAULT_SYNOPSIS + _EVENT_SYNOPSIS + _TEMP_SYNOPSIS)
+_SYNOPSIS = (
+    _SET_SYNOPSIS + _CLEAR_SYNOPSIS + _GET_SYNOPSIS + _LOCK_SYNOPSIS +
+    _EVENT_DEFAULT_SYNOPSIS + _EVENT_SYNOPSIS + _TEMP_SYNOPSIS)
 
 _DESCRIPTION = (
     _SET_DESCRIPTION + _CLEAR_DESCRIPTION + _GET_DESCRIPTION +
@@ -320,7 +321,8 @@ class RetentionCommand(Command):
           'event-default': _event_default_help_text,
           'event': _event_help_text,
           'temp': _temp_help_text
-      },)
+      },
+  )
 
   def RunCommand(self):
     """Command entry point for the retention command."""
@@ -353,9 +355,10 @@ class RetentionCommand(Command):
     elif action_subcommand == 'temp':
       func = self._TempHold
     else:
-      raise CommandException(('Invalid subcommand "{}" for the {} command.\n'
-                              'See "gsutil help retention".').format(
-                                  action_subcommand, self.command_name))
+      raise CommandException(
+          ('Invalid subcommand "{}" for the {} command.\n'
+           'See "gsutil help retention".').format(action_subcommand,
+                                                  self.command_name))
 
     # Commands with both suboptions and subcommands need to reparse for
     # suboptions, so we log again.
@@ -395,7 +398,7 @@ class RetentionCommand(Command):
 
     Args:
       patch_obj_metadata: Metadata changes that should be applied to the
-                          existing object.
+        existing object.
       log_template: The log template that should be printed for each object.
       name_expansion_result: NameExpansionResult describing target object.
       thread_state: gsutil Cloud API instance to use for the operation.
@@ -424,8 +427,8 @@ class RetentionCommand(Command):
         preconditions=preconditions,
         provider=exp_src_url.scheme,
         fields=['id'])
-    PutToQueueWithTimeout(
-        gsutil_api.status_queue, MetadataMessage(message_time=time.time()))
+    PutToQueueWithTimeout(gsutil_api.status_queue,
+                          MetadataMessage(message_time=time.time()))
 
   def _GetObjectNameExpansionIterator(self, url_args):
     return NameExpansionIterator(
@@ -453,8 +456,8 @@ class RetentionCommand(Command):
     """Set retention retention_period on one or more buckets."""
 
     seconds = RetentionInSeconds(self.args[0])
-    retention_policy = (apitools_messages.Bucket.RetentionPolicyValue(
-        retentionPeriod=seconds))
+    retention_policy = (
+        apitools_messages.Bucket.RetentionPolicyValue(retentionPeriod=seconds))
 
     log_msg_template = 'Setting Retention Policy on %s...'
     bucket_metadata_update = apitools_messages.Bucket(
@@ -469,8 +472,8 @@ class RetentionCommand(Command):
 
   def _ClearRetention(self):
     """Clear retention retention_period on one or more buckets."""
-    retention_policy = (apitools_messages.Bucket.RetentionPolicyValue(
-        retentionPeriod=None))
+    retention_policy = (
+        apitools_messages.Bucket.RetentionPolicyValue(retentionPeriod=None))
     log_msg_template = 'Clearing Retention Policy on %s...'
     bucket_metadata_update = apitools_messages.Bucket(
         retentionPolicy=retention_policy)
@@ -538,8 +541,8 @@ class RetentionCommand(Command):
       else:
         raise CommandException(
             ('Invalid subcommand "{}" for the "retention event-default"'
-             ' command.\nSee "gsutil help retention event".'
-            ).format(self.sub_opts))
+             ' command.\nSee "gsutil help retention event".').format(
+                 self.sub_opts))
 
     verb = 'Setting' if hold else 'Releasing'
     log_msg_template = '{} default Event-Based Hold on %s...'.format(verb)
@@ -559,8 +562,8 @@ class RetentionCommand(Command):
     sub_command_full_name = 'Event-Based'
     hold = self._ProcessHoldArgs(sub_command_name)
     url_args = self.args[1:]
-    obj_metadata_update_wrapper = (SetEventHoldFuncWrapper
-                                   if hold else ReleaseEventHoldFuncWrapper)
+    obj_metadata_update_wrapper = (
+        SetEventHoldFuncWrapper if hold else ReleaseEventHoldFuncWrapper)
     self._SetHold(obj_metadata_update_wrapper, url_args, sub_command_full_name)
     return 0
 
@@ -570,8 +573,8 @@ class RetentionCommand(Command):
     sub_command_full_name = 'Temporary'
     hold = self._ProcessHoldArgs(sub_command_name)
     url_args = self.args[1:]
-    obj_metadata_update_wrapper = (SetTempHoldFuncWrapper
-                                   if hold else ReleaseTempHoldFuncWrapper)
+    obj_metadata_update_wrapper = (
+        SetTempHoldFuncWrapper if hold else ReleaseTempHoldFuncWrapper)
     self._SetHold(obj_metadata_update_wrapper, url_args, sub_command_full_name)
     return 0
 
@@ -593,8 +596,9 @@ class RetentionCommand(Command):
     else:
       raise CommandException(
           ('Invalid subcommand "{}" for the "retention {}" command.\n'
-           'See "gsutil help retention {}".').format(
-               self.args[0], sub_command_name, sub_command_name))
+           'See "gsutil help retention {}".').format(self.args[0],
+                                                     sub_command_name,
+                                                     sub_command_name))
     return hold
 
   def _SetHold(self, obj_metadata_update_wrapper, url_args,
@@ -603,16 +607,16 @@ class RetentionCommand(Command):
 
     Args:
       obj_metadata_update_wrapper: The function for updating related fields in
-                                   Object metadata.
+        Object metadata.
       url_args: List of object URIs.
-      sub_command_full_name: The full name for sub-command:
-                             "Temporary" / "Event-Based"
+      sub_command_full_name: The full name for sub-command: "Temporary" /
+        "Event-Based"
     """
     if len(url_args) == 1 and not self.recursion_requested:
       url = StorageUrlFromString(url_args[0])
       if not (url.IsCloudUrl() and url.IsObject()):
-        raise CommandException(
-            'URL ({}) must name an object'.format(url_args[0]))
+        raise CommandException('URL ({}) must name an object'.format(
+            url_args[0]))
 
     name_expansion_iterator = self._GetObjectNameExpansionIterator(url_args)
     seek_ahead_iterator = self._GetSeekAheadNameExpansionIterator(url_args)
@@ -639,5 +643,6 @@ class RetentionCommand(Command):
       raise
 
     if not self.everything_set_okay:
-      raise CommandException('{} Hold for some objects could not be set.'.
-                             format(sub_command_full_name))
+      raise CommandException(
+          '{} Hold for some objects could not be set.'.format(
+              sub_command_full_name))

@@ -79,7 +79,7 @@ if not IS_WINDOWS:
       except OverflowError:
         # Limit reached without a usable GID found.
         break
-    raise Exception("Unable to generate GID for ")
+    raise Exception('Unable to generate GID for ')
 
   def GetNonPrimaryGid():
     # Select a group for the current user that is not the user's primary group.
@@ -107,8 +107,8 @@ if not IS_WINDOWS:
   # Take the current user's UID and increment it by one, this counts as an
   # invalid UID, as the metric used is if the UID matches the current user's,
   # exactly.
-  INVALID_UID = LazyWrapper(lambda: sorted([user.pw_uid for user
-                                            in pwd.getpwall()])[-1] + 1)
+  INVALID_UID = LazyWrapper(lambda: sorted(
+      [user.pw_uid for user in pwd.getpwall()])[-1] + 1)
 
   # Note that because the system's GID mapping can change mid-test, tests that
   # check for specific errors should always re-fetch these GID-related values,
@@ -206,8 +206,9 @@ def TailSet(start_point, listing):
   return set(l[len(start_point):] for l in listing.strip().split('\n'))
 
 
-HAS_S3_CREDS = (boto.config.get('Credentials', 'aws_access_key_id', None) and
-          boto.config.get('Credentials', 'aws_secret_access_key', None))
+HAS_S3_CREDS = (
+    boto.config.get('Credentials', 'aws_access_key_id', None) and
+    boto.config.get('Credentials', 'aws_secret_access_key', None))
 
 _GS_HOST = boto.config.get('Credentials', 'gs_host', None)
 _DEFAULT_HOST = six.ensure_str(boto.gs.connection.GSConnection.DefaultHost)
@@ -221,7 +222,8 @@ HAS_GS_HOST = _GS_HOST is not None
 
 HAS_GS_PORT = boto.config.get('Credentials', 'gs_port', None) is not None
 
-USING_JSON_API = boto.config.get('GSUtil', 'prefer_api', 'json').upper() != 'XML'
+USING_JSON_API = boto.config.get('GSUtil', 'prefer_api',
+                                 'json').upper() != 'XML'
 
 
 def _ArgcompleteAvailable():
@@ -233,6 +235,7 @@ def _ArgcompleteAvailable():
     except ImportError:
       pass
   return argcomplete is not None
+
 
 ARGCOMPLETE_AVAILABLE = _ArgcompleteAvailable()
 
@@ -277,7 +280,8 @@ def GenerationFromURI(uri):
     Generation string for the URI.
   """
   if not (uri.generation or uri.version_id):
-    if uri.scheme == 's3': return 'null'
+    if uri.scheme == 's3':
+      return 'null'
   return uri.generation or uri.version_id
 
 
@@ -286,18 +290,17 @@ def ObjectToURI(obj, *suffixes):
 
   Args:
     obj: The object to get the URI from. Can be a file object, a subclass of
-         boto.storage_uri.StorageURI, or a string. If a string, it is assumed to
-         be a local on-disk path.
+      boto.storage_uri.StorageURI, or a string. If a string, it is assumed to be
+      a local on-disk path.
     *suffixes: Suffixes to append. For example, ObjectToUri(bucketuri, 'foo')
-               would return the URI for a key name 'foo' inside the given
-               bucket.
+      would return the URI for a key name 'foo' inside the given bucket.
 
   Returns:
     Storage URI string.
   """
   if is_file(obj):
     return 'file://{}'.format(
-      os.path.abspath(os.path.join(obj.name, *suffixes)))
+        os.path.abspath(os.path.join(obj.name, *suffixes)))
   if isinstance(obj, six.string_types):
     return 'file://{}'.format(os.path.join(obj, *suffixes))
   uri = six.ensure_text(obj.uri)
@@ -317,6 +320,7 @@ class GSMockConnection(mock_storage_service.MockConnection):
     kwargs['provider'] = 'gs'
     self.debug = 0
     super(GSMockConnection, self).__init__(*args, **kwargs)
+
 
 mock_connection = GSMockConnection()
 
@@ -366,7 +370,7 @@ def _RevertBotoConfig(revert_list):
 
   Args:
     revert_list: List of boto config modifications created by calls to
-                 _SetBotoConfig.
+      _SetBotoConfig.
   """
   sections_to_remove = []
   for section, name, value in revert_list:
@@ -394,6 +398,7 @@ def SequentialAndParallelTransfer(func):
   Returns:
     Wrapped function.
   """
+
   @functools.wraps(func)
   def Wrapper(*args, **kwargs):
     # Run the test normally once.
@@ -405,7 +410,8 @@ def SequentialAndParallelTransfer(func):
           ('GSUtil', 'parallel_composite_upload_threshold', '1'),
           ('GSUtil', 'sliced_object_download_threshold', '1'),
           ('GSUtil', 'sliced_object_download_max_components', '3'),
-          ('GSUtil', 'check_hashes', 'always')]):
+          ('GSUtil', 'check_hashes', 'always')
+      ]):
         func(*args, **kwargs)
 
   return Wrapper
@@ -418,9 +424,9 @@ def _SectionDictFromConfigList(boto_config_list):
   preserving the existing values.
 
   Args:
-    boto_config_list: list of tuples of:
-        (boto config section to set, boto config name to set, value to set)
-        If value to set is None, no entry is created.
+    boto_config_list: list of tuples of: (boto config section to set, boto
+      config name to set, value to set) If value to set is None, no entry is
+      created.
 
   Returns:
     Dictionary of {section: {keys: values}} for writing to the file.
@@ -462,11 +468,11 @@ def SetBotoConfigForTest(boto_config_list, use_existing_config=True):
   the provided boto_config_list.
 
   Args:
-    boto_config_list: list of tuples of:
-        (boto config section to set, boto config name to set, value to set)
+    boto_config_list: list of tuples of: (boto config section to set, boto
+      config name to set, value to set)
     use_existing_config: If True, apply boto_config_list to the existing
-        configuration, preserving any original values unless they are
-        overwritten. Otherwise, apply boto_config_list to a blank configuration.
+      configuration, preserving any original values unless they are overwritten.
+      Otherwise, apply boto_config_list to a blank configuration.
 
   Yields:
     Once after config is set.
@@ -487,8 +493,8 @@ def SetBotoConfigForTest(boto_config_list, use_existing_config=True):
       with open(tmp_filename, 'w') as tmp_file:
         boto.config.write(tmp_file)
     else:
-      _WriteSectionDictToFile(_SectionDictFromConfigList(boto_config_list),
-                              tmp_filename)
+      _WriteSectionDictToFile(
+          _SectionDictFromConfigList(boto_config_list), tmp_filename)
 
     with _SetBotoConfigFileForTest(tmp_filename):
       yield
@@ -566,6 +572,7 @@ def GetTestNames():
       names.append(m.group('name'))
   return names
 
+
 def is_file(obj):
   if six.PY2:
     return isinstance(obj, file)
@@ -576,7 +583,8 @@ def MakeBucketNameValid(name):
   """Returns a copy of the given name with any invalid characters replaced.
 
   Args:
-    name Union[str, unicode, bytes]: The bucket name to transform into a valid name.
+    name Union[str, unicode, bytes]: The bucket name to transform into a valid
+      name.
 
   Returns:
     Union[str, unicode, bytes] The version of the bucket name containing only
@@ -639,9 +647,9 @@ class HaltingCopyCallbackHandler(object):
     """Forcibly exits if the transfer has passed the halting point."""
     if total_bytes_transferred >= self._halt_at_byte:
       sys.stderr.write(
-          'Halting transfer after byte %s. %s/%s transferred.\r\n' % (
-              self._halt_at_byte, MakeHumanReadable(total_bytes_transferred),
-              MakeHumanReadable(total_size)))
+          'Halting transfer after byte %s. %s/%s transferred.\r\n' %
+          (self._halt_at_byte, MakeHumanReadable(total_bytes_transferred),
+           MakeHumanReadable(total_size)))
       if self._is_upload:
         raise ResumableUploadException('Artifically halting upload.')
       else:

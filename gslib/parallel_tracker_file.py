@@ -31,9 +31,7 @@ from gslib.exception import CommandException
 from gslib.tracker_file import RaiseUnwritableTrackerFileException
 from gslib.utils.constants import UTF8
 
-
-ObjectFromTracker = namedtuple('ObjectFromTracker',
-                               'object_name generation')
+ObjectFromTracker = namedtuple('ObjectFromTracker', 'object_name generation')
 
 
 class _CompositeUploadTrackerEntry(object):
@@ -80,19 +78,20 @@ def ReadParallelUploadTrackerFile(tracker_file_name, logger):
     tracker_json = json.loads(tracker_data)
     enc_key_sha256 = tracker_json[_CompositeUploadTrackerEntry.ENC_SHA256]
     prefix = tracker_json[_CompositeUploadTrackerEntry.PREFIX]
-    for component in tracker_json[
-        _CompositeUploadTrackerEntry.COMPONENTS_LIST]:
-      existing_components.append(ObjectFromTracker(
-          component[_CompositeUploadTrackerEntry.COMPONENT_NAME],
-          component[_CompositeUploadTrackerEntry.COMPONENT_GENERATION]))
+    for component in tracker_json[_CompositeUploadTrackerEntry.COMPONENTS_LIST]:
+      existing_components.append(
+          ObjectFromTracker(
+              component[_CompositeUploadTrackerEntry.COMPONENT_NAME],
+              component[_CompositeUploadTrackerEntry.COMPONENT_GENERATION]))
   except IOError as e:
     # Ignore non-existent file (happens first time a upload is attempted on an
     # object, or when re-starting an upload after a
     # ResumableUploadStartOverException), but warn user for other errors.
     if e.errno != errno.ENOENT:
-      logger.warn('Couldn\'t read upload tracker file (%s): %s. Restarting '
-                  'parallel composite upload from scratch.', tracker_file_name,
-                  e.strerror)
+      logger.warn(
+          'Couldn\'t read upload tracker file (%s): %s. Restarting '
+          'parallel composite upload from scratch.', tracker_file_name,
+          e.strerror)
   except (KeyError, ValueError) as e:
     # Legacy format did not support user-supplied encryption.
     enc_key_sha256 = None
@@ -135,10 +134,11 @@ def _ParseLegacyTrackerData(tracker_data):
   return (prefix, existing_components)
 
 
-def ValidateParallelCompositeTrackerData(
-    tracker_file_name, existing_enc_sha256, existing_prefix,
-    existing_components, current_enc_key_sha256, bucket_url, command_obj,
-    logger, delete_func, delete_exc_handler):
+def ValidateParallelCompositeTrackerData(tracker_file_name, existing_enc_sha256,
+                                         existing_prefix, existing_components,
+                                         current_enc_key_sha256, bucket_url,
+                                         command_obj, logger, delete_func,
+                                         delete_exc_handler):
   """Validates that tracker data matches the current encryption key.
 
   If the data does not match, makes a best-effort attempt to delete existing
@@ -147,13 +147,13 @@ def ValidateParallelCompositeTrackerData(
   Args:
     tracker_file_name: String file name of tracker file.
     existing_enc_sha256: Encryption key SHA256 used to encrypt the existing
-        components, or None if an encryption key was not used.
+      components, or None if an encryption key was not used.
     existing_prefix: String prefix used in naming the existing components, or
-        None if no prefix was found.
-    existing_components: A list of ObjectFromTracker objects representing
-        the set of files that have already been uploaded.
-    current_enc_key_sha256: Current Encryption key SHA256 that should be used
-        to encrypt objects.
+      None if no prefix was found.
+    existing_components: A list of ObjectFromTracker objects representing the
+      set of files that have already been uploaded.
+    current_enc_key_sha256: Current Encryption key SHA256 that should be used to
+      encrypt objects.
     bucket_url: Bucket URL in which the components exist.
     command_obj: Command class for calls to Apply.
     logger: logging.Logger for outputting log messages.
@@ -172,10 +172,11 @@ def ValidateParallelCompositeTrackerData(
       current_enc_key_sha256 = current_enc_key_sha256.encode(UTF8)
   if existing_prefix and existing_enc_sha256 != current_enc_key_sha256:
     try:
-      logger.warn('Upload tracker file (%s) does not match current encryption '
-                  'key. Deleting old components and restarting upload from '
-                  'scratch with a new tracker file that uses the current '
-                  'encryption key.', tracker_file_name)
+      logger.warn(
+          'Upload tracker file (%s) does not match current encryption '
+          'key. Deleting old components and restarting upload from '
+          'scratch with a new tracker file that uses the current '
+          'encryption key.', tracker_file_name)
       components_to_delete = []
       for component in existing_components:
         url = bucket_url.Clone()
@@ -183,14 +184,17 @@ def ValidateParallelCompositeTrackerData(
         url.generation = component.generation
 
       command_obj.Apply(
-          delete_func, components_to_delete,
-          delete_exc_handler, arg_checker=gslib.command.DummyArgChecker,
+          delete_func,
+          components_to_delete,
+          delete_exc_handler,
+          arg_checker=gslib.command.DummyArgChecker,
           parallel_operations_override=command_obj.ParallelOverrideReason.SPEED)
     except:  # pylint: disable=bare-except
       # Regardless of why we can't clean up old components, need to proceed
       # with the user's original intent to upload the file, so merely warn.
-      component_names = [component.object_name for component
-                         in existing_components]
+      component_names = [
+          component.object_name for component in existing_components
+      ]
       logger.warn(
           'Failed to delete some of the following temporary objects:\n%s\n'
           '(Continuing on to re-upload components from scratch.)',
@@ -208,19 +212,21 @@ def GenerateComponentObjectPrefix(encryption_key_sha256=None):
 
   Args:
     encryption_key_sha256: Encryption key SHA256 that will be used to encrypt
-        the components. This is hashed into the prefix to avoid collision
-        during resumption with a different encryption key.
+      the components. This is hashed into the prefix to avoid collision during
+      resumption with a different encryption key.
 
   Returns:
     String prefix for use in the composite upload.
   """
-  return str((random.randint(1, (10 ** 10) - 1) + hash(encryption_key_sha256))
-             % 10 ** 10)
+  return str(
+      (random.randint(1, (10**10) - 1) + hash(encryption_key_sha256)) % 10**10)
 
 
-def WriteComponentToParallelUploadTrackerFile(
-    tracker_file_name, tracker_file_lock, component, logger,
-    encryption_key_sha256=None):
+def WriteComponentToParallelUploadTrackerFile(tracker_file_name,
+                                              tracker_file_lock,
+                                              component,
+                                              logger,
+                                              encryption_key_sha256=None):
   """Rewrites an existing tracker file with info about the uploaded component.
 
   Follows the format described in _CreateParallelUploadTrackerFile.
@@ -244,11 +250,15 @@ def WriteComponentToParallelUploadTrackerFile(
     newly_completed_components = [component]
     completed_components = existing_components + newly_completed_components
     WriteParallelUploadTrackerFile(
-        tracker_file_name, prefix, completed_components,
+        tracker_file_name,
+        prefix,
+        completed_components,
         encryption_key_sha256=encryption_key_sha256)
 
 
-def WriteParallelUploadTrackerFile(tracker_file_name, prefix, components,
+def WriteParallelUploadTrackerFile(tracker_file_name,
+                                   prefix,
+                                   components,
                                    encryption_key_sha256=None):
   """Writes information about components that were successfully uploaded.
 
@@ -271,7 +281,7 @@ def WriteParallelUploadTrackerFile(tracker_file_name, prefix, components,
   Args:
     tracker_file_name: The name of the parallel upload tracker file.
     prefix: The generated prefix that used for uploading any existing
-        components.
+      components.
     components: A list of ObjectFromTracker objects that were uploaded.
     encryption_key_sha256: Encryption key SHA256 for use in this upload, if any.
   """

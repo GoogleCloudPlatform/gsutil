@@ -36,10 +36,10 @@ class FilePart(io.IOBase):
     """Initializes the FilePart.
 
     Args:
-      filename: The name of the existing file, of which this object represents
-                a part.
+      filename: The name of the existing file, of which this object represents a
+        part.
       offset: The position (in bytes) in the original file that corresponds to
-              the first byte of the FilePart.
+        the first byte of the FilePart.
       length: The total number of bytes in the FilePart.
     """
     self._fp = open(filename, 'rb')

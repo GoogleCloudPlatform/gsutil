@@ -91,10 +91,7 @@ class ComposeCommand(Command):
       urls_start_arg=1,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
-  )
+      argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='compose',
@@ -120,11 +117,11 @@ class ComposeCommand(Command):
     self.CheckProvider(target_url)
     if target_url.HasGeneration():
       raise CommandException('A version-specific URL (%s) cannot be '
-                             'the destination for gsutil compose - abort.'
-                             % target_url)
+                             'the destination for gsutil compose - abort.' %
+                             target_url)
 
-    dst_obj_metadata = apitools_messages.Object(name=target_url.object_name,
-                                                bucket=target_url.bucket_name)
+    dst_obj_metadata = apitools_messages.Object(
+        name=target_url.object_name, bucket=target_url.bucket_name)
 
     components = []
     # Remember the first source object so we can get its content type.
@@ -139,8 +136,7 @@ class ComposeCommand(Command):
         self.CheckProvider(src_url)
 
         if src_url.bucket_name != target_url.bucket_name:
-          raise CommandException(
-              'GCS does not support inter-bucket composing.')
+          raise CommandException('GCS does not support inter-bucket composing.')
 
         if not first_src_url:
           first_src_url = src_url
@@ -160,15 +156,18 @@ class ComposeCommand(Command):
       raise CommandException('"compose" requires at least 1 component object.')
 
     dst_obj_metadata.contentType = self.gsutil_api.GetObjectMetadata(
-        first_src_url.bucket_name, first_src_url.object_name,
-        provider=first_src_url.scheme, fields=['contentType']).contentType
+        first_src_url.bucket_name,
+        first_src_url.object_name,
+        provider=first_src_url.scheme,
+        fields=['contentType']).contentType
 
     preconditions = PreconditionsFromHeaders(self.headers or {})
 
-    self.logger.info(
-        'Composing %s from %d component object(s).',
-        target_url, len(components))
+    self.logger.info('Composing %s from %d component object(s).', target_url,
+                     len(components))
     self.gsutil_api.ComposeObject(
-        components, dst_obj_metadata, preconditions=preconditions,
+        components,
+        dst_obj_metadata,
+        preconditions=preconditions,
         provider=target_url.scheme,
         encryption_tuple=GetEncryptionKeyWrapper(config))

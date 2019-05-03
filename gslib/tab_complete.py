@@ -97,6 +97,7 @@ class TabCompletionCache(object):
 
     Args:
       filename: The file to load.
+
     Returns:
       TabCompletionCache instance with loaded data or an empty cache
           if the file cannot be loaded
@@ -129,8 +130,8 @@ class TabCompletionCache(object):
 
     if prefix == self.prefix:
       results = self.results
-    elif (not self.partial_results and prefix.startswith(self.prefix)
-          and prefix.count('/') == self.prefix.count('/')):
+    elif (not self.partial_results and prefix.startswith(self.prefix) and
+          prefix.count('/') == self.prefix.count('/')):
       results = [x for x in self.results if x.startswith(prefix)]
 
     if results is not None:
@@ -182,10 +183,11 @@ class CloudListingRequestThread(threading.Thread):
 
   def run(self):
     it = CreateWildcardIterator(
-        self._wildcard_url_str, self._gsutil_api).IterAll(
-            bucket_listing_fields=['name'])
+        self._wildcard_url_str,
+        self._gsutil_api).IterAll(bucket_listing_fields=['name'])
     self.results = [
-        str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)]
+        str(c) for c in itertools.islice(it, _TAB_COMPLETE_MAX_RESULTS)
+    ]
 
 
 class TimeoutError(Exception):
@@ -211,6 +213,7 @@ class CloudObjectCompleter(object):
     Args:
       wildcard_url: The wildcard URL to list.
       timeout: Time limit for the request.
+
     Returns:
       Cloud resources matching the given wildcard URL.
     Raises:
@@ -312,6 +315,7 @@ def MakeCompleter(completer_type, gsutil_api):
   Args:
     completer_type: The type of completer to create.
     gsutil_api: gsutil Cloud API instance to use.
+
   Returns:
     A completer instance.
   Raises:
@@ -330,8 +334,7 @@ def MakeCompleter(completer_type, gsutil_api):
   elif completer_type == CompleterType.NO_OP:
     return NoOpCompleter()
   else:
-    raise RuntimeError(
-        'Unknown completer "%s"' % completer_type)
+    raise RuntimeError('Unknown completer "%s"' % completer_type)
 
 
 def _WriteTimingLog(message):
@@ -339,4 +342,3 @@ def _WriteTimingLog(message):
   if boto.config.getbool('GSUtil', 'tab_completion_time_logs', False):
     with open(GetTabCompletionLogFilename(), 'ab') as fp:
       fp.write(message)
-

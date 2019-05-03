@@ -36,13 +36,11 @@ from gslib.utils.constants import MIN_SIZE_COMPUTE_LOGGING
 from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 from gslib.utils.constants import UTF8
 
-
 SLOW_CRCMOD_WARNING = """
 WARNING: You have requested checksumming but your crcmod installation isn't
 using the module's C extension, so checksumming will run very slowly. For help
 installing the extension, please see "gsutil help crcmod".
 """
-
 
 SLOW_CRCMOD_RSYNC_WARNING = """
 WARNING: gsutil rsync uses hashes when modification time is not available at
@@ -51,7 +49,6 @@ module's C extension, so checksumming will run very slowly. If this is your
 first rsync since updating gsutil, this rsync can take significantly longer than
 usual. For help installing the extension, please see "gsutil help crcmod".
 """
-
 
 _SLOW_CRCMOD_DOWNLOAD_WARNING = """
 WARNING: Downloading this composite object requires integrity checking with
@@ -62,7 +59,6 @@ installing the extension, please see "gsutil help crcmod".
 To disable slow integrity checking, see the "check_hashes" option in your
 boto config file.
 """
-
 
 _SLOW_CRC_EXCEPTION_TEXT = """
 Downloading this composite object requires integrity checking with CRC32c,
@@ -76,7 +72,6 @@ checks, see the "check_hashes" option in your boto config file.
 NOTE: It is strongly recommended that you not disable integrity checks. Doing so
 could allow data corruption to go undetected during uploading/downloading."""
 
-
 _NO_HASH_CHECK_WARNING = """
 WARNING: This download will not be validated since your crcmod installation
 doesn't use the module's C extension, so the hash computation would likely
@@ -87,7 +82,6 @@ To force integrity checking, see the "check_hashes" option in your boto config
 file.
 """
 
-
 # Configuration values for hashing.
 CHECK_HASH_IF_FAST_ELSE_FAIL = 'if_fast_else_fail'
 CHECK_HASH_IF_FAST_ELSE_SKIP = 'if_fast_else_skip'
@@ -97,12 +91,13 @@ CHECK_HASH_NEVER = 'never'
 # Table storing polynomial values of x^(2^k) mod CASTAGNOLI_POLY for all k < 31,
 # where x^(2^k) and CASTAGNOLI_POLY are both considered polynomials. This is
 # sufficient since x^(2^31) mod CASTAGNOLI_POLY = x.
-X_POW_2K_TABLE = [2, 4, 16, 256, 65536, 517762881, 984302966,
-                  408362264, 1503875210, 2862076957, 3884826397, 1324787473,
-                  621200174, 1758783527, 1416537776, 1180494764, 648569364,
-                  2521473789, 994858823, 1728245375, 3498467999, 4059169852,
-                  3345064394, 2828422810, 2429203150, 3336788029, 860151998,
-                  2102628683, 1033187991, 4243778976, 1123580069]
+X_POW_2K_TABLE = [
+    2, 4, 16, 256, 65536, 517762881, 984302966, 408362264, 1503875210,
+    2862076957, 3884826397, 1324787473, 621200174, 1758783527, 1416537776,
+    1180494764, 648569364, 2521473789, 994858823, 1728245375, 3498467999,
+    4059169852, 3345064394, 2828422810, 2429203150, 3336788029, 860151998,
+    2102628683, 1033187991, 4243778976, 1123580069
+]
 # Castagnoli polynomial and its degree.
 CASTAGNOLI_POLY = 4812730177
 DEGREE = 32
@@ -116,7 +111,7 @@ def ConcatCrc32c(crc_a, crc_b, num_bytes_in_b):
 
   Args:
     crc_a: A 32-bit integer representing crc(A) with least-significant
-           coefficient first.
+      coefficient first.
     crc_b: Same as crc_a.
     num_bytes_in_b: Length of B in bytes.
 
@@ -162,8 +157,10 @@ def _ExtendByZeros(crc, num_bits):
   Returns:
     P(x)*x^num_bits
   """
+
   def _ReverseBits32(crc):
     return int('{0:032b}'.format(crc, width=32)[::-1], 2)
+
   crc = _ReverseBits32(crc)
   i = 0
 
@@ -200,10 +197,10 @@ def CalculateHashesFromContents(fp, hash_dict, callback_processor=None):
 
   Args:
     fp: An already-open file object (stream will be consumed).
-    hash_dict: Dict of (string alg_name: initialized hashing class)
-        Hashing class will be populated with digests upon return.
+    hash_dict: Dict of (string alg_name: initialized hashing class) Hashing
+      class will be populated with digests upon return.
     callback_processor: Optional callback processing class that implements
-        Progress(integer amount of bytes processed).
+      Progress(integer amount of bytes processed).
   """
   while True:
     data = fp.read(DEFAULT_FILE_BUFFER_SIZE)
@@ -229,8 +226,8 @@ def CalculateB64EncodedCrc32cFromContents(fp):
   Returns:
     CRC32c checksum of the file in base64 format.
   """
-  return _CalculateB64EncodedHashFromContents(
-      fp, crcmod.predefined.Crc('crc-32c'))
+  return _CalculateB64EncodedHashFromContents(fp,
+                                              crcmod.predefined.Crc('crc-32c'))
 
 
 def CalculateB64EncodedMd5FromContents(fp):
@@ -263,7 +260,8 @@ def CalculateMd5FromContents(fp):
 
 def Base64EncodeHash(digest_value):
   """Returns the base64-encoded version of the input hex digest value."""
-  return base64.encodestring(binascii.unhexlify(digest_value)).rstrip(b'\n').decode(UTF8)
+  return base64.encodestring(
+      binascii.unhexlify(digest_value)).rstrip(b'\n').decode(UTF8)
 
 
 def Base64ToHexHash(base64_hash):
@@ -271,13 +269,13 @@ def Base64ToHexHash(base64_hash):
 
   Args:
     base64_hash: Base64-encoded hash, which may contain newlines and single or
-        double quotes.
+      double quotes.
 
   Returns:
     Hex digest of the input argument.
   """
   return binascii.hexlify(
-    base64.decodestring(base64_hash.strip('\n"\'').encode(UTF8)))
+      base64.decodestring(base64_hash.strip('\n"\'').encode(UTF8)))
 
 
 def _CalculateB64EncodedHashFromContents(fp, hash_alg):
@@ -305,8 +303,8 @@ def GetUploadHashAlgs():
   Returns:
     dict of (algorithm_name: hash_algorithm)
   """
-  check_hashes_config = config.get(
-      'GSUtil', 'check_hashes', CHECK_HASH_IF_FAST_ELSE_FAIL)
+  check_hashes_config = config.get('GSUtil', 'check_hashes',
+                                   CHECK_HASH_IF_FAST_ELSE_FAIL)
   if check_hashes_config == 'never':
     return {}
   return {'md5': md5}
@@ -327,8 +325,8 @@ def GetDownloadHashAlgs(logger, consider_md5=False, consider_crc32c=False):
     CommandException if hash algorithms satisfying the boto config file
     cannot be returned.
   """
-  check_hashes_config = config.get(
-      'GSUtil', 'check_hashes', CHECK_HASH_IF_FAST_ELSE_FAIL)
+  check_hashes_config = config.get('GSUtil', 'check_hashes',
+                                   CHECK_HASH_IF_FAST_ELSE_FAIL)
   if check_hashes_config == CHECK_HASH_NEVER:
     return {}
 
@@ -379,9 +377,9 @@ class HashingFileUploadWrapper(object):
     Args:
       stream: Input stream.
       digesters: dict of {string: hash digester} containing digesters, where
-          string is the name of the hash algorithm.
+        string is the name of the hash algorithm.
       hash_algs: dict of {string: hash algorithm} for resetting and
-          recalculating digesters. String is the name of the hash algorithm.
+        recalculating digesters. String is the name of the hash algorithm.
       src_url: Source FileUrl that is being copied.
       logger: For outputting log messages.
     """
@@ -408,7 +406,7 @@ class HashingFileUploadWrapper(object):
 
     Args:
       size: The amount of bytes to read. If ommited or negative, the entire
-          contents of the file will be read, hashed, and returned.
+        contents of the file will be read, hashed, and returned.
 
     Returns:
       Bytes from the wrapped stream.

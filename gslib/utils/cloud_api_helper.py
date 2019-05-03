@@ -37,8 +37,8 @@ def GetCloudApiInstance(cls, thread_state=None):
 
   Args:
     cls: Command class to be used for single-threaded case.
-    thread_state: Per thread state from this thread containing a gsutil
-                  Cloud API instance.
+    thread_state: Per thread state from this thread containing a gsutil Cloud
+      API instance.
 
   Returns:
     gsutil Cloud API instance.
@@ -46,8 +46,9 @@ def GetCloudApiInstance(cls, thread_state=None):
   return thread_state or cls.gsutil_api
 
 
-def GetDownloadSerializationData(
-    src_obj_metadata, progress=0, user_project=None):
+def GetDownloadSerializationData(src_obj_metadata,
+                                 progress=0,
+                                 user_project=None):
   """Returns download serialization data.
 
   There are five entries:

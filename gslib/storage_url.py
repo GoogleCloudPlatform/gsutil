@@ -67,7 +67,7 @@ class StorageUrl(object):
 
     Args:
       wildcard_suffix: If supplied, this wildcard suffix will be appended to the
-                       prefix with a trailing slash before being returned.
+        prefix with a trailing slash before being returned.
 
     Returns:
       A prefix of this URL that can be used for iterating.
@@ -163,8 +163,7 @@ class _FileUrl(StorageUrl):
     return self.is_fifo
 
   def IsDirectory(self):
-    return (not self.IsStream() and
-            not self.IsFifo() and
+    return (not self.IsStream() and not self.IsFifo() and
             os.path.isdir(self.object_name))
 
   def CreatePrefixUrl(self, wildcard_suffix=None):
@@ -213,8 +212,8 @@ class _CloudUrl(StorageUrl):
         self.bucket_name = object_match.group('bucket')
         self.object_name = object_match.group('object')
         if self.object_name == '.' or self.object_name == '..':
-          raise InvalidUrlError(
-              '%s is an invalid root-level object name' % self.object_name)
+          raise InvalidUrlError('%s is an invalid root-level object name' %
+                                self.object_name)
         if self.scheme == 'gs':
           generation_match = GS_GENERATION_REGEX.match(self.object_name)
           if generation_match:
@@ -325,8 +324,7 @@ def GenerationFromUrlAndString(url, generation):
 
   Args:
     url: StorageUrl representing the object.
-    generation: Long or string representing the object's generation or
-                version.
+    generation: Long or string representing the object's generation or version.
 
   Returns:
     Valid generation string for use in URLs.
@@ -384,7 +382,7 @@ def IsCloudSubdirPlaceholder(url, blr=None):
   Args:
     url: (gslib.storage_url.StorageUrl) The URL to be checked.
     blr: (gslib.BucketListingRef or None) The blr to check, or None if not
-        available. If `blr` is None, size won't be checked.
+      available. If `blr` is None, size won't be checked.
 
   Returns:
     (bool) True if the URL is a cloud subdir placeholder, otherwise False.
@@ -452,4 +450,3 @@ def UrlsAreForSingleProvider(url_args):
     elif url.scheme != provider:
       return False
   return provider is not None
-

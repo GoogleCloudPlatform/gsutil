@@ -34,6 +34,7 @@ from gslib.utils.retry_util import Retry
 def _LoadNotificationUrl():
   return boto.config.get_value('GSUtil', 'test_notification_url')
 
+
 NOTIFICATION_URL = _LoadNotificationUrl()
 
 
@@ -45,14 +46,18 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
   def test_watch_bucket(self):
     """Tests creating a notification channel on a bucket."""
     bucket_uri = self.CreateBucket()
-    self.RunGsUtil([
-        'notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)])
+    self.RunGsUtil(
+        ['notification', 'watchbucket', NOTIFICATION_URL,
+         suri(bucket_uri)])
 
     identifier = str(uuid.uuid4())
     token = str(uuid.uuid4())
     stderr = self.RunGsUtil([
         'notification', 'watchbucket', '-i', identifier, '-t', token,
-        NOTIFICATION_URL, suri(bucket_uri)], return_stderr=True)
+        NOTIFICATION_URL,
+        suri(bucket_uri)
+    ],
+                            return_stderr=True)
     self.assertIn('token: %s' % token, stderr)
     self.assertIn('identifier: %s' % identifier, stderr)
 
@@ -62,7 +67,8 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
     """Tests stopping a notification channel on a bucket."""
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(
-        ['notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)],
+        ['notification', 'watchbucket', NOTIFICATION_URL,
+         suri(bucket_uri)],
         return_stderr=True)
 
     channel_id = re.findall(r'channel identifier: (?P<id>.*)', stderr)
@@ -83,7 +89,8 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
 
     # Set up an OCN (object change notification) on the newly created bucket.
     self.RunGsUtil(
-        ['notification', 'watchbucket', NOTIFICATION_URL, suri(bucket_uri)],
+        ['notification', 'watchbucket', NOTIFICATION_URL,
+         suri(bucket_uri)],
         return_stderr=False)
     # The OCN listing in the service is eventually consistent. In initial
     # tests, it almost never was ready immediately after calling WatchBucket
@@ -93,10 +100,11 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
     # as an AssertionError due to the exit status not being 0).
     @Retry(AssertionError, tries=3, timeout_secs=5)
     def _ListObjectChangeNotifications():
-      stderr = self.RunGsUtil(
-          ['notification', 'list', '-o', suri(bucket_uri)],
-          return_stderr=True)
+      stderr = self.RunGsUtil(['notification', 'list', '-o',
+                               suri(bucket_uri)],
+                              return_stderr=True)
       return stderr
+
     time.sleep(5)
     stderr = _ListObjectChangeNotifications()
 
@@ -113,5 +121,6 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
 
   def test_invalid_subcommand(self):
     stderr = self.RunGsUtil(['notification', 'foo', 'bar', 'baz'],
-                            return_stderr=True, expected_status=1)
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('Invalid subcommand', stderr)

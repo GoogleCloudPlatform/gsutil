@@ -40,6 +40,7 @@ def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
   Returns:
     A retry function for retryable errors in apitools.
   """
+
   def WarnAfterManyRetriesHandler(retry_args):
     """Exception handler for http failures in apitools.
 
@@ -51,13 +52,16 @@ def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
     Args:
       retry_args: An apitools ExceptionRetryArgs tuple.
     """
-    if (retry_args.total_wait_sec is not None
-       and retry_args.total_wait_sec >= constants.LONG_RETRY_WARN_SEC):
+    if (retry_args.total_wait_sec is not None and
+        retry_args.total_wait_sec >= constants.LONG_RETRY_WARN_SEC):
       logging.info('Retrying request, attempt #%d...', retry_args.num_retries)
     if status_queue:
-      status_queue.put(thread_message.RetryableErrorMessage(
-          retry_args.exc, time.time(), num_retries=retry_args.num_retries,
-          total_wait_sec=retry_args.total_wait_sec))
+      status_queue.put(
+          thread_message.RetryableErrorMessage(
+              retry_args.exc,
+              time.time(),
+              num_retries=retry_args.num_retries,
+              total_wait_sec=retry_args.total_wait_sec))
     http_wrapper.HandleExceptionsAndRebuildHttpConnections(retry_args)
 
   def RetriesInDataTransferHandler(retry_args):
@@ -71,13 +75,14 @@ def LogAndHandleRetries(is_data_transfer=False, status_queue=None):
       retry_args: An apitools ExceptionRetryArgs tuple.
     """
     if status_queue:
-      status_queue.put(thread_message.RetryableErrorMessage(
-          retry_args.exc, time.time(), num_retries=retry_args.num_retries,
-          total_wait_sec=retry_args.total_wait_sec))
+      status_queue.put(
+          thread_message.RetryableErrorMessage(
+              retry_args.exc,
+              time.time(),
+              num_retries=retry_args.num_retries,
+              total_wait_sec=retry_args.total_wait_sec))
     http_wrapper.RethrowExceptionHandler(retry_args)
 
   if is_data_transfer:
     return RetriesInDataTransferHandler
   return WarnAfterManyRetriesHandler
-
-

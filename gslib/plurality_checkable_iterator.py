@@ -57,8 +57,8 @@ class PluralityCheckableIterator(six.Iterator):
     """Populates self.head from the underlying iterator.
 
     Args:
-      num_elements: Populate until self.head contains this many
-          elements (or until the underlying iterator runs out).
+      num_elements: Populate until self.head contains this many elements (or
+        until the underlying iterator runs out).
 
     Returns:
       Number of elements at self.head after execution complete.
@@ -108,4 +108,5 @@ class PluralityCheckableIterator(six.Iterator):
     """Raises an exception if the first iterated element raised."""
     if self._PopulateHead() and self.head[0][0] == 'exception':
       exception_tuple = self.head[0]
-      raise six.reraise(exception_tuple[1].__class__, exception_tuple[1], exception_tuple[2])
+      raise six.reraise(exception_tuple[1].__class__, exception_tuple[1],
+                        exception_tuple[2])

@@ -48,11 +48,11 @@ def CreateCustomMetadata(entries=None, custom_metadata=None):
 
   Args:
     entries: (Dict[str, Any] or None) The dictionary containing key/value pairs
-        to insert into metadata. Both the key and value must be able to be
-        casted to a string type.
+      to insert into metadata. Both the key and value must be able to be casted
+      to a string type.
     custom_metadata (apitools_messages.Object.MetadataValue or None): A
-        pre-existing custom metadata object to add to. If one is not provided,
-        a new one will be constructed.
+      pre-existing custom metadata object to add to. If one is not provided, a
+      new one will be constructed.
 
   Returns:
     An apitools_messages.Object.MetadataValue.
@@ -69,7 +69,8 @@ def CreateCustomMetadata(entries=None, custom_metadata=None):
   return custom_metadata
 
 
-def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
+def GetValueFromObjectCustomMetadata(obj_metadata,
+                                     search_key,
                                      default_value=None):
   """Filters a specific element out of an object's custom metadata.
 
@@ -77,7 +78,7 @@ def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
     obj_metadata: (apitools_messages.Object) The metadata for an object.
     search_key: (str) The custom metadata key to search for.
     default_value: (Any) The default value to use for the key if it cannot be
-        found.
+      found.
 
   Returns:
     (Tuple(bool, Any)) A tuple indicating if the value could be found in
@@ -86,8 +87,8 @@ def GetValueFromObjectCustomMetadata(obj_metadata, search_key,
     exist in the custom metadata).
   """
   try:
-    value = next((attr.value for attr in
-                  obj_metadata.metadata.additionalProperties
+    value = next((attr.value
+                  for attr in obj_metadata.metadata.additionalProperties
                   if attr.key == search_key), None)
     if value is None:
       return False, default_value

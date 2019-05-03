@@ -114,4 +114,3 @@ class BucketListingObject(BucketListingRef):
     self._url_string = storage_url.url_string
     self.storage_url = storage_url
     self.root_object = root_object
-

@@ -99,11 +99,7 @@ class FakeCommandWithInvalidCompleter(Command):
   """Command with an invalid completer on an argument."""
 
   command_spec = Command.CreateCommandSpec(
-      'fake1',
-      argparse_arguments=[
-          CommandArgument('arg', completer='BAD')
-      ]
-  )
+      'fake1', argparse_arguments=[CommandArgument('arg', completer='BAD')])
 
   help_spec = Command.HelpSpec(
       help_name='fake1',
@@ -111,8 +107,7 @@ class FakeCommandWithInvalidCompleter(Command):
       help_type='command_help',
       help_one_line_summary='fake command for tests',
       help_text='fake command for tests',
-      subcommand_help_text={}
-  )
+      subcommand_help_text={})
 
   def __init__(self):
     pass
@@ -133,8 +128,7 @@ class FakeCommandWithNestedArguments(object):
                   CommandArgument('arg2'),
               ]
           }
-      }
-  )
+      })
 
 
 class FakeCommandWithCompleters(Command):
@@ -149,8 +143,7 @@ class FakeCommandWithCompleters(Command):
           CommandArgument.MakeFreeTextArgument(),
           CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           CommandArgument.MakeFileURLOrCannedACLArgument(),
-      ]
-  )
+      ])
 
   help_spec = Command.HelpSpec(
       help_name='fake2',
@@ -184,8 +177,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     base_version = six.text_type(gslib.VERSION)
     while not base_version.isnumeric():
       if not base_version:
-        raise CommandException(
-            'Version number (%s) is not numeric.' % gslib.VERSION)
+        raise CommandException('Version number (%s) is not numeric.' %
+                               gslib.VERSION)
       base_version = base_version[:-1]
     self.old_look_up_gsutil_version = command_runner.LookUpGsutilVersion
     command_runner.LookUpGsutilVersion = lambda u, v: float(base_version) + 1
@@ -206,7 +199,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     # Create a fake pub tarball that will be used to check for gsutil version.
     self.pub_bucket_uri = self.CreateBucket('pub')
     self.gsutil_tarball_uri = self.CreateObject(
-        bucket_uri=self.pub_bucket_uri, object_name='gsutil.tar.gz',
+        bucket_uri=self.pub_bucket_uri,
+        object_name='gsutil.tar.gz',
         contents='foo')
 
   def tearDown(self):
@@ -231,8 +225,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_interactive(self):
     """Tests that update is not triggered if not running interactively."""
-    with SetBotoConfigForTest([
-        ('GSUtil', 'software_update_check_period', '1')]):
+    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')
+                              ]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       self.running_interactively = False
@@ -248,8 +242,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     self.assertFalse(os.path.exists(self.timestamp_file_path))
     self.version_mod_time = time.time()
     self.assertEqual(
-        False,
-        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        False, self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_no_tracker_file_version_old(self):
@@ -276,14 +269,13 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     with open(self.timestamp_file_path, 'w') as f:
       f.write('NaN')
     self.assertEqual(
-        False,
-        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
+        False, self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('ls', 0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_update_should_trigger(self):
     """Tests update should be triggered if time is up."""
-    with SetBotoConfigForTest([
-        ('GSUtil', 'software_update_check_period', '1')]):
+    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')
+                              ]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       expected = not self._IsPackageOrCloudSDKInstall()
@@ -294,8 +286,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_time_for_update_yet(self):
     """Tests update not triggered if not time yet."""
-    with SetBotoConfigForTest([
-        ('GSUtil', 'software_update_check_period', '3')]):
+    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '3')
+                              ]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       self.assertEqual(
@@ -304,8 +296,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
   def test_user_says_no_to_update(self):
     """Tests no update triggered if user says no at the prompt."""
-    with SetBotoConfigForTest([
-        ('GSUtil', 'software_update_check_period', '1')]):
+    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')
+                              ]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
       command_runner.input = lambda p: 'n'
@@ -316,8 +308,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_update_check_skipped_with_quiet_mode(self):
     """Tests that update isn't triggered when loglevel is in quiet mode."""
-    with SetBotoConfigForTest([
-        ('GSUtil', 'software_update_check_period', '1')]):
+    with SetBotoConfigForTest([('GSUtil', 'software_update_check_period', '1')
+                              ]):
       with open(self.timestamp_file_path, 'w') as f:
         f.write(str(int(time.time() - 2 * SECONDS_PER_DAY)))
 
@@ -385,8 +377,8 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     # FakeArgparseParser adds a FakeArgparseArgument in place of any arguments
     # passed in via add_argument(), so we can't check for anything beyond the
     # presence of the correct number of arguments here.
-    self.assertEqual(len(cur_subparser.arguments),
-                     FakeCommandWithNestedArguments.num_args)
+    self.assertEqual(
+        len(cur_subparser.arguments), FakeCommandWithNestedArguments.num_args)
 
   @unittest.skipUnless(ARGCOMPLETE_AVAILABLE,
                        'Tab completion requires argcomplete')
@@ -450,8 +442,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
       HandleHeaderCoding(headers)
 
 
-class TestCommandRunnerIntegrationTests(
-    testcase.GsUtilIntegrationTestCase):
+class TestCommandRunnerIntegrationTests(testcase.GsUtilIntegrationTestCase):
   """Integration tests for gsutil update check in command_runner module."""
 
   def setUp(self):
