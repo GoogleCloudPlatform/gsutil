@@ -336,9 +336,13 @@ class IamCommand(Command):
 
     storage_url = StorageUrlFromString(list(matches)[0].url_string)
     policy = self.GetIamHelper(storage_url, thread_state=thread_state)
-    print(json.dumps(json.loads(protojson.encode_message(policy)),
-                     sort_keys=True,
-                     indent=2))
+    policy_json = json.loads(protojson.encode_message(policy))
+    policy_str = json.dumps(
+        policy_json,
+        sort_keys=True,
+        indent=2,
+    )
+    print(policy_str)
 
   def _SetIamHelperInternal(self, storage_url, policy, thread_state=None):
     """Sets IAM policy for a single, resolved bucket / object URL.
