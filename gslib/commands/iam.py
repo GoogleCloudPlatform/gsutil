@@ -53,7 +53,6 @@ from gslib.utils.iam_helper import IsEqualBindings
 from gslib.utils.iam_helper import PatchBindings
 from gslib.utils.iam_helper import SerializeBindingsTuple
 from gslib.utils.retry_util import Retry
-from gslib.utils.text_util import IsBucketNameValid
 
 _SET_SYNOPSIS = """
   gsutil iam set [-afRr] [-e <etag>] file url ...
@@ -216,6 +215,7 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
+STORAGE_URI_REGEX = re.compile(r'[a-z]+://.+')
 
 IAM_CH_CONDITIONS_WORKAROUND_MSG = (
     'To change the IAM policy of a resource that has bindings containing '
@@ -480,7 +480,7 @@ class IamCommand(Command):
     # expecting to come across the -r, -f flags here.
     it = iter(self.args)
     for token in it:
-      if IsBucketNameValid(token):
+      if STORAGE_URI_REGEX.match(token):
         patterns.append(token)
         break
       if token == '-d':
