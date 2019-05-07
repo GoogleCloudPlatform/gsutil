@@ -215,7 +215,7 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
-STORAGE_URI_REGEX = re.compile(r'[a-z]+://[a-z].*')
+STORAGE_URI_REGEX = re.compile(r'[a-z]+://.+')
 
 IAM_CH_CONDITIONS_WORKAROUND_MSG = (
     'To change the IAM policy of a resource that has bindings containing '

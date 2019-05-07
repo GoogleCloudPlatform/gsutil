@@ -303,6 +303,7 @@ def PrintableStr(input_val):
   """
   return input_val
 
+
 def print_to_fd(*objects, **kwargs):
   """A Python 2/3 compatible analogue to the print function.
 
@@ -340,7 +341,7 @@ def print_to_fd(*objects, **kwargs):
 
     return expected_keywords.values()
 
-  
+
   def _get_byte_strings(*objects):
     """Gets a `bytes` string for each item in a list of printable objects."""
     byte_objects = []
@@ -357,7 +358,7 @@ def print_to_fd(*objects, **kwargs):
         # will throw a TypeError.
         byte_objects.append(six.ensure_binary(item))
     return byte_objects
-    
+
   sep, end, file = _get_args(**kwargs)
   sep = six.ensure_binary(sep)
   end = six.ensure_binary(end)
