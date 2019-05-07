@@ -334,7 +334,6 @@ def IsBucketNameValid(bucket_name):
     prefix.isalpha(),
     prefix.islower(),
     len(url) > 2,
-    len(url) < 64,
     url[0].isalnum(),
     url[-1].isalnum(),
     not url.startswith('goog'),
