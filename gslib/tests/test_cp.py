@@ -1744,10 +1744,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(expected_headers, lines[0].strip().split(','))
     results = lines[1].strip().split(',')
 
-    for header in results:
-      if isinstance(header, (six.string_types, six.text_type)):
-        header = six.ensure_str(header)
-
     results = dict(zip(expected_headers, results))
 
     self.assertEqual(results['Source'][:7], 'file://')
