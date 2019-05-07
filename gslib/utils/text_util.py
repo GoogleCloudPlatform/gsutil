@@ -303,6 +303,42 @@ def PrintableStr(input_val):
   """
   return input_val
 
+
+def IsBucketNameValid(bucket_name):
+  """Check if string meets all bucket name requirements.
+
+  Requirements for bucket names defined at:
+  https://cloud.google.com/storage/docs/naming
+
+  Args:
+    Unicode tring, name of bucket. Full name, including provider prefix, i.e.:
+    'gs://my-bucket-name'
+  Returns:
+    Boolean, whether the bucket name is valid or not.
+  """
+
+  def _StripAllowedSymbols(s):
+    """Remove from a string the symbols '-', '_', and '.'"""
+    return ''.join((char for char in s if char not in ['-', '_', '.']))
+
+  if not '://' in bucket_name:
+    return False
+
+  prefix, url = bucket_name.split('://')
+
+  return all([
+    prefix.isalpha(),
+    prefix.islower(),
+    len(url) > 2,
+    len(url) < 64,
+    url[0].isalnum(),
+    url[-1].isalnum(),
+    not url.startswith('goog'),
+    not url.isupper(),
+    _StripAllowedSymbols(url).isalnum()
+  ])
+
+
 def print_to_fd(*objects, **kwargs):
   """A Python 2/3 compatible analogue to the print function.
 
@@ -340,7 +376,7 @@ def print_to_fd(*objects, **kwargs):
 
     return expected_keywords.values()
 
-  
+
   def _get_byte_strings(*objects):
     """Gets a `bytes` string for each item in a list of printable objects."""
     byte_objects = []
@@ -357,7 +393,7 @@ def print_to_fd(*objects, **kwargs):
         # will throw a TypeError.
         byte_objects.append(six.ensure_binary(item))
     return byte_objects
-    
+
   sep, end, file = _get_args(**kwargs)
   sep = six.ensure_binary(sep)
   end = six.ensure_binary(end)
