@@ -318,8 +318,8 @@ def IsBucketNameValid(bucket_name):
   """
 
   def _StripAllowedSymbols(s):
-    """Remove from a string the symbols '-', '_', and '.'"""
-    return ''.join((char for char in s if char not in ['-', '_', '.']))
+    """Remove '-', '_', '/', and '.' from given string."""
+    return ''.join((char for char in s if char not in ['/', '-', '_', '.']))
 
   if not '://' in bucket_name:
     return False
