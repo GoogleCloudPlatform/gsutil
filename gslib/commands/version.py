@@ -131,8 +131,8 @@ class VersionCommand(Command):
               cloud_sdk=system_util.InvokedViaCloudSdk(),
               cloud_sdk_credentials=system_util.CloudSdkCredPassingEnabled(),
               config_paths=config_paths,
-              gsutil_path=GetCloudSdkGsutilWrapperScriptPath() or
-              gslib.GSUTIL_PATH,
+              gsutil_path=(GetCloudSdkGsutilWrapperScriptPath() or
+                           gslib.GSUTIL_PATH),
               compiled_crcmod=UsingCrcmodExtension(crcmod),
               is_package_install=gslib.IS_PACKAGE_INSTALL,
               is_editable_install=gslib.IS_EDITABLE_INSTALL,
@@ -196,8 +196,10 @@ def GetCloudSdkGsutilWrapperScriptPath():
     platform_path_suffix = os.path.join('platform', 'gsutil', 'gsutil')
     if gsutil_path.endswith(platform_path_suffix):
       bin_path = os.path.join(
-          gsutil_path[0:gsutil_path.rfind(platform_path_suffix)], 'bin',
-          'gsutil')
+          gsutil_path[0:gsutil_path.rfind(platform_path_suffix)],
+          'bin',
+          'gsutil',
+      )
       if os.path.exists(bin_path):
         return bin_path
 

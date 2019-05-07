@@ -594,9 +594,8 @@ class BotoResumableUpload(object):
         # Save generation and metageneration in class state so caller
         # can find these values, for use in preconditions of future
         # operations on the uploaded object.
-        (_, self.generation,
-         self.metageneration) = (self._AttemptResumableUpload(
-             key, fp, file_length, headers, cb, num_cb))
+        _, self.generation, self.metageneration = self._AttemptResumableUpload(
+            key, fp, file_length, headers, cb, num_cb)
 
         key.generation = self.generation
         if debug >= 1:

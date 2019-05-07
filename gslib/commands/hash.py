@@ -134,8 +134,9 @@ class HashCommand(Command):
         elif o == '-h':
           output_format = 'hex'
           format_func = lambda digest: digest.hexdigest()
-          cloud_format_func = (lambda digest: hashing_helper.Base64ToHexHash(
-              digest).decode('ascii'))
+          cloud_format_func = lambda digest: (
+              hashing_helper.Base64ToHexHash(digest).decode('ascii')
+          )  # yapf: disable
         elif o == '-m':
           calc_md5 = True
           found_hash_option = True
@@ -176,7 +177,10 @@ class HashCommand(Command):
     for url_str in self.args:
       for file_ref in self.WildcardIterator(url_str).IterObjects(
           bucket_listing_fields=[
-              'crc32c', 'md5Hash', 'customerEncryption', 'size'
+              'crc32c',
+              'customerEncryption',
+              'md5Hash',
+              'size',
           ]):
         matched_one = True
         url = StorageUrlFromString(url_str)

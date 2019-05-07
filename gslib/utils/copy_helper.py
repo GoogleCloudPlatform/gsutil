@@ -204,7 +204,12 @@ hash the original name.
 # When uploading a file, get the following fields in the response for
 # filling in command output and manifests.
 UPLOAD_RETURN_FIELDS = [
-    'crc32c', 'customerEncryption', 'etag', 'generation', 'md5Hash', 'size'
+    'crc32c',
+    'customerEncryption',
+    'etag',
+    'generation',
+    'md5Hash',
+    'size',
 ]
 
 # This tuple is used only to encapsulate the arguments needed for
@@ -370,9 +375,17 @@ def _PerformParallelUploadFileToObject(cls, args, thread_state=None):
 
 
 CopyHelperOpts = namedtuple('CopyHelperOpts', [
-    'perform_mv', 'no_clobber', 'daisy_chain', 'read_args_from_stdin',
-    'print_ver', 'use_manifest', 'preserve_acl', 'canned_acl',
-    'skip_unsupported_objects', 'test_callback_file', 'dest_storage_class'
+    'perform_mv',
+    'no_clobber',
+    'daisy_chain',
+    'read_args_from_stdin',
+    'print_ver',
+    'use_manifest',
+    'preserve_acl',
+    'canned_acl',
+    'skip_unsupported_objects',
+    'test_callback_file',
+    'dest_storage_class',
 ])
 
 
@@ -2484,7 +2497,7 @@ def _MaintainSlicedDownloadTrackerFiles(src_obj_metadata, dst_url,
       tracker_file_data = {
           'etag': src_obj_metadata.etag,
           'generation': src_obj_metadata.generation,
-          'num_components': num_components
+          'num_components': num_components,
       }
       tracker_file.write(json.dumps(tracker_file_data))
   except IOError as e:
@@ -2779,9 +2792,15 @@ def _DownloadObjectToFileResumable(src_url,
     api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
     existing_file_size = GetFileSize(fp)
 
-    tracker_file_name, download_start_byte = (ReadOrCreateDownloadTrackerFile(
-        src_obj_metadata, dst_url, logger, api_selector, start_byte,
-        existing_file_size, component_num))
+    tracker_file_name, download_start_byte = ReadOrCreateDownloadTrackerFile(
+        src_obj_metadata,
+        dst_url,
+        logger,
+        api_selector,
+        start_byte,
+        existing_file_size,
+        component_num,
+    )
 
     if download_start_byte < start_byte or download_start_byte > end_byte + 1:
       DeleteTrackerFile(tracker_file_name)
@@ -3039,16 +3058,17 @@ def _DownloadObjectToFile(src_url,
       if 'crc32c' in digesters:
         digesters['crc32c'].crcValue = crc32c
     elif download_strategy is CloudApi.DownloadStrategy.ONE_SHOT:
-      (bytes_transferred, server_encoding) = (_DownloadObjectToFileNonResumable(
+      bytes_transferred, server_encoding = _DownloadObjectToFileNonResumable(
           src_url,
           src_obj_metadata,
           dst_url,
           download_file_name,
           gsutil_api,
           digesters,
-          decryption_key=decryption_key))
+          decryption_key=decryption_key,
+      )
     elif download_strategy is CloudApi.DownloadStrategy.RESUMABLE:
-      (bytes_transferred, server_encoding) = (_DownloadObjectToFileResumable(
+      bytes_transferred, server_encoding = _DownloadObjectToFileResumable(
           src_url,
           src_obj_metadata,
           dst_url,
@@ -3056,7 +3076,8 @@ def _DownloadObjectToFile(src_url,
           gsutil_api,
           logger,
           digesters,
-          decryption_key=decryption_key))
+          decryption_key=decryption_key,
+      )
     else:
       raise CommandException('Invalid download strategy %s chosen for'
                              'file %s' %
@@ -3484,10 +3505,23 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud,
     # complete object resource. Since we want metadata like the object size for
     # our own tracking, we just get all of the metadata here.
     src_obj_fields_set.update([
-        'cacheControl', 'componentCount', 'contentDisposition',
-        'contentEncoding', 'contentLanguage', 'contentType', 'crc32c',
-        'customerEncryption', 'etag', 'generation', 'md5Hash', 'mediaLink',
-        'metadata', 'metageneration', 'size', 'storageClass', 'timeCreated'
+        'cacheControl',
+        'componentCount',
+        'contentDisposition',
+        'contentEncoding',
+        'contentLanguage',
+        'contentType',
+        'crc32c',
+        'customerEncryption',
+        'etag',
+        'generation',
+        'md5Hash',
+        'mediaLink',
+        'metadata',
+        'metageneration',
+        'size',
+        'storageClass',
+        'timeCreated',
     ])
     # We only need the ACL if we're going to preserve it.
     if preserve_acl:
@@ -3496,8 +3530,15 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud,
   else:
     # Just get the fields needed to perform and validate the download.
     src_obj_fields_set.update([
-        'crc32c', 'contentEncoding', 'contentType', 'customerEncryption',
-        'etag', 'mediaLink', 'md5Hash', 'size', 'generation'
+        'crc32c',
+        'contentEncoding',
+        'contentType',
+        'customerEncryption',
+        'etag',
+        'mediaLink',
+        'md5Hash',
+        'size',
+        'generation',
     ])
     if is_rsync:
       src_obj_fields_set.update(['metadata/%s' % MTIME_ATTR, 'timeCreated'])
@@ -3507,12 +3548,15 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud,
           'metadata/%s' % MTIME_ATTR,
           'metadata/%s' % GID_ATTR,
           'metadata/%s' % MODE_ATTR,
-          'metadata/%s' % UID_ATTR
+          'metadata/%s' % UID_ATTR,
       ]
       src_obj_fields_set.update(posix_fields)
 
   if delete_source:
-    src_obj_fields_set.update(['storageClass', 'timeCreated'])
+    src_obj_fields_set.update([
+        'storageClass',
+        'timeCreated',
+    ])
 
   if skip_unsupported_objects:
     src_obj_fields_set.update(['storageClass'])
@@ -3949,15 +3993,31 @@ class Manifest(object):
           with open(self.manifest_path, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
-                'Source', 'Destination', 'Start', 'End', 'Md5', 'UploadId',
-                'Source Size', 'Bytes Transferred', 'Result', 'Description'
+                'Source',
+                'Destination',
+                'Start',
+                'End',
+                'Md5',
+                'UploadId',
+                'Source Size',
+                'Bytes Transferred',
+                'Result',
+                'Description',
             ])
         else:
           with open(self.manifest_path, 'wb', 1) as f:
             writer = csv.writer(f)
             writer.writerow([
-                'Source', 'Destination', 'Start', 'End', 'Md5', 'UploadId',
-                'Source Size', 'Bytes Transferred', 'Result', 'Description'
+                'Source',
+                'Destination',
+                'Start',
+                'End',
+                'Md5',
+                'UploadId',
+                'Source Size',
+                'Bytes Transferred',
+                'Result',
+                'Description',
             ])
     except IOError:
       raise CommandException('Could not create manifest file.')
@@ -3991,14 +4051,16 @@ class Manifest(object):
     """Writes a manifest entry to the manifest file for the url argument."""
     row_item = self.items[url]
     data = [
-        row_item['source_uri'], row_item['destination_uri'],
+        row_item['source_uri'],
+        row_item['destination_uri'],
         '%sZ' % row_item['start_time'].isoformat(),
         '%sZ' % row_item['end_time'].isoformat(),
         row_item['md5'] if 'md5' in row_item else '',
         row_item['upload_id'] if 'upload_id' in row_item else '',
         str(row_item['size']) if 'size' in row_item else '',
         str(row_item['bytes']) if 'bytes' in row_item else '',
-        row_item['result'], row_item['description']
+        row_item['result'],
+        row_item['description'],
     ]
 
     data = [six.ensure_str(value) for value in data]

@@ -107,8 +107,13 @@ class CommandOptions(HelpProvider):
   help_spec = HelpProvider.HelpSpec(
       help_name='projects',
       help_name_aliases=[
-          'apis console', 'cloud console', 'console', 'dev console', 'project',
-          'proj', 'project-id'
+          'apis console',
+          'cloud console',
+          'console',
+          'dev console',
+          'project',
+          'proj',
+          'project-id',
       ],
       help_type='additional_help',
       help_one_line_summary='Working With Projects',

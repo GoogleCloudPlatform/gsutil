@@ -119,8 +119,11 @@ _DETAILED_HELP_TEXT = ("""
 # of doing things. This list comes from functionality that was supported by
 # gsutil3 at the time gsutil4 was released.
 SETTABLE_FIELDS = [
-    'cache-control', 'content-disposition', 'content-encoding',
-    'content-language', 'content-type'
+    'cache-control',
+    'content-disposition',
+    'content-encoding',
+    'content-language',
+    'content-type',
 ]
 
 
@@ -148,9 +151,15 @@ class SetMetaCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[
+          ApiSelector.XML,
+          ApiSelector.JSON,
+      ],
       gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
+      argparse_arguments=[
+          CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
+      ],
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='setmeta',

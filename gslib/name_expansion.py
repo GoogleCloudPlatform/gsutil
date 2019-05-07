@@ -608,13 +608,15 @@ DestinationInfo = collections.namedtuple(
         'exp_dst_url',
         # Bool indicating whether the expanded destination names an existing
         # directory, bucket, or bucket subdirectory.
-        'have_existing_dst_container'
+        'have_existing_dst_container',
     ])
 
 # Describes (NameExpansionIterator, DestinationInfo) tuple.
 NameExpansionIteratorDestinationTuple = collections.namedtuple(
-    'NameExpansionIteratorDestinationTuple',
-    ['name_expansion_iter', 'destination'])
+    'NameExpansionIteratorDestinationTuple', [
+        'name_expansion_iter',
+        'destination',
+    ])
 
 
 class CopyObjectsIterator(six.Iterator):

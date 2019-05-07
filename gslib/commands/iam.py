@@ -262,14 +262,16 @@ class IamCommand(Command):
       gs_api_support=[ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
-          'get': [CommandArgument.MakeNCloudURLsArgument(1)],
+          'get': [
+              CommandArgument.MakeNCloudURLsArgument(1),
+          ],
           'set': [
               CommandArgument.MakeNFileURLsArgument(1),
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
           ],
           'ch': [
               CommandArgument.MakeOneOrMoreBindingsArgument(),
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
           ],
       },
   )
@@ -278,14 +280,15 @@ class IamCommand(Command):
       help_name='iam',
       help_name_aliases=[],
       help_type='command_help',
-      help_one_line_summary=('Get, set, or change'
-                             ' bucket and/or object IAM permissions.'),
+      help_one_line_summary=(
+          'Get, set, or change bucket and/or object IAM permissions.'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
           'set': _set_help_text,
           'ch': _ch_help_text,
-      })
+      },
+  )
 
   def GetIamHelper(self, storage_url, thread_state=None):
     """Gets an IAM policy for a single, resolved bucket / object URL.

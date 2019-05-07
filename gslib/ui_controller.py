@@ -627,8 +627,8 @@ class DataManager(StatusMessageManager):
       file_name = status_message.src_url.url_string
       status_message.size = status_message.size if status_message.size else 0
       # Creates a new entry on individual_file_progress.
-      self.individual_file_progress[file_name] = (self._ProgressInformation(
-          status_message.size))
+      self.individual_file_progress[file_name] = self._ProgressInformation(
+          status_message.size)
 
       if self.num_objects_source >= EstimationSource.INDIVIDUAL_MESSAGES:
         # This ensures the file has not been counted on SeekAheadThread or
@@ -893,10 +893,15 @@ class DataManager(StatusMessageManager):
       True if this message can be properly handled by this manager,
       False otherwise.
     """
-    if isinstance(
-        status_message,
-        (SeekAheadMessage, ProducerThreadMessage, FileMessage, ProgressMessage,
-         FinalMessage, RetryableErrorMessage, PerformanceSummaryMessage)):
+    if isinstance(status_message, (
+        SeekAheadMessage,
+        ProducerThreadMessage,
+        FileMessage,
+        ProgressMessage,
+        FinalMessage,
+        RetryableErrorMessage,
+        PerformanceSummaryMessage,
+    )):
       return True
     return False
 

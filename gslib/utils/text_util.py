@@ -46,7 +46,7 @@ STORAGE_CLASS_SHORTHAND_TO_FULL_NAME = {
     'DRA': 'DURABLE_REDUCED_AVAILABILITY',
     'NL': 'NEARLINE',
     'S': 'STANDARD',
-    'STD': 'STANDARD'
+    'STD': 'STANDARD',
 }
 
 VERSION_MATCHER = LazyWrapper(lambda: re.compile(

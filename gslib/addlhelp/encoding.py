@@ -160,7 +160,12 @@ class CommandOptions(HelpProvider):
   help_spec = HelpProvider.HelpSpec(
       help_name='encoding',
       help_name_aliases=[
-          'encodings', 'utf8', 'utf-8', 'latin1', 'unicode', 'interoperability'
+          'encodings',
+          'utf8',
+          'utf-8',
+          'latin1',
+          'unicode',
+          'interoperability',
       ],
       help_type='additional_help',
       help_one_line_summary='Filename encoding and interoperability problems',

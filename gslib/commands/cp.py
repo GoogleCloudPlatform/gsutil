@@ -765,11 +765,20 @@ _OPTIONS_TEXT = """
 """
 
 _DETAILED_HELP_TEXT = '\n\n'.join([
-    _SYNOPSIS_TEXT, _DESCRIPTION_TEXT, _NAME_CONSTRUCTION_TEXT,
-    _SUBDIRECTORIES_TEXT, _COPY_IN_CLOUD_TEXT, _CHECKSUM_VALIDATION_TEXT,
-    _RETRY_HANDLING_TEXT, _RESUMABLE_TRANSFERS_TEXT, _STREAMING_TRANSFERS_TEXT,
-    _SLICED_OBJECT_DOWNLOADS_TEXT, _PARALLEL_COMPOSITE_UPLOADS_TEXT,
-    _CHANGING_TEMP_DIRECTORIES_TEXT, _COPYING_SPECIAL_FILES_TEXT, _OPTIONS_TEXT
+    _SYNOPSIS_TEXT,
+    _DESCRIPTION_TEXT,
+    _NAME_CONSTRUCTION_TEXT,
+    _SUBDIRECTORIES_TEXT,
+    _COPY_IN_CLOUD_TEXT,
+    _CHECKSUM_VALIDATION_TEXT,
+    _RETRY_HANDLING_TEXT,
+    _RESUMABLE_TRANSFERS_TEXT,
+    _STREAMING_TRANSFERS_TEXT,
+    _SLICED_OBJECT_DOWNLOADS_TEXT,
+    _PARALLEL_COMPOSITE_UPLOADS_TEXT,
+    _CHANGING_TEMP_DIRECTORIES_TEXT,
+    _COPYING_SPECIAL_FILES_TEXT,
+    _OPTIONS_TEXT,
 ])
 
 CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRs:tUvz:Zj:J'
@@ -830,8 +839,9 @@ class CpCommand(Command):
       gs_default_api=ApiSelector.JSON,
       supported_private_args=['testcallbackfile='],
       argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
-      ])
+          CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument(),
+      ],
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='cp',
@@ -974,20 +984,20 @@ class CpCommand(Command):
     try:
       if copy_helper_opts.use_manifest:
         self.manifest.Initialize(exp_src_url.url_string, dst_url.url_string)
-      (_, bytes_transferred, result_url,
-       md5) = (copy_helper.PerformCopy(self.logger,
-                                       exp_src_url,
-                                       dst_url,
-                                       gsutil_api,
-                                       self,
-                                       _CopyExceptionHandler,
-                                       src_obj_metadata=src_obj_metadata,
-                                       allow_splitting=True,
-                                       headers=self.headers,
-                                       manifest=self.manifest,
-                                       gzip_encoded=self.gzip_encoded,
-                                       gzip_exts=self.gzip_exts,
-                                       preserve_posix=preserve_posix))
+      _, bytes_transferred, result_url, md5 = copy_helper.PerformCopy(
+          self.logger,
+          exp_src_url,
+          dst_url,
+          gsutil_api,
+          self,
+          _CopyExceptionHandler,
+          src_obj_metadata=src_obj_metadata,
+          allow_splitting=True,
+          headers=self.headers,
+          manifest=self.manifest,
+          gzip_encoded=self.gzip_encoded,
+          gzip_exts=self.gzip_exts,
+          preserve_posix=preserve_posix)
       if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.url_string, 'md5', md5)
@@ -1075,9 +1085,11 @@ class CpCommand(Command):
       # destination directory. In another scenario, all the threads might find
       # that the destination directory does not exist and copy the source
       # directories to the destination directory.
-      (exp_dst_url,
-       have_existing_dst_container) = (copy_helper.ExpandUrlToSingleBlr(
-           dst_url_str, self.gsutil_api, self.project_id, logger=self.logger))
+      exp_dst_url, have_existing_dst_container = (
+          copy_helper.ExpandUrlToSingleBlr(dst_url_str,
+                                           self.gsutil_api,
+                                           self.project_id,
+                                           logger=self.logger))
       name_expansion_iterator_dst_tuple = NameExpansionIteratorDestinationTuple(
           NameExpansionIterator(
               self.command_name,
@@ -1145,7 +1157,9 @@ class CpCommand(Command):
     # wrap the name expansion iterator in order to collect analytics.
     name_expansion_iterator = CopyObjectsIterator(
         self._ConstructNameExpansionIteratorDstTupleIterator(
-            src_url_strs, dst_url_strs), copy_helper_opts.daisy_chain)
+            src_url_strs, dst_url_strs),
+        copy_helper_opts.daisy_chain,
+    )
 
     seek_ahead_iterator = None
     # Cannot seek ahead with stdin args, since we can only iterate them

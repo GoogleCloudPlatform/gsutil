@@ -50,7 +50,7 @@ if coverage_outfile:
                                             omit=[
                                                 'gslib/third_party/*',
                                                 'gslib/tests/*',
-                                                tempfile.gettempdir() + '*'
+                                                tempfile.gettempdir() + '*',
                                             ])
     coverage_controller.start()
   except ImportError:

@@ -698,15 +698,19 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
     else:
       wildcard = '%s/*' % base_url_str.rstrip('/\\')
     fields = [
-        'crc32c', 'md5Hash', 'name', 'size', 'timeCreated',
-        'metadata/%s' % MTIME_ATTR
+        'crc32c',
+        'md5Hash',
+        'name',
+        'size',
+        'timeCreated',
+        'metadata/%s' % MTIME_ATTR,
     ]
     if cls.preserve_posix_attrs:
       fields.extend([
           'metadata/%s' % ATIME_ATTR,
           'metadata/%s' % MODE_ATTR,
           'metadata/%s' % GID_ATTR,
-          'metadata/%s' % UID_ATTR
+          'metadata/%s' % UID_ATTR,
       ])
     iterator = CreateWildcardIterator(
         wildcard,
@@ -820,8 +824,8 @@ def _BuildTmpOutputLine(blr):
       uid,  # int
       gid,  # int
       crc32c,  # unicode
-      md5
-  ]  # unicode
+      md5,  # unicode
+  ]
   attrs = [six.ensure_text(str(i)) for i in attrs]
   return ' '.join(attrs) + '\n'
 
@@ -953,10 +957,18 @@ class _DiffIterator(object):
     # Build sorted lists of src and dst URLs in parallel. To do this, pass
     # args to _ListUrlRootFunc as tuple (base_url_str, out_filename, desc)
     # where base_url_str is the starting URL string for listing.
-    args_iter = iter([(self.base_src_url.url_string,
-                       self.sorted_list_src_file_name, 'source'),
-                      (self.base_dst_url.url_string,
-                       self.sorted_list_dst_file_name, 'destination')])
+    args_iter = iter([
+        (
+            self.base_src_url.url_string,
+            self.sorted_list_src_file_name,
+            'source',
+        ),
+        (
+            self.base_dst_url.url_string,
+            self.sorted_list_dst_file_name,
+            'destination',
+        ),
+    ])
 
     # Contains error message from non-retryable listing failure.
     command_obj.non_retryable_listing_failures = 0
@@ -1004,8 +1016,8 @@ class _DiffIterator(object):
     """
     errors = collections.deque()
     for src_url in self.sorted_src_urls_it:
-      (src_url_str, _, _, _, _, src_mode, src_uid, src_gid, _,
-       _) = (self._ParseTmpFileLine(src_url))
+      src_url_str, _, _, _, _, src_mode, src_uid, src_gid, _, _ = (
+          self._ParseTmpFileLine(src_url))
       valid, err = ValidateFilePermissionAccess(src_url_str,
                                                 uid=src_uid,
                                                 gid=src_gid,
@@ -1035,8 +1047,18 @@ class _DiffIterator(object):
     """
     (encoded_url, size, time_created, atime, mtime, mode, uid, gid, crc32c,
      md5) = line.split()
-    return (_DecodeUrl(encoded_url), int(size), long(time_created), long(atime),
-            long(mtime), int(mode), int(uid), int(gid), crc32c, md5.strip())
+    return (
+        _DecodeUrl(encoded_url),
+        int(size),
+        long(time_created),
+        long(atime),
+        long(mtime),
+        int(mode),
+        int(uid),
+        int(gid),
+        crc32c,
+        md5.strip(),
+    )
 
   def _WarnIfMissingCloudHash(self, url_str, crc32c, md5):
     """Warns if given url_str is a cloud URL and is missing both crc32c and md5.
@@ -1059,9 +1081,19 @@ class _DiffIterator(object):
       return True
     return False
 
-  def _CompareObjects(self, src_url_str, src_size, src_mtime, src_crc32c,
-                      src_md5, dst_url_str, dst_size, dst_mtime, dst_crc32c,
-                      dst_md5):
+  def _CompareObjects(
+      self,
+      src_url_str,
+      src_size,
+      src_mtime,
+      src_crc32c,
+      src_md5,
+      dst_url_str,
+      dst_size,
+      dst_mtime,
+      dst_crc32c,
+      dst_md5,
+  ):
     """Returns whether src should replace dst object, and if mtime is present.
 
     Uses mtime, size, or whatever checksums are available.
@@ -1104,10 +1136,17 @@ class _DiffIterator(object):
               src_size != dst_size, has_src_mtime, has_dst_mtime)
     if src_size != dst_size:
       return True, has_src_mtime, has_dst_mtime
-    (src_crc32c, src_md5, dst_crc32c,
-     dst_md5) = _ComputeNeededFileChecksums(self.logger, src_url_str, src_size,
-                                            src_crc32c, src_md5, dst_url_str,
-                                            dst_size, dst_crc32c, dst_md5)
+    src_crc32c, src_md5, dst_crc32c, dst_md5 = _ComputeNeededFileChecksums(
+        self.logger,
+        src_url_str,
+        src_size,
+        src_crc32c,
+        src_md5,
+        dst_url_str,
+        dst_size,
+        dst_crc32c,
+        dst_md5,
+    )
     if src_md5 != _NA and dst_md5 != _NA:
       self.logger.debug('Comparing md5 for %s and %s', src_url_str, dst_url_str)
       return src_md5 != dst_md5, has_src_mtime, has_dst_mtime

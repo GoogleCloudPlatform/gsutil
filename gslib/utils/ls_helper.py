@@ -36,14 +36,33 @@ from gslib.utils.translation_helper import AclTranslation
 from gslib.utils import text_util
 from gslib.wildcard_iterator import StorageUrlFromString
 
-ENCRYPTED_FIELDS = ['md5Hash', 'crc32c']
+ENCRYPTED_FIELDS = [
+    'md5Hash',
+    'crc32c',
+]
 UNENCRYPTED_FULL_LISTING_FIELDS = [
-    'acl', 'cacheControl', 'componentCount', 'contentDisposition',
-    'contentEncoding', 'contentLanguage', 'contentType', 'kmsKeyName',
-    'customerEncryption', 'etag', 'eventBasedHold', 'generation', 'metadata',
-    'metageneration', 'retentionExpirationTime', 'size', 'storageClass',
-    'temporaryHold', 'timeCreated', 'timeDeleted', 'timeStorageClassUpdated',
-    'updated'
+    'acl',
+    'cacheControl',
+    'componentCount',
+    'contentDisposition',
+    'contentEncoding',
+    'contentLanguage',
+    'contentType',
+    'kmsKeyName',
+    'customerEncryption',
+    'etag',
+    'eventBasedHold',
+    'generation',
+    'metadata',
+    'metageneration',
+    'retentionExpirationTime',
+    'size',
+    'storageClass',
+    'temporaryHold',
+    'timeCreated',
+    'timeDeleted',
+    'timeStorageClassUpdated',
+    'updated',
 ]
 
 

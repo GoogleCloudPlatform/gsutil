@@ -89,19 +89,25 @@ class VersioningCommand(Command):
               CommandArgument('mode', choices=['on', 'off']),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
-          'get': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()]
-      })
+          'get': [
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
+          ],
+      },
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='versioning',
-      help_name_aliases=['getversioning', 'setversioning'],
+      help_name_aliases=[
+          'getversioning',
+          'setversioning',
+      ],
       help_type='command_help',
       help_one_line_summary=(
           'Enable or suspend versioning for one or more buckets'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
-          'set': _set_help_text
+          'set': _set_help_text,
       },
   )
 
