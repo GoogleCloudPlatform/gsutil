@@ -98,10 +98,8 @@ from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.unit_util import TEN_MIB
 from gslib.wildcard_iterator import CreateWildcardIterator
 
-
 if six.PY3:
   long = int
-
 
 _SYNOPSIS = """
   gsutil rsync [OPTION]... src_url dst_url
@@ -563,8 +561,8 @@ def CleanUpTempFiles():
 
 def _DiffToApplyArgChecker(command_instance, diff_to_apply):
   """Arg checker that skips symlinks if -e flag specified."""
-  if (diff_to_apply.diff_action == DiffAction.REMOVE
-      or not command_instance.exclude_symlinks):
+  if (diff_to_apply.diff_action == DiffAction.REMOVE or
+      not command_instance.exclude_symlinks):
     # No src URL is populated for REMOVE actions.
     return True
   exp_src_url = StorageUrlFromString(diff_to_apply.src_url_str)
@@ -650,9 +648,8 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
     # futile or could result in data loss - for example:
     #     gsutil rsync -d gs://non-existent-bucket ./localdir
     # would delete files from localdir.
-    cls.logger.error(
-        'Caught non-retryable exception while listing %s: %s' %
-        (base_url_str, e))
+    cls.logger.error('Caught non-retryable exception while listing %s: %s' %
+                     (base_url_str, e))
     # Also print the full stack trace in debugging mode. This makes debugging
     # a bit easier.
     cls.logger.debug(traceback.format_exc())
@@ -700,14 +697,27 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
       wildcard = '%s/**' % base_url_str.rstrip('/\\')
     else:
       wildcard = '%s/*' % base_url_str.rstrip('/\\')
-    fields = ['crc32c', 'md5Hash', 'name', 'size', 'timeCreated',
-              'metadata/%s' % MTIME_ATTR]
+    fields = [
+        'crc32c',
+        'md5Hash',
+        'name',
+        'size',
+        'timeCreated',
+        'metadata/%s' % MTIME_ATTR,
+    ]
     if cls.preserve_posix_attrs:
-      fields.extend(['metadata/%s' % ATIME_ATTR, 'metadata/%s' % MODE_ATTR,
-                     'metadata/%s' % GID_ATTR, 'metadata/%s' % UID_ATTR])
+      fields.extend([
+          'metadata/%s' % ATIME_ATTR,
+          'metadata/%s' % MODE_ATTR,
+          'metadata/%s' % GID_ATTR,
+          'metadata/%s' % UID_ATTR,
+      ])
     iterator = CreateWildcardIterator(
-        wildcard, gsutil_api, project_id=cls.project_id,
-        ignore_symlinks=cls.exclude_symlinks, logger=cls.logger).IterObjects(
+        wildcard,
+        gsutil_api,
+        project_id=cls.project_id,
+        ignore_symlinks=cls.exclude_symlinks,
+        logger=cls.logger).IterObjects(
             # Request just the needed fields, to reduce bandwidth usage.
             bucket_listing_fields=fields)
   i = 0
@@ -725,8 +735,8 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
       # We used to output the message 'Skipping cloud sub-directory placeholder
       # object...' but we no longer do so because it caused customer confusion.
       continue
-    if (cls.exclude_symlinks and url.IsFileUrl()
-        and os.path.islink(url.object_name)):
+    if (cls.exclude_symlinks and url.IsFileUrl() and
+        os.path.islink(url.object_name)):
       continue
     if cls.exclude_pattern:
       str_to_check = url.url_string[len(base_url_str):]
@@ -776,8 +786,8 @@ def _BuildTmpOutputLine(blr):
   elif url.IsCloudUrl():
     size = blr.root_object.size
     if blr.root_object.metadata is not None:
-      found_m, mtime_str = GetValueFromObjectCustomMetadata(blr.root_object,
-                                                            MTIME_ATTR, NA_TIME)
+      found_m, mtime_str = GetValueFromObjectCustomMetadata(
+          blr.root_object, MTIME_ATTR, NA_TIME)
       try:
         # The mtime value can be changed in the online console, this performs a
         # sanity check and sets the mtime to NA_TIME if it fails.
@@ -791,8 +801,8 @@ def _BuildTmpOutputLine(blr):
         # long.
         WarnInvalidValue('mtime', url.url_string)
         mtime = NA_TIME
-      posix_attrs = DeserializeFileAttributesFromObjectMetadata(blr.root_object,
-                                                                url.url_string)
+      posix_attrs = DeserializeFileAttributesFromObjectMetadata(
+          blr.root_object, url.url_string)
       mode = posix_attrs.mode.permissions
       atime = posix_attrs.atime
       uid = posix_attrs.uid
@@ -804,16 +814,18 @@ def _BuildTmpOutputLine(blr):
     md5 = blr.root_object.md5Hash or _NA
   else:
     raise CommandException('Got unexpected URL type (%s)' % url.scheme)
-  attrs = [_EncodeUrl(url.url_string), # binary str in py2 / unicode str py 3
-          size, # int
-          time_created, # int
-          atime, # long
-          mtime, # long
-          mode, # int
-          uid, # int
-          gid, # int
-          crc32c, # unicode
-          md5] # unicode
+  attrs = [
+      _EncodeUrl(url.url_string),  # binary str in py2 / unicode str py 3
+      size,  # int
+      time_created,  # int
+      atime,  # long
+      mtime,  # long
+      mode,  # int
+      uid,  # int
+      gid,  # int
+      crc32c,  # unicode
+      md5,  # unicode
+  ]
   attrs = [six.ensure_text(str(i)) for i in attrs]
   return ' '.join(attrs) + '\n'
 
@@ -849,6 +861,7 @@ def _DecodeUrl(enc_url_string):
     url = url.decode(constants.UTF8)
   return url
 
+
 # pylint: disable=bare-except
 def _BatchSort(in_iter, out_file):
   """Sorts input lines from in_iter and outputs to out_file.
@@ -878,7 +891,8 @@ def _BatchSort(in_iter, out_file):
       if not current_chunk:
         break
       output_chunk = io.open('%s-%06i' % (out_file.name, len(chunk_files)),
-                             mode='w+', encoding=constants.UTF8)
+                             mode='w+',
+                             encoding=constants.UTF8)
       chunk_files.append(output_chunk)
       output_chunk.write(six.text_type(''.join(current_chunk)))
       output_chunk.flush()
@@ -886,11 +900,12 @@ def _BatchSort(in_iter, out_file):
     out_file.writelines(heapq.merge(*chunk_files))
   except IOError as e:
     if e.errno == errno.EMFILE:
-      raise CommandException('\n'.join(textwrap.wrap(
-          'Synchronization failed because too many open file handles were '
-          'needed while building synchronization state. Please see the '
-          'comments about rsync_buffer_lines in your .boto config file for a '
-          'possible way to address this problem.')))
+      raise CommandException('\n'.join(
+          textwrap.wrap(
+              'Synchronization failed because too many open file handles were '
+              'needed while building synchronization state. Please see the '
+              'comments about rsync_buffer_lines in your .boto config file for a '
+              'possible way to address this problem.')))
     raise
   finally:
     for chunk_file in chunk_files:
@@ -923,10 +938,10 @@ class _DiffIterator(object):
     # Files to track src and dst state should be created in the system's
     # preferred temp directory so that they are eventually cleaned up if our
     # cleanup callback is interrupted.
-    temp_src_file = tempfile.NamedTemporaryFile(
-        prefix='gsutil-rsync-src-', delete=False)
-    temp_dst_file = tempfile.NamedTemporaryFile(
-        prefix='gsutil-rsync-dst-', delete=False)
+    temp_src_file = tempfile.NamedTemporaryFile(prefix='gsutil-rsync-src-',
+                                                delete=False)
+    temp_dst_file = tempfile.NamedTemporaryFile(prefix='gsutil-rsync-dst-',
+                                                delete=False)
     self.sorted_list_src_file_name = temp_src_file.name
     self.sorted_list_dst_file_name = temp_dst_file.name
     _tmp_files.append(temp_src_file)
@@ -943,17 +958,26 @@ class _DiffIterator(object):
     # args to _ListUrlRootFunc as tuple (base_url_str, out_filename, desc)
     # where base_url_str is the starting URL string for listing.
     args_iter = iter([
-        (self.base_src_url.url_string, self.sorted_list_src_file_name,
-         'source'),
-        (self.base_dst_url.url_string, self.sorted_list_dst_file_name,
-         'destination')
+        (
+            self.base_src_url.url_string,
+            self.sorted_list_src_file_name,
+            'source',
+        ),
+        (
+            self.base_dst_url.url_string,
+            self.sorted_list_dst_file_name,
+            'destination',
+        ),
     ])
 
     # Contains error message from non-retryable listing failure.
     command_obj.non_retryable_listing_failures = 0
     shared_attrs = ['non_retryable_listing_failures']
     command_obj.Apply(
-        _ListUrlRootFunc, args_iter, _RootListingExceptionHandler, shared_attrs,
+        _ListUrlRootFunc,
+        args_iter,
+        _RootListingExceptionHandler,
+        shared_attrs,
         arg_checker=DummyArgChecker,
         parallel_operations_override=command_obj.ParallelOverrideReason.SPEED,
         fail_on_error=True)
@@ -992,10 +1016,12 @@ class _DiffIterator(object):
     """
     errors = collections.deque()
     for src_url in self.sorted_src_urls_it:
-      (src_url_str, _, _, _, _, src_mode, src_uid, src_gid,
-       _, _) = (self._ParseTmpFileLine(src_url))
-      valid, err = ValidateFilePermissionAccess(src_url_str, uid=src_uid,
-                                                gid=src_gid, mode=src_mode)
+      src_url_str, _, _, _, _, src_mode, src_uid, src_gid, _, _ = (
+          self._ParseTmpFileLine(src_url))
+      valid, err = ValidateFilePermissionAccess(src_url_str,
+                                                uid=src_uid,
+                                                gid=src_gid,
+                                                mode=src_mode)
       if not valid:
         errors.append(err)
     if errors:
@@ -1021,9 +1047,18 @@ class _DiffIterator(object):
     """
     (encoded_url, size, time_created, atime, mtime, mode, uid, gid, crc32c,
      md5) = line.split()
-    return (_DecodeUrl(encoded_url), int(size), long(time_created), long(atime),
-            long(mtime), int(mode), int(uid), int(gid), crc32c,
-            md5.strip())
+    return (
+        _DecodeUrl(encoded_url),
+        int(size),
+        long(time_created),
+        long(atime),
+        long(mtime),
+        int(mode),
+        int(uid),
+        int(gid),
+        crc32c,
+        md5.strip(),
+    )
 
   def _WarnIfMissingCloudHash(self, url_str, crc32c, md5):
     """Warns if given url_str is a cloud URL and is missing both crc32c and md5.
@@ -1038,17 +1073,27 @@ class _DiffIterator(object):
     """
     # One known way this can currently happen is when rsync'ing objects larger
     # than 5 GB from S3 (for which the etag is not an MD5).
-    if (StorageUrlFromString(url_str).IsCloudUrl()
-        and crc32c == _NA and md5 == _NA):
+    if (StorageUrlFromString(url_str).IsCloudUrl() and crc32c == _NA and
+        md5 == _NA):
       self.logger.warn(
           'Found no hashes to validate %s. Integrity cannot be assured without '
           'hashes.', url_str)
       return True
     return False
 
-  def _CompareObjects(self, src_url_str, src_size, src_mtime, src_crc32c,
-                      src_md5, dst_url_str, dst_size, dst_mtime, dst_crc32c,
-                      dst_md5):
+  def _CompareObjects(
+      self,
+      src_url_str,
+      src_size,
+      src_mtime,
+      src_crc32c,
+      src_md5,
+      dst_url_str,
+      dst_size,
+      dst_mtime,
+      dst_crc32c,
+      dst_md5,
+  ):
     """Returns whether src should replace dst object, and if mtime is present.
 
     Uses mtime, size, or whatever checksums are available.
@@ -1087,19 +1132,27 @@ class _DiffIterator(object):
         src_mtime < dst_mtime):
       return False, has_src_mtime, has_dst_mtime
     if not use_hashes and has_src_mtime and has_dst_mtime:
-      return (src_mtime != dst_mtime or src_size != dst_size, has_src_mtime,
-              has_dst_mtime)
+      return (src_mtime != dst_mtime or
+              src_size != dst_size, has_src_mtime, has_dst_mtime)
     if src_size != dst_size:
       return True, has_src_mtime, has_dst_mtime
-    (src_crc32c, src_md5, dst_crc32c, dst_md5) = _ComputeNeededFileChecksums(
-        self.logger, src_url_str, src_size, src_crc32c, src_md5, dst_url_str,
-        dst_size, dst_crc32c, dst_md5)
+    src_crc32c, src_md5, dst_crc32c, dst_md5 = _ComputeNeededFileChecksums(
+        self.logger,
+        src_url_str,
+        src_size,
+        src_crc32c,
+        src_md5,
+        dst_url_str,
+        dst_size,
+        dst_crc32c,
+        dst_md5,
+    )
     if src_md5 != _NA and dst_md5 != _NA:
       self.logger.debug('Comparing md5 for %s and %s', src_url_str, dst_url_str)
       return src_md5 != dst_md5, has_src_mtime, has_dst_mtime
     if src_crc32c != _NA and dst_crc32c != _NA:
-      self.logger.debug(
-          'Comparing crc32c for %s and %s', src_url_str, dst_url_str)
+      self.logger.debug('Comparing crc32c for %s and %s', src_url_str,
+                        dst_url_str)
       return src_crc32c != dst_crc32c, has_src_mtime, has_dst_mtime
     if not self._WarnIfMissingCloudHash(src_url_str, src_crc32c, src_md5):
       self._WarnIfMissingCloudHash(dst_url_str, dst_crc32c, dst_md5)
@@ -1131,10 +1184,13 @@ class _DiffIterator(object):
           out_of_src_items = True
         else:
           (src_url_str, src_size, src_time_created, src_atime, src_mtime,
-           src_mode, src_uid, src_gid, src_crc32c, src_md5) = (
-               self._ParseTmpFileLine(next(self.sorted_src_urls_it)))
-          posix_attrs = POSIXAttributes(atime=src_atime, mtime=src_mtime,
-                                        uid=src_uid, gid=src_gid, mode=src_mode)
+           src_mode, src_uid, src_gid, src_crc32c,
+           src_md5) = (self._ParseTmpFileLine(next(self.sorted_src_urls_it)))
+          posix_attrs = POSIXAttributes(atime=src_atime,
+                                        mtime=src_mtime,
+                                        uid=src_uid,
+                                        gid=src_gid,
+                                        mode=src_mode)
           # Skip past base URL and normalize slashes so we can compare across
           # clouds/file systems (including Windows).
           src_url_str_to_check = _EncodeUrl(
@@ -1159,12 +1215,10 @@ class _DiffIterator(object):
 
       # We're guaranteed to have a value for src_url_str_to_check here, but may
       # be out of dst objects.
-      if (dst_url_str is None or
-          src_url_str_to_check < dst_url_str_to_check):
+      if (dst_url_str is None or src_url_str_to_check < dst_url_str_to_check):
         # There's no dst object corresponding to src object, so copy src to dst.
-        yield RsyncDiffToApply(
-            src_url_str, dst_url_str_would_copy_to, posix_attrs,
-            DiffAction.COPY, src_size)
+        yield RsyncDiffToApply(src_url_str, dst_url_str_would_copy_to,
+                               posix_attrs, DiffAction.COPY, src_size)
         src_url_str = None
       elif src_url_str_to_check > dst_url_str_to_check:
         # dst object without a corresponding src object, so remove dst if -d
@@ -1281,6 +1335,7 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
         iter(self.sorted_list_src_file))
     self.sorted_dst_urls_it = PluralityCheckableIterator(
         iter(self.sorted_list_dst_file))
+
   # pylint: enable=super-init-not-called
 
 
@@ -1299,9 +1354,10 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
         os.unlink(dst_url.object_name)
       else:
         try:
-          gsutil_api.DeleteObject(
-              dst_url.bucket_name, dst_url.object_name,
-              generation=dst_url.generation, provider=dst_url.scheme)
+          gsutil_api.DeleteObject(dst_url.bucket_name,
+                                  dst_url.object_name,
+                                  generation=dst_url.generation,
+                                  provider=dst_url.scheme)
         except NotFoundException:
           # If the object happened to be deleted by an external process, this
           # is fine because it moves us closer to the desired state.
@@ -1327,8 +1383,10 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           src_generation = GenerationFromUrlAndString(src_url,
                                                       src_url.generation)
           src_obj_metadata = gsutil_api.GetObjectMetadata(
-              src_url.bucket_name, src_url.object_name,
-              generation=src_generation, provider=src_url.scheme,
+              src_url.bucket_name,
+              src_url.object_name,
+              generation=src_generation,
+              provider=src_url.scheme,
               fields=cls.source_metadata_fields)
           if ObjectIsGzipEncoded(src_obj_metadata):
             cls.logger.info(
@@ -1338,8 +1396,8 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
                 'to synchronize such an object efficiently, compress the '
                 'source objects in place before synchronizing them, rather '
                 'than (for example) using gsutil cp -Z to compress them '
-                'on-the-fly (which results in compressed content-encoding).'
-                % src_url)
+                'on-the-fly (which results in compressed content-encoding).' %
+                src_url)
         else:  # src_url.IsFileUrl()
           src_obj_metadata = apitools_messages.Object()
           # getmtime can return a float, so it needs to be converted to long.
@@ -1351,16 +1409,25 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           custom_metadata = apitools_messages.Object.MetadataValue(
               additionalProperties=[])
         SerializeFileAttributesToObjectMetadata(
-            posix_attrs, custom_metadata,
+            posix_attrs,
+            custom_metadata,
             preserve_posix=cls.preserve_posix_attrs)
         tmp_obj_metadata = apitools_messages.Object()
         tmp_obj_metadata.metadata = custom_metadata
         CopyCustomMetadata(tmp_obj_metadata, src_obj_metadata, override=True)
         copy_result = copy_helper.PerformCopy(
-            cls.logger, src_url, dst_url, gsutil_api, cls,
-            _RsyncExceptionHandler, src_obj_metadata=src_obj_metadata,
-            headers=cls.headers, is_rsync=True, gzip_encoded=cls.gzip_encoded,
-            gzip_exts=cls.gzip_exts, preserve_posix=cls.preserve_posix_attrs)
+            cls.logger,
+            src_url,
+            dst_url,
+            gsutil_api,
+            cls,
+            _RsyncExceptionHandler,
+            src_obj_metadata=src_obj_metadata,
+            headers=cls.headers,
+            is_rsync=True,
+            gzip_encoded=cls.gzip_encoded,
+            gzip_exts=cls.gzip_exts,
+            preserve_posix=cls.preserve_posix_attrs)
         if copy_result is not None:
           (_, bytes_transferred, _, _) = copy_result
           with cls.stats_lock:
@@ -1385,27 +1452,32 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
         dst_url = StorageUrlFromString(diff_to_apply.dst_url_str)
         dst_generation = GenerationFromUrlAndString(dst_url, dst_url.generation)
         dst_obj_metadata = gsutil_api.GetObjectMetadata(
-            dst_url.bucket_name, dst_url.object_name, generation=dst_generation,
-            provider=dst_url.scheme, fields=['acl'])
+            dst_url.bucket_name,
+            dst_url.object_name,
+            generation=dst_generation,
+            provider=dst_url.scheme,
+            fields=['acl'])
         if dst_obj_metadata.acl:
           # We have ownership, and can patch the object.
           gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
-                                         dst_url.object_name, obj_metadata,
+                                         dst_url.object_name,
+                                         obj_metadata,
                                          provider=dst_url.scheme,
                                          generation=dst_url.generation)
         else:
           # We don't have object ownership, so it must be copied.
-          cls.logger.info('Copying whole file/object for %s instead of patching'
-                          ' because you don\'t have owner permission on the '
-                          'object.', dst_url.url_string)
-          _RsyncFunc(cls, RsyncDiffToApply(diff_to_apply.src_url_str,
-                                           diff_to_apply.dst_url_str,
-                                           posix_attrs,
-                                           DiffAction.COPY,
-                                           diff_to_apply.copy_size),
+          cls.logger.info(
+              'Copying whole file/object for %s instead of patching'
+              ' because you don\'t have owner permission on the '
+              'object.', dst_url.url_string)
+          _RsyncFunc(cls,
+                     RsyncDiffToApply(diff_to_apply.src_url_str,
+                                      diff_to_apply.dst_url_str, posix_attrs,
+                                      DiffAction.COPY, diff_to_apply.copy_size),
                      thread_state=thread_state)
       else:
-        ParseAndSetPOSIXAttributes(dst_url.object_name, obj_metadata,
+        ParseAndSetPOSIXAttributes(dst_url.object_name,
+                                   obj_metadata,
                                    preserve_posix=cls.preserve_posix_attrs)
   elif diff_to_apply.diff_action == DiffAction.POSIX_SRC_TO_DST:
     # If the destination is an object in a bucket, this will not blow away other
@@ -1426,27 +1498,32 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
       if dst_url.IsCloudUrl():
         dst_generation = GenerationFromUrlAndString(dst_url, dst_url.generation)
         dst_obj_metadata = gsutil_api.GetObjectMetadata(
-            dst_url.bucket_name, dst_url.object_name, generation=dst_generation,
-            provider=dst_url.scheme, fields=['acl'])
+            dst_url.bucket_name,
+            dst_url.object_name,
+            generation=dst_generation,
+            provider=dst_url.scheme,
+            fields=['acl'])
         if dst_obj_metadata.acl:
           # We have ownership, and can patch the object.
           gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
-                                         dst_url.object_name, obj_metadata,
+                                         dst_url.object_name,
+                                         obj_metadata,
                                          provider=dst_url.scheme,
                                          generation=dst_url.generation)
         else:
           # We don't have object ownership, so it must be copied.
-          cls.logger.info('Copying whole file/object for %s instead of patching'
-                          ' because you don\'t have owner permission on the '
-                          'object.', dst_url.url_string)
-          _RsyncFunc(cls, RsyncDiffToApply(diff_to_apply.src_url_str,
-                                           diff_to_apply.dst_url_str,
-                                           posix_attrs, DiffAction.COPY,
-                                           diff_to_apply.copy_size),
+          cls.logger.info(
+              'Copying whole file/object for %s instead of patching'
+              ' because you don\'t have owner permission on the '
+              'object.', dst_url.url_string)
+          _RsyncFunc(cls,
+                     RsyncDiffToApply(diff_to_apply.src_url_str,
+                                      diff_to_apply.dst_url_str, posix_attrs,
+                                      DiffAction.COPY, diff_to_apply.copy_size),
                      thread_state=thread_state)
   else:
-    raise CommandException('Got unexpected DiffAction (%d)'
-                           % diff_to_apply.diff_action)
+    raise CommandException('Got unexpected DiffAction (%d)' %
+                           diff_to_apply.diff_action)
 
 
 def _RootListingExceptionHandler(cls, e):
@@ -1478,10 +1555,7 @@ class RsyncCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeNCloudOrFileURLsArgument(2)
-      ]
-  )
+      argparse_arguments=[CommandArgument.MakeNCloudOrFileURLsArgument(2)])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='rsync',
@@ -1507,12 +1581,15 @@ class RsyncCommand(Command):
       CommandException if url_str doesn't name an existing container.
     """
     (url, have_existing_container) = copy_helper.ExpandUrlToSingleBlr(
-        url_str, self.gsutil_api, self.project_id,
-        treat_nonexistent_object_as_subdir, logger=self.logger)
+        url_str,
+        self.gsutil_api,
+        self.project_id,
+        treat_nonexistent_object_as_subdir,
+        logger=self.logger)
     if not have_existing_container:
       raise CommandException(
-          'arg (%s) does not name a directory, bucket, or bucket subdir.'
-          % url_str)
+          'arg (%s) does not name a directory, bucket, or bucket subdir.' %
+          url_str)
     return url
 
   def RunCommand(self):
@@ -1533,15 +1610,20 @@ class RsyncCommand(Command):
     dst_url = self._InsistContainer(self.args[1], True)
     is_daisy_chain = (src_url.IsCloudUrl() and dst_url.IsCloudUrl() and
                       src_url.scheme != dst_url.scheme)
-    LogPerformanceSummaryParams(
-        has_file_src=src_url.IsFileUrl(), has_cloud_src=src_url.IsCloudUrl(),
-        has_file_dst=dst_url.IsFileUrl(), has_cloud_dst=dst_url.IsCloudUrl(),
-        is_daisy_chain=is_daisy_chain, uses_fan=self.parallel_operations,
-        provider_types=[src_url.scheme, dst_url.scheme])
+    LogPerformanceSummaryParams(has_file_src=src_url.IsFileUrl(),
+                                has_cloud_src=src_url.IsCloudUrl(),
+                                has_file_dst=dst_url.IsFileUrl(),
+                                has_cloud_dst=dst_url.IsCloudUrl(),
+                                is_daisy_chain=is_daisy_chain,
+                                uses_fan=self.parallel_operations,
+                                provider_types=[src_url.scheme, dst_url.scheme])
 
     self.source_metadata_fields = GetSourceFieldsNeededForCopy(
-        dst_url.IsCloudUrl(), self.skip_unsupported_objects, self.preserve_acl,
-        is_rsync=True, preserve_posix=self.preserve_posix_attrs)
+        dst_url.IsCloudUrl(),
+        self.skip_unsupported_objects,
+        self.preserve_acl,
+        is_rsync=True,
+        preserve_posix=self.preserve_posix_attrs)
 
     # Tracks if any copy or rm operations failed.
     self.op_failure_count = 0
@@ -1567,9 +1649,13 @@ class RsyncCommand(Command):
     self.logger.info('Starting synchronization...')
     start_time = time.time()
     try:
-      self.Apply(_RsyncFunc, diff_iterator, _RsyncExceptionHandler,
-                 shared_attrs, arg_checker=_DiffToApplyArgChecker,
-                 fail_on_error=True, seek_ahead_iterator=seek_ahead_iterator)
+      self.Apply(_RsyncFunc,
+                 diff_iterator,
+                 _RsyncExceptionHandler,
+                 shared_attrs,
+                 arg_checker=_DiffToApplyArgChecker,
+                 fail_on_error=True,
+                 seek_ahead_iterator=seek_ahead_iterator)
     finally:
       CleanUpTempFiles()
 
@@ -1584,9 +1670,8 @@ class RsyncCommand(Command):
 
     if self.op_failure_count:
       plural_str = 's' if self.op_failure_count else ''
-      raise CommandException(
-          '%d file%s/object%s could not be copied/removed.' %
-          (self.op_failure_count, plural_str, plural_str))
+      raise CommandException('%d file%s/object%s could not be copied/removed.' %
+                             (self.op_failure_count, plural_str, plural_str))
 
   def _ParseOpts(self):
     # exclude_symlinks is handled by Command parent class, so save in Command

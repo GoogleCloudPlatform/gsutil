@@ -39,8 +39,8 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   def test_set_retention_seconds(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(['retention', 'set', '60s', suri(bucket_uri)])
-    self.VerifyRetentionPolicy(
-        bucket_uri, expected_retention_period_in_seconds=60)
+    self.VerifyRetentionPolicy(bucket_uri,
+                               expected_retention_period_in_seconds=60)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -88,11 +88,10 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
 
-    self.RunGsUtil([
-        '-m', 'retention', 'set', '1y',
-        suri(bucket1_uri),
-        suri(bucket2_uri)
-    ])
+    self.RunGsUtil(
+        ['-m', 'retention', 'set', '1y',
+         suri(bucket1_uri),
+         suri(bucket2_uri)])
 
     self.VerifyRetentionPolicy(
         bucket1_uri, expected_retention_period_in_seconds=_SECONDS_IN_YEAR)
@@ -114,8 +113,7 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucketWithRetentionPolicy(
         retention_period_in_seconds=_SECONDS_IN_MONTH)
     self.RunGsUtil(
-        ['retention', 'set',
-         '{}s'.format(_SECONDS_IN_DAY),
+        ['retention', 'set', '{}s'.format(_SECONDS_IN_DAY),
          suri(bucket_uri)])
     self.VerifyRetentionPolicy(
         bucket_uri, expected_retention_period_in_seconds=_SECONDS_IN_DAY)
@@ -126,16 +124,15 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucketWithRetentionPolicy(
         retention_period_in_seconds=_SECONDS_IN_DAY)
     self.RunGsUtil(['retention', 'clear', suri(bucket_uri)])
-    self.VerifyRetentionPolicy(
-        bucket_uri, expected_retention_period_in_seconds=None)
+    self.VerifyRetentionPolicy(bucket_uri,
+                               expected_retention_period_in_seconds=None)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
   def test_set_retention_unlocked_invalid_arg(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(
-        ['retention', 'set', '1a',
-         suri(bucket_uri)],
+        ['retention', 'set', '1a', suri(bucket_uri)],
         expected_status=1,
         return_stderr=True)
     self.assertRegexpMatches(stderr, r'Incorrect retention period specified')
@@ -173,8 +170,8 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
         return_stderr=True)
     self.assertRegexpMatches(stderr,
                              'does not have an Unlocked Retention Policy')
-    self.VerifyRetentionPolicy(
-        bucket_uri, expected_retention_period_in_seconds=None)
+    self.VerifyRetentionPolicy(bucket_uri,
+                               expected_retention_period_in_seconds=None)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -202,10 +199,10 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   def test_increase_retention_locked(self):
     bucket_uri = self.CreateBucketWithRetentionPolicy(
         retention_period_in_seconds=_SECONDS_IN_DAY, is_locked=True)
-    self.RunGsUtil(
-        ['retention', 'set',
-         '{}s'.format(_SECONDS_IN_DAY + 1),
-         suri(bucket_uri)])
+    self.RunGsUtil([
+        'retention', 'set', '{}s'.format(_SECONDS_IN_DAY + 1),
+        suri(bucket_uri)
+    ])
     self.VerifyRetentionPolicy(
         bucket_uri,
         expected_retention_period_in_seconds=_SECONDS_IN_DAY + 1,
@@ -216,15 +213,15 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   def test_decrease_retention_locked(self):
     bucket_uri = self.CreateBucketWithRetentionPolicy(
         retention_period_in_seconds=_SECONDS_IN_DAY, is_locked=True)
-    stderr = self.RunGsUtil(
-        ['retention', 'set',
-         '{}s'.format(_SECONDS_IN_DAY - 1),
-         suri(bucket_uri)],
-        expected_status=1,
-        return_stderr=True)
-    self.assertRegexpMatches(stderr,
-                             '403 Cannot reduce retention duration of a '
-                             'locked Retention Policy for bucket')
+    stderr = self.RunGsUtil([
+        'retention', 'set', '{}s'.format(_SECONDS_IN_DAY - 1),
+        suri(bucket_uri)
+    ],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertRegexpMatches(
+        stderr, '403 Cannot reduce retention duration of a '
+        'locked Retention Policy for bucket')
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -298,11 +295,10 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('Retention is not supported for XML API')
   def test_set_temporary_hold_invalid_arg(self):
     object_uri = self.CreateObject()
-    stderr = self.RunGsUtil(
-        ['retention', 'temp', 'held',
-         suri(object_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['retention', 'temp', 'held',
+                             suri(object_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertRegexpMatches(
         stderr, r'Invalid subcommand ".*" for the "retention temp" command')
 
@@ -311,14 +307,17 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   def test_temporary_hold_bucket_with_no_retention(self):
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='content')
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object_uri, temporary_hold=None)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             temporary_hold=None)
     self.RunGsUtil(['retention', 'temp', 'set', suri(object_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object_uri, temporary_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             temporary_hold=True)
     self.RunGsUtil(['retention', 'temp', 'release', suri(object_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object_uri, temporary_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             temporary_hold=False)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -326,23 +325,20 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     retention_period = 1
     bucket_uri = self.CreateBucketWithRetentionPolicy(retention_period)
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='content')
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri,
-        object_uri,
-        temporary_hold=None,
-        retention_period=retention_period)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             temporary_hold=None,
+                                             retention_period=retention_period)
     self.RunGsUtil(['retention', 'temp', 'set', suri(object_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri,
-        object_uri,
-        temporary_hold=True,
-        retention_period=retention_period)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             temporary_hold=True,
+                                             retention_period=retention_period)
     self.RunGsUtil(['retention', 'temp', 'release', suri(object_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri,
-        object_uri,
-        temporary_hold=False,
-        retention_period=retention_period)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             temporary_hold=False,
+                                             retention_period=retention_period)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -354,18 +350,22 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
         ['retention', 'temp', 'set',
          suri(object1_uri),
          suri(object2_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object1_uri, temporary_hold=True)
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object2_uri, temporary_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object1_uri,
+                                             temporary_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object2_uri,
+                                             temporary_hold=True)
     self.RunGsUtil(
         ['retention', 'temp', 'release',
          suri(object1_uri),
          suri(object2_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object1_uri, temporary_hold=False)
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object2_uri, temporary_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object1_uri,
+                                             temporary_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object2_uri,
+                                             temporary_hold=False)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -378,29 +378,32 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
         suri(object1_uri),
         suri(object2_uri)
     ])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object1_uri, temporary_hold=True)
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object2_uri, temporary_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object1_uri,
+                                             temporary_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object2_uri,
+                                             temporary_hold=True)
     self.RunGsUtil([
         '-m', 'retention', 'temp', 'release',
         suri(object1_uri),
         suri(object2_uri)
     ])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object1_uri, temporary_hold=False)
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object2_uri, temporary_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object1_uri,
+                                             temporary_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object2_uri,
+                                             temporary_hold=False)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
   def test_set_event_based_hold_invalid_arg(self):
     object_uri = self.CreateObject()
-    stderr = self.RunGsUtil(
-        ['retention', 'event', 'rel',
-         suri(object_uri)],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['retention', 'event', 'rel',
+                             suri(object_uri)],
+                            expected_status=1,
+                            return_stderr=True)
     self.assertRegexpMatches(
         stderr, r'Invalid subcommand ".*" for the "retention event" command')
 
@@ -409,14 +412,17 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
   def test_event_based_hold_bucket_with_no_retention(self):
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='content')
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object_uri, event_based_hold=None)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             event_based_hold=None)
     self.RunGsUtil(['retention', 'event', 'set', suri(object_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object_uri, event_based_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             event_based_hold=True)
     self.RunGsUtil(['retention', 'event', 'release', suri(object_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object_uri, event_based_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             event_based_hold=False)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -424,20 +430,20 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     retention_period = 1
     bucket_uri = self.CreateBucketWithRetentionPolicy(retention_period)
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents='content')
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri,
-        object_uri,
-        event_based_hold=None,
-        retention_period=retention_period)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             event_based_hold=None,
+                                             retention_period=retention_period)
     self.RunGsUtil(['retention', 'event', 'set', suri(object_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object_uri, event_based_hold=True, retention_period=None)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             event_based_hold=True,
+                                             retention_period=None)
     self.RunGsUtil(['retention', 'event', 'release', suri(object_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri,
-        object_uri,
-        event_based_hold=False,
-        retention_period=retention_period)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object_uri,
+                                             event_based_hold=False,
+                                             retention_period=retention_period)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -449,18 +455,22 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
         ['retention', 'event', 'set',
          suri(object1_uri),
          suri(object2_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object1_uri, event_based_hold=True)
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object2_uri, event_based_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object1_uri,
+                                             event_based_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object2_uri,
+                                             event_based_hold=True)
     self.RunGsUtil(
         ['retention', 'event', 'release',
          suri(object1_uri),
          suri(object2_uri)])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object1_uri, event_based_hold=False)
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object2_uri, event_based_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object1_uri,
+                                             event_based_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object2_uri,
+                                             event_based_hold=False)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -473,30 +483,34 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
         suri(object1_uri),
         suri(object2_uri)
     ])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object1_uri, event_based_hold=True)
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object2_uri, event_based_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object1_uri,
+                                             event_based_hold=True)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object2_uri,
+                                             event_based_hold=True)
     self.RunGsUtil([
         '-m', 'retention', 'event', 'release',
         suri(object1_uri),
         suri(object2_uri)
     ])
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object1_uri, event_based_hold=False)
-    self._VerifyObjectHoldAndRetentionStatus(
-        bucket_uri, object2_uri, event_based_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object1_uri,
+                                             event_based_hold=False)
+    self._VerifyObjectHoldAndRetentionStatus(bucket_uri,
+                                             object2_uri,
+                                             event_based_hold=False)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
   def test_default_event_based_hold(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(['retention', 'event-default', 'set', suri(bucket_uri)])
-    self._VerifyDefaultEventBasedHold(
-        bucket_uri, expected_default_event_based_hold=True)
+    self._VerifyDefaultEventBasedHold(bucket_uri,
+                                      expected_default_event_based_hold=True)
     self.RunGsUtil(['retention', 'event-default', 'release', suri(bucket_uri)])
-    self._VerifyDefaultEventBasedHold(
-        bucket_uri, expected_default_event_based_hold=False)
+    self._VerifyDefaultEventBasedHold(bucket_uri,
+                                      expected_default_event_based_hold=False)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -508,10 +522,10 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
         suri(bucket1_uri),
         suri(bucket2_uri)
     ])
-    self._VerifyDefaultEventBasedHold(
-        bucket1_uri, expected_default_event_based_hold=True)
-    self._VerifyDefaultEventBasedHold(
-        bucket2_uri, expected_default_event_based_hold=True)
+    self._VerifyDefaultEventBasedHold(bucket1_uri,
+                                      expected_default_event_based_hold=True)
+    self._VerifyDefaultEventBasedHold(bucket2_uri,
+                                      expected_default_event_based_hold=True)
 
   @SkipForS3('Retention is not supported for s3 objects')
   @SkipForXML('Retention is not supported for XML API')
@@ -523,10 +537,10 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
         suri(bucket1_uri),
         suri(bucket2_uri)
     ])
-    self._VerifyDefaultEventBasedHold(
-        bucket1_uri, expected_default_event_based_hold=True)
-    self._VerifyDefaultEventBasedHold(
-        bucket2_uri, expected_default_event_based_hold=True)
+    self._VerifyDefaultEventBasedHold(bucket1_uri,
+                                      expected_default_event_based_hold=True)
+    self._VerifyDefaultEventBasedHold(bucket2_uri,
+                                      expected_default_event_based_hold=True)
 
   def _VerifyObjectHoldAndRetentionStatus(self,
                                           bucket_uri,
@@ -554,8 +568,9 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     if retention_period is None:
       self.assertEqual(object_metadata.retentionExpirationTime, None)
     elif event_based_hold is False:
-      retention_policy = self.json_api.GetBucket(
-          bucket_uri.bucket_name, fields=['retentionPolicy']).retentionPolicy
+      retention_policy = self.json_api.GetBucket(bucket_uri.bucket_name,
+                                                 fields=['retentionPolicy'
+                                                        ]).retentionPolicy
       time_delta = datetime.timedelta(0, retention_policy.retentionPeriod)
       expected_expiration_time = object_metadata.timeCreated + time_delta
       if event_based_hold is None:

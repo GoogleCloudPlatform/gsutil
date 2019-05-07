@@ -24,7 +24,6 @@ import six
 import gslib
 import gslib.tests.testcase as testcase
 
-
 if six.PY3:
   long = int
 

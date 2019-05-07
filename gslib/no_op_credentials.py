@@ -30,4 +30,3 @@ class NoOpCredentials(object):
 
   def set_store(self, store):  # pylint: disable=invalid-name
     pass
-

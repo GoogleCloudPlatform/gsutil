@@ -42,20 +42,22 @@ class HelpProvider(object):
 
   # Each subclass of HelpProvider define a property named 'help_spec' that is
   # an instance of the following class.
-  HelpSpec = collections.namedtuple('HelpSpec', [
-      # Name of command or auxiliary help info for which this help applies.
-      'help_name',
-      # List of help name aliases.
-      'help_name_aliases',
-      # Type of help.
-      'help_type',
-      # One line summary of this help.
-      'help_one_line_summary',
-      # The full help text.
-      'help_text',
-      # Help text for subcommands of the command's help being specified.
-      'subcommand_help_text',
-  ])
+  HelpSpec = collections.namedtuple(
+      'HelpSpec',
+      [
+          # Name of command or auxiliary help info for which this help applies.
+          'help_name',
+          # List of help name aliases.
+          'help_name_aliases',
+          # Type of help.
+          'help_type',
+          # One line summary of this help.
+          'help_one_line_summary',
+          # The full help text.
+          'help_text',
+          # Help text for subcommands of the command's help being specified.
+          'subcommand_help_text',
+      ])
 
   # Each subclass must override this with an instance of HelpSpec.
   help_spec = None
@@ -66,13 +68,13 @@ class HelpProvider(object):
 def SanityCheck(help_provider, help_name_map):
   """Helper for checking that a HelpProvider has minimally adequate content."""
   # Sanity check the content.
-  assert (len(help_provider.help_spec.help_name) > 1
-          and len(help_provider.help_spec.help_name) < MAX_HELP_NAME_LEN)
+  assert (len(help_provider.help_spec.help_name) > 1 and
+          len(help_provider.help_spec.help_name) < MAX_HELP_NAME_LEN)
   for hna in help_provider.help_spec.help_name_aliases:
     assert hna
   one_line_summary_len = len(help_provider.help_spec.help_one_line_summary)
-  assert (one_line_summary_len > MIN_ONE_LINE_SUMMARY_LEN
-          and one_line_summary_len < MAX_ONE_LINE_SUMMARY_LEN)
+  assert (one_line_summary_len > MIN_ONE_LINE_SUMMARY_LEN and
+          one_line_summary_len < MAX_ONE_LINE_SUMMARY_LEN)
   assert len(help_provider.help_spec.help_text) > 10
 
   # Ensure there are no dupe help names or aliases across commands.
@@ -82,9 +84,9 @@ def SanityCheck(help_provider, help_name_map):
     if name_or_alias in help_name_map:
       raise CommandException(
           'Duplicate help name/alias "%s" found while loading help from %s. '
-          'That name/alias was already taken by %s' % (
-              name_or_alias, help_provider.__module__,
-              help_name_map[name_or_alias].__module__))
+          'That name/alias was already taken by %s' %
+          (name_or_alias, help_provider.__module__,
+           help_name_map[name_or_alias].__module__))
 
 
 def CreateHelpText(synopsis, description):

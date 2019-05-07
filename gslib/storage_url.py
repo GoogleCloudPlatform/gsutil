@@ -163,8 +163,7 @@ class _FileUrl(StorageUrl):
     return self.is_fifo
 
   def IsDirectory(self):
-    return (not self.IsStream() and
-            not self.IsFifo() and
+    return (not self.IsStream() and not self.IsFifo() and
             os.path.isdir(self.object_name))
 
   def CreatePrefixUrl(self, wildcard_suffix=None):
@@ -213,8 +212,8 @@ class _CloudUrl(StorageUrl):
         self.bucket_name = object_match.group('bucket')
         self.object_name = object_match.group('object')
         if self.object_name == '.' or self.object_name == '..':
-          raise InvalidUrlError(
-              '%s is an invalid root-level object name' % self.object_name)
+          raise InvalidUrlError('%s is an invalid root-level object name' %
+                                self.object_name)
         if self.scheme == 'gs':
           generation_match = GS_GENERATION_REGEX.match(self.object_name)
           if generation_match:
@@ -452,4 +451,3 @@ def UrlsAreForSingleProvider(url_args):
     elif url.scheme != provider:
       return False
   return provider is not None
-

@@ -42,7 +42,6 @@ from gslib.utils import hashing_helper
 from gslib.utils import parallelism_framework_util
 from gslib.utils import text_util
 
-
 _PutToQueueWithTimeout = parallelism_framework_util.PutToQueueWithTimeout
 
 _SYNOPSIS = """
@@ -91,10 +90,7 @@ class HashCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreFileURLsArgument()
-      ]
-  )
+      argparse_arguments=[CommandArgument.MakeZeroOrMoreFileURLsArgument()])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='hash',
@@ -138,8 +134,9 @@ class HashCommand(Command):
         elif o == '-h':
           output_format = 'hex'
           format_func = lambda digest: digest.hexdigest()
-          cloud_format_func = (
-              lambda digest: hashing_helper.Base64ToHexHash(digest).decode('ascii'))
+          cloud_format_func = lambda digest: (
+              hashing_helper.Base64ToHexHash(digest).decode('ascii')
+          )  # yapf: disable
         elif o == '-m':
           calc_md5 = True
           found_hash_option = True
@@ -173,34 +170,45 @@ class HashCommand(Command):
 
   def RunCommand(self):
     """Command entry point for the hash command."""
-    (calc_crc32c, calc_md5, format_func, cloud_format_func, output_format) = (
-        self._ParseOpts(self.sub_opts, self.logger))
+    (calc_crc32c, calc_md5, format_func, cloud_format_func,
+     output_format) = (self._ParseOpts(self.sub_opts, self.logger))
 
     matched_one = False
     for url_str in self.args:
-      for file_ref in self.WildcardIterator(
-          url_str).IterObjects(bucket_listing_fields=['crc32c', 'md5Hash',
-                                                      'customerEncryption',
-                                                      'size']):
+      for file_ref in self.WildcardIterator(url_str).IterObjects(
+          bucket_listing_fields=[
+              'crc32c',
+              'customerEncryption',
+              'md5Hash',
+              'size',
+          ]):
         matched_one = True
         url = StorageUrlFromString(url_str)
         file_name = file_ref.storage_url.object_name
         if StorageUrlFromString(url_str).IsFileUrl():
           file_size = os.path.getsize(file_name)
           self.gsutil_api.status_queue.put(
-              FileMessage(url, None, time.time(), size=file_size,
-                          finished=False, message_type=FileMessage.FILE_HASH))
+              FileMessage(url,
+                          None,
+                          time.time(),
+                          size=file_size,
+                          finished=False,
+                          message_type=FileMessage.FILE_HASH))
           callback_processor = ProgressCallbackWithTimeout(
-              file_size, FileProgressCallbackHandler(
-                  self.gsutil_api.status_queue,
-                  src_url=StorageUrlFromString(url_str),
-                  operation_name='Hashing').call)
+              file_size,
+              FileProgressCallbackHandler(self.gsutil_api.status_queue,
+                                          src_url=StorageUrlFromString(url_str),
+                                          operation_name='Hashing').call)
           hash_dict = self._GetHashClassesFromArgs(calc_crc32c, calc_md5)
           with open(file_name, 'rb') as fp:
             hashing_helper.CalculateHashesFromContents(
                 fp, hash_dict, callback_processor=callback_processor)
           self.gsutil_api.status_queue.put(
-              FileMessage(url, None, time.time(), size=file_size, finished=True,
+              FileMessage(url,
+                          None,
+                          time.time(),
+                          size=file_size,
+                          finished=True,
                           message_type=FileMessage.FILE_HASH))
         else:
           hash_dict = {}
@@ -215,15 +223,15 @@ class HashCommand(Command):
             hash_dict['md5'] = obj_metadata.md5Hash
           if crc32c_present:
             hash_dict['crc32c'] = obj_metadata.crc32c
-        text_util.print_to_fd('Hashes [%s] for %s:' % (output_format, file_name))
+        text_util.print_to_fd('Hashes [%s] for %s:' %
+                              (output_format, file_name))
         for name, digest in six.iteritems(hash_dict):
-          text_util.print_to_fd('\tHash (%s):\t\t%s' % (name,
-                                        (format_func(digest) if url.IsFileUrl()
-                                         else cloud_format_func(digest))))
+          text_util.print_to_fd('\tHash (%s):\t\t%s' %
+                                (name, (format_func(digest) if url.IsFileUrl()
+                                        else cloud_format_func(digest))))
 
     if not matched_one:
       raise CommandException('No files matched')
     _PutToQueueWithTimeout(self.gsutil_api.status_queue,
-                          FinalMessage(time.time()))
+                           FinalMessage(time.time()))
     return 0
-

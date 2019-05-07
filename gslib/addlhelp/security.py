@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   This help section provides details about various precautions taken by gsutil

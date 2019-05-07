@@ -24,7 +24,6 @@ from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 
-
 SECONDS_IN_DAY = 24 * 60 * 60
 SECONDS_IN_MONTH = 31 * SECONDS_IN_DAY
 SECONDS_IN_YEAR = int(365.25 * SECONDS_IN_DAY)
@@ -32,17 +31,13 @@ _LOCK_PROMPT = (
     'This will PERMANENTLY set the Retention Policy on gs://{} to:\n\n'
     '{}\n\nThis setting cannot be reverted!  Continue?')
 # Regex to match retention period in years.
-_RETENTION_IN_YEARS = LazyWrapper(
-    lambda: re.compile(r'(?P<number>\d+)y$'))
+_RETENTION_IN_YEARS = LazyWrapper(lambda: re.compile(r'(?P<number>\d+)y$'))
 # Regex to match retention period in months.
-_RETENTION_IN_MONTHS = LazyWrapper(
-    lambda: re.compile(r'(?P<number>\d+)m$'))
+_RETENTION_IN_MONTHS = LazyWrapper(lambda: re.compile(r'(?P<number>\d+)m$'))
 # Regex to match retention period in days.
-_RETENTION_IN_DAYS = LazyWrapper(
-    lambda: re.compile(r'(?P<number>\d+)d$'))
+_RETENTION_IN_DAYS = LazyWrapper(lambda: re.compile(r'(?P<number>\d+)d$'))
 # Regex to match retention period in seconds.
-_RETENTION_IN_SECONDS = LazyWrapper(
-    lambda: re.compile(r'(?P<number>\d+)s$'))
+_RETENTION_IN_SECONDS = LazyWrapper(lambda: re.compile(r'(?P<number>\d+)s$'))
 
 
 def _ConfirmWithUserPrompt(question, default_response):
@@ -135,41 +130,37 @@ def UpdateObjectMetadataExceptionHandler(cls, e):
 def SetTempHoldFuncWrapper(cls, name_expansion_result, thread_state=None):
   log_template = 'Setting Temporary Hold on %s...'
   object_metadata_update = apitools_messages.Object(temporaryHold=True)
-  cls.ObjectUpdateMetadataFunc(
-      object_metadata_update,
-      log_template,
-      name_expansion_result,
-      thread_state=thread_state)
+  cls.ObjectUpdateMetadataFunc(object_metadata_update,
+                               log_template,
+                               name_expansion_result,
+                               thread_state=thread_state)
 
 
 def ReleaseTempHoldFuncWrapper(cls, name_expansion_result, thread_state=None):
   log_template = 'Releasing Temporary Hold on %s...'
   object_metadata_update = apitools_messages.Object(temporaryHold=False)
-  cls.ObjectUpdateMetadataFunc(
-      object_metadata_update,
-      log_template,
-      name_expansion_result,
-      thread_state=thread_state)
+  cls.ObjectUpdateMetadataFunc(object_metadata_update,
+                               log_template,
+                               name_expansion_result,
+                               thread_state=thread_state)
 
 
 def SetEventHoldFuncWrapper(cls, name_expansion_result, thread_state=None):
   log_template = 'Setting Event-Based Hold on %s...'
   object_metadata_update = apitools_messages.Object(eventBasedHold=True)
-  cls.ObjectUpdateMetadataFunc(
-      object_metadata_update,
-      log_template,
-      name_expansion_result,
-      thread_state=thread_state)
+  cls.ObjectUpdateMetadataFunc(object_metadata_update,
+                               log_template,
+                               name_expansion_result,
+                               thread_state=thread_state)
 
 
 def ReleaseEventHoldFuncWrapper(cls, name_expansion_result, thread_state=None):
   log_template = 'Releasing Event-Based Hold on %s...'
   object_metadata_update = apitools_messages.Object(eventBasedHold=False)
-  cls.ObjectUpdateMetadataFunc(
-      object_metadata_update,
-      log_template,
-      name_expansion_result,
-      thread_state=thread_state)
+  cls.ObjectUpdateMetadataFunc(object_metadata_update,
+                               log_template,
+                               name_expansion_result,
+                               thread_state=thread_state)
 
 
 def DaysToSeconds(days):

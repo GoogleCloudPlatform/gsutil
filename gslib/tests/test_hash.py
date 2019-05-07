@@ -26,7 +26,6 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 
-
 _TEST_FILE_CONTENTS = b'123456\n'
 _TEST_FILE_B64_CRC = 'nYmSiA=='
 _TEST_FILE_B64_MD5 = '9EeyCn/L9TpdW+AT6gsVrw=='
@@ -45,9 +44,9 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('hash', args=[tmp_file], return_stdout=True)
     self.assertIn(b'Hashes [base64]', stdout)
     self.assertIn(
-      ('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC).encode('ascii'), stdout)
-    self.assertIn(
-      ('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5).encode('ascii'), stdout)
+        ('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC).encode('ascii'), stdout)
+    self.assertIn(('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5).encode('ascii'),
+                  stdout)
 
   def testHashNoMatch(self):
     try:
@@ -61,14 +60,15 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('hash', args=['-h', tmp_file], return_stdout=True)
     self.assertIn(b'Hashes [hex]', stdout)
     self.assertIn(
-      ('\tHash (crc32c):\t\t%s' % _TEST_FILE_HEX_CRC).encode('ascii'), stdout)
-    self.assertIn(
-      ('\tHash (md5):\t\t%s' % _TEST_FILE_HEX_MD5).encode('ascii'), stdout)
+        ('\tHash (crc32c):\t\t%s' % _TEST_FILE_HEX_CRC).encode('ascii'), stdout)
+    self.assertIn(('\tHash (md5):\t\t%s' % _TEST_FILE_HEX_MD5).encode('ascii'),
+                  stdout)
 
   def testHashWildcard(self):
     num_test_files = 2
     tmp_dir = self.CreateTempDir(test_files=num_test_files)
-    stdout = self.RunCommand('hash', args=[os.path.join(tmp_dir, '*')],
+    stdout = self.RunCommand('hash',
+                             args=[os.path.join(tmp_dir, '*')],
                              return_stdout=True)
     # One summary line and two hash lines per file.
     num_expected_lines = num_test_files * (1 + 2)
@@ -76,18 +76,22 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
 
   def testHashSelectAlg(self):
     tmp_file = self.CreateTempFile(contents=_TEST_FILE_CONTENTS)
-    stdout_crc = self.RunCommand('hash', args=['-c', tmp_file],
+    stdout_crc = self.RunCommand('hash',
+                                 args=['-c', tmp_file],
                                  return_stdout=True)
-    stdout_md5 = self.RunCommand('hash', args=['-m', tmp_file],
+    stdout_md5 = self.RunCommand('hash',
+                                 args=['-m', tmp_file],
                                  return_stdout=True)
-    stdout_both = self.RunCommand('hash', args=['-c', '-m', tmp_file],
+    stdout_both = self.RunCommand('hash',
+                                  args=['-c', '-m', tmp_file],
                                   return_stdout=True)
     for stdout in (stdout_crc, stdout_both):
       self.assertIn(
-        ('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC).encode('ascii'), stdout)
+          ('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC).encode('ascii'),
+          stdout)
     for stdout in (stdout_md5, stdout_both):
       self.assertIn(
-        ('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5).encode('ascii'), stdout)
+          ('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5).encode('ascii'), stdout)
     self.assertNotIn(b'md5', stdout_crc)
     self.assertNotIn(b'crc32c', stdout_md5)
 
@@ -114,18 +118,18 @@ class TestHash(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['hash', suri(obj1)], return_stdout=True)
     self.assertIn('Hashes [base64]', stdout)
     if self.default_provider == 'gs':
-      self.assertIn(
-        ('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC), stdout)
-    self.assertIn(
-      ('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5), stdout)
+      self.assertIn(('\tHash (crc32c):\t\t%s' % _TEST_FILE_B64_CRC), stdout)
+    self.assertIn(('\tHash (md5):\t\t%s' % _TEST_FILE_B64_MD5), stdout)
 
   @SkipForS3('No composite object or crc32c support for S3.')
   def testHashCompositeObject(self):
     """Test hash command on a composite object (which only has crc32c)."""
     bucket = self.CreateBucket()
-    obj1 = self.CreateObject(bucket_uri=bucket, object_name='obj1',
+    obj1 = self.CreateObject(bucket_uri=bucket,
+                             object_name='obj1',
                              contents=_TEST_FILE_CONTENTS)
-    obj2 = self.CreateObject(bucket_uri=bucket, object_name='tmp',
+    obj2 = self.CreateObject(bucket_uri=bucket,
+                             object_name='tmp',
                              contents=_TEST_COMPOSITE_ADDED_CONTENTS)
     self.RunGsUtil(['compose', suri(obj1), suri(obj2), suri(obj1)])
 
@@ -133,11 +137,9 @@ class TestHash(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Hashes [hex]', stdout)
     # Hex hashes for cloud objects get converted to lowercase but their
     # meaning is the same.
-    self.assertIn(
-      ('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_HEX_CRC.lower()),
-      stdout)
+    self.assertIn(('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_HEX_CRC.lower()),
+                  stdout)
 
     stdout = self.RunGsUtil(['hash', suri(obj1)], return_stdout=True)
     self.assertIn('Hashes [base64]', stdout)
-    self.assertIn(
-      ('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_B64_CRC), stdout)
+    self.assertIn(('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_B64_CRC), stdout)

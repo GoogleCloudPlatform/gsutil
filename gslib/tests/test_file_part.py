@@ -86,18 +86,14 @@ class TestFilePart(testcase.GsUtilUnitTestCase):
     fp.seek(0)
     offset = 10
     partial_file = fp.read(offset)
-    self.assertEqual(
-        contents[start_pos:(start_pos + offset)],
-        partial_file)
+    self.assertEqual(contents[start_pos:(start_pos + offset)], partial_file)
 
     # Read in the rest of the file.
     remaining_file = fp.read(part_length - offset)
-    self.assertEqual(
-        contents[(start_pos + offset):(start_pos + part_length)],
-        remaining_file)
-    self.assertEqual(
-        contents[start_pos:(start_pos + part_length)],
-        partial_file + remaining_file)
+    self.assertEqual(contents[(start_pos + offset):(start_pos + part_length)],
+                     remaining_file)
+    self.assertEqual(contents[start_pos:(start_pos + part_length)],
+                     partial_file + remaining_file)
 
     # Try to read after reaching EOF.
     empty_file = fp.read(100)

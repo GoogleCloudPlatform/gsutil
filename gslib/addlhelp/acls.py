@@ -226,8 +226,13 @@ class CommandOptions(HelpProvider):
   help_spec = HelpProvider.HelpSpec(
       help_name='acls',
       help_name_aliases=[
-          'ACL', 'access control', 'access control list', 'authorization',
-          'canned', 'canned acl'],
+          'ACL',
+          'access control',
+          'access control list',
+          'authorization',
+          'canned',
+          'canned acl',
+      ],
       help_type='additional_help',
       help_one_line_summary='Working With Access Control Lists',
       help_text=_DETAILED_HELP_TEXT,

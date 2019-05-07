@@ -35,7 +35,6 @@ from six import add_move, MovedModule
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
-
 # Assigning string representations of the appropriate package, used for
 # '@mock.patch` methods that take a string in the following format:
 # "package.module.ClassName"
@@ -52,7 +51,9 @@ class TestUploadCallbackConnection(testcase.GsUtilUnitTestCase):
     super(TestUploadCallbackConnection, self).setUp()
     self.bytes_container = BytesTransferredContainer()
     self.class_factory = UploadCallbackConnectionClassFactory(
-        self.bytes_container, buffer_size=50, total_size=100,
+        self.bytes_container,
+        buffer_size=50,
+        total_size=100,
         progress_callback='Sample')
     self.instance = self.class_factory.GetConnectionClass()('host')
 

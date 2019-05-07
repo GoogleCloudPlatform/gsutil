@@ -40,18 +40,22 @@ MAX_BUCKET_LENGTH = 63
 
 def NotParallelizable(func):
   """Wrapper function for cases that are not parallelizable."""
+
   @wraps(func)
   def ParallelAnnotatedFunc(*args, **kwargs):
     return func(*args, **kwargs)
+
   ParallelAnnotatedFunc.is_parallelizable = False
   return ParallelAnnotatedFunc
 
 
 def RequiresIsolation(func):
   """Wrapper function for cases that require running in a separate process."""
+
   @wraps(func)
   def RequiresIsolationFunc(*args, **kwargs):
     return func(*args, **kwargs)
+
   RequiresIsolationFunc.requires_isolation = True
   return RequiresIsolationFunc
 
@@ -104,17 +108,17 @@ class GsUtilTestCase(unittest.TestCase):
       lowercase, etc.).
     """
     name = '{prefix}gsutil-test-{method}-{kind}'.format(
-      prefix=prefix, method=self.GetTestMethodName(), kind=kind)
-    name = name[:MAX_BUCKET_LENGTH-9]
+        prefix=prefix, method=self.GetTestMethodName(), kind=kind)
+    name = name[:MAX_BUCKET_LENGTH - 9]
     name = '{name}-{rand}'.format(name=name, rand=self.MakeRandomTestString())
     total_name_len = len(name) + len(suffix)
     if suffix:
       if kind == 'bucket' and total_name_len > MAX_BUCKET_LENGTH:
         self.fail(
-          'Tried to create a psuedo-random bucket name with a specific '
-          'suffix, but the generated name was too long and there was not '
-          'enough room for the suffix. Please use shorter strings or perform '
-          'name randomization manually.\nRequested name: ' + name + suffix)
+            'Tried to create a psuedo-random bucket name with a specific '
+            'suffix, but the generated name was too long and there was not '
+            'enough room for the suffix. Please use shorter strings or perform '
+            'name randomization manually.\nRequested name: ' + name + suffix)
       name += suffix
 
     if kind == 'bucket':
@@ -148,8 +152,7 @@ class GsUtilTestCase(unittest.TestCase):
       contents_file = contents
       if contents_file is None:
         contents_file = ('test %d' % i).encode('ascii')
-      self.CreateTempFile(tmpdir=tmpdir, file_name=name,
-                          contents=contents_file)
+      self.CreateTempFile(tmpdir=tmpdir, file_name=name, contents=contents_file)
     return tmpdir
 
   def CreateTempFifo(self, tmpdir=None, file_name=None):
@@ -175,8 +178,14 @@ class GsUtilTestCase(unittest.TestCase):
     os.mkfifo(fpath)
     return fpath
 
-  def CreateTempFile(self, tmpdir=None, contents=None, file_name=None,
-                     mtime=None, mode=NA_MODE, uid=NA_ID, gid=NA_ID):
+  def CreateTempFile(self,
+                     tmpdir=None,
+                     contents=None,
+                     file_name=None,
+                     mtime=None,
+                     mode=NA_MODE,
+                     uid=NA_ID,
+                     gid=NA_ID):
     """Creates a temporary file on disk.
 
     Note: if mode, uid, or gid are present, they must be validated by
@@ -215,11 +224,11 @@ class GsUtilTestCase(unittest.TestCase):
     if not os.path.isdir(os.path.dirname(fpath)):
       os.makedirs(os.path.dirname(fpath))
     if isinstance(fpath, six.binary_type):
-        fpath = fpath.decode(UTF8)
+      fpath = fpath.decode(UTF8)
 
     with open(fpath, 'wb') as f:
-      contents = (contents if contents is not None
-                  else self.MakeTempName(str('contents')))
+      contents = (contents if contents is not None else self.MakeTempName(
+          str('contents')))
       if isinstance(contents, bytearray):
         contents = bytes(contents)
       else:
@@ -253,6 +262,6 @@ class GsUtilTestCase(unittest.TestCase):
       pattern = re.compile(pattern.pattern, flags=pattern.flags | flags)
     if not pattern.search(text):
       failure_msg = msg or 'Regex didn\'t match'
-      failure_msg = '%s: %r not found in %r' % (
-          failure_msg, pattern.pattern, text)
+      failure_msg = '%s: %r not found in %r' % (failure_msg, pattern.pattern,
+                                                text)
       raise self.failureException(failure_msg)

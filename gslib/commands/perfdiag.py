@@ -242,9 +242,7 @@ _DETAILED_HELP_TEXT = ("""
   be sent to Google unless you choose to send it.
 """)
 
-FileDataTuple = namedtuple(
-    'FileDataTuple',
-    'size md5 data')
+FileDataTuple = namedtuple('FileDataTuple', 'size md5 data')
 
 # Describes one object in a fanned download. If need_to_slice is specified as
 # True, the object should be downloaded with the slice strategy. Other field
@@ -328,10 +326,16 @@ def _UploadObject(cls, args, thread_state=None):
   """
   gsutil_api = GetCloudApiInstance(cls, thread_state)
   if args.need_to_slice:
-    cls.PerformSlicedUpload(args.file_name, args.object_name, args.use_file,
-                            gsutil_api, gzip_encoded=args.gzip_encoded)
+    cls.PerformSlicedUpload(args.file_name,
+                            args.object_name,
+                            args.use_file,
+                            gsutil_api,
+                            gzip_encoded=args.gzip_encoded)
   else:
-    cls.Upload(args.file_name, args.object_name, gsutil_api, args.use_file,
+    cls.Upload(args.file_name,
+               args.object_name,
+               gsutil_api,
+               args.use_file,
                gzip_encoded=args.gzip_encoded)
 
 
@@ -344,8 +348,13 @@ def _UploadSlice(cls, args, thread_state=None):
     thread_state: gsutil Cloud API instance to use for the operation.
   """
   gsutil_api = GetCloudApiInstance(cls, thread_state)
-  cls.Upload(args.file_name, args.object_name, gsutil_api, args.use_file,
-             args.file_start, args.file_size, gzip_encoded=args.gzip_encoded)
+  cls.Upload(args.file_name,
+             args.object_name,
+             gsutil_api,
+             args.use_file,
+             args.file_start,
+             args.file_size,
+             gzip_encoded=args.gzip_encoded)
 
 
 def _DeleteWrapper(cls, object_name, thread_state=None):
@@ -383,7 +392,9 @@ class DummyFile(object):
     pass
 
 
-def _GenerateFileData(fp, file_size=0, random_ratio=100,
+def _GenerateFileData(fp,
+                      file_size=0,
+                      random_ratio=100,
                       max_unique_random_bytes=5242883):
   """Writes data into a file like object.
 
@@ -433,10 +444,7 @@ class PerfDiagCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeNCloudBucketURLsArgument(1)
-      ]
-  )
+      argparse_arguments=[CommandArgument.MakeNCloudBucketURLsArgument(1)])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='perfdiag',
@@ -480,8 +488,8 @@ class PerfDiagCommand(Command):
   PARALLEL_STRATEGIES = (FAN, SLICE, BOTH)
 
   # Google Cloud Storage XML API endpoint host.
-  XML_API_HOST = boto.config.get(
-      'Credentials', 'gs_host', boto.gs.connection.GSConnection.DefaultHost)
+  XML_API_HOST = boto.config.get('Credentials', 'gs_host',
+                                 boto.gs.connection.GSConnection.DefaultHost)
   # Google Cloud Storage XML API endpoint port.
   XML_API_PORT = boto.config.getint('Credentials', 'gs_port', 80)
 
@@ -499,7 +507,10 @@ class PerfDiagCommand(Command):
   # reflect what we expect in the listing tests.
   MAX_LISTING_WAIT_TIME = 60.0
 
-  def _Exec(self, cmd, raise_on_error=True, return_output=False,
+  def _Exec(self,
+            cmd,
+            raise_on_error=True,
+            return_output=False,
             mute_stderr=False):
     """Executes a command in a subprocess.
 
@@ -536,8 +547,11 @@ class PerfDiagCommand(Command):
     if self.num_objects * self.thru_filesize > HumanReadableToBytes('2GiB'):
       self.logger.info('This is a large operation, and could take a while.')
 
-  def _MakeTempFile(self, file_size=0, mem_metadata=False,
-                    mem_data=False, prefix='gsutil_test_file',
+  def _MakeTempFile(self,
+                    file_size=0,
+                    mem_metadata=False,
+                    mem_data=False,
+                    prefix='gsutil_test_file',
                     random_ratio=100):
     """Creates a temporary file of the given size and returns its path.
 
@@ -556,8 +570,10 @@ class PerfDiagCommand(Command):
     Returns:
       The file path of the created temporary file.
     """
-    fd, fpath = tempfile.mkstemp(suffix='.bin', prefix=prefix,
-                                 dir=self.directory, text=False)
+    fd, fpath = tempfile.mkstemp(suffix='.bin',
+                                 prefix=prefix,
+                                 dir=self.directory,
+                                 text=False)
     with os.fdopen(fd, 'wb') as fp:
       _GenerateFileData(fp, file_size, random_ratio)
 
@@ -602,14 +618,17 @@ class PerfDiagCommand(Command):
     if self.diag_tests.intersection(
         (self.RTHRU, self.WTHRU, self.RTHRU_FILE, self.WTHRU_FILE)):
       # Create a file for warming up the TCP connection.
-      self.tcp_warmup_file = self._MakeTempFile(
-          5 * 1024 * 1024, mem_metadata=True, mem_data=True)
+      self.tcp_warmup_file = self._MakeTempFile(5 * 1024 * 1024,
+                                                mem_metadata=True,
+                                                mem_data=True)
 
       # For in memory tests, throughput tests transfer the same object N times
       # instead of creating N objects, in order to avoid excessive memory usage.
       if self.diag_tests.intersection((self.RTHRU, self.WTHRU)):
         self.mem_thru_file_name = self._MakeTempFile(
-            self.thru_filesize, mem_metadata=True, mem_data=True,
+            self.thru_filesize,
+            mem_metadata=True,
+            mem_data=True,
             random_ratio=self.gzip_compression_ratio)
         self.mem_thru_object_name = os.path.basename(self.mem_thru_file_name)
 
@@ -623,22 +642,23 @@ class PerfDiagCommand(Command):
 
         free_disk_space = CheckFreeSpace(self.directory)
         if free_disk_space >= self.thru_filesize * self.num_objects:
-          self.logger.info('\nCreating %d local files each of size %s.'
-                           % (self.num_objects,
-                              MakeHumanReadable(self.thru_filesize)))
+          self.logger.info(
+              '\nCreating %d local files each of size %s.' %
+              (self.num_objects, MakeHumanReadable(self.thru_filesize)))
           self._WarnIfLargeData()
           for _ in range(self.num_objects):
             file_name = self._MakeTempFile(
-                self.thru_filesize, mem_metadata=True,
+                self.thru_filesize,
+                mem_metadata=True,
                 random_ratio=self.gzip_compression_ratio)
             self.thru_file_names.append(file_name)
             self.thru_object_names.append(os.path.basename(file_name))
         else:
           raise CommandException(
               'Not enough free disk space for throughput files: '
-              '%s of disk space required, but only %s available.'
-              % (MakeHumanReadable(self.thru_filesize * self.num_objects),
-                 MakeHumanReadable(free_disk_space)))
+              '%s of disk space required, but only %s available.' %
+              (MakeHumanReadable(self.thru_filesize * self.num_objects),
+               MakeHumanReadable(free_disk_space)))
 
     # Dummy file buffer to use for downloading that goes nowhere.
     self.discard_sink = DummyFile()
@@ -730,7 +750,7 @@ class PerfDiagCommand(Command):
     i = 0
     return_val = None
     while not success:
-      next_sleep = min(random.random() * (2 ** i) + 1, GetMaxRetryDelay())
+      next_sleep = min(random.random() * (2**i) + 1, GetMaxRetryDelay())
       try:
         return_val = func()
         self.total_requests += 1
@@ -763,7 +783,7 @@ class PerfDiagCommand(Command):
     self.results['latency'] = defaultdict(list)
 
     for i in range(self.num_objects):
-      self.logger.info('\nRunning latency iteration %d...', i+1)
+      self.logger.info('\nRunning latency iteration %d...', i + 1)
       for fpath in self.latency_files:
         file_data = temp_file_dict[fpath]
         url = self.bucket_url.Clone()
@@ -780,17 +800,22 @@ class PerfDiagCommand(Command):
         def _Upload():
           io_fp = six.BytesIO(file_data.data)
           with self._Time('UPLOAD_%d' % file_size, self.results['latency']):
-            self.gsutil_api.UploadObject(
-                io_fp, upload_target, size=file_size, provider=self.provider,
-                fields=['name'])
+            self.gsutil_api.UploadObject(io_fp,
+                                         upload_target,
+                                         size=file_size,
+                                         provider=self.provider,
+                                         fields=['name'])
+
         self._RunOperation(_Upload)
 
         def _Metadata():
           with self._Time('METADATA_%d' % file_size, self.results['latency']):
             return self.gsutil_api.GetObjectMetadata(
-                url.bucket_name, url.object_name,
-                provider=self.provider, fields=['name', 'contentType',
-                                                'mediaLink', 'size'])
+                url.bucket_name,
+                url.object_name,
+                provider=self.provider,
+                fields=['name', 'contentType', 'mediaLink', 'size'])
+
         # Download will get the metadata first if we don't pass it in.
         download_metadata = self._RunOperation(_Metadata)
         serialization_data = GetDownloadSerializationData(download_metadata)
@@ -798,14 +823,20 @@ class PerfDiagCommand(Command):
         def _Download():
           with self._Time('DOWNLOAD_%d' % file_size, self.results['latency']):
             self.gsutil_api.GetObjectMedia(
-                url.bucket_name, url.object_name, self.discard_sink,
-                provider=self.provider, serialization_data=serialization_data)
+                url.bucket_name,
+                url.object_name,
+                self.discard_sink,
+                provider=self.provider,
+                serialization_data=serialization_data)
+
         self._RunOperation(_Download)
 
         def _Delete():
           with self._Time('DELETE_%d' % file_size, self.results['latency']):
-            self.gsutil_api.DeleteObject(url.bucket_name, url.object_name,
+            self.gsutil_api.DeleteObject(url.bucket_name,
+                                         url.object_name,
                                          provider=self.provider)
+
         self._RunOperation(_Delete)
 
   class _PerfdiagFilter(logging.Filter):
@@ -837,14 +868,17 @@ class PerfDiagCommand(Command):
     args = []
     for i in range(len(object_names)):
       file_name = file_names[i] if file_names else None
-      args.append(FanDownloadTuple(
-          need_to_slice, object_names[i], file_name,
-          serialization_data[i]))
+      args.append(
+          FanDownloadTuple(need_to_slice, object_names[i], file_name,
+                           serialization_data[i]))
     self.Apply(
-        _DownloadObject, args, _PerfdiagExceptionHandler,
-        ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+        _DownloadObject,
+        args,
+        _PerfdiagExceptionHandler, ('total_requests', 'request_errors'),
+        arg_checker=DummyArgChecker,
         parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
-        process_count=self.processes, thread_count=self.threads)
+        process_count=self.processes,
+        thread_count=self.threads)
 
   def PerformSlicedDownload(self, object_name, file_name, serialization_data):
     """Performs a download of an object using the slice strategy.
@@ -863,16 +897,24 @@ class PerfDiagCommand(Command):
     for i in range(self.num_slices):
       start_byte = i * component_size
       end_byte = min((i + 1) * (component_size) - 1, self.thru_filesize - 1)
-      args.append(SliceDownloadTuple(object_name, file_name, serialization_data,
-                                     start_byte, end_byte))
+      args.append(
+          SliceDownloadTuple(object_name, file_name, serialization_data,
+                             start_byte, end_byte))
     self.Apply(
-        _DownloadSlice, args, _PerfdiagExceptionHandler,
-        ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+        _DownloadSlice,
+        args,
+        _PerfdiagExceptionHandler, ('total_requests', 'request_errors'),
+        arg_checker=DummyArgChecker,
         parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
-        process_count=self.processes, thread_count=self.threads)
+        process_count=self.processes,
+        thread_count=self.threads)
 
-  def PerformFannedUpload(self, need_to_slice, file_names, object_names,
-                          use_file, gzip_encoded=False):
+  def PerformFannedUpload(self,
+                          need_to_slice,
+                          file_names,
+                          object_names,
+                          use_file,
+                          gzip_encoded=False):
     """Performs a parallel upload of multiple files using the fan strategy.
 
     The metadata for file_name should be present in temp_file_dict prior
@@ -892,16 +934,23 @@ class PerfDiagCommand(Command):
     """
     args = []
     for i in range(len(file_names)):
-      args.append(FanUploadTuple(
-          need_to_slice, file_names[i], object_names[i], use_file,
-          gzip_encoded))
+      args.append(
+          FanUploadTuple(need_to_slice, file_names[i], object_names[i],
+                         use_file, gzip_encoded))
     self.Apply(
-        _UploadObject, args, _PerfdiagExceptionHandler,
-        ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+        _UploadObject,
+        args,
+        _PerfdiagExceptionHandler, ('total_requests', 'request_errors'),
+        arg_checker=DummyArgChecker,
         parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
-        process_count=self.processes, thread_count=self.threads)
+        process_count=self.processes,
+        thread_count=self.threads)
 
-  def PerformSlicedUpload(self, file_name, object_name, use_file, gsutil_api,
+  def PerformSlicedUpload(self,
+                          file_name,
+                          object_name,
+                          use_file,
+                          gsutil_api,
                           gzip_encoded=False):
     """Performs a parallel upload of a file using the slice strategy.
 
@@ -920,25 +969,29 @@ class PerfDiagCommand(Command):
     """
     # Divide the file into components.
     component_size = DivideAndCeil(self.thru_filesize, self.num_slices)
-    component_object_names = (
-        [object_name + str(i) for i in range(self.num_slices)])
+    component_object_names = ([
+        object_name + str(i) for i in range(self.num_slices)
+    ])
 
     args = []
     for i in range(self.num_slices):
       component_start = i * component_size
       component_size = min(component_size,
                            temp_file_dict[file_name].size - component_start)
-      args.append(SliceUploadTuple(
-          file_name, component_object_names[i], use_file, component_start,
-          component_size, gzip_encoded))
+      args.append(
+          SliceUploadTuple(file_name, component_object_names[i], use_file,
+                           component_start, component_size, gzip_encoded))
 
     # Upload the components in parallel.
     try:
       self.Apply(
-          _UploadSlice, args, _PerfdiagExceptionHandler,
-          ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+          _UploadSlice,
+          args,
+          _PerfdiagExceptionHandler, ('total_requests', 'request_errors'),
+          arg_checker=DummyArgChecker,
           parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
-          process_count=self.processes, thread_count=self.threads)
+          process_count=self.processes,
+          thread_count=self.threads)
 
       # Compose the components into an object.
       request_components = []
@@ -952,16 +1005,21 @@ class PerfDiagCommand(Command):
         dst_obj_metadata = apitools_messages.Object()
         dst_obj_metadata.name = object_name
         dst_obj_metadata.bucket = self.bucket_url.bucket_name
-        gsutil_api.ComposeObject(request_components, dst_obj_metadata,
+        gsutil_api.ComposeObject(request_components,
+                                 dst_obj_metadata,
                                  provider=self.provider)
+
       self._RunOperation(_Compose)
     finally:
       # Delete the temporary components.
       self.Apply(
-          _DeleteWrapper, component_object_names, _PerfdiagExceptionHandler,
-          ('total_requests', 'request_errors'), arg_checker=DummyArgChecker,
+          _DeleteWrapper,
+          component_object_names,
+          _PerfdiagExceptionHandler, ('total_requests', 'request_errors'),
+          arg_checker=DummyArgChecker,
           parallel_operations_override=self.ParallelOverrideReason.PERFDIAG,
-          process_count=self.processes, thread_count=self.threads)
+          process_count=self.processes,
+          thread_count=self.threads)
 
   def _RunReadThruTests(self, use_file=False):
     """Runs read throughput tests."""
@@ -969,15 +1027,16 @@ class PerfDiagCommand(Command):
     file_io_string = 'with file I/O' if use_file else ''
     self.logger.info(
         '\nRunning read throughput tests %s (%s objects of size %s)' %
-        (file_io_string, self.num_objects,
-         MakeHumanReadable(self.thru_filesize)))
+        (file_io_string, self.num_objects, MakeHumanReadable(
+            self.thru_filesize)))
     self._WarnIfLargeData()
 
-    self.results[test_name] = {'file_size': self.thru_filesize,
-                               'processes': self.processes,
-                               'threads': self.threads,
-                               'parallelism': self.parallel_strategy
-                              }
+    self.results[test_name] = {
+        'file_size': self.thru_filesize,
+        'processes': self.processes,
+        'threads': self.threads,
+        'parallelism': self.parallel_strategy
+    }
 
     # Copy the file(s) to the test bucket, and also get the serialization data
     # so that we can pass it to download.
@@ -991,12 +1050,14 @@ class PerfDiagCommand(Command):
         if self.WTHRU_FILE in self.diag_tests:
           # If we ran the WTHRU_FILE test, then the objects already exist.
           obj_metadata = self.gsutil_api.GetObjectMetadata(
-              self.bucket_url.bucket_name, self.thru_object_names[i],
-              fields=['size', 'mediaLink'], provider=self.bucket_url.scheme)
+              self.bucket_url.bucket_name,
+              self.thru_object_names[i],
+              fields=['size', 'mediaLink'],
+              provider=self.bucket_url.scheme)
         else:
-          obj_metadata = self.Upload(
-              self.thru_file_names[i], self.thru_object_names[i],
-              self.gsutil_api, use_file)
+          obj_metadata = self.Upload(self.thru_file_names[i],
+                                     self.thru_object_names[i], self.gsutil_api,
+                                     use_file)
 
         # File overwrite causes performance issues with sliced downloads.
         # Delete the file and reopen it for download. This matches what a real
@@ -1008,13 +1069,13 @@ class PerfDiagCommand(Command):
       # For in-memory test only use one file but copy it num_objects times, to
       # allow scalability in num_objects.
       self.temporary_objects.add(self.mem_thru_object_name)
-      obj_metadata = self.Upload(
-          self.mem_thru_file_name, self.mem_thru_object_name, self.gsutil_api,
-          use_file)
+      obj_metadata = self.Upload(self.mem_thru_file_name,
+                                 self.mem_thru_object_name, self.gsutil_api,
+                                 use_file)
       file_names = None
       object_names = [self.mem_thru_object_name] * self.num_objects
-      serialization_data = (
-          [GetDownloadSerializationData(obj_metadata)] * self.num_objects)
+      serialization_data = ([GetDownloadSerializationData(obj_metadata)] *
+                            self.num_objects)
 
     # Warmup the TCP connection.
     warmup_obj_name = os.path.basename(self.tcp_warmup_file)
@@ -1036,8 +1097,8 @@ class PerfDiagCommand(Command):
       elif self.parallel_strategy == self.SLICE:
         for i in range(self.num_objects):
           file_name = file_names[i] if use_file else None
-          self.PerformSlicedDownload(
-              object_names[i], file_name, serialization_data[i])
+          self.PerformSlicedDownload(object_names[i], file_name,
+                                     serialization_data[i])
     t1 = time.time()
 
     time_took = t1 - t0
@@ -1054,8 +1115,8 @@ class PerfDiagCommand(Command):
     file_io_string = 'with file I/O' if use_file else ''
     self.logger.info(
         '\nRunning write throughput tests %s (%s objects of size %s)' %
-        (file_io_string, self.num_objects,
-         MakeHumanReadable(self.thru_filesize)))
+        (file_io_string, self.num_objects, MakeHumanReadable(
+            self.thru_filesize)))
     self._WarnIfLargeData()
 
     self.results[test_name] = {
@@ -1064,7 +1125,8 @@ class PerfDiagCommand(Command):
         'threads': self.threads,
         'parallelism': self.parallel_strategy,
         'gzip_encoded_writes': self.gzip_encoded_writes,
-        'gzip_compression_ratio': self.gzip_compression_ratio}
+        'gzip_compression_ratio': self.gzip_compression_ratio
+    }
 
     # Warmup the TCP connection.
     warmup_obj_name = os.path.basename(self.tcp_warmup_file)
@@ -1079,8 +1141,9 @@ class PerfDiagCommand(Command):
       # For in-memory test only use one file but copy it num_objects times, to
       # allow for scalability in num_objects.
       file_names = [self.mem_thru_file_name] * self.num_objects
-      object_names = (
-          [self.mem_thru_object_name + str(i) for i in range(self.num_objects)])
+      object_names = ([
+          self.mem_thru_object_name + str(i) for i in range(self.num_objects)
+      ])
 
     for object_name in object_names:
       self.temporary_objects.add(object_name)
@@ -1088,20 +1151,26 @@ class PerfDiagCommand(Command):
     t0 = time.time()
     if self.processes == 1 and self.threads == 1:
       for i in range(self.num_objects):
-        self.Upload(
-            file_names[i], object_names[i], self.gsutil_api, use_file,
-            gzip_encoded=self.gzip_encoded_writes)
+        self.Upload(file_names[i],
+                    object_names[i],
+                    self.gsutil_api,
+                    use_file,
+                    gzip_encoded=self.gzip_encoded_writes)
     else:
       if self.parallel_strategy in (self.FAN, self.BOTH):
         need_to_slice = (self.parallel_strategy == self.BOTH)
-        self.PerformFannedUpload(
-            need_to_slice, file_names, object_names, use_file,
-            gzip_encoded=self.gzip_encoded_writes)
+        self.PerformFannedUpload(need_to_slice,
+                                 file_names,
+                                 object_names,
+                                 use_file,
+                                 gzip_encoded=self.gzip_encoded_writes)
       elif self.parallel_strategy == self.SLICE:
         for i in range(self.num_objects):
-          self.PerformSlicedUpload(
-              file_names[i], object_names[i], use_file,
-              self.gsutil_api, gzip_encoded=self.gzip_encoded_writes)
+          self.PerformSlicedUpload(file_names[i],
+                                   object_names[i],
+                                   use_file,
+                                   self.gsutil_api,
+                                   gzip_encoded=self.gzip_encoded_writes)
     t1 = time.time()
 
     time_took = t1 - t0
@@ -1123,11 +1192,13 @@ class PerfDiagCommand(Command):
     # from a previous run (if perfdiag could not exit gracefully and delete
     # them) do not affect this run.
     random_id = ''.join(
-      [random.choice(string.ascii_lowercase) for _ in range(10)])
+        [random.choice(string.ascii_lowercase) for _ in range(10)])
     list_prefix = 'gsutil-perfdiag-list-' + random_id + '-'
 
     for _ in xrange(self.num_objects):
-      fpath = self._MakeTempFile(0, mem_data=True, mem_metadata=True,
+      fpath = self._MakeTempFile(0,
+                                 mem_data=True,
+                                 mem_metadata=True,
                                  prefix=list_prefix)
       object_name = os.path.basename(fpath)
       list_objects.append(object_name)
@@ -1135,10 +1206,12 @@ class PerfDiagCommand(Command):
       self.temporary_objects.add(object_name)
 
     # Add the objects to the bucket.
-    self.logger.info(
-        '\nWriting %s objects for listing test...', self.num_objects)
+    self.logger.info('\nWriting %s objects for listing test...',
+                     self.num_objects)
 
-    self.Apply(_UploadObject, args, _PerfdiagExceptionHandler,
+    self.Apply(_UploadObject,
+               args,
+               _PerfdiagExceptionHandler,
                arg_checker=DummyArgChecker)
 
     list_latencies = []
@@ -1150,9 +1223,12 @@ class PerfDiagCommand(Command):
     def _List():
       """Lists and returns objects in the bucket. Also records latency."""
       t0 = time.time()
-      objects = list(self.gsutil_api.ListObjects(
-          self.bucket_url.bucket_name, prefix=list_prefix, delimiter='/',
-          provider=self.provider, fields=['items/name']))
+      objects = list(
+          self.gsutil_api.ListObjects(self.bucket_url.bucket_name,
+                                      prefix=list_prefix,
+                                      delimiter='/',
+                                      provider=self.provider,
+                                      fields=['items/name']))
       if len(objects) > self.num_objects:
         self.logger.warning(
             'Listing produced more than the expected %d object(s).',
@@ -1166,9 +1242,8 @@ class PerfDiagCommand(Command):
       found_objects.update(names & expected_objects)
       files_seen.append(len(found_objects))
 
-    self.logger.info(
-        'Listing bucket %s waiting for %s objects to appear...',
-        self.bucket_url.bucket_name, self.num_objects)
+    self.logger.info('Listing bucket %s waiting for %s objects to appear...',
+                     self.bucket_url.bucket_name, self.num_objects)
     while expected_objects - found_objects:
       self._RunOperation(_ListAfterUpload)
       if expected_objects - found_objects:
@@ -1185,23 +1260,26 @@ class PerfDiagCommand(Command):
     }
 
     args = [object_name for object_name in list_objects]
-    self.logger.info(
-        'Deleting %s objects for listing test...', self.num_objects)
-    self.Apply(_DeleteWrapper, args, _PerfdiagExceptionHandler,
+    self.logger.info('Deleting %s objects for listing test...',
+                     self.num_objects)
+    self.Apply(_DeleteWrapper,
+               args,
+               _PerfdiagExceptionHandler,
                arg_checker=DummyArgChecker)
 
-    self.logger.info(
-        'Listing bucket %s waiting for %s objects to disappear...',
-        self.bucket_url.bucket_name, self.num_objects)
+    self.logger.info('Listing bucket %s waiting for %s objects to disappear...',
+                     self.bucket_url.bucket_name, self.num_objects)
     list_latencies = []
     files_seen = []
     total_start_time = time.time()
     found_objects = set(list_objects)
     while found_objects:
+
       def _ListAfterDelete():
         names = _List()
         found_objects.intersection_update(names)
         files_seen.append(len(found_objects))
+
       self._RunOperation(_ListAfterDelete)
       if found_objects:
         if time.time() - total_start_time > self.MAX_LISTING_WAIT_TIME:
@@ -1216,8 +1294,14 @@ class PerfDiagCommand(Command):
         'time_took': total_end_time - total_start_time,
     }
 
-  def Upload(self, file_name, object_name, gsutil_api, use_file=False,
-             file_start=0, file_size=None, gzip_encoded=False):
+  def Upload(self,
+             file_name,
+             object_name,
+             gsutil_api,
+             use_file=False,
+             file_start=0,
+             file_size=None,
+             gzip_encoded=False):
     """Performs an upload to the test bucket.
 
     The file is uploaded to the bucket referred to by self.bucket_url, and has
@@ -1251,18 +1335,23 @@ class PerfDiagCommand(Command):
       if use_file:
         fp = FilePart(file_name, file_start, file_size)
       else:
-        data = temp_file_dict[file_name].data[file_start:file_start+file_size]
+        data = temp_file_dict[file_name].data[file_start:file_start + file_size]
         fp = six.BytesIO(data)
 
       def _InnerUpload():
         if file_size < ResumableThreshold():
-          return gsutil_api.UploadObject(
-              fp, upload_target, provider=self.provider, size=file_size,
-              fields=['name', 'mediaLink', 'size'],
-              gzip_encoded=gzip_encoded)
+          return gsutil_api.UploadObject(fp,
+                                         upload_target,
+                                         provider=self.provider,
+                                         size=file_size,
+                                         fields=['name', 'mediaLink', 'size'],
+                                         gzip_encoded=gzip_encoded)
         else:
           return gsutil_api.UploadObjectResumable(
-              fp, upload_target, provider=self.provider, size=file_size,
+              fp,
+              upload_target,
+              provider=self.provider,
+              size=file_size,
               fields=['name', 'mediaLink', 'size'],
               tracker_callback=_DummyTrackerCallback,
               gzip_encoded=gzip_encoded)
@@ -1280,8 +1369,13 @@ class PerfDiagCommand(Command):
       if fp:
         fp.close()
 
-  def Download(self, object_name, gsutil_api, file_name=None,
-               serialization_data=None, start_byte=0, end_byte=None):
+  def Download(self,
+               object_name,
+               gsutil_api,
+               file_name=None,
+               serialization_data=None,
+               start_byte=0,
+               end_byte=None):
     """Downloads an object from the test bucket.
 
     Args:
@@ -1305,10 +1399,14 @@ class PerfDiagCommand(Command):
         fp = self.discard_sink
 
       def _InnerDownload():
-        gsutil_api.GetObjectMedia(
-            self.bucket_url.bucket_name, object_name, fp,
-            provider=self.provider, start_byte=start_byte, end_byte=end_byte,
-            serialization_data=serialization_data)
+        gsutil_api.GetObjectMedia(self.bucket_url.bucket_name,
+                                  object_name,
+                                  fp,
+                                  provider=self.provider,
+                                  start_byte=start_byte,
+                                  end_byte=end_byte,
+                                  serialization_data=serialization_data)
+
       self._RunOperation(_InnerDownload)
     finally:
       if fp:
@@ -1322,9 +1420,12 @@ class PerfDiagCommand(Command):
       gsutil_api: Cloud API instance to use for this delete.
     """
     try:
+
       def _InnerDelete():
-        gsutil_api.DeleteObject(self.bucket_url.bucket_name, object_name,
+        gsutil_api.DeleteObject(self.bucket_url.bucket_name,
+                                object_name,
                                 provider=self.provider)
+
       self._RunOperation(_InnerDelete)
     except NotFoundException:
       pass
@@ -1379,7 +1480,8 @@ class PerfDiagCommand(Command):
     """
     # netstat return code is non-zero for -s on Linux, so don't raise on error.
     try:
-      netstat_output = self._Exec(['netstat', '-s'], return_output=True,
+      netstat_output = self._Exec(['netstat', '-s'],
+                                  return_output=True,
                                   raise_on_error=False)
     except OSError:
       self.logger.warning('netstat not found on your system; some measurement '
@@ -1431,8 +1533,8 @@ class PerfDiagCommand(Command):
     sysinfo = {}
 
     # All exceptions that might be raised from socket module calls.
-    socket_errors = (
-        socket.error, socket.herror, socket.gaierror, socket.timeout)
+    socket_errors = (socket.error, socket.herror, socket.gaierror,
+                     socket.timeout)
 
     # Find out whether HTTPS is enabled in Boto.
     sysinfo['boto_https_enabled'] = boto.config.get('Boto', 'is_secure', True)
@@ -1488,16 +1590,17 @@ class PerfDiagCommand(Command):
           # "gcloud compute" commands will (hopefully) fail on these envs due to
           # lack of credentials/permissions to access compute resources.
           mute_stderr = IsRunningInCiEnvironment()
-          sysinfo['gce_instance_info'] = (
-              self._Exec(cmd, return_output=True, mute_stderr=mute_stderr))
+          sysinfo['gce_instance_info'] = (self._Exec(cmd,
+                                                     return_output=True,
+                                                     mute_stderr=mute_stderr))
         except (CommandException, OSError):
           sysinfo['gce_instance_info'] = ''
 
     # Record info about location and storage class of the bucket being used for
     # performance testing.
-    bucket_info = self.gsutil_api.GetBucket(
-        self.bucket_url.bucket_name, fields=['location', 'storageClass'],
-        provider=self.bucket_url.scheme)
+    bucket_info = self.gsutil_api.GetBucket(self.bucket_url.bucket_name,
+                                            fields=['location', 'storageClass'],
+                                            provider=self.bucket_url.scheme)
     sysinfo['bucket_location'] = bucket_info.location
     sysinfo['bucket_storageClass'] = bucket_info.storageClass
 
@@ -1594,24 +1697,26 @@ class PerfDiagCommand(Command):
       with open('/proc/meminfo', 'r') as f:
         for line in f:
           if line.startswith('MemTotal'):
-            mem_total = (int(''.join(c for c in line if c in string.digits))
-                         * 1000)
+            mem_total = (int(''.join(c for c in line if c in string.digits)) *
+                         1000)
           elif line.startswith('MemFree'):
-            mem_free = (int(''.join(c for c in line if c in string.digits))
-                        * 1000)
+            mem_free = (int(''.join(c for c in line if c in string.digits)) *
+                        1000)
           elif line.startswith('Buffers'):
-            mem_buffers = (int(''.join(c for c in line if c in string.digits))
-                           * 1000)
+            mem_buffers = (int(''.join(c for c in line if c in string.digits)) *
+                           1000)
           elif line.startswith('Cached'):
-            mem_cached = (int(''.join(c for c in line if c in string.digits))
-                          * 1000)
+            mem_cached = (int(''.join(c for c in line if c in string.digits)) *
+                          1000)
     except (IOError, ValueError):
       pass
 
-    sysinfo['meminfo'] = {'mem_total': mem_total,
-                          'mem_free': mem_free,
-                          'mem_buffers': mem_buffers,
-                          'mem_cached': mem_cached}
+    sysinfo['meminfo'] = {
+        'mem_total': mem_total,
+        'mem_free': mem_free,
+        'mem_buffers': mem_buffers,
+        'mem_cached': mem_cached
+    }
 
     # Get configuration attributes from config module.
     sysinfo['gsutil_config'] = {}
@@ -1651,8 +1756,11 @@ class PerfDiagCommand(Command):
     text_util.print_to_fd(str(n).rjust(6), '', end=' ')
     text_util.print_to_fd(('%.1f' % (mean * 1000)).rjust(9), '', end=' ')
     text_util.print_to_fd(('%.1f' % (stdev * 1000)).rjust(12), '', end=' ')
-    text_util.print_to_fd(('%.1f' % (Percentile(trials, 0.5) * 1000)).rjust(11), '', end=' ')
-    text_util.print_to_fd(('%.1f' % (Percentile(trials, 0.9) * 1000)).rjust(11), '')
+    text_util.print_to_fd(('%.1f' % (Percentile(trials, 0.5) * 1000)).rjust(11),
+                          '',
+                          end=' ')
+    text_util.print_to_fd(('%.1f' % (Percentile(trials, 0.9) * 1000)).rjust(11),
+                          '')
 
   def _DisplayResults(self):
     """Displays results collected from diagnostic run."""
@@ -1666,29 +1774,39 @@ class PerfDiagCommand(Command):
       text_util.print_to_fd('-' * 78)
       text_util.print_to_fd('Latency'.center(78))
       text_util.print_to_fd('-' * 78)
-      text_util.print_to_fd('Operation       Size  Trials  Mean (ms)  Std Dev (ms)  '
-             'Median (ms)  90th % (ms)')
-      text_util.print_to_fd('=========  =========  ======  =========  ============  '
-             '===========  ===========')
+      text_util.print_to_fd(
+          'Operation       Size  Trials  Mean (ms)  Std Dev (ms)  '
+          'Median (ms)  90th % (ms)')
+      text_util.print_to_fd(
+          '=========  =========  ======  =========  ============  '
+          '===========  ===========')
       for key in sorted(self.results['latency']):
         trials = sorted(self.results['latency'][key])
         op, numbytes = key.split('_')
         numbytes = int(numbytes)
         if op == 'METADATA':
           text_util.print_to_fd('Metadata'.rjust(9), '', end=' ')
-          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9),
+                                '',
+                                end=' ')
           self._DisplayStats(trials)
         if op == 'DOWNLOAD':
           text_util.print_to_fd('Download'.rjust(9), '', end=' ')
-          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9),
+                                '',
+                                end=' ')
           self._DisplayStats(trials)
         if op == 'UPLOAD':
           text_util.print_to_fd('Upload'.rjust(9), '', end=' ')
-          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9),
+                                '',
+                                end=' ')
           self._DisplayStats(trials)
         if op == 'DELETE':
           text_util.print_to_fd('Delete'.rjust(9), '', end=' ')
-          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9), '', end=' ')
+          text_util.print_to_fd(MakeHumanReadable(numbytes).rjust(9),
+                                '',
+                                end=' ')
           self._DisplayStats(trials)
 
     if 'write_throughput' in self.results:
@@ -1697,14 +1815,16 @@ class PerfDiagCommand(Command):
       text_util.print_to_fd('Write Throughput'.center(78))
       text_util.print_to_fd('-' * 78)
       write_thru = self.results['write_throughput']
-      text_util.print_to_fd('Copied %s %s file(s) for a total transfer size of %s.' % (
-          self.num_objects,
-          MakeHumanReadable(write_thru['file_size']),
-          MakeHumanReadable(write_thru['total_bytes_copied'])))
-      text_util.print_to_fd('Write throughput: %s/s.' % (
-          MakeBitsHumanReadable(write_thru['bytes_per_second'] * 8)))
+      text_util.print_to_fd(
+          'Copied %s %s file(s) for a total transfer size of %s.' %
+          (self.num_objects, MakeHumanReadable(write_thru['file_size']),
+           MakeHumanReadable(write_thru['total_bytes_copied'])))
+      text_util.print_to_fd(
+          'Write throughput: %s/s.' %
+          (MakeBitsHumanReadable(write_thru['bytes_per_second'] * 8)))
       if 'parallelism' in write_thru:  # Compatibility with old versions.
-        text_util.print_to_fd('Parallelism strategy: %s' % write_thru['parallelism'])
+        text_util.print_to_fd('Parallelism strategy: %s' %
+                              write_thru['parallelism'])
 
     if 'write_throughput_file' in self.results:
       text_util.print_to_fd()
@@ -1712,14 +1832,16 @@ class PerfDiagCommand(Command):
       text_util.print_to_fd('Write Throughput With File I/O'.center(78))
       text_util.print_to_fd('-' * 78)
       write_thru_file = self.results['write_throughput_file']
-      text_util.print_to_fd('Copied %s %s file(s) for a total transfer size of %s.' % (
-          self.num_objects,
-          MakeHumanReadable(write_thru_file['file_size']),
-          MakeHumanReadable(write_thru_file['total_bytes_copied'])))
-      text_util.print_to_fd('Write throughput: %s/s.' % (
-          MakeBitsHumanReadable(write_thru_file['bytes_per_second'] * 8)))
+      text_util.print_to_fd(
+          'Copied %s %s file(s) for a total transfer size of %s.' %
+          (self.num_objects, MakeHumanReadable(write_thru_file['file_size']),
+           MakeHumanReadable(write_thru_file['total_bytes_copied'])))
+      text_util.print_to_fd(
+          'Write throughput: %s/s.' %
+          (MakeBitsHumanReadable(write_thru_file['bytes_per_second'] * 8)))
       if 'parallelism' in write_thru_file:  # Compatibility with old versions.
-        text_util.print_to_fd('Parallelism strategy: %s' % write_thru_file['parallelism'])
+        text_util.print_to_fd('Parallelism strategy: %s' %
+                              write_thru_file['parallelism'])
 
     if 'read_throughput' in self.results:
       text_util.print_to_fd()
@@ -1727,14 +1849,16 @@ class PerfDiagCommand(Command):
       text_util.print_to_fd('Read Throughput'.center(78))
       text_util.print_to_fd('-' * 78)
       read_thru = self.results['read_throughput']
-      text_util.print_to_fd('Copied %s %s file(s) for a total transfer size of %s.' % (
-          self.num_objects,
-          MakeHumanReadable(read_thru['file_size']),
-          MakeHumanReadable(read_thru['total_bytes_copied'])))
-      text_util.print_to_fd('Read throughput: %s/s.' % (
-          MakeBitsHumanReadable(read_thru['bytes_per_second'] * 8)))
+      text_util.print_to_fd(
+          'Copied %s %s file(s) for a total transfer size of %s.' %
+          (self.num_objects, MakeHumanReadable(read_thru['file_size']),
+           MakeHumanReadable(read_thru['total_bytes_copied'])))
+      text_util.print_to_fd(
+          'Read throughput: %s/s.' %
+          (MakeBitsHumanReadable(read_thru['bytes_per_second'] * 8)))
       if 'parallelism' in read_thru:  # Compatibility with old versions.
-        text_util.print_to_fd('Parallelism strategy: %s' % read_thru['parallelism'])
+        text_util.print_to_fd('Parallelism strategy: %s' %
+                              read_thru['parallelism'])
 
     if 'read_throughput_file' in self.results:
       text_util.print_to_fd()
@@ -1742,14 +1866,16 @@ class PerfDiagCommand(Command):
       text_util.print_to_fd('Read Throughput With File I/O'.center(78))
       text_util.print_to_fd('-' * 78)
       read_thru_file = self.results['read_throughput_file']
-      text_util.print_to_fd('Copied %s %s file(s) for a total transfer size of %s.' % (
-          self.num_objects,
-          MakeHumanReadable(read_thru_file['file_size']),
-          MakeHumanReadable(read_thru_file['total_bytes_copied'])))
-      text_util.print_to_fd('Read throughput: %s/s.' % (
-          MakeBitsHumanReadable(read_thru_file['bytes_per_second'] * 8)))
+      text_util.print_to_fd(
+          'Copied %s %s file(s) for a total transfer size of %s.' %
+          (self.num_objects, MakeHumanReadable(read_thru_file['file_size']),
+           MakeHumanReadable(read_thru_file['total_bytes_copied'])))
+      text_util.print_to_fd(
+          'Read throughput: %s/s.' %
+          (MakeBitsHumanReadable(read_thru_file['bytes_per_second'] * 8)))
       if 'parallelism' in read_thru_file:  # Compatibility with old versions.
-        text_util.print_to_fd('Parallelism strategy: %s' % read_thru_file['parallelism'])
+        text_util.print_to_fd('Parallelism strategy: %s' %
+                              read_thru_file['parallelism'])
 
     if 'listing' in self.results:
       text_util.print_to_fd()
@@ -1760,23 +1886,32 @@ class PerfDiagCommand(Command):
       listing = self.results['listing']
       insert = listing['insert']
       delete = listing['delete']
-      text_util.print_to_fd('After inserting %s objects:' % listing['num_files'])
-      text_util.print_to_fd(('  Total time for objects to appear: %.2g seconds' %
-             insert['time_took']))
-      text_util.print_to_fd('  Number of listing calls made: %s' % insert['num_listing_calls'])
-      text_util.print_to_fd(('  Individual listing call latencies: [%s]' %
-             ', '.join('%.2gs' % lat for lat in insert['list_latencies'])))
-      text_util.print_to_fd(('  Files reflected after each call: [%s]' %
-             ', '.join(map(str, insert['files_seen_after_listing']))))
+      text_util.print_to_fd('After inserting %s objects:' %
+                            listing['num_files'])
+      text_util.print_to_fd(
+          ('  Total time for objects to appear: %.2g seconds' %
+           insert['time_took']))
+      text_util.print_to_fd('  Number of listing calls made: %s' %
+                            insert['num_listing_calls'])
+      text_util.print_to_fd(
+          ('  Individual listing call latencies: [%s]' %
+           ', '.join('%.2gs' % lat for lat in insert['list_latencies'])))
+      text_util.print_to_fd(
+          ('  Files reflected after each call: [%s]' %
+           ', '.join(map(str, insert['files_seen_after_listing']))))
 
       text_util.print_to_fd('After deleting %s objects:' % listing['num_files'])
-      text_util.print_to_fd(('  Total time for objects to appear: %.2g seconds' %
-             delete['time_took']))
-      text_util.print_to_fd('  Number of listing calls made: %s' % delete['num_listing_calls'])
-      text_util.print_to_fd(('  Individual listing call latencies: [%s]' %
-             ', '.join('%.2gs' % lat for lat in delete['list_latencies'])))
-      text_util.print_to_fd(('  Files reflected after each call: [%s]' %
-             ', '.join(map(str, delete['files_seen_after_listing']))))
+      text_util.print_to_fd(
+          ('  Total time for objects to appear: %.2g seconds' %
+           delete['time_took']))
+      text_util.print_to_fd('  Number of listing calls made: %s' %
+                            delete['num_listing_calls'])
+      text_util.print_to_fd(
+          ('  Individual listing call latencies: [%s]' %
+           ', '.join('%.2gs' % lat for lat in delete['list_latencies'])))
+      text_util.print_to_fd(
+          ('  Files reflected after each call: [%s]' %
+           ', '.join(map(str, delete['files_seen_after_listing']))))
 
     if 'sysinfo' in self.results:
       text_util.print_to_fd()
@@ -1787,9 +1922,10 @@ class PerfDiagCommand(Command):
       text_util.print_to_fd('IP Address: \n  %s' % info['ip_address'])
       text_util.print_to_fd('Temporary Directory: \n  %s' % info['tempdir'])
       text_util.print_to_fd('Bucket URI: \n  %s' % self.results['bucket_uri'])
-      text_util.print_to_fd('gsutil Version: \n  %s' % self.results.get('gsutil_version',
-                                                        'Unknown'))
-      text_util.print_to_fd('boto Version: \n  %s' % self.results.get('boto_version', 'Unknown'))
+      text_util.print_to_fd('gsutil Version: \n  %s' %
+                            self.results.get('gsutil_version', 'Unknown'))
+      text_util.print_to_fd('boto Version: \n  %s' %
+                            self.results.get('boto_version', 'Unknown'))
 
       if 'gmt_timestamp' in info:
         ts_string = info['gmt_timestamp']
@@ -1804,32 +1940,34 @@ class PerfDiagCommand(Command):
           # Converts the GMT time tuple to local Linux timestamp.
           localtime = calendar.timegm(timetuple)
           localdt = datetime.datetime.fromtimestamp(localtime)
-          text_util.print_to_fd('Measurement time: \n %s' % localdt.strftime(
-              '%Y-%m-%d %I:%M:%S %p %Z'))
+          text_util.print_to_fd('Measurement time: \n %s' %
+                                localdt.strftime('%Y-%m-%d %I:%M:%S %p %Z'))
 
       if 'on_gce' in info:
         text_util.print_to_fd('Running on GCE: \n  %s' % info['on_gce'])
         if info['on_gce']:
           text_util.print_to_fd('GCE Instance:\n\t%s' %
-                 info['gce_instance_info'].replace('\n', '\n\t'))
+                                info['gce_instance_info'].replace('\n', '\n\t'))
       text_util.print_to_fd('Bucket location: \n  %s' % info['bucket_location'])
-      text_util.print_to_fd('Bucket storage class: \n  %s' % info['bucket_storageClass'])
+      text_util.print_to_fd('Bucket storage class: \n  %s' %
+                            info['bucket_storageClass'])
       text_util.print_to_fd('Google Server: \n  %s' % info['googserv_route'])
       text_util.print_to_fd('Google Server IP Addresses: \n  %s' %
-             ('\n  '.join(info['googserv_ips'])))
+                            ('\n  '.join(info['googserv_ips'])))
       text_util.print_to_fd('Google Server Hostnames: \n  %s' %
-             ('\n  '.join(info['googserv_hostnames'])))
-      text_util.print_to_fd('Google DNS thinks your IP is: \n  %s' % info['dns_o-o_ip'])
+                            ('\n  '.join(info['googserv_hostnames'])))
+      text_util.print_to_fd('Google DNS thinks your IP is: \n  %s' %
+                            info['dns_o-o_ip'])
       text_util.print_to_fd('CPU Count: \n  %s' % info['cpu_count'])
       text_util.print_to_fd('CPU Load Average: \n  %s' % info['load_avg'])
       try:
         text_util.print_to_fd(('Total Memory: \n  %s' %
-               MakeHumanReadable(info['meminfo']['mem_total'])))
+                               MakeHumanReadable(info['meminfo']['mem_total'])))
         # Free memory is really MemFree + Buffers + Cached.
-        text_util.print_to_fd('Free Memory: \n  %s' % MakeHumanReadable(
-            info['meminfo']['mem_free'] +
-            info['meminfo']['mem_buffers'] +
-            info['meminfo']['mem_cached']))
+        text_util.print_to_fd('Free Memory: \n  %s' %
+                              MakeHumanReadable(info['meminfo']['mem_free'] +
+                                                info['meminfo']['mem_buffers'] +
+                                                info['meminfo']['mem_cached']))
       except TypeError:
         pass
 
@@ -1840,20 +1978,23 @@ class PerfDiagCommand(Command):
           try:
             delta = (netstat_after['tcp_%s' % tcp_type] -
                      netstat_before['tcp_%s' % tcp_type])
-            text_util.print_to_fd('TCP segments %s during test:\n  %d' % (tcp_type, delta))
+            text_util.print_to_fd('TCP segments %s during test:\n  %d' %
+                                  (tcp_type, delta))
           except TypeError:
             pass
       else:
-        text_util.print_to_fd('TCP segment counts not available because "netstat" was not '
-               'found during test runs')
+        text_util.print_to_fd(
+            'TCP segment counts not available because "netstat" was not '
+            'found during test runs')
 
       if 'disk_counters_end' in info and 'disk_counters_start' in info:
         text_util.print_to_fd('Disk Counter Deltas:\n', end=' ')
         disk_after = info['disk_counters_end']
         disk_before = info['disk_counters_start']
         text_util.print_to_fd('', 'disk'.rjust(6), end=' ')
-        for colname in ['reads', 'writes', 'rbytes', 'wbytes', 'rtime',
-                        'wtime']:
+        for colname in [
+            'reads', 'writes', 'rbytes', 'wbytes', 'rtime', 'wtime'
+        ]:
           text_util.print_to_fd(colname.rjust(8), end=' ')
         text_util.print_to_fd()
         for diskname in sorted(disk_after):
@@ -1862,8 +2003,10 @@ class PerfDiagCommand(Command):
           (reads1, writes1, rbytes1, wbytes1, rtime1, wtime1) = before
           (reads2, writes2, rbytes2, wbytes2, rtime2, wtime2) = after
           text_util.print_to_fd('', diskname.rjust(6), end=' ')
-          deltas = [reads2-reads1, writes2-writes1, rbytes2-rbytes1,
-                    wbytes2-wbytes1, rtime2-rtime1, wtime2-wtime1]
+          deltas = [
+              reads2 - reads1, writes2 - writes1, rbytes2 - rbytes1,
+              wbytes2 - wbytes1, rtime2 - rtime1, wtime2 - wtime1
+          ]
           for delta in deltas:
             text_util.print_to_fd(str(delta).rjust(8), end=' ')
           text_util.print_to_fd()
@@ -1874,27 +2017,33 @@ class PerfDiagCommand(Command):
           text_util.print_to_fd('   %s = %s' % item)
 
       if 'boto_https_enabled' in info:
-        text_util.print_to_fd('Boto HTTPS Enabled: \n  %s' % info['boto_https_enabled'])
+        text_util.print_to_fd('Boto HTTPS Enabled: \n  %s' %
+                              info['boto_https_enabled'])
 
       if 'using_proxy' in info:
-        text_util.print_to_fd('Requests routed through proxy: \n  %s' % info['using_proxy'])
+        text_util.print_to_fd('Requests routed through proxy: \n  %s' %
+                              info['using_proxy'])
 
       if 'google_host_dns_latency' in info:
-        text_util.print_to_fd(('Latency of the DNS lookup for Google Storage server (ms): '
-               '\n  %.1f' % (info['google_host_dns_latency'] * 1000.0)))
+        text_util.print_to_fd(
+            ('Latency of the DNS lookup for Google Storage server (ms): '
+             '\n  %.1f' % (info['google_host_dns_latency'] * 1000.0)))
 
       if 'google_host_connect_latencies' in info:
-        text_util.print_to_fd('Latencies connecting to Google Storage server IPs (ms):')
+        text_util.print_to_fd(
+            'Latencies connecting to Google Storage server IPs (ms):')
         for ip, latency in six.iteritems(info['google_host_connect_latencies']):
           text_util.print_to_fd('  %s = %.1f' % (ip, latency * 1000.0))
 
       if 'proxy_dns_latency' in info:
-        text_util.print_to_fd(('Latency of the DNS lookup for the configured proxy (ms): '
-               '\n  %.1f' % (info['proxy_dns_latency'] * 1000.0)))
+        text_util.print_to_fd(
+            ('Latency of the DNS lookup for the configured proxy (ms): '
+             '\n  %.1f' % (info['proxy_dns_latency'] * 1000.0)))
 
       if 'proxy_host_connect_latency' in info:
-        text_util.print_to_fd(('Latency connecting to the configured proxy (ms): \n  %.1f' %
-               (info['proxy_host_connect_latency'] * 1000.0)))
+        text_util.print_to_fd(
+            ('Latency connecting to the configured proxy (ms): \n  %.1f' %
+             (info['proxy_host_connect_latency'] * 1000.0)))
 
     if 'request_errors' in self.results and 'total_requests' in self.results:
       text_util.print_to_fd()
@@ -1904,8 +2053,8 @@ class PerfDiagCommand(Command):
       total = int(self.results['total_requests'])
       numerrors = int(self.results['request_errors'])
       numbreaks = int(self.results['connection_breaks'])
-      availability = (((total - numerrors) / float(total)) * 100
-                      if total > 0 else 100)
+      availability = (((total - numerrors) / float(total)) *
+                      100 if total > 0 else 100)
       text_util.print_to_fd('Total HTTP requests made: %d' % total)
       text_util.print_to_fd('HTTP 5xx errors: %d' % numerrors)
       text_util.print_to_fd('HTTP connections broken: %d' % numbreaks)
@@ -1991,8 +2140,8 @@ class PerfDiagCommand(Command):
           if a.lower() in self.PARALLEL_STRATEGIES:
             self.parallel_strategy = a.lower()
           else:
-            raise CommandException(
-                "'%s' is not a valid parallelism strategy." % a)
+            raise CommandException("'%s' is not a valid parallelism strategy." %
+                                   a)
         if o == '-y':
           self.num_slices = self._ParsePositiveInteger(
               a, 'The -y parameter must be a positive integer.')
@@ -2070,9 +2219,9 @@ class PerfDiagCommand(Command):
           'sizes, specify rthru_file and/or wthru_file with the -t option.')
 
     perform_slice = self.parallel_strategy in (self.SLICE, self.BOTH)
-    slice_not_available = (
-        self.provider == 's3' and self.diag_tests.intersection(self.WTHRU,
-                                                               self.WTHRU_FILE))
+    slice_not_available = (self.provider == 's3' and
+                           self.diag_tests.intersection(self.WTHRU,
+                                                        self.WTHRU_FILE))
     if perform_slice and slice_not_available:
       raise CommandException('Sliced uploads are not available for s3. '
                              'Use -p fan or sequential uploads for s3.')
@@ -2081,9 +2230,10 @@ class PerfDiagCommand(Command):
     self.gsutil_api.GetBucket(self.bucket_url.bucket_name,
                               provider=self.bucket_url.scheme,
                               fields=['id'])
-    self.exceptions = [http_client.HTTPException, socket.error, socket.gaierror,
-                       socket.timeout, http_client.BadStatusLine,
-                       ServiceException]
+    self.exceptions = [
+        http_client.HTTPException, socket.error, socket.gaierror,
+        socket.timeout, http_client.BadStatusLine, ServiceException
+    ]
 
   # Command entry point.
   def RunCommand(self):
@@ -2107,16 +2257,10 @@ class PerfDiagCommand(Command):
         'Throughput file size: %s\n'
         'Diagnostics to run: %s\n'
         'Gzip compression ratio: %s\n'
-        'Gzip transport encoding writes: %s',
-        self.num_objects,
-        self.bucket_url,
-        self.processes,
-        self.threads,
-        self.parallel_strategy,
-        MakeHumanReadable(self.thru_filesize),
-        (', '.join(self.diag_tests)),
-        self.gzip_compression_ratio,
-        self.gzip_encoded_writes)
+        'Gzip transport encoding writes: %s', self.num_objects, self.bucket_url,
+        self.processes, self.threads, self.parallel_strategy,
+        MakeHumanReadable(self.thru_filesize), (', '.join(self.diag_tests)),
+        self.gzip_compression_ratio, self.gzip_encoded_writes)
 
     try:
       self._SetUp()

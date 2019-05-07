@@ -50,7 +50,6 @@ if six.PY3:
   # StandardError was removed, so use the base exception type instead
   StandardError = Exception
 
-
 FLAT_LIST_REGEX = re.compile(r'(?P<before>.*?)\*\*(?P<after>.*)')
 
 _UNICODE_EXCEPTION_TEXT = (
@@ -86,8 +85,12 @@ class CloudWildcardIterator(WildcardIterator):
   information is available in the object list results.
   """
 
-  def __init__(self, wildcard_url, gsutil_api, all_versions=False,
-               project_id=None, logger=None):
+  def __init__(self,
+               wildcard_url,
+               gsutil_api,
+               all_versions=False,
+               project_id=None,
+               logger=None):
     """Instantiates an iterator that matches the wildcard URL.
 
     Args:
@@ -148,8 +151,8 @@ class CloudWildcardIterator(WildcardIterator):
       # If we're making versioned requests, ensure generation and
       # metageneration are also included.
       if single_version_request or self.all_versions:
-        bucket_listing_fields.update(['items/generation',
-                                      'items/metageneration'])
+        bucket_listing_fields.update(
+            ['items/generation', 'items/metageneration'])
         get_fields.update(['generation', 'metageneration'])
 
     # Handle bucket wildcarding, if any, in _ExpandBucketWildcards. Then
@@ -163,11 +166,14 @@ class CloudWildcardIterator(WildcardIterator):
         if expand_top_level_buckets:
           url = StorageUrlFromString(bucket_url_string)
           for obj_or_prefix in self.gsutil_api.ListObjects(
-              url.bucket_name, delimiter='/', all_versions=self.all_versions,
+              url.bucket_name,
+              delimiter='/',
+              all_versions=self.all_versions,
               provider=self.wildcard_url.scheme,
               fields=bucket_listing_fields):
             if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT:
-              yield self._GetObjectRef(bucket_url_string, obj_or_prefix.data,
+              yield self._GetObjectRef(bucket_url_string,
+                                       obj_or_prefix.data,
                                        with_version=self.all_versions)
             else:  # CloudApi.CsObjectOrPrefixType.PREFIX:
               yield self._GetPrefixRef(bucket_url_string, obj_or_prefix.data)
@@ -186,9 +192,10 @@ class CloudWildcardIterator(WildcardIterator):
                 generation=self.wildcard_url.generation,
                 provider=self.wildcard_url.scheme,
                 fields=get_fields)
-            yield self._GetObjectRef(
-                self.wildcard_url.bucket_url_string, get_object,
-                with_version=(self.all_versions or single_version_request))
+            yield self._GetObjectRef(self.wildcard_url.bucket_url_string,
+                                     get_object,
+                                     with_version=(self.all_versions or
+                                                   single_version_request))
             return
           except (NotFoundException, AccessDeniedException):
             # It's possible this is a prefix - try to list instead.
@@ -205,35 +212,40 @@ class CloudWildcardIterator(WildcardIterator):
         else:
           # Rstrip any prefixes to correspond with rstripped prefix wildcard
           # from _BuildBucketFilterStrings().
-          url_string = '%s%s' % (bucket_url_string,
-                                 StripOneSlash(self.wildcard_url.object_name)
-                                 or '/')  # Cover root object named '/' case.
+          url_string = '%s%s' % (
+              bucket_url_string, StripOneSlash(self.wildcard_url.object_name) or
+              '/')  # Cover root object named '/' case.
         urls_needing_expansion = [url_string]
         while urls_needing_expansion:
           url = StorageUrlFromString(urls_needing_expansion.pop(0))
-          (prefix, delimiter, prefix_wildcard, suffix_wildcard) = (
-              self._BuildBucketFilterStrings(url.object_name))
+          (prefix, delimiter, prefix_wildcard,
+           suffix_wildcard) = (self._BuildBucketFilterStrings(url.object_name))
           prog = re.compile(fnmatch.translate(prefix_wildcard))
 
           # If we have a suffix wildcard, we only care about listing prefixes.
-          listing_fields = (
-              set(['prefixes']) if suffix_wildcard else bucket_listing_fields)
+          listing_fields = (set(['prefixes'])
+                            if suffix_wildcard else bucket_listing_fields)
 
           # List bucket for objects matching prefix up to delimiter.
           for obj_or_prefix in self.gsutil_api.ListObjects(
-              url.bucket_name, prefix=prefix, delimiter=delimiter,
+              url.bucket_name,
+              prefix=prefix,
+              delimiter=delimiter,
               all_versions=self.all_versions or single_version_request,
-              provider=self.wildcard_url.scheme, fields=listing_fields):
+              provider=self.wildcard_url.scheme,
+              fields=listing_fields):
             if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT:
               gcs_object = obj_or_prefix.data
               if prog.match(gcs_object.name):
-                if not suffix_wildcard or (
-                    StripOneSlash(gcs_object.name) == suffix_wildcard):
-                  if not single_version_request or (
-                      self._SingleVersionMatches(gcs_object.generation)):
+                if not suffix_wildcard or (StripOneSlash(
+                    gcs_object.name) == suffix_wildcard):
+                  if not single_version_request or (self._SingleVersionMatches(
+                      gcs_object.generation)):
                     yield self._GetObjectRef(
-                        bucket_url_string, gcs_object, with_version=(
-                            self.all_versions or single_version_request))
+                        bucket_url_string,
+                        gcs_object,
+                        with_version=(self.all_versions or
+                                      single_version_request))
             else:  # CloudApi.CsObjectOrPrefixType.PREFIX
               prefix = obj_or_prefix.data
 
@@ -244,8 +256,7 @@ class CloudWildcardIterator(WildcardIterator):
                 raise CommandException(
                     'Cloud folder %s%s contains a wildcard; gsutil does '
                     'not currently support objects with wildcards in their '
-                    'name.'
-                    % (bucket_url_string, prefix))
+                    'name.' % (bucket_url_string, prefix))
 
               # If the prefix ends with a slash, remove it.  Note that we only
               # remove one slash so that we can successfully enumerate dirs
@@ -254,9 +265,9 @@ class CloudWildcardIterator(WildcardIterator):
               if prog.match(rstripped_prefix):
                 if suffix_wildcard and rstripped_prefix != suffix_wildcard:
                   # There's more wildcard left to expand.
-                  url_append_string = '%s%s' % (
-                      bucket_url_string, rstripped_prefix + '/' +
-                      suffix_wildcard)
+                  url_append_string = '%s%s' % (bucket_url_string,
+                                                rstripped_prefix + '/' +
+                                                suffix_wildcard)
                   urls_needing_expansion.append(url_append_string)
                 else:
                   # No wildcard to expand, just yield the prefix
@@ -314,7 +325,7 @@ class CloudWildcardIterator(WildcardIterator):
         wildcard_part = wildcard
       end = wildcard_part.find('/')
       if end != -1:
-        wildcard_part = wildcard_part[:end+1]
+        wildcard_part = wildcard_part[:end + 1]
       # Remove trailing '/' so we will match gs://bucket/abc* as well as
       # gs://bucket/abc*/ with the same wildcard regex.
       prefix_wildcard = StripOneSlash((prefix or '') + wildcard_part)
@@ -323,7 +334,7 @@ class CloudWildcardIterator(WildcardIterator):
       if end == -1:
         suffix_wildcard = ''
       else:
-        suffix_wildcard = suffix_wildcard[end+1:]
+        suffix_wildcard = suffix_wildcard[end + 1:]
       # To implement recursive (**) wildcarding, if prefix_wildcard
       # suffix_wildcard starts with '**' don't send a delimiter, and combine
       # suffix_wildcard at end of prefix_wildcard.
@@ -337,10 +348,9 @@ class CloudWildcardIterator(WildcardIterator):
     # walks through a multi-part wildcard like gs://bucket/abc/d*e/f*.txt
     self.logger.debug(
         'wildcard=%s, prefix=%s, delimiter=%s, '
-        'prefix_wildcard=%s, suffix_wildcard=%s\n',
-        PrintableStr(wildcard), PrintableStr(prefix),
-        PrintableStr(delimiter), PrintableStr(prefix_wildcard),
-        PrintableStr(suffix_wildcard))
+        'prefix_wildcard=%s, suffix_wildcard=%s\n', PrintableStr(wildcard),
+        PrintableStr(prefix), PrintableStr(delimiter),
+        PrintableStr(prefix_wildcard), PrintableStr(suffix_wildcard))
     return (prefix, delimiter, prefix_wildcard, suffix_wildcard)
 
   def _SingleVersionMatches(self, listed_generation):
@@ -366,13 +376,14 @@ class CloudWildcardIterator(WildcardIterator):
       # If we just want the name of a non-wildcarded bucket URL,
       # don't make an RPC.
       yield BucketListingBucket(bucket_url)
-    elif(self.wildcard_url.IsBucket() and
-         not ContainsWildcard(self.wildcard_url.bucket_name)):
+    elif (self.wildcard_url.IsBucket() and
+          not ContainsWildcard(self.wildcard_url.bucket_name)):
       # If we have a non-wildcarded bucket URL, get just that bucket.
-      yield BucketListingBucket(
-          bucket_url, root_object=self.gsutil_api.GetBucket(
-              self.wildcard_url.bucket_name, provider=self.wildcard_url.scheme,
-              fields=bucket_fields))
+      yield BucketListingBucket(bucket_url,
+                                root_object=self.gsutil_api.GetBucket(
+                                    self.wildcard_url.bucket_name,
+                                    provider=self.wildcard_url.scheme,
+                                    fields=bucket_fields))
     else:
       regex = fnmatch.translate(self.wildcard_url.bucket_name)
       prog = re.compile(regex)
@@ -381,11 +392,12 @@ class CloudWildcardIterator(WildcardIterator):
       if fields:
         fields.add('items/id')
       for bucket in self.gsutil_api.ListBuckets(
-          fields=fields, project_id=self.project_id,
+          fields=fields,
+          project_id=self.project_id,
           provider=self.wildcard_url.scheme):
         if prog.match(bucket.id):
-          url = StorageUrlFromString(
-              '%s://%s/' % (self.wildcard_url.scheme, bucket.id))
+          url = StorageUrlFromString('%s://%s/' %
+                                     (self.wildcard_url.scheme, bucket.id))
           yield BucketListingBucket(url, root_object=bucket)
 
   def _GetToListFields(self, get_fields=None):
@@ -481,9 +493,8 @@ class CloudWildcardIterator(WildcardIterator):
     Yields:
       BucketListingRef, or empty iterator if no matches.
     """
-    for blr in self.__iter__(
-        bucket_listing_fields=bucket_listing_fields,
-        expand_top_level_buckets=expand_top_level_buckets):
+    for blr in self.__iter__(bucket_listing_fields=bucket_listing_fields,
+                             expand_top_level_buckets=expand_top_level_buckets):
       yield blr
 
   def IterObjects(self, bucket_listing_fields=None):
@@ -560,8 +571,8 @@ class FileWildcardIterator(WildcardIterator):
     Yields:
       BucketListingRef of type OBJECT (for files) or PREFIX (for directories)
     """
-    include_size = (bucket_listing_fields
-                    and 'size' in set(bucket_listing_fields))
+    include_size = (bucket_listing_fields and
+                    'size' in set(bucket_listing_fields))
 
     wildcard = self.wildcard_url.object_name
     match = FLAT_LIST_REGEX.match(wildcard)
@@ -599,8 +610,8 @@ class FileWildcardIterator(WildcardIterator):
           blr_object = _GetFileObject(filepath) if include_size else None
           yield BucketListingObject(expanded_url, root_object=blr_object)
       except UnicodeEncodeError:
-        raise CommandException('\n'.join(textwrap.wrap(
-            _UNICODE_EXCEPTION_TEXT % repr(filepath))))
+        raise CommandException('\n'.join(
+            textwrap.wrap(_UNICODE_EXCEPTION_TEXT % repr(filepath))))
 
   def _IterDir(self, directory, wildcard):
     """An iterator over the specified dir and wildcard.
@@ -671,8 +682,9 @@ class FileWildcardIterator(WildcardIterator):
           #    warranted by this relatively uncommon corner case.
           # Instead we chose to abort when one such file is encountered, and
           # require the user to remove or rename the files and try again.
-          raise CommandException('\n'.join(textwrap.wrap(
-              _UNICODE_EXCEPTION_TEXT % repr(os.path.join(dirpath, f)))))
+          raise CommandException('\n'.join(
+              textwrap.wrap(_UNICODE_EXCEPTION_TEXT %
+                            repr(os.path.join(dirpath, f)))))
 
   # pylint: disable=unused-argument
   def IterObjects(self, bucket_listing_fields=None):
@@ -738,8 +750,11 @@ class WildcardException(StandardError):
     return 'WildcardException: %s' % self.reason
 
 
-def CreateWildcardIterator(url_str, gsutil_api, all_versions=False,
-                           project_id=None, ignore_symlinks=False,
+def CreateWildcardIterator(url_str,
+                           gsutil_api,
+                           all_versions=False,
+                           project_id=None,
+                           ignore_symlinks=False,
                            logger=None):
   """Instantiate a WildcardIterator for the given URL string.
 
@@ -762,8 +777,11 @@ def CreateWildcardIterator(url_str, gsutil_api, all_versions=False,
   url = StorageUrlFromString(url_str)
   logger = logger or logging.getLogger()
   if url.IsFileUrl():
-    return FileWildcardIterator(
-        url, ignore_symlinks=ignore_symlinks, logger=logger)
+    return FileWildcardIterator(url,
+                                ignore_symlinks=ignore_symlinks,
+                                logger=logger)
   else:  # Cloud URL
-    return CloudWildcardIterator(
-        url, gsutil_api, all_versions=all_versions, project_id=project_id)
+    return CloudWildcardIterator(url,
+                                 gsutil_api,
+                                 all_versions=all_versions,
+                                 project_id=project_id)

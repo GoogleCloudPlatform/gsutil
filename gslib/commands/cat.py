@@ -31,10 +31,8 @@ from gslib.exception import CommandException
 from gslib.utils import cat_helper
 from gslib.utils import constants
 
-
 if six.PY3:
   long = int
-
 
 _SYNOPSIS = """
   gsutil cat [-h] url...
@@ -108,10 +106,7 @@ class CatCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
-  )
+      argparse_arguments=[CommandArgument.MakeZeroOrMoreCloudURLsArgument()])
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='cat',

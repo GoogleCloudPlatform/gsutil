@@ -173,24 +173,22 @@ class DefAclCommand(Command):
               CommandArgument.MakeFileURLOrCannedACLArgument(),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
-          'get': [
-              CommandArgument.MakeNCloudBucketURLsArgument(1)
-          ],
-          'ch': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
-          ],
-      }
+          'get': [CommandArgument.MakeNCloudBucketURLsArgument(1)],
+          'ch': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
+      },
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='defacl',
-      help_name_aliases=[
-          'default acl', 'setdefacl', 'getdefacl', 'chdefacl'],
+      help_name_aliases=['default acl', 'setdefacl', 'getdefacl', 'chdefacl'],
       help_type='command_help',
       help_one_line_summary='Get, set, or change default ACL on buckets',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
-          'get': _get_help_text, 'set': _set_help_text, 'ch': _ch_help_text},
+          'get': _get_help_text,
+          'set': _set_help_text,
+          'ch': _ch_help_text,
+      },
   )
 
   def _CalculateUrlsStartArg(self):
@@ -238,9 +236,8 @@ class DefAclCommand(Command):
           self.changes.append(acl_helper.AclDel(a))
 
     if not self.changes:
-      raise CommandException(
-          'Please specify at least one access change '
-          'with the -g, -u, or -d flags')
+      raise CommandException('Please specify at least one access change '
+                             'with the -g, -u, or -d flags')
 
     if (not UrlsAreForSingleProvider(self.args) or
         StorageUrlFromString(self.args[0]).scheme != 'gs'):
@@ -263,7 +260,8 @@ class DefAclCommand(Command):
   def ApplyAclChanges(self, url):
     """Applies the changes in self.changes to the provided URL."""
     bucket = self.gsutil_api.GetBucket(
-        url.bucket_name, provider=url.scheme,
+        url.bucket_name,
+        provider=url.scheme,
         fields=['defaultObjectAcl', 'metageneration'])
 
     # Default object ACLs can be blank if the ACL was set to private, or
@@ -284,9 +282,11 @@ class DefAclCommand(Command):
     try:
       preconditions = Preconditions(meta_gen_match=bucket.metageneration)
       bucket_metadata = apitools_messages.Bucket(defaultObjectAcl=current_acl)
-      self.gsutil_api.PatchBucket(url.bucket_name, bucket_metadata,
+      self.gsutil_api.PatchBucket(url.bucket_name,
+                                  bucket_metadata,
                                   preconditions=preconditions,
-                                  provider=url.scheme, fields=['id'])
+                                  provider=url.scheme,
+                                  fields=['id'])
       self.logger.info('Updated default ACL on %s', url)
     except BadRequestException as e:
       # Don't retry on bad requests, e.g. invalid email address.
@@ -299,8 +299,8 @@ class DefAclCommand(Command):
   def _ApplyAclChangesAndReturnChangeCount(self, storage_url, defacl_message):
     modification_count = 0
     for change in self.changes:
-      modification_count += change.Execute(
-          storage_url, defacl_message, 'defacl', self.logger)
+      modification_count += change.Execute(storage_url, defacl_message,
+                                           'defacl', self.logger)
     return modification_count
 
   def RunCommand(self):

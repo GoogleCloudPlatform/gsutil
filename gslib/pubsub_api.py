@@ -41,9 +41,7 @@ from gslib.utils.boto_util import GetNewHttp
 from gslib.utils.boto_util import GetNumRetries
 from gslib.utils.constants import UTF8
 
-
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError)
-
 
 if system_util.InvokedViaCloudSdk():
   _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE = (
@@ -84,9 +82,11 @@ class PubsubApi(object):
     log_request = (debug >= 3)
     log_response = (debug >= 3)
 
-    self.api_client = apitools_client.PubsubV1(
-        url=self.url_base, http=self.http, log_request=log_request,
-        log_response=log_response, credentials=self.credentials)
+    self.api_client = apitools_client.PubsubV1(url=self.url_base,
+                                               http=self.http,
+                                               log_request=log_request,
+                                               log_response=log_response,
+                                               credentials=self.credentials)
 
     self.num_retries = GetNumRetries()
     self.api_client.num_retries = self.num_retries
@@ -132,8 +132,7 @@ class PubsubApi(object):
       self._TranslateExceptionAndRaise(e, topic_name=topic_name)
 
   def SetTopicIamPolicy(self, topic_name, policy):
-    policy_request = apitools_messages.SetIamPolicyRequest(
-        policy=policy)
+    policy_request = apitools_messages.SetIamPolicyRequest(policy=policy)
     request = apitools_messages.PubsubProjectsTopicsSetIamPolicyRequest(
         resource=topic_name, setIamPolicyRequest=policy_request)
     try:
@@ -153,8 +152,8 @@ class PubsubApi(object):
       translatable.
     """
     if self.logger.isEnabledFor(logging.DEBUG):
-      self.logger.debug(
-          'TranslateExceptionAndRaise: %s', traceback.format_exc())
+      self.logger.debug('TranslateExceptionAndRaise: %s',
+                        traceback.format_exc())
     translated_exception = self._TranslateApitoolsException(
         e, topic_name=topic_name)
     if translated_exception:
@@ -215,27 +214,30 @@ class PubsubApi(object):
                                    status=e.status_code)
       elif e.status_code == 401:
         if 'Login Required' in str(e):
-          return AccessDeniedException(
-              message or 'Access denied: login required.',
-              status=e.status_code)
+          return AccessDeniedException(message or
+                                       'Access denied: login required.',
+                                       status=e.status_code)
         elif 'insufficient_scope' in str(e):
           # If the service includes insufficient scope error detail in the
           # response body, this check can be removed.
           return AccessDeniedException(
-              _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE, status=e.status_code,
+              _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE,
+              status=e.status_code,
               body=self._GetAcceptableScopesFromHttpError(e))
       elif e.status_code == 403:
         if 'The account for the specified project has been disabled' in str(e):
           return AccessDeniedException(message or 'Account disabled.',
                                        status=e.status_code)
         elif 'Daily Limit for Unauthenticated Use Exceeded' in str(e):
-          return AccessDeniedException(
-              message or 'Access denied: quota exceeded. '
-              'Is your project ID valid?',
-              status=e.status_code)
+          return AccessDeniedException(message or
+                                       'Access denied: quota exceeded. '
+                                       'Is your project ID valid?',
+                                       status=e.status_code)
         elif 'User Rate Limit Exceeded' in str(e):
-          return AccessDeniedException('Rate limit exceeded. Please retry this '
-                                       'request later.', status=e.status_code)
+          return AccessDeniedException(
+              'Rate limit exceeded. Please retry this '
+              'request later.',
+              status=e.status_code)
         elif 'Access Not Configured' in str(e):
           return AccessDeniedException(
               'Access Not Configured. Please go to the Google Cloud Platform '
@@ -247,7 +249,8 @@ class PubsubApi(object):
           # If the service includes insufficient scope error detail in the
           # response body, this check can be removed.
           return AccessDeniedException(
-              _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE, status=e.status_code,
+              _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE,
+              status=e.status_code,
               body=self._GetAcceptableScopesFromHttpError(e))
         else:
           return AccessDeniedException(message or e.message,
@@ -256,8 +259,8 @@ class PubsubApi(object):
         return NotFoundException(message, status=e.status_code)
 
       elif e.status_code == 409 and topic_name:
-        return ServiceException(
-            'The topic %s already exists.' % topic_name, status=e.status_code)
+        return ServiceException('The topic %s already exists.' % topic_name,
+                                status=e.status_code)
       elif e.status_code == 412:
         return PreconditionException(message, status=e.status_code)
       return ServiceException(message, status=e.status_code)

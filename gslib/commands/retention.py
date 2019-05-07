@@ -250,13 +250,12 @@ _TEMP_DESCRIPTION = """
     gsutil -m retention temp set gs://bucket/*.jpg
 """
 
-_SYNOPSIS = (_SET_SYNOPSIS + _CLEAR_SYNOPSIS +  _GET_SYNOPSIS + _LOCK_SYNOPSIS +
+_SYNOPSIS = (_SET_SYNOPSIS + _CLEAR_SYNOPSIS + _GET_SYNOPSIS + _LOCK_SYNOPSIS +
              _EVENT_DEFAULT_SYNOPSIS + _EVENT_SYNOPSIS + _TEMP_SYNOPSIS)
 
-_DESCRIPTION = (
-    _SET_DESCRIPTION + _CLEAR_DESCRIPTION + _GET_DESCRIPTION +
-    _LOCK_DESCRIPTION + _EVENT_DEFAULT_DESCRIPTION + _EVENT_DESCRIPTION +
-    _TEMP_DESCRIPTION)
+_DESCRIPTION = (_SET_DESCRIPTION + _CLEAR_DESCRIPTION + _GET_DESCRIPTION +
+                _LOCK_DESCRIPTION + _EVENT_DEFAULT_DESCRIPTION +
+                _EVENT_DESCRIPTION + _TEMP_DESCRIPTION)
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
@@ -320,7 +319,8 @@ class RetentionCommand(Command):
           'event-default': _event_default_help_text,
           'event': _event_help_text,
           'temp': _temp_help_text
-      },)
+      },
+  )
 
   def RunCommand(self):
     """Command entry point for the retention command."""
@@ -353,14 +353,15 @@ class RetentionCommand(Command):
     elif action_subcommand == 'temp':
       func = self._TempHold
     else:
-      raise CommandException(('Invalid subcommand "{}" for the {} command.\n'
-                              'See "gsutil help retention".').format(
-                                  action_subcommand, self.command_name))
+      raise CommandException(
+          ('Invalid subcommand "{}" for the {} command.\n'
+           'See "gsutil help retention".').format(action_subcommand,
+                                                  self.command_name))
 
     # Commands with both suboptions and subcommands need to reparse for
     # suboptions, so we log again.
-    metrics.LogCommandParams(
-        subcommands=[action_subcommand], sub_opts=self.sub_opts)
+    metrics.LogCommandParams(subcommands=[action_subcommand],
+                             sub_opts=self.sub_opts)
     return func()
 
   def BucketUpdateFunc(self, url_args, bucket_metadata_update, fields,
@@ -377,12 +378,11 @@ class RetentionCommand(Command):
         url = blr.storage_url
         some_matched = True
         self.logger.info(log_msg_template, blr)
-        self.gsutil_api.PatchBucket(
-            url.bucket_name,
-            bucket_metadata_update,
-            preconditions=preconditions,
-            provider=url.scheme,
-            fields=fields)
+        self.gsutil_api.PatchBucket(url.bucket_name,
+                                    bucket_metadata_update,
+                                    preconditions=preconditions,
+                                    provider=url.scheme,
+                                    fields=fields)
     if not some_matched:
       raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
 
@@ -416,16 +416,15 @@ class RetentionCommand(Command):
     if preconditions.meta_gen_match is None:
       preconditions.meta_gen_match = cloud_obj_metadata.metageneration
 
-    gsutil_api.PatchObjectMetadata(
-        exp_src_url.bucket_name,
-        exp_src_url.object_name,
-        patch_obj_metadata,
-        generation=exp_src_url.generation,
-        preconditions=preconditions,
-        provider=exp_src_url.scheme,
-        fields=['id'])
-    PutToQueueWithTimeout(
-        gsutil_api.status_queue, MetadataMessage(message_time=time.time()))
+    gsutil_api.PatchObjectMetadata(exp_src_url.bucket_name,
+                                   exp_src_url.object_name,
+                                   patch_obj_metadata,
+                                   generation=exp_src_url.generation,
+                                   preconditions=preconditions,
+                                   provider=exp_src_url.scheme,
+                                   fields=['id'])
+    PutToQueueWithTimeout(gsutil_api.status_queue,
+                          MetadataMessage(message_time=time.time()))
 
   def _GetObjectNameExpansionIterator(self, url_args):
     return NameExpansionIterator(
@@ -440,14 +439,13 @@ class RetentionCommand(Command):
         bucket_listing_fields=['generation', 'metageneration'])
 
   def _GetSeekAheadNameExpansionIterator(self, url_args):
-    return SeekAheadNameExpansionIterator(
-        self.command_name,
-        self.debug,
-        self.GetSeekAheadGsutilApi(),
-        url_args,
-        self.recursion_requested,
-        all_versions=self.all_versions,
-        project_id=self.project_id)
+    return SeekAheadNameExpansionIterator(self.command_name,
+                                          self.debug,
+                                          self.GetSeekAheadGsutilApi(),
+                                          url_args,
+                                          self.recursion_requested,
+                                          all_versions=self.all_versions,
+                                          project_id=self.project_id)
 
   def _SetRetention(self):
     """Set retention retention_period on one or more buckets."""
@@ -460,11 +458,10 @@ class RetentionCommand(Command):
     bucket_metadata_update = apitools_messages.Bucket(
         retentionPolicy=retention_policy)
     url_args = self.args[1:]
-    self.BucketUpdateFunc(
-        url_args,
-        bucket_metadata_update,
-        fields=['id', 'retentionPolicy'],
-        log_msg_template=log_msg_template)
+    self.BucketUpdateFunc(url_args,
+                          bucket_metadata_update,
+                          fields=['id', 'retentionPolicy'],
+                          log_msg_template=log_msg_template)
     return 0
 
   def _ClearRetention(self):
@@ -475,11 +472,10 @@ class RetentionCommand(Command):
     bucket_metadata_update = apitools_messages.Bucket(
         retentionPolicy=retention_policy)
     url_args = self.args
-    self.BucketUpdateFunc(
-        url_args,
-        bucket_metadata_update,
-        fields=['id', 'retentionPolicy'],
-        log_msg_template=log_msg_template)
+    self.BucketUpdateFunc(url_args,
+                          bucket_metadata_update,
+                          fields=['id', 'retentionPolicy'],
+                          log_msg_template=log_msg_template)
     return 0
 
   def _GetRetention(self):
@@ -516,10 +512,9 @@ class RetentionCommand(Command):
         elif ConfirmLockRequest(url.bucket_name,
                                 bucket_metadata.retentionPolicy):
           self.logger.info('Locking Retention Policy on %s...', blr)
-          self.gsutil_api.LockRetentionPolicy(
-              url.bucket_name,
-              bucket_metadata.metageneration,
-              provider=url.scheme)
+          self.gsutil_api.LockRetentionPolicy(url.bucket_name,
+                                              bucket_metadata.metageneration,
+                                              provider=url.scheme)
         else:
           self.logger.error(
               '  Abort Locking Retention Policy on {}'.format(blr))
@@ -538,19 +533,18 @@ class RetentionCommand(Command):
       else:
         raise CommandException(
             ('Invalid subcommand "{}" for the "retention event-default"'
-             ' command.\nSee "gsutil help retention event".'
-            ).format(self.sub_opts))
+             ' command.\nSee "gsutil help retention event".').format(
+                 self.sub_opts))
 
     verb = 'Setting' if hold else 'Releasing'
     log_msg_template = '{} default Event-Based Hold on %s...'.format(verb)
     bucket_metadata_update = apitools_messages.Bucket(
         defaultEventBasedHold=hold)
     url_args = self.args[1:]
-    self.BucketUpdateFunc(
-        url_args,
-        bucket_metadata_update,
-        fields=['id', 'defaultEventBasedHold'],
-        log_msg_template=log_msg_template)
+    self.BucketUpdateFunc(url_args,
+                          bucket_metadata_update,
+                          fields=['id', 'defaultEventBasedHold'],
+                          log_msg_template=log_msg_template)
     return 0
 
   def _EventHold(self):
@@ -593,8 +587,9 @@ class RetentionCommand(Command):
     else:
       raise CommandException(
           ('Invalid subcommand "{}" for the "retention {}" command.\n'
-           'See "gsutil help retention {}".').format(
-               self.args[0], sub_command_name, sub_command_name))
+           'See "gsutil help retention {}".').format(self.args[0],
+                                                     sub_command_name,
+                                                     sub_command_name))
     return hold
 
   def _SetHold(self, obj_metadata_update_wrapper, url_args,
@@ -611,8 +606,8 @@ class RetentionCommand(Command):
     if len(url_args) == 1 and not self.recursion_requested:
       url = StorageUrlFromString(url_args[0])
       if not (url.IsCloudUrl() and url.IsObject()):
-        raise CommandException(
-            'URL ({}) must name an object'.format(url_args[0]))
+        raise CommandException('URL ({}) must name an object'.format(
+            url_args[0]))
 
     name_expansion_iterator = self._GetObjectNameExpansionIterator(url_args)
     seek_ahead_iterator = self._GetSeekAheadNameExpansionIterator(url_args)
@@ -626,12 +621,11 @@ class RetentionCommand(Command):
       # Perform requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
       # perform requests with sequential function calls in current process.
-      self.Apply(
-          obj_metadata_update_wrapper,
-          name_expansion_iterator,
-          UpdateObjectMetadataExceptionHandler,
-          fail_on_error=True,
-          seek_ahead_iterator=seek_ahead_iterator)
+      self.Apply(obj_metadata_update_wrapper,
+                 name_expansion_iterator,
+                 UpdateObjectMetadataExceptionHandler,
+                 fail_on_error=True,
+                 seek_ahead_iterator=seek_ahead_iterator)
 
     except AccessDeniedException as e:
       if e.status == 403:
@@ -639,5 +633,6 @@ class RetentionCommand(Command):
       raise
 
     if not self.everything_set_okay:
-      raise CommandException('{} Hold for some objects could not be set.'.
-                             format(sub_command_full_name))
+      raise CommandException(
+          '{} Hold for some objects could not be set.'.format(
+              sub_command_full_name))

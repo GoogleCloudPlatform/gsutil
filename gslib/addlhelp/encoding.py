@@ -159,8 +159,14 @@ class CommandOptions(HelpProvider):
   # Help specification. See help_provider.py for documentation.
   help_spec = HelpProvider.HelpSpec(
       help_name='encoding',
-      help_name_aliases=['encodings', 'utf8', 'utf-8', 'latin1', 'unicode',
-                         'interoperability'],
+      help_name_aliases=[
+          'encodings',
+          'utf8',
+          'utf-8',
+          'latin1',
+          'unicode',
+          'interoperability',
+      ],
       help_type='additional_help',
       help_one_line_summary='Filename encoding and interoperability problems',
       help_text=_DETAILED_HELP_TEXT,

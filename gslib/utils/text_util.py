@@ -37,21 +37,20 @@ from gslib.utils.constants import UTF8
 from gslib.utils.constants import WINDOWS_1252
 from gslib.utils.system_util import IS_CP1252
 
-
 if six.PY3:
   long = int
 
-
 STORAGE_CLASS_SHORTHAND_TO_FULL_NAME = {
-  # Values should remain uppercase, as required by non-gs providers.
-  'CL': 'COLDLINE',
-  'DRA': 'DURABLE_REDUCED_AVAILABILITY',
-  'NL': 'NEARLINE',
-  'S': 'STANDARD',
-  'STD': 'STANDARD'}
+    # Values should remain uppercase, as required by non-gs providers.
+    'CL': 'COLDLINE',
+    'DRA': 'DURABLE_REDUCED_AVAILABILITY',
+    'NL': 'NEARLINE',
+    'S': 'STANDARD',
+    'STD': 'STANDARD',
+}
 
-VERSION_MATCHER = LazyWrapper(
-  lambda: re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
+VERSION_MATCHER = LazyWrapper(lambda: re.compile(
+    r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
 
 
 def AddQueryParamToUrl(url_str, param_name, param_value):
@@ -84,7 +83,8 @@ def AddQueryParamToUrl(url_str, param_name, param_value):
   query_params.append((param_name, param_value))
   new_query_str = '&'.join(['%s=%s' % (k, v) for (k, v) in query_params])
 
-  new_url = urllib.parse.urlunsplit((scheme, netloc, path, new_query_str, fragment))
+  new_url = urllib.parse.urlunsplit(
+      (scheme, netloc, path, new_query_str, fragment))
   return new_url
 
 
@@ -313,6 +313,7 @@ def print_to_fd(*objects, **kwargs):
   Aguments and return values are the same as documented in
   the Python 2 print function.
   """
+
   def _get_args(**kwargs):
     """Validates keyword arguments that would be used in Print
 
@@ -322,25 +323,19 @@ def print_to_fd(*objects, **kwargs):
 
     Returns the above kwargs of the above types.
     """
-    expected_keywords = collections.OrderedDict([
-      ('sep', ' '),
-      ('end', '\n'),
-      ('file', sys.stdout)])
+    expected_keywords = collections.OrderedDict([('sep', ' '), ('end', '\n'),
+                                                 ('file', sys.stdout)])
 
     for key, value in kwargs.items():
       if key not in expected_keywords:
-        error_msg = (
-          '{} is not a valid keyword argument. '
-          'Please use one of: {}')
-        raise KeyError(
-          error_msg.format(
-            key,
-            ' '.join(expected_keywords.keys())))
+        error_msg = ('{} is not a valid keyword argument. '
+                     'Please use one of: {}')
+        raise KeyError(error_msg.format(key,
+                                        ' '.join(expected_keywords.keys())))
       else:
         expected_keywords[key] = value
 
     return expected_keywords.values()
-
 
   def _get_byte_strings(*objects):
     """Gets a `bytes` string for each item in a list of printable objects."""

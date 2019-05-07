@@ -155,15 +155,15 @@ class LabelCommand(Command):
       argparse_arguments={
           'set': [
               CommandArgument.MakeNFileURLsArgument(1),
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
           'get': [
-              CommandArgument.MakeNCloudURLsArgument(1)
+              CommandArgument.MakeNCloudURLsArgument(1),
           ],
           'ch': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
-      }
+      },
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
@@ -174,7 +174,10 @@ class LabelCommand(Command):
           'Get, set, or change the label configuration of a bucket.'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
-          'get': _get_help_text, 'set': _set_help_text, 'ch': _ch_help_text},
+          'get': _get_help_text,
+          'set': _set_help_text,
+          'ch': _ch_help_text,
+      },
   )
 
   def _CalculateUrlsStartArg(self):
@@ -202,19 +205,19 @@ class LabelCommand(Command):
       self.logger.info('Setting label configuration on %s...', blr)
 
       if url.scheme == 's3':  # Uses only XML.
-        self.gsutil_api.XmlPassThroughSetTagging(
-            label_text, url, provider=url.scheme)
+        self.gsutil_api.XmlPassThroughSetTagging(label_text,
+                                                 url,
+                                                 provider=url.scheme)
       else:  # Must be a 'gs://' bucket.
         labels_message = None
         # When performing a read-modify-write cycle, include metageneration to
         # avoid race conditions (supported for GS buckets only).
         metageneration = None
         new_label_json = json.loads(label_text)
-        if (self.gsutil_api.GetApiSelector(url.scheme) ==
-            ApiSelector.JSON):
+        if (self.gsutil_api.GetApiSelector(url.scheme) == ApiSelector.JSON):
           # Perform a read-modify-write so that we can specify which
           # existing labels need to be deleted.
-          (_, bucket_metadata) = self.GetSingleBucketUrlFromArg(
+          _, bucket_metadata = self.GetSingleBucketUrlFromArg(
               url.url_string, bucket_fields=['labels', 'metageneration'])
           metageneration = bucket_metadata.metageneration
           label_json = {}
@@ -289,8 +292,7 @@ class LabelCommand(Command):
       # When performing a read-modify-write cycle, include metageneration to
       # avoid race conditions (supported for GS buckets only).
       metageneration = None
-      if (self.gsutil_api.GetApiSelector(url.scheme) ==
-          ApiSelector.JSON):
+      if (self.gsutil_api.GetApiSelector(url.scheme) == ApiSelector.JSON):
         # The JSON API's PATCH semantics allow us to skip read-modify-write,
         # with the exception of one edge case - attempting to delete a
         # nonexistent label returns an error iff no labels previously existed
@@ -332,6 +334,7 @@ class LabelCommand(Command):
                                   preconditions=preconditions,
                                   provider=url.scheme,
                                   fields=['id'])
+
     some_matched = False
     url_args = self.args
     if not url_args:
@@ -348,15 +351,15 @@ class LabelCommand(Command):
 
   def _GetAndPrintLabel(self, bucket_arg):
     """Gets and prints the labels for a cloud bucket."""
-    (bucket_url, bucket_metadata) = self.GetSingleBucketUrlFromArg(
+    bucket_url, bucket_metadata = self.GetSingleBucketUrlFromArg(
         bucket_arg, bucket_fields=['labels'])
     if bucket_url.scheme == 's3':
       print((self.gsutil_api.XmlPassThroughGetTagging(
           bucket_url, provider=bucket_url.scheme)))
     else:
       if bucket_metadata.labels:
-        print((LabelTranslation.JsonFromMessage(
-            bucket_metadata.labels, pretty_print=True)))
+        print((LabelTranslation.JsonFromMessage(bucket_metadata.labels,
+                                                pretty_print=True)))
       else:
         print(('%s has no label configuration.' % bucket_url))
 
@@ -379,6 +382,6 @@ class LabelCommand(Command):
       self._ChLabel()
     else:
       raise CommandException(
-          'Invalid subcommand "%s" for the %s command.\nSee "gsutil help %s".'
-          % (action_subcommand, self.command_name, self.command_name))
+          'Invalid subcommand "%s" for the %s command.\nSee "gsutil help %s".' %
+          (action_subcommand, self.command_name, self.command_name))
     return 0

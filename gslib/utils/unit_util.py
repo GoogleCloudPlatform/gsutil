@@ -24,10 +24,8 @@ import re
 
 import six
 
-
 if six.PY3:
   long = int
-
 
 # Binary exponentiation strings.
 _EXP_STRINGS = [
@@ -45,8 +43,9 @@ _EXP_TEN_STRING = [
     (6, 'm'),
     (9, 'b'),
     (12, 't'),
-    (15, 'q')
+    (15, 'q'),
 ]
+
 
 # Define this method before constants below, as some call it to init themselves.
 def _GenerateSuffixRegex():
@@ -81,9 +80,9 @@ SUFFIX_TO_SI, MATCH_HUMAN_BYTES = _GenerateSuffixRegex()
 
 def _RoundToNearestExponent(num):
   i = 0
-  while i + 1 < len(_EXP_STRINGS) and num >= (2 ** _EXP_STRINGS[i+1][0]):
+  while i + 1 < len(_EXP_STRINGS) and num >= (2**_EXP_STRINGS[i + 1][0]):
     i += 1
-  return i, round(float(num) / 2.0 ** _EXP_STRINGS[i][0], 2)
+  return i, round(float(num) / 2.0**_EXP_STRINGS[i][0], 2)
 
 
 def CalculateThroughput(total_bytes_transferred, total_elapsed_time):
@@ -155,7 +154,7 @@ def HumanReadableToBytes(human_string):
     num = float(m.group('num'))
     if m.group('suffix'):
       power = _EXP_STRINGS[SUFFIX_TO_SI[m.group('suffix')]][0]
-      num *= (2.0 ** power)
+      num *= (2.0**power)
     num = int(round(num))
     return num
   raise ValueError('Invalid byte string specified: %s' % human_string)
@@ -174,13 +173,14 @@ def HumanReadableWithDecimalPlaces(number, decimal_places=1):
   number_format = MakeHumanReadable(number).split()
   num = str(int(round(10**decimal_places * float(number_format[0]))))
   if num == '0':
-    number_format[0] = ('0' + (('.' + ('0' * decimal_places)) if decimal_places
-                               else ''))
+    number_format[0] = ('0' +
+                        (('.' +
+                          ('0' * decimal_places)) if decimal_places else ''))
   else:
     num_length = len(num)
     if decimal_places:
-      num = (num[:num_length-decimal_places] + '.' +
-             num[num_length-decimal_places:])
+      num = (num[:num_length - decimal_places] + '.' +
+             num[num_length - decimal_places:])
     number_format[0] = num
   return ' '.join(number_format)
 
@@ -262,5 +262,5 @@ def PrettyTime(remaining_time):
   minutes = remaining_time // 60
   remaining_time -= (60 * minutes)
   seconds = remaining_time
-  return (str('%02d' % hours) + ':' + str('%02d' % minutes)+':' +
+  return (str('%02d' % hours) + ':' + str('%02d' % minutes) + ':' +
           str('%02d' % seconds))

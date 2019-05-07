@@ -36,7 +36,6 @@ from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.constants import UTF8
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
 
-
 _SYNOPSIS = """
   gsutil version
 """
@@ -118,24 +117,25 @@ class VersionCommand(Command):
           'gsutil path: {gsutil_path}\n'
           'compiled crcmod: {compiled_crcmod}\n'
           'installed via package manager: {is_package_install}\n'
-          'editable install: {is_editable_install}\n'
-          )
+          'editable install: {is_editable_install}\n')
 
-      sys.stdout.write(long_form_output.format(
-          checksum=cur_checksum,
-          checksum_ok=checksum_ok_str,
-          boto_version=boto.__version__,
-          python_version=sys.version.replace('\n', ''),
-          os_version='%s %s' % (platform.system(), platform.release()),
-          multiprocessing_available=(
-              CheckMultiprocessingAvailableAndInit().is_available),
-          cloud_sdk=system_util.InvokedViaCloudSdk(),
-          cloud_sdk_credentials=system_util.CloudSdkCredPassingEnabled(),
-          config_paths=config_paths,
-          gsutil_path=GetCloudSdkGsutilWrapperScriptPath() or gslib.GSUTIL_PATH,
-          compiled_crcmod=UsingCrcmodExtension(crcmod),
-          is_package_install=gslib.IS_PACKAGE_INSTALL,
-          is_editable_install=gslib.IS_EDITABLE_INSTALL,
+      sys.stdout.write(
+          long_form_output.format(
+              checksum=cur_checksum,
+              checksum_ok=checksum_ok_str,
+              boto_version=boto.__version__,
+              python_version=sys.version.replace('\n', ''),
+              os_version='%s %s' % (platform.system(), platform.release()),
+              multiprocessing_available=(
+                  CheckMultiprocessingAvailableAndInit().is_available),
+              cloud_sdk=system_util.InvokedViaCloudSdk(),
+              cloud_sdk_credentials=system_util.CloudSdkCredPassingEnabled(),
+              config_paths=config_paths,
+              gsutil_path=(GetCloudSdkGsutilWrapperScriptPath() or
+                           gslib.GSUTIL_PATH),
+              compiled_crcmod=UsingCrcmodExtension(crcmod),
+              is_package_install=gslib.IS_PACKAGE_INSTALL,
+              is_editable_install=gslib.IS_EDITABLE_INSTALL,
           ))
 
     return 0
@@ -197,9 +197,10 @@ def GetCloudSdkGsutilWrapperScriptPath():
     if gsutil_path.endswith(platform_path_suffix):
       bin_path = os.path.join(
           gsutil_path[0:gsutil_path.rfind(platform_path_suffix)],
-          'bin', 'gsutil')
+          'bin',
+          'gsutil',
+      )
       if os.path.exists(bin_path):
         return bin_path
 
   return ''
-

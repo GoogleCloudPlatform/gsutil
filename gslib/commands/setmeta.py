@@ -118,9 +118,13 @@ _DETAILED_HELP_TEXT = ("""
 # Setmeta assumes a header-like model which doesn't line up with the JSON way
 # of doing things. This list comes from functionality that was supported by
 # gsutil3 at the time gsutil4 was released.
-SETTABLE_FIELDS = ['cache-control', 'content-disposition',
-                   'content-encoding', 'content-language',
-                   'content-type']
+SETTABLE_FIELDS = [
+    'cache-control',
+    'content-disposition',
+    'content-encoding',
+    'content-language',
+    'content-type',
+]
 
 
 def _SetMetadataExceptionHandler(cls, e):
@@ -147,11 +151,14 @@ class SetMetaCommand(Command):
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
+      gs_api_support=[
+          ApiSelector.XML,
+          ApiSelector.JSON,
+      ],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ]
+          CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
+      ],
   )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
@@ -192,22 +199,33 @@ class SetMetaCommand(Command):
     self.preconditions = PreconditionsFromHeaders(self.headers)
 
     name_expansion_iterator = NameExpansionIterator(
-        self.command_name, self.debug, self.logger, self.gsutil_api,
-        self.args, self.recursion_requested, all_versions=self.all_versions,
+        self.command_name,
+        self.debug,
+        self.logger,
+        self.gsutil_api,
+        self.args,
+        self.recursion_requested,
+        all_versions=self.all_versions,
         continue_on_error=self.parallel_operations,
         bucket_listing_fields=['generation', 'metadata', 'metageneration'])
 
     seek_ahead_iterator = SeekAheadNameExpansionIterator(
-        self.command_name, self.debug, self.GetSeekAheadGsutilApi(),
-        self.args, self.recursion_requested,
-        all_versions=self.all_versions, project_id=self.project_id)
+        self.command_name,
+        self.debug,
+        self.GetSeekAheadGsutilApi(),
+        self.args,
+        self.recursion_requested,
+        all_versions=self.all_versions,
+        project_id=self.project_id)
 
     try:
       # Perform requests in parallel (-m) mode, if requested, using
       # configured number of parallel processes and threads. Otherwise,
       # perform requests with sequential function calls in current process.
-      self.Apply(_SetMetadataFuncWrapper, name_expansion_iterator,
-                 _SetMetadataExceptionHandler, fail_on_error=True,
+      self.Apply(_SetMetadataFuncWrapper,
+                 name_expansion_iterator,
+                 _SetMetadataExceptionHandler,
+                 fail_on_error=True,
                  seek_ahead_iterator=seek_ahead_iterator)
     except AccessDeniedException as e:
       if e.status == 403:
@@ -253,19 +271,21 @@ class SetMetaCommand(Command):
     if api == ApiSelector.XML:
       pass
     elif api == ApiSelector.JSON:
-      CopyObjectMetadata(patch_obj_metadata, cloud_obj_metadata,
-                         override=True)
+      CopyObjectMetadata(patch_obj_metadata, cloud_obj_metadata, override=True)
       patch_obj_metadata = cloud_obj_metadata
       # Patch body does not need the object generation and metageneration.
       patch_obj_metadata.generation = None
       patch_obj_metadata.metageneration = None
 
-    gsutil_api.PatchObjectMetadata(
-        exp_src_url.bucket_name, exp_src_url.object_name, patch_obj_metadata,
-        generation=exp_src_url.generation, preconditions=preconditions,
-        provider=exp_src_url.scheme, fields=['id'])
+    gsutil_api.PatchObjectMetadata(exp_src_url.bucket_name,
+                                   exp_src_url.object_name,
+                                   patch_obj_metadata,
+                                   generation=exp_src_url.generation,
+                                   preconditions=preconditions,
+                                   provider=exp_src_url.scheme,
+                                   fields=['id'])
     _PutToQueueWithTimeout(gsutil_api.status_queue,
-                          MetadataMessage(message_time=time.time()))
+                           MetadataMessage(message_time=time.time()))
 
   def _ParseMetadataHeaders(self, headers):
     """Validates and parses metadata changes from the headers argument.
@@ -307,8 +327,8 @@ class SetMetaCommand(Command):
       if not is_custom_meta and lowercase_header not in SETTABLE_FIELDS:
         raise CommandException(
             'Invalid or disallowed header (%s).\nOnly these fields (plus '
-            'x-goog-meta-* fields) can be set or unset:\n%s' % (
-                header, sorted(list(SETTABLE_FIELDS))))
+            'x-goog-meta-* fields) can be set or unset:\n%s' %
+            (header, sorted(list(SETTABLE_FIELDS))))
 
       if value:
         if is_custom_meta:
@@ -331,14 +351,13 @@ class SetMetaCommand(Command):
           metadata_minus.add(lowercase_header)
           num_metadata_minus_elems += 1
 
-    if (num_metadata_plus_elems != len(metadata_plus)
-        or num_cust_metadata_plus_elems != len(cust_metadata_plus)
-        or num_metadata_minus_elems != len(metadata_minus)
-        or num_cust_metadata_minus_elems != len(cust_metadata_minus)
-        or metadata_minus.intersection(set(metadata_plus.keys()))):
+    if (num_metadata_plus_elems != len(metadata_plus) or
+        num_cust_metadata_plus_elems != len(cust_metadata_plus) or
+        num_metadata_minus_elems != len(metadata_minus) or
+        num_cust_metadata_minus_elems != len(cust_metadata_minus) or
+        metadata_minus.intersection(set(metadata_plus.keys()))):
       raise CommandException('Each header must appear at most once.')
 
     metadata_plus.update(cust_metadata_plus)
     metadata_minus.update(cust_metadata_minus)
     return (metadata_minus, metadata_plus)
-

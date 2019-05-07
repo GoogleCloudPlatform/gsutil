@@ -44,7 +44,6 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.translation_helper import CreateBucketNotFoundException
 from gslib.utils.translation_helper import CreateObjectNotFoundException
 
-
 if six.PY3:
   long = int
 
@@ -57,8 +56,7 @@ class MockObject(object):
     self.contents = contents
 
   def __str__(self):
-    return '%s/%s#%s' % (self.root_object.bucket,
-                         self.root_object.name,
+    return '%s/%s#%s' % (self.root_object.bucket, self.root_object.name,
                          self.root_object.generation)
 
   def __repr__(self):
@@ -77,8 +75,9 @@ class MockBucket(object):
     self.objects = {}
 
   def CreateObject(self, object_name, contents=''):
-    return self.CreateObjectWithMetadata(MockObject(
-        apitools_messages.Object(name=object_name, contents=contents)))
+    return self.CreateObjectWithMetadata(
+        MockObject(apitools_messages.Object(name=object_name,
+                                            contents=contents)))
 
   def CreateObjectWithMetadata(self, apitools_object, contents=''):
     """Creates an object in the bucket according to the input metadata.
@@ -112,8 +111,8 @@ class MockBucket(object):
         # Versioning enabled but only archived objects exist, pick a generation
         # higher than the highest versioned object (which will be at the end).
         apitools_object.generation = (
-            self.objects[object_name]['versioned'][-1].root_object.generation
-            + 1)
+            self.objects[object_name]['versioned'][-1].root_object.generation +
+            1)
     else:
       # Versioning disabled or no objects exist yet with this name.
       apitools_object.generation = 1
@@ -164,8 +163,12 @@ class MockCloudApi(object):
         apitools_object, contents=contents).root_object
 
   # pylint: disable=unused-argument
-  def GetObjectMetadata(self, bucket_name, object_name, generation=None,
-                        provider=None, fields=None):
+  def GetObjectMetadata(self,
+                        bucket_name,
+                        object_name,
+                        generation=None,
+                        provider=None,
+                        fields=None):
     """See CloudApi class for function doc strings."""
     if generation:
       generation = long(generation)

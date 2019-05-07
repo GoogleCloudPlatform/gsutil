@@ -78,34 +78,36 @@ _DISABLED_TEXT = 'DISABLED'
 # - Any other value sets default behavior.
 
 # Map from descriptive labels to the key labels that GA recognizes.
-_GA_LABEL_MAP = {'Event Category': 'ec',
-                 'Event Action': 'ea',
-                 'Event Label': 'el',
-                 'Event Value': 'ev',
-                 'Command Name': 'cd1',
-                 'Global Options': 'cd2',
-                 'Command-Level Options': 'cd3',
-                 'Config': 'cd4',
-                 'Command Alias': 'cd5',
-                 'Fatal Error': 'cd6',
-                 'Parallelism Strategy': 'cd7',
-                 'Source URL Type': 'cd8',
-                 'Provider Types': 'cd9',
-                 'Timestamp': 'cd10',
-                 'Execution Time': 'cm1',
-                 'Retryable Errors': 'cm2',
-                 'Is Google Corp User': 'cm3',
-                 'Num Processes': 'cm4',
-                 'Num Threads': 'cm5',
-                 'Number of Files/Objects Transferred': 'cm6',
-                 'Size of Files/Objects Transferred': 'cm7',
-                 'Average Overall Throughput': 'cm8',
-                 'Num Retryable Service Errors': 'cm9',
-                 'Num Retryable Network Errors': 'cm10',
-                 'Thread Idle Time Percent': 'cm11',
-                 'Slowest Thread Throughput': 'cm12',
-                 'Fastest Thread Throughput': 'cm13',
-                 'Disk I/O Time': 'cm14'}
+_GA_LABEL_MAP = {
+    'Event Category': 'ec',
+    'Event Action': 'ea',
+    'Event Label': 'el',
+    'Event Value': 'ev',
+    'Command Name': 'cd1',
+    'Global Options': 'cd2',
+    'Command-Level Options': 'cd3',
+    'Config': 'cd4',
+    'Command Alias': 'cd5',
+    'Fatal Error': 'cd6',
+    'Parallelism Strategy': 'cd7',
+    'Source URL Type': 'cd8',
+    'Provider Types': 'cd9',
+    'Timestamp': 'cd10',
+    'Execution Time': 'cm1',
+    'Retryable Errors': 'cm2',
+    'Is Google Corp User': 'cm3',
+    'Num Processes': 'cm4',
+    'Num Threads': 'cm5',
+    'Number of Files/Objects Transferred': 'cm6',
+    'Size of Files/Objects Transferred': 'cm7',
+    'Average Overall Throughput': 'cm8',
+    'Num Retryable Service Errors': 'cm9',
+    'Num Retryable Network Errors': 'cm10',
+    'Thread Idle Time Percent': 'cm11',
+    'Slowest Thread Throughput': 'cm12',
+    'Fastest Thread Throughput': 'cm13',
+    'Disk I/O Time': 'cm14',
+}
 
 
 class MetricsCollector(object):
@@ -146,9 +148,14 @@ class MetricsCollector(object):
     if _GOOGLE_CORP_HOST_RE.match(socket.gethostname()):
       is_corp_user = 1
 
-    self.ga_params = {'v': '1', 'tid': ga_tid, 'cid': cid, 't': 'event',
-                      _GA_LABEL_MAP['Config']: config_values,
-                      _GA_LABEL_MAP['Is Google Corp User']: is_corp_user}
+    self.ga_params = {
+        'v': '1',
+        'tid': ga_tid,
+        'cid': cid,
+        't': 'event',
+        _GA_LABEL_MAP['Config']: config_values,
+        _GA_LABEL_MAP['Is Google Corp User']: is_corp_user,
+    }
 
     # Used by Google Analytics to track user OS.
     self.user_agent = '{system}/{release}'.format(system=platform.system(),
@@ -203,7 +210,8 @@ class MetricsCollector(object):
                                    ('GSUtil', 'use_magicfile'),
                                    ('GSUtil', 'tab_completion_time_logs')):
       GetAndValidateConfigValue(
-          section=section, category=bool_category,
+          section=section,
+          category=bool_category,
           validation_fn=lambda val: str(val).lower() in ('true', 'false'))
 
     # Define a threshold for some config values which should be reasonably low.
@@ -220,26 +228,29 @@ class MetricsCollector(object):
         ('GSUtil', 'parallel_thread_count'),
         ('GSUtil', 'software_update_check_period'),
         ('GSUtil', 'tab_completion_timeout'),
-        ('OAuth2', 'oauth2_refresh_retries')):
-      GetAndValidateConfigValue(
-          section=section, category=small_int_category,
-          validation_fn=
-          lambda val: str(val).isdigit() and int(val) < small_int_threshold)
+        ('OAuth2', 'oauth2_refresh_retries'),
+    ):
+      GetAndValidateConfigValue(section=section,
+                                category=small_int_category,
+                                validation_fn=lambda val: str(val).isdigit() and
+                                int(val) < small_int_threshold)
 
     # Validate large integers.
-    for section, large_int_category in (
-        ('GSUtil', 'resumable_threshold'), ('GSUtil', 'rsync_buffer_lines'),
-        ('GSUtil', 'task_estimation_threshold')):
-      GetAndValidateConfigValue(
-          section=section, category=large_int_category,
-          validation_fn=lambda val: str(val).isdigit())
+    for section, large_int_category in (('GSUtil', 'resumable_threshold'),
+                                        ('GSUtil', 'rsync_buffer_lines'),
+                                        ('GSUtil',
+                                         'task_estimation_threshold')):
+      GetAndValidateConfigValue(section=section,
+                                category=large_int_category,
+                                validation_fn=lambda val: str(val).isdigit())
 
     # Validate data sizes.
     for section, data_size_category in (
         ('GSUtil', 'parallel_composite_upload_component_size'),
         ('GSUtil', 'parallel_composite_upload_threshold'),
         ('GSUtil', 'sliced_object_download_component_size'),
-        ('GSUtil', 'sliced_object_download_threshold')):
+        ('GSUtil', 'sliced_object_download_threshold'),
+    ):
       config_value = boto.config.get_value(section, data_size_category)
       if config_value:
         try:
@@ -251,26 +262,31 @@ class MetricsCollector(object):
     # Validate specific options.
     # pylint: disable=g-long-lambda
     GetAndValidateConfigValue(
-        section='GSUtil', category='check_hashes',
-        validation_fn=lambda val: val in ('if_fast_else_fail',
-                                          'if_fast_else_skip',
-                                          'always', 'never'))
+        section='GSUtil',
+        category='check_hashes',
+        validation_fn=lambda val: val in (
+            'if_fast_else_fail', 'if_fast_else_skip', 'always', 'never'))
     # pylint: enable=g-long-lambda
     GetAndValidateConfigValue(
-        section='GSUtil', category='content_language',
+        section='GSUtil',
+        category='content_language',
         validation_fn=lambda val: val.isalpha() and len(val) <= 3)
     GetAndValidateConfigValue(
-        section='GSUtil', category='json_api_version',
+        section='GSUtil',
+        category='json_api_version',
         validation_fn=lambda val: val[0].lower() == 'v' and val[1:].isdigit())
+    GetAndValidateConfigValue(section='GSUtil',
+                              category='prefer_api',
+                              validation_fn=lambda val: val in ('json', 'xml'))
     GetAndValidateConfigValue(
-        section='GSUtil', category='prefer_api',
-        validation_fn=lambda val: val in ('json', 'xml'))
-    GetAndValidateConfigValue(
-        section='OAuth2', category='token_cache',
+        section='OAuth2',
+        category='token_cache',
         validation_fn=lambda val: val in ('file_system', 'in_memory'))
 
-    return ','.join(sorted(['{0}:{1}'.format(config[0], config[1])
-                            for config in config_values]))
+    return ','.join(
+        sorted([
+            '{0}:{1}'.format(config[0], config[1]) for config in config_values
+        ]))
 
   @staticmethod
   def GetCollector(ga_tid=_GA_TID):
@@ -312,8 +328,10 @@ class MetricsCollector(object):
       cls._disabled_cache = True
 
   @classmethod
-  def StartTestCollector(cls, endpoint='https://example.com',
-                         user_agent='user-agent-007', ga_params=None):
+  def StartTestCollector(cls,
+                         endpoint='https://example.com',
+                         user_agent='user-agent-007',
+                         ga_params=None):
     """Reset the singleton MetricsCollector with testing parameters.
 
     Should only be used for tests, where we want to change the default
@@ -388,8 +406,13 @@ class MetricsCollector(object):
     """
     return self.ga_params.get(_GA_LABEL_MAP[param_name])
 
-  def CollectGAMetric(self, category, action, label=VERSION, value=0,
-                      execution_time=None, **custom_params):
+  def CollectGAMetric(self,
+                      category,
+                      action,
+                      label=VERSION,
+                      value=0,
+                      execution_time=None,
+                      **custom_params):
     """Adds a GA metric with the given parameters to the metrics queue.
 
     Args:
@@ -403,10 +426,12 @@ class MetricsCollector(object):
     """
     params = [('ec', category), ('ea', action), ('el', label), ('ev', value),
               (_GA_LABEL_MAP['Timestamp'], _GetTimeInMillis())]
-    params.extend([(k, v) for k, v in six.iteritems(custom_params)
-                   if v is not None])
-    params.extend([(k, v) for k, v in six.iteritems(self.ga_params)
-                   if v is not None])
+    params.extend([
+        (k, v) for k, v in six.iteritems(custom_params) if v is not None
+    ])
+    params.extend([
+        (k, v) for k, v in six.iteritems(self.ga_params) if v is not None
+    ])
 
     # Log how long after the start of the program this event happened.
     if execution_time is None:
@@ -414,8 +439,11 @@ class MetricsCollector(object):
     params.append((_GA_LABEL_MAP['Execution Time'], execution_time))
 
     data = urllib.parse.urlencode(sorted(params))
-    self._metrics.append(Metric(endpoint=self.endpoint, method='POST',
-                                body=data, user_agent=self.user_agent))
+    self._metrics.append(
+        Metric(endpoint=self.endpoint,
+               method='POST',
+               body=data,
+               user_agent=self.user_agent))
 
   # TODO: Collect CPU usage (Linux-only), latency to first byte, and slowest
   # thread process.
@@ -577,8 +605,7 @@ class MetricsCollector(object):
       # If this operation doesn't use parallelism, we manually update the
       # number of objects transferred rather than relying on
       # ProducerThreadMessages.
-      if not (self.perf_sum_params.uses_slice or
-              self.perf_sum_params.uses_fan):
+      if not (self.perf_sum_params.uses_slice or self.perf_sum_params.uses_fan):
         self.perf_sum_params.num_objects_transferred += 1
       thread_info.LogTaskEnd(file_message.time)
     else:
@@ -591,12 +618,15 @@ class MetricsCollector(object):
     if command_name:
       self.CollectGAMetric(category=_GA_COMMANDS_CATEGORY,
                            action=command_name,
-                           **{_GA_LABEL_MAP['Retryable Errors']:
-                              sum(self.retryable_errors.values())})
+                           **{
+                               _GA_LABEL_MAP['Retryable Errors']:
+                               sum(self.retryable_errors.values())
+                           })
 
     # Collect the retryable errors.
     for error_type, num_errors in six.iteritems(self.retryable_errors):
-      self.CollectGAMetric(category=_GA_ERRORRETRY_CATEGORY, action=error_type,
+      self.CollectGAMetric(category=_GA_ERRORRETRY_CATEGORY,
+                           action=error_type,
                            **{_GA_LABEL_MAP['Retryable Errors']: num_errors})
 
     # Collect the fatal error, if any.
@@ -614,12 +644,14 @@ class MetricsCollector(object):
 
     # These parameters need no further processing.
     for attr_name, label in (
-        ('num_processes', 'Num Processes'), ('num_threads', 'Num Threads'),
+        ('num_processes', 'Num Processes'),
+        ('num_threads', 'Num Threads'),
         ('num_retryable_service_errors', 'Num Retryable Service Errors'),
         ('num_retryable_network_errors', 'Num Retryable Network Errors'),
         ('avg_throughput', 'Average Overall Throughput'),
         ('num_objects_transferred', 'Number of Files/Objects Transferred'),
-        ('total_bytes_transferred', 'Size of Files/Objects Transferred')):
+        ('total_bytes_transferred', 'Size of Files/Objects Transferred'),
+    ):
       custom_params[_GA_LABEL_MAP[label]] = getattr(self.perf_sum_params,
                                                     attr_name)
 
@@ -655,8 +687,10 @@ class MetricsCollector(object):
 
     # Determine the slowest and fastest thread throughputs.
     if self.perf_sum_params.thread_throughputs:
-      throughputs = [thread.GetThroughput() for thread in
-                     self.perf_sum_params.thread_throughputs.values()]
+      throughputs = [
+          thread.GetThroughput()
+          for thread in self.perf_sum_params.thread_throughputs.values()
+      ]
       custom_params[_GA_LABEL_MAP['Slowest Thread Throughput']] = min(
           throughputs)
       custom_params[_GA_LABEL_MAP['Fastest Thread Throughput']] = max(
@@ -668,18 +702,27 @@ class MetricsCollector(object):
 
     # Determine the transfer types.
     # This maps a transfer type to whether the condition has been met for it.
-    transfer_types = {'CloudToCloud': self.perf_sum_params.has_cloud_src and
-                                      self.perf_sum_params.has_cloud_dst,
-                      'CloudToFile': self.perf_sum_params.has_cloud_src and
-                                     self.perf_sum_params.has_file_dst,
-                      'DaisyChain': self.perf_sum_params.is_daisy_chain,
-                      'FileToCloud': self.perf_sum_params.has_file_src and
-                                     self.perf_sum_params.has_cloud_dst,
-                      'FileToFile': self.perf_sum_params.has_file_src and
-                                    self.perf_sum_params.has_file_dst}
+    transfer_types = {
+        'CloudToCloud':
+        self.perf_sum_params.has_cloud_src and
+        self.perf_sum_params.has_cloud_dst,
+        'CloudToFile':
+        self.perf_sum_params.has_cloud_src and
+        self.perf_sum_params.has_file_dst,
+        'DaisyChain':
+        self.perf_sum_params.is_daisy_chain,
+        'FileToCloud':
+        self.perf_sum_params.has_file_src and
+        self.perf_sum_params.has_cloud_dst,
+        'FileToFile':
+        self.perf_sum_params.has_file_src and self.perf_sum_params.has_file_dst,
+    }
     action = ','.join(
-        sorted([transfer_type
-                for transfer_type, cond in six.iteritems(transfer_types) if cond]))
+        sorted([
+            transfer_type
+            for transfer_type, cond in six.iteritems(transfer_types)
+            if cond
+        ]))
 
     # Use the time spent on Apply rather than the total command execution time
     # for the execution time metric. This aligns more closely with throughput
@@ -690,12 +733,15 @@ class MetricsCollector(object):
     apply_execution_time = _GetTimeInMillis(
         self.perf_sum_params.total_elapsed_time)
 
-    self.CollectGAMetric(
-        category=_GA_PERFSUM_CATEGORY, action=action,
-        execution_time=apply_execution_time, **custom_params)
+    self.CollectGAMetric(category=_GA_PERFSUM_CATEGORY,
+                         action=action,
+                         execution_time=apply_execution_time,
+                         **custom_params)
 
-  def ReportMetrics(
-      self, wait_for_report=False, log_level=None, log_file_path=None):
+  def ReportMetrics(self,
+                    wait_for_report=False,
+                    log_level=None,
+                    log_file_path=None):
     """Reports the collected metrics using a separate async process.
 
     Args:
@@ -734,9 +780,7 @@ class MetricsCollector(object):
     reporting_code = six.ensure_str(
         'from gslib.metrics_reporter import ReportMetrics; '
         'ReportMetrics(r"{0}", {1}, log_file_path={2})'.format(
-            temp_metrics_file_name,
-            log_level,
-            log_file_path))
+            temp_metrics_file_name, log_level, log_file_path))
     execution_args = [sys.executable, '-c', reporting_code]
     exec_env = os.environ.copy()
     exec_env['PYTHONPATH'] = os.pathsep.join(sys.path)
@@ -747,8 +791,9 @@ class MetricsCollector(object):
     try:
       # In order for Popen to work correctly with Windows/Py3 shell needs
       # to be True.
-      p = subprocess.Popen(execution_args, env=sm_env, shell=(
-          six.PY3 and system_util.IS_WINDOWS))
+      p = subprocess.Popen(execution_args,
+                           env=sm_env,
+                           shell=(six.PY3 and system_util.IS_WINDOWS))
       self.logger.debug('Metrics reporting process started...')
 
       if wait_for_report:
@@ -779,6 +824,7 @@ def CaptureAndLogException(func):
   Returns:
     The wrapped function.
   """
+
   @wraps(func)
   def Wrapper(*args, **kwds):
     try:
@@ -787,6 +833,7 @@ def CaptureAndLogException(func):
       logger = logging.getLogger('metrics')
       logger.debug('Exception captured in %s during metrics collection: %s',
                    func.__name__, e)
+
   return Wrapper
 
 
@@ -803,6 +850,7 @@ def CaptureThreadStatException(func):
   Returns:
     The wrapped function.
   """
+
   @wraps(func)
   def Wrapper(*args, **kwds):
     try:
@@ -810,6 +858,7 @@ def CaptureThreadStatException(func):
     except:  # pylint:disable=bare-except
       # Don't surface the exception to the user.
       pass
+
   return Wrapper
 
 
@@ -825,8 +874,11 @@ def Shutdown():
 
 
 @CaptureAndLogException
-def LogCommandParams(command_name=None, subcommands=None, global_opts=None,
-                     sub_opts=None, command_alias=None):
+def LogCommandParams(command_name=None,
+                     subcommands=None,
+                     global_opts=None,
+                     sub_opts=None,
+                     command_alias=None):
   """Logs info about the gsutil command being run.
 
   This only updates the collector's ga_params. The actual command metric will
@@ -850,8 +902,8 @@ def LogCommandParams(command_name=None, subcommands=None, global_opts=None,
   if command_name and not collector.GetGAParam('Command Name'):
     collector.ExtendGAParams({_GA_LABEL_MAP['Command Name']: command_name})
   if global_opts and not collector.GetGAParam('Global Options'):
-    global_opts_string = ','.join(sorted([opt[0].strip('-') for opt in
-                                          global_opts]))
+    global_opts_string = ','.join(
+        sorted([opt[0].strip('-') for opt in global_opts]))
     collector.ExtendGAParams(
         {_GA_LABEL_MAP['Global Options']: global_opts_string})
 
@@ -927,8 +979,7 @@ def CheckAndMaybePromptForAnalyticsEnabling():
   If the user agrees, generates a UUID file. Will not prompt if part of SDK.
   """
   disable_prompt = boto.config.get_value('GSUtil', 'disable_analytics_prompt')
-  if (not os.path.exists(_UUID_FILE_PATH) and
-      not disable_prompt and
+  if (not os.path.exists(_UUID_FILE_PATH) and not disable_prompt and
       not system_util.InvokedViaCloudSdk()):
     enable_analytics = input('\n' + textwrap.fill(
         'gsutil developers rely on user feedback to make improvements to the '

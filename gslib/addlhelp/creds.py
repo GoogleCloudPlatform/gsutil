@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
 
-
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   gsutil currently supports several types of credentials/authentication, as

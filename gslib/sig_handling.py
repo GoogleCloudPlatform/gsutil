@@ -157,4 +157,6 @@ def MultithreadedMainSignalHandler(signal_num, cur_stack_frame):
 def ChildProcessSignalHandler(signal_num, cur_stack_frame):
   """Final signal handler for child processes."""
   KillProcess(os.getpid())
+
+
 # pylint: enable=unused-argument

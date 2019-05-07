@@ -133,14 +133,14 @@ def GetCredentialStoreKey(credentials, api_version):
 
 def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
   """Helper to ensure each GCS API client shares the same credentials."""
-  api.credentials = (
-      credentials or _CheckAndGetCredentials(logger) or NoOpCredentials())
+  api.credentials = (credentials or _CheckAndGetCredentials(logger) or
+                     NoOpCredentials())
 
   # Set credential cache so that we don't have to get a new access token for
   # every call we make. All GCS APIs use the same credentials as the JSON API,
   # so we use its version in the key for caching access tokens.
-  credential_store_key = (
-      GetCredentialStoreKey(api.credentials, GetGcsJsonApiVersion()))
+  credential_store_key = (GetCredentialStoreKey(api.credentials,
+                                                GetGcsJsonApiVersion()))
   api.credentials.set_store(
       multiprocess_file_storage.MultiprocessFileStorage(
           GetCredentialStoreFilename(), credential_store_key))
@@ -160,8 +160,8 @@ def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
   # happen when transitioning to version v4.31+), we don't fetch it from the
   # cache. This results in our new-style credential being refreshed and
   # overwriting the old credential cache entry in our credstore.
-  if (cached_cred
-      and type(cached_cred) != oauth2client.client.OAuth2Credentials):
+  if (cached_cred and
+      type(cached_cred) != oauth2client.client.OAuth2Credentials):
     api.credentials = cached_cred
 
 
@@ -195,8 +195,8 @@ def _CheckAndGetCredentials(logger):
            'not supported. One common way this happens is if you run gsutil '
            'config to create credentials and later run gcloud auth, and '
            'create a second set of credentials. Your boto config path is: '
-           '%s. For more help, see "gsutil help creds".')
-          % (configured_cred_types, GetFriendlyConfigFilePaths()))
+           '%s. For more help, see "gsutil help creds".') %
+          (configured_cred_types, GetFriendlyConfigFilePaths()))
 
     failed_cred_type = CredTypes.OAUTH2_USER_ACCOUNT
     user_creds = _GetOauth2UserAccountCredentials()
@@ -231,8 +231,8 @@ def _CheckAndGetCredentials(logger):
 
 
 def _GetProviderTokenUri():
-  return config.get(
-      'OAuth2', 'provider_token_uri', DEFAULT_GOOGLE_OAUTH2_PROVIDER_TOKEN_URI)
+  return config.get('OAuth2', 'provider_token_uri',
+                    DEFAULT_GOOGLE_OAUTH2_PROVIDER_TOKEN_URI)
 
 
 def _HasOauth2ServiceAccountCreds():
@@ -280,14 +280,15 @@ def _GetOauth2ServiceAccountCredentials():
       if not service_client_id:
         raise Exception('gs_service_client_id must be set if '
                         'gs_service_key_file is set to a .p12 key file')
-      key_file_pass = config.get(
-          'Credentials', 'gs_service_key_file_password',
-          GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD)
+      key_file_pass = config.get('Credentials', 'gs_service_key_file_password',
+                                 GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD)
       # We use _from_p12_keyfile_contents to avoid reading the key file
       # again unnecessarily.
       return ServiceAccountCredentials.from_p12_keyfile_buffer(
-          service_client_id, BytesIO(private_key),
-          private_key_password=key_file_pass, scopes=DEFAULT_SCOPES,
+          service_client_id,
+          BytesIO(private_key),
+          private_key_password=key_file_pass,
+          scopes=DEFAULT_SCOPES,
           token_uri=provider_token_uri)
 
 
@@ -301,14 +302,15 @@ def _GetOauth2UserAccountCredentials():
       system_util.GetGsutilClientIdAndSecret())
   client_id = config.get('OAuth2', 'client_id',
                          os.environ.get('OAUTH2_CLIENT_ID', gsutil_client_id))
-  client_secret = config.get('OAuth2', 'client_secret',
-                             os.environ.get('OAUTH2_CLIENT_SECRET',
-                                            gsutil_client_secret))
+  client_secret = config.get(
+      'OAuth2', 'client_secret',
+      os.environ.get('OAUTH2_CLIENT_SECRET', gsutil_client_secret))
   # Note that these scopes don't necessarily correspond to the refresh token
   # being used. This list is is used for obtaining the RAPT in the reauth flow,
   # to determine which challenges should be used.
   scopes_for_reauth_challenge = [
-      constants.Scopes.CLOUD_PLATFORM, constants.Scopes.REAUTH]
+      constants.Scopes.CLOUD_PLATFORM, constants.Scopes.REAUTH
+  ]
   return reauth_creds.Oauth2WithReauthCredentials(
       None,  # access_token
       client_id,
@@ -326,8 +328,8 @@ def _GetGceCreds():
 
   try:
     return credentials_lib.GceAssertionCredentials(
-        service_account_name=config.get(
-            'GoogleCompute', 'service_account', 'default'),
+        service_account_name=config.get('GoogleCompute', 'service_account',
+                                        'default'),
         cache_filename=GetGceCredentialCacheFilename())
   except apitools_exceptions.ResourceUnavailableError as e:
     if 'service account' in str(e) and 'does not exist' in str(e):
