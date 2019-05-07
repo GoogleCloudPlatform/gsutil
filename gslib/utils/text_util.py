@@ -325,6 +325,10 @@ def IsBucketNameValid(bucket_name):
     return False
 
   prefix, url = bucket_name.split('://')
+  url = url.rstrip()
+
+  if url[-1] == '/':
+    url = url[:-1]
 
   return all([
     prefix.isalpha(),
