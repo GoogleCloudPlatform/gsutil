@@ -25,7 +25,6 @@ import datetime
 import gslib
 import gzip
 from hashlib import md5
-import io
 import logging
 import os
 import pickle
@@ -35,6 +34,7 @@ import re
 import string
 import sys
 import threading
+import io
 
 import six
 from six.moves import http_client
@@ -4321,48 +4321,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn(
         'CommandException: Cannot upload from a stream when using gsutil -m',
         stderr)
-
-  def test_cp_minus_l(self):
-    """Ensure that log file from 'cp -L' looks as expected."""
-    bucket_uri = self.CreateBucket()
-    tmp_dir = self.CreateTempDir()
-    tmp_file_path = self.CreateTempFile(
-        tmpdir=tmp_dir,
-        file_name='manifest_test',
-    )
-    log_file_path = tmp_dir + '/cp_manifest.log'
-
-    self.RunGsUtil([
-        'cp',
-        '-L',
-        log_file_path,
-        tmp_file_path,
-        suri(bucket_uri),
-    ])
-
-    with open(log_file_path) as lf:
-      log_lines = lf.readlines()
-    lf.close()
-
-    # First line of manifest log is CSV headers
-    self.assertEqual(
-        log_lines[0],
-        ('Source,Destination,Start,End,Md5,UploadId,Source Size,'
-         'Bytes Transferred,Result,Description\n'),
-    )
-
-    log_dict = dict(
-        zip(log_lines[0].rstrip().split(','), log_lines[1].rstrip().split(',')))
-
-    self.assertEqual(
-        log_dict['Source'],
-        'file://' + tmp_file_path,
-    )
-    self.assertEqual(
-        log_dict['Destination'],
-        suri(bucket_uri) + '/' + 'manifest_test',
-    )
-    self.assertEqual(log_dict['Result'], 'OK')
 
 
 class TestCpUnitTests(testcase.GsUtilUnitTestCase):
