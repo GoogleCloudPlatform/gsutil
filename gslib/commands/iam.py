@@ -215,7 +215,40 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
-STORAGE_URI_REGEX = re.compile(r'[a-z]+://[a-z0-9].*')
+def _IsBucketNameValid(bucket_name):
+  """Check if string meets all bucket name requirements.
+
+  Requirements for bucket names defined at:
+  https://cloud.google.com/storage/docs/naming
+
+  Args:
+    Unicode tring, name of bucket. Full name, including provider prefix, i.e.:
+    'gs://my-bucket-name'
+  Returns:
+    Boolean, whether the bucket name is valid or not.
+  """
+
+  def _StripAllowedSymbols(s):
+    """Remove from a string the symbols '-', '_', and '.'"""
+    return ''.join((char for char in s if char not in ['-', '_', '.']))
+
+  if not '://' in bucket_name:
+    return False
+
+  prefix, url = bucket_name.split('://')
+
+  return all([
+    prefix.isalpha(),
+    prefix.islower(),
+    len(url) > 2,
+    len(url) < 64,
+    url[0].isalnum(),
+    url[-1].isalnum(),
+    not url.startswith('goog'),
+    not url.isupper(),
+    _StripAllowedSymbols(url).isalnum()
+  ])
+
 
 IAM_CH_CONDITIONS_WORKAROUND_MSG = (
     'To change the IAM policy of a resource that has bindings containing '
@@ -480,7 +513,7 @@ class IamCommand(Command):
     # expecting to come across the -r, -f flags here.
     it = iter(self.args)
     for token in it:
-      if STORAGE_URI_REGEX.match(token):
+      if _IsBucketNameValid(token):
         patterns.append(token)
         break
       if token == '-d':
