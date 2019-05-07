@@ -316,8 +316,11 @@ def _GenSignedUrl(key,
     # https://github.com/pyca/pyopenssl/issues/741
     digest = 'RSA-SHA256'
 
-  signature = base64.b16encode(sign(key, string_to_sign,
-                                    digest)).lower().decode()
+  signature = (
+      base64.b16encode(sign(key, string_to_sign, digest))
+          .lower()
+          .decode()
+  )  # yapf: disable
 
   final_url = _SIGNED_URL_FORMAT.format(host=gs_host,
                                         path=gcs_path,
@@ -329,8 +332,8 @@ def _GenSignedUrl(key,
 
 def _ReadKeystore(ks_contents, passwd):
   ks = load_pkcs12(ks_contents, passwd)
-  client_email = (ks.get_certificate().get_subject().CN.replace(
-      '.apps.googleusercontent.com', '@developer.gserviceaccount.com'))
+  client_email = ks.get_certificate().get_subject().CN.replace(
+      '.apps.googleusercontent.com', '@developer.gserviceaccount.com')
 
   return ks.get_privatekey(), client_email
 
@@ -391,12 +394,16 @@ class UrlSignCommand(Command):
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
           CommandArgument.MakeNFileURLsArgument(1),
-          CommandArgument.MakeZeroOrMoreCloudURLsArgument()
-      ])
+          CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
+      ],
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='signurl',
-      help_name_aliases=['signedurl', 'queryauth'],
+      help_name_aliases=[
+          'signedurl',
+          'queryauth',
+      ],
       help_type='command_help',
       help_one_line_summary='Create a signed url',
       help_text=_DETAILED_HELP_TEXT,

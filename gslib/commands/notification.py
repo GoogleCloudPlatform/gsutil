@@ -67,9 +67,12 @@ _STOPCHANNEL_SYNOPSIS = """
   gsutil notification stopchannel channel_id resource_id
 """
 
-_SYNOPSIS = (_CREATE_SYNOPSIS + _DELETE_SYNOPSIS.lstrip('\n') +
-             _LIST_SYNOPSIS.lstrip('\n') + _WATCHBUCKET_SYNOPSIS +
-             _STOPCHANNEL_SYNOPSIS.lstrip('\n') + '\n')
+_SYNOPSIS = (
+    _CREATE_SYNOPSIS +
+    _DELETE_SYNOPSIS.lstrip('\n') +
+    _LIST_SYNOPSIS.lstrip('\n') +
+    _WATCHBUCKET_SYNOPSIS +
+    _STOPCHANNEL_SYNOPSIS.lstrip('\n') + '\n')  # yapf: disable
 
 _LIST_DESCRIPTION = """
 <B>LIST</B>
@@ -346,15 +349,23 @@ verified using Google Webmaster Tools. For instructions, please see
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 
-_create_help_text = (CreateHelpText(_CREATE_SYNOPSIS, _CREATE_DESCRIPTION))
-_list_help_text = (CreateHelpText(_LIST_SYNOPSIS, _LIST_DESCRIPTION))
-_delete_help_text = (CreateHelpText(_DELETE_SYNOPSIS, _DELETE_DESCRIPTION))
-_watchbucket_help_text = (CreateHelpText(_WATCHBUCKET_SYNOPSIS,
-                                         _WATCHBUCKET_DESCRIPTION))
-_stopchannel_help_text = (CreateHelpText(_STOPCHANNEL_SYNOPSIS,
-                                         _STOPCHANNEL_DESCRIPTION))
+# yapf: disable
+_create_help_text = (
+    CreateHelpText(_CREATE_SYNOPSIS, _CREATE_DESCRIPTION))
+_list_help_text = (
+    CreateHelpText(_LIST_SYNOPSIS, _LIST_DESCRIPTION))
+_delete_help_text = (
+    CreateHelpText(_DELETE_SYNOPSIS, _DELETE_DESCRIPTION))
+_watchbucket_help_text = (
+    CreateHelpText(_WATCHBUCKET_SYNOPSIS, _WATCHBUCKET_DESCRIPTION))
+_stopchannel_help_text = (
+    CreateHelpText(_STOPCHANNEL_SYNOPSIS, _STOPCHANNEL_DESCRIPTION))
+# yapf: enable
 
-PAYLOAD_FORMAT_MAP = {'none': 'NONE', 'json': 'JSON_API_V1'}
+PAYLOAD_FORMAT_MAP = {
+    'none': 'NONE',
+    'json': 'JSON_API_V1',
+}
 
 
 class NotificationCommand(Command):
@@ -376,7 +387,12 @@ class NotificationCommand(Command):
   # Command specification. See base class for documentation.
   command_spec = Command.CreateCommandSpec(
       'notification',
-      command_name_aliases=['notify', 'notifyconfig', 'notifications', 'notif'],
+      command_name_aliases=[
+          'notify',
+          'notifyconfig',
+          'notifications',
+          'notif',
+      ],
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
@@ -389,25 +405,32 @@ class NotificationCommand(Command):
       argparse_arguments={
           'watchbucket': [
               CommandArgument.MakeFreeTextArgument(),
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
           'stopchannel': [],
-          'list': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
+          'list': [
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
+          ],
           'delete': [
               # Takes a list of one of the following:
               #   notification: projects/_/buckets/bla/notificationConfigs/5,
               #   bucket: gs://foobar
-              CommandArgument.MakeZeroOrMoreCloudURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudURLsArgument(),
           ],
           'create': [
               CommandArgument.MakeFreeTextArgument(),  # Cloud Pub/Sub topic
-              CommandArgument.MakeNCloudBucketURLsArgument(1)
+              CommandArgument.MakeNCloudBucketURLsArgument(1),
           ]
-      })
+      },
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='notification',
-      help_name_aliases=['watchbucket', 'stopchannel', 'notifyconfig'],
+      help_name_aliases=[
+          'watchbucket',
+          'stopchannel',
+          'notifyconfig',
+      ],
       help_type='command_help',
       help_one_line_summary='Configure object change notification',
       help_text=_DETAILED_HELP_TEXT,
@@ -416,7 +439,7 @@ class NotificationCommand(Command):
           'list': _list_help_text,
           'delete': _delete_help_text,
           'watchbucket': _watchbucket_help_text,
-          'stopchannel': _stopchannel_help_text
+          'stopchannel': _stopchannel_help_text,
       },
   )
 

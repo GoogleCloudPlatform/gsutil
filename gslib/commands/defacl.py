@@ -175,7 +175,8 @@ class DefAclCommand(Command):
           ],
           'get': [CommandArgument.MakeNCloudBucketURLsArgument(1)],
           'ch': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
-      })
+      },
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='defacl',
@@ -186,7 +187,7 @@ class DefAclCommand(Command):
       subcommand_help_text={
           'get': _get_help_text,
           'set': _set_help_text,
-          'ch': _ch_help_text
+          'ch': _ch_help_text,
       },
   )
 

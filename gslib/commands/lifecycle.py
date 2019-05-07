@@ -108,25 +108,33 @@ class LifecycleCommand(Command):
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=1,
-      gs_api_support=[ApiSelector.JSON, ApiSelector.XML],
+      gs_api_support=[
+          ApiSelector.JSON,
+          ApiSelector.XML,
+      ],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
               CommandArgument.MakeNFileURLsArgument(1),
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
-          'get': [CommandArgument.MakeNCloudBucketURLsArgument(1)]
+          'get': [
+              CommandArgument.MakeNCloudBucketURLsArgument(1),
+          ]
       })
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='lifecycle',
-      help_name_aliases=['getlifecycle', 'setlifecycle'],
+      help_name_aliases=[
+          'getlifecycle',
+          'setlifecycle',
+      ],
       help_type='command_help',
       help_one_line_summary=('Get or set lifecycle configuration for a bucket'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
-          'set': _set_help_text
+          'set': _set_help_text,
       },
   )
 

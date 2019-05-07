@@ -114,21 +114,27 @@ class CorsCommand(Command):
       argparse_arguments={
           'set': [
               CommandArgument.MakeNFileURLsArgument(1),
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
-          'get': [CommandArgument.MakeNCloudBucketURLsArgument(1)]
+          'get': [
+              CommandArgument.MakeNCloudBucketURLsArgument(1),
+          ]
       })
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='cors',
-      help_name_aliases=['getcors', 'setcors', 'cross-origin'],
+      help_name_aliases=[
+          'getcors',
+          'setcors',
+          'cross-origin',
+      ],
       help_type='command_help',
       help_one_line_summary=(
           'Get or set a CORS JSON document for one or more buckets'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
-          'set': _set_help_text
+          'set': _set_help_text,
       },
   )
 

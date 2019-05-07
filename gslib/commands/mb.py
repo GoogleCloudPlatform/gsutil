@@ -187,14 +187,27 @@ class MbCommand(Command):
       gs_default_api=ApiSelector.JSON,
       argparse_arguments=[
           CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
-      ])
+      ],
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='mb',
       help_name_aliases=[
-          'createbucket', 'makebucket', 'md', 'mkdir', 'location', 'dra',
-          'dras', 'reduced_availability', 'durable_reduced_availability', 'rr',
-          'reduced_redundancy', 'standard', 'storage class', 'nearline', 'nl'
+          'createbucket',
+          'makebucket',
+          'md',
+          'mkdir',
+          'location',
+          'dra',
+          'dras',
+          'reduced_availability',
+          'durable_reduced_availability',
+          'rr',
+          'reduced_redundancy',
+          'standard',
+          'storage class',
+          'nearline',
+          'nl',
       ],
       help_type='command_help',
       help_one_line_summary='Make buckets',

@@ -319,12 +319,17 @@ def CreateTestProcesses(parallel_tests,
     envstr = dict()
     # constructing command list and ensuring each part is str
     cmd = [
-        six.ensure_str(part) for part in
-        list(executable_prefix + [gslib.GSUTIL_PATH] + project_id_arg +
-             ['test'] + s3_argument + multiregional_buckets +
-             ['--' + _SEQUENTIAL_ISOLATION_FLAG] +
-             [parallel_tests[test_index][len('gslib.tests.test_'):]])
-    ]
+        six.ensure_str(part) for part in list(
+            executable_prefix +
+            [gslib.GSUTIL_PATH] +
+            project_id_arg +
+            ['test'] +
+            s3_argument +
+            multiregional_buckets +
+            ['--' + _SEQUENTIAL_ISOLATION_FLAG] +
+            [parallel_tests[test_index][len('gslib.tests.test_'):]]
+        )
+    ]  # yapf: disable
     for k, v in six.iteritems(env):
       envstr[six.ensure_str(k)] = six.ensure_str(v)
     process_list.append(
@@ -359,7 +364,8 @@ class TestCommand(Command):
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
-      supported_private_args=[_SEQUENTIAL_ISOLATION_FLAG])
+      supported_private_args=[_SEQUENTIAL_ISOLATION_FLAG],
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='test',
@@ -613,7 +619,7 @@ class TestCommand(Command):
                                               omit=[
                                                   'gslib/third_party/*',
                                                   'gslib/tests/*',
-                                                  tempfile.gettempdir() + '*'
+                                                  tempfile.gettempdir() + '*',
                                               ])
       coverage_controller.erase()
       coverage_controller.start()

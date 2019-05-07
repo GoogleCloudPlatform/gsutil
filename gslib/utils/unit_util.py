@@ -38,7 +38,13 @@ _EXP_STRINGS = [
     (60, 'EiB', 'Eibit', 'E'),
 ]
 
-_EXP_TEN_STRING = [(3, 'k'), (6, 'm'), (9, 'b'), (12, 't'), (15, 'q')]
+_EXP_TEN_STRING = [
+    (3, 'k'),
+    (6, 'm'),
+    (9, 'b'),
+    (12, 't'),
+    (15, 'q'),
+]
 
 
 # Define this method before constants below, as some call it to init themselves.

@@ -153,4 +153,5 @@ setup(
     cmdclass={
         'build_py': CustomBuildPy,
         'sdist': CustomSDist,
-    })
+    },
+)

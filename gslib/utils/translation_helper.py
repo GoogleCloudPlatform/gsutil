@@ -757,12 +757,12 @@ class AclTranslation(object):
   JSON_TO_XML_ROLES = {
       'READER': 'READ',
       'WRITER': 'WRITE',
-      'OWNER': 'FULL_CONTROL'
+      'OWNER': 'FULL_CONTROL',
   }
   XML_TO_JSON_ROLES = {
       'READ': 'READER',
       'WRITE': 'WRITER',
-      'FULL_CONTROL': 'OWNER'
+      'FULL_CONTROL': 'OWNER',
   }
 
   @classmethod

@@ -88,10 +88,13 @@ class DefStorageClassCommand(Command):
           'set': [
               # FreeTextArgument allows for using storage class abbreviations.
               CommandArgument.MakeFreeTextArgument(),
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
-          'get': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
-      })
+          'get': [
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
+          ],
+      },
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='defstorageclass',
@@ -101,7 +104,7 @@ class DefStorageClassCommand(Command):
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
-          'set': _set_help_text
+          'set': _set_help_text,
       },
   )
 

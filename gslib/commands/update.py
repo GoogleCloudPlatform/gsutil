@@ -449,10 +449,12 @@ class UpdateCommand(Command):
 
   def _FetchAndOpenGsutilTarball(self, update_from_url_str):
     self.command_runner.RunNamedCommand(
-        'cp', [update_from_url_str, 'file://gsutil.tar.gz'],
+        'cp',
+        [update_from_url_str, 'file://gsutil.tar.gz'],
         self.headers,
         self.debug,
-        skip_update_check=True)
+        skip_update_check=True,
+    )
     # Note: tf is closed in _CleanUpUpdateCommand.
     tf = tarfile.open('gsutil.tar.gz')
     tf.errorlevel = 1  # So fatal tarball unpack errors raise exceptions.

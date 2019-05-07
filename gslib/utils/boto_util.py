@@ -338,8 +338,10 @@ def HasConfiguredCredentials():
     # Exclude the no-op auth handler as indicating credentials are configured.
     # Note we can't use isinstance() here because the no-op module may not be
     # imported so we can't get a reference to the class type.
-    if getattr(getattr(valid_auth_handler, '__class__', None), '__name__',
-               None) == 'NoOpAuth':
+    if 'NoOpAuth' == getattr(
+        getattr(valid_auth_handler, '__class__', None),
+        '__name__',
+        None):  # yapf: disable
       valid_auth_handler = None
   except NoAuthHandlerFound:
     pass
@@ -370,6 +372,7 @@ def MonkeyPatchBoto():
   # We have to do all sorts of gross things here (dynamic imports, invalid names
   # to resolve symbols in copy/pasted methods, invalid spacing from copy/pasted
   # methods, etc.), so we just disable pylint warnings for this whole method.
+  # yapf: disable
   # pylint: disable=all
 
   # This should have already been imported if this method was called in the
@@ -494,6 +497,9 @@ def UsingCrcmodExtension(crcmod):
 # TODO(boto-2.49.0): Remove when we pull in the next version of Boto.
 def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
   """Replaces boto.s3.key's should_retry() to handle KMS-encrypted objects."""
+  # We copy/pasted this from boto and slightly modified it; keep the old
+  # formatting style.
+  # yapf: disable
   provider = self.bucket.connection.provider
 
   if not chunked_transfer:
@@ -520,7 +526,7 @@ def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
     goog_customer_managed_encryption = response.getheader(
         'x-goog-encryption-kms-key-name', None)
     if (amz_server_side_encryption_customer_algorithm is None and
-        goog_customer_managed_encryption is None):
+            goog_customer_managed_encryption is None):
       if self.etag != '"%s"' % md5:
         raise provider.storage_data_error(
             'ETag from S3 did not match computed MD5. '
@@ -534,12 +540,16 @@ def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
     # If ``RequestTimeout`` is present, we'll retry. Otherwise, bomb
     # out.
     body = response.read()
-    err = provider.storage_response_error(response.status, response.reason,
-                                          body)
+    err = provider.storage_response_error(
+        response.status,
+        response.reason,
+        body
+    )
 
     if err.error_code in ['RequestTimeout']:
-      raise boto.exception.PleaseRetryException("Saw %s, retrying" %
-                                                err.error_code,
-                                                response=response)
+      raise boto.exception.PleaseRetryException(
+          "Saw %s, retrying" % err.error_code,
+          response=response
+      )
 
   return False

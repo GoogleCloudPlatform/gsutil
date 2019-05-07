@@ -387,13 +387,17 @@ class BotoTranslation(CloudApi):
                   'support listing or removing S3 DeleteMarkers, so you may '
                   'need to delete these using another tool to successfully '
                   'delete this bucket.' % bucket_name,
-                  status=e.status)
-            raise NotEmptyException('VersionedBucketNotEmpty (%s)' %
-                                    bucket_name,
-                                    status=e.status)
+                  status=e.status,
+              )
+            raise NotEmptyException(
+                'VersionedBucketNotEmpty (%s)' % bucket_name,
+                status=e.status,
+            )
           else:
-            raise NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
-                                    status=e.status)
+            raise NotEmptyException(
+                'BucketNotEmpty (%s)' % bucket_name,
+                status=e.status,
+            )
         except TRANSLATABLE_BOTO_EXCEPTIONS as e2:
           self._TranslateExceptionAndRaise(e2, bucket_name=bucket_name)
       elif translated_exception and translated_exception.status == 404:
@@ -434,8 +438,13 @@ class BotoTranslation(CloudApi):
 
           # Listed keys are populated with these fields during bucket listing.
           key_http_fields = set([
-              'bucket', 'etag', 'name', 'updated', 'generation',
-              'metageneration', 'size'
+              'bucket',
+              'etag',
+              'name',
+              'updated',
+              'generation',
+              'metageneration',
+              'size',
           ])
 
           # When fields == None, the caller is requesting all possible fields.

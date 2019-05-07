@@ -82,16 +82,19 @@ class RequesterPaysCommand(Command):
       urls_start_arg=2,
       gs_api_support=[
           # ApiSelector.XML,  # TODO: Uncomment once boto changes are added.
-          ApiSelector.JSON
+          ApiSelector.JSON,
       ],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
           'set': [
               CommandArgument('mode', choices=['on', 'off']),
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
-          'get': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()]
-      })
+          'get': [
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
+          ]
+      },
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='requesterpays',
@@ -102,7 +105,7 @@ class RequesterPaysCommand(Command):
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
-          'set': _set_help_text
+          'set': _set_help_text,
       },
   )
 

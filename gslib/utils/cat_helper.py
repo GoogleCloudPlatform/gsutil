@@ -34,8 +34,14 @@ from gslib.utils.metadata_util import ObjectIsGzipEncoded
 from gslib.utils import text_util
 
 _CAT_BUCKET_LISTING_FIELDS = [
-    'bucket', 'contentEncoding', 'crc32c', 'customerEncryption', 'generation',
-    'md5Hash', 'name', 'size'
+    'bucket',
+    'contentEncoding',
+    'crc32c',
+    'customerEncryption',
+    'generation',
+    'md5Hash',
+    'name',
+    'size',
 ]
 
 

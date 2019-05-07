@@ -436,15 +436,14 @@ def WrapDownloadHttpRequest(download_http):
   # pylint: disable=g-equals-none,g-doc-return-or-yield
   # pylint: disable=g-short-docstring-punctuation,g-doc-args
   # pylint: disable=too-many-statements
-  def OverrideRequest(self, conn, host, absolute_uri, request_uri, method, body,
-                      headers, redirections, cachekey):
+  # yapf: disable
+  def OverrideRequest(self, conn, host, absolute_uri, request_uri, method,
+                      body, headers, redirections, cachekey):
     """Do the actual request using the connection object.
-
     Also follow one level of redirects if necessary.
     """
 
-    auths = ([(auth.depth(request_uri), auth)
-              for auth in self.authorizations
+    auths = ([(auth.depth(request_uri), auth) for auth in self.authorizations
               if auth.inscope(host, request_uri)])
     auth = auths and sorted(auths)[0][1] or None
     if auth:
@@ -461,8 +460,8 @@ def WrapDownloadHttpRequest(download_http):
         response._stale_digest = 1
 
     if response.status == 401:
-      for authorization in self._auth_from_challenge(host, request_uri, headers,
-                                                     response, content):
+      for authorization in self._auth_from_challenge(
+          host, request_uri, headers, response, content):
         authorization.request(method, request_uri, headers, body)
         (response, content) = self._conn_request(conn, request_uri, method,
                                                  body, headers)
@@ -471,9 +470,10 @@ def WrapDownloadHttpRequest(download_http):
           authorization.response(response, body)
           break
 
-    if (self.follow_all_redirects or (method in ["GET", "HEAD"]) or
-        response.status == 303):
-      if self.follow_redirects and response.status in [300, 301, 302, 303, 307]:
+    if (self.follow_all_redirects or (method in ["GET", "HEAD"])
+        or response.status == 303):
+      if self.follow_redirects and response.status in [300, 301, 302,
+                                                       303, 307]:
         # Pick out the location header and basically start from the beginning
         # remembering first to strip the ETag header and decrement our 'depth'
         if redirections:
@@ -486,8 +486,7 @@ def WrapDownloadHttpRequest(download_http):
             location = response['location']
             (scheme, authority, path, query, fragment) = parse_uri(location)
             if authority is None:
-              response['location'] = urllib.parse.urljoin(
-                  absolute_uri, location)
+              response['location'] = urllib.parse.urljoin(absolute_uri, location)
           if response.status == 301 and method in ["GET", "HEAD"]:
             response['-x-permanent-redirect-url'] = response['location']
             if 'content-location' not in response:
@@ -511,24 +510,22 @@ def WrapDownloadHttpRequest(download_http):
               redirect_method = "GET"
               body = None
             (response, content) = self.request(
-                location,
-                redirect_method,
-                body=body,
-                headers=headers,
-                redirections=redirections - 1,
+                location, redirect_method, body=body, headers=headers,
+                redirections=redirections-1,
                 # BUGFIX (see comments at the top of this function):
                 connection_type=conn.__class__)
             response.previous = old_response
         else:
           raise httplib2.RedirectLimit(
-              "Redirected more times than redirection_limit allows.", response,
-              content)
+              "Redirected more times than redirection_limit allows.",
+              response, content)
       elif response.status in [200, 203] and method in ["GET", "HEAD"]:
         # Don't cache 206's since we aren't going to handle byte range
         # requests
         if 'content-location' in response:
           response['content-location'] = absolute_uri
-        httplib2._updateCache(headers, response, content, self.cache, cachekey)
+        httplib2._updateCache(headers, response, content, self.cache,
+                              cachekey)
 
     return (response, content)
 
@@ -536,26 +533,16 @@ def WrapDownloadHttpRequest(download_http):
   # on POSTS, which are used to refresh oauth tokens. We don't want to
   # process the data received in those requests.
   request_orig = download_http.request
-
-  def NewRequest(uri,
-                 method='GET',
-                 body=None,
-                 headers=None,
+  def NewRequest(uri, method='GET', body=None, headers=None,
                  redirections=httplib2.DEFAULT_MAX_REDIRECTS,
                  connection_type=None):
     if method == 'POST':
-      return request_orig(uri,
-                          method=method,
-                          body=body,
-                          headers=headers,
-                          redirections=redirections,
+      return request_orig(uri, method=method, body=body,
+                          headers=headers, redirections=redirections,
                           connection_type=None)
     else:
-      return request_orig(uri,
-                          method=method,
-                          body=body,
-                          headers=headers,
-                          redirections=redirections,
+      return request_orig(uri, method=method, body=body,
+                          headers=headers, redirections=redirections,
                           connection_type=connection_type)
 
   # Replace the request methods with our own closures.

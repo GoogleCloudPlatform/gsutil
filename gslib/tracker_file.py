@@ -307,10 +307,19 @@ def HashRewriteParameters(src_obj_metadata,
       not dst_obj_metadata.name or not projection):
     return
   md5_hash = hashlib.md5()
-  for input_param in (src_obj_metadata, dst_obj_metadata, projection,
-                      src_generation, gen_match, meta_gen_match, canned_acl,
-                      fields, max_bytes_per_call, src_dec_key_sha256,
-                      dst_enc_key_sha256):
+  for input_param in (
+      src_obj_metadata,
+      dst_obj_metadata,
+      projection,
+      src_generation,
+      gen_match,
+      meta_gen_match,
+      canned_acl,
+      fields,
+      max_bytes_per_call,
+      src_dec_key_sha256,
+      dst_enc_key_sha256,
+  ):
     # Tracker file matching changed between gsutil 4.15 -> 4.16 and will cause
     # rewrites to start over from the beginning on a gsutil version upgrade.
     if input_param is not None:
@@ -536,7 +545,7 @@ def WriteDownloadComponentTrackerFile(tracker_file_name, src_obj_metadata,
   component_data = {
       'etag': src_obj_metadata.etag,
       'generation': src_obj_metadata.generation,
-      'download_start_byte': current_file_pos
+      'download_start_byte': current_file_pos,
   }
 
   _WriteTrackerFile(tracker_file_name, json.dumps(component_data))

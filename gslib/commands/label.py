@@ -155,11 +155,16 @@ class LabelCommand(Command):
       argparse_arguments={
           'set': [
               CommandArgument.MakeNFileURLsArgument(1),
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
-          'get': [CommandArgument.MakeNCloudURLsArgument(1)],
-          'ch': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()],
-      })
+          'get': [
+              CommandArgument.MakeNCloudURLsArgument(1),
+          ],
+          'ch': [
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
+          ],
+      },
+  )
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(
       help_name='label',
@@ -171,7 +176,7 @@ class LabelCommand(Command):
       subcommand_help_text={
           'get': _get_help_text,
           'set': _set_help_text,
-          'ch': _ch_help_text
+          'ch': _ch_help_text,
       },
   )
 
@@ -212,7 +217,7 @@ class LabelCommand(Command):
         if (self.gsutil_api.GetApiSelector(url.scheme) == ApiSelector.JSON):
           # Perform a read-modify-write so that we can specify which
           # existing labels need to be deleted.
-          (_, bucket_metadata) = self.GetSingleBucketUrlFromArg(
+          _, bucket_metadata = self.GetSingleBucketUrlFromArg(
               url.url_string, bucket_fields=['labels', 'metageneration'])
           metageneration = bucket_metadata.metageneration
           label_json = {}
@@ -346,9 +351,8 @@ class LabelCommand(Command):
 
   def _GetAndPrintLabel(self, bucket_arg):
     """Gets and prints the labels for a cloud bucket."""
-    (bucket_url,
-     bucket_metadata) = self.GetSingleBucketUrlFromArg(bucket_arg,
-                                                       bucket_fields=['labels'])
+    bucket_url, bucket_metadata = self.GetSingleBucketUrlFromArg(
+        bucket_arg, bucket_fields=['labels'])
     if bucket_url.scheme == 's3':
       print((self.gsutil_api.XmlPassThroughGetTagging(
           bucket_url, provider=bucket_url.scheme)))

@@ -138,12 +138,17 @@ HTTP_TRANSFER_EXCEPTIONS = (
     socket.gaierror,
     socket.timeout,
     ssl.SSLError,
-    ValueError)
+    ValueError,
+)
 
 # Fields requiring projection=full across all API calls.
 _ACL_FIELDS_SET = set([
-    'acl', 'defaultObjectAcl', 'items/acl', 'items/defaultObjectAcl',
-    'items/owner', 'owner'
+    'acl',
+    'defaultObjectAcl',
+    'items/acl',
+    'items/defaultObjectAcl',
+    'items/owner',
+    'owner',
 ])
 
 # Fields that may be encrypted.
@@ -455,9 +460,16 @@ class GcsJsonApi(CloudApi):
     # For blank metadata objects, we need to explicitly call
     # them out to apitools so it will send/erase them.
     apitools_include_fields = []
-    for metadata_field in ('billing', 'encryption', 'lifecycle', 'logging',
-                           'metadata', 'retentionPolicy', 'versioning',
-                           'website'):
+    for metadata_field in (
+        'billing',
+        'encryption',
+        'lifecycle',
+        'logging',
+        'metadata',
+        'retentionPolicy',
+        'versioning',
+        'website',
+    ):
       attr = getattr(bucket_metadata, metadata_field, None)
       if attr and not encoding.MessageToDict(attr):
         setattr(bucket_metadata, metadata_field, None)
@@ -1363,12 +1375,14 @@ class GcsJsonApi(CloudApi):
     upload_http_class = callback_class_factory.GetConnectionClass()
     self.upload_http.connections = {
         'http': upload_http_class,
-        'https': upload_http_class
+        'https': upload_http_class,
     }
 
     # Since bytes_http is created in this function, we don't get the
     # user-agent header from api_client's http automatically.
-    additional_headers = {'user-agent': self.api_client.user_agent}
+    additional_headers = {
+        'user-agent': self.api_client.user_agent,
+    }
     self._AddPerfTraceTokenToHeaders(additional_headers)
 
     try:
@@ -1417,7 +1431,9 @@ class GcsJsonApi(CloudApi):
       else:  # Resumable upload.
         # Since bytes_http is created in this function, we don't get the
         # user-agent header from api_client's http automatically.
-        additional_headers = {'user-agent': self.api_client.user_agent}
+        additional_headers = {
+            'user-agent': self.api_client.user_agent,
+        }
         additional_headers.update(encryption_headers)
 
         return self._PerformResumableUpload(
@@ -1677,8 +1693,12 @@ class GcsJsonApi(CloudApi):
     global_params = apitools_messages.StandardQueryParameters()
     if fields:
       # Rewrite returns the resultant object under the 'resource' field.
-      new_fields = set(
-          ['done', 'objectSize', 'rewriteToken', 'totalBytesRewritten'])
+      new_fields = set([
+          'done',
+          'objectSize',
+          'rewriteToken',
+          'totalBytesRewritten',
+      ])
       for field in fields:
         new_fields.add('resource/' + field)
       global_params.fields = ','.join(set(new_fields))

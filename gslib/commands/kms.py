@@ -370,9 +370,8 @@ class KmsCommand(Command):
 
   def _RunSubCommand(self, func):
     try:
-      (self.sub_opts,
-       self.args) = getopt.getopt(self.args,
-                                  self.command_spec.supported_sub_args)
+      self.sub_opts, self.args = getopt.getopt(
+          self.args, self.command_spec.supported_sub_args)
       # Commands with both suboptions and subcommands need to reparse for
       # suboptions, so we log again.
       metrics.LogCommandParams(sub_opts=self.sub_opts)

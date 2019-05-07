@@ -106,7 +106,7 @@ _GA_LABEL_MAP = {
     'Thread Idle Time Percent': 'cm11',
     'Slowest Thread Throughput': 'cm12',
     'Fastest Thread Throughput': 'cm13',
-    'Disk I/O Time': 'cm14'
+    'Disk I/O Time': 'cm14',
 }
 
 
@@ -154,7 +154,7 @@ class MetricsCollector(object):
         'cid': cid,
         't': 'event',
         _GA_LABEL_MAP['Config']: config_values,
-        _GA_LABEL_MAP['Is Google Corp User']: is_corp_user
+        _GA_LABEL_MAP['Is Google Corp User']: is_corp_user,
     }
 
     # Used by Google Analytics to track user OS.
@@ -218,16 +218,18 @@ class MetricsCollector(object):
     small_int_threshold = 2000
     # Validate small integers.
     for section, small_int_category in (
-        ('Boto', 'debug'), ('Boto', 'http_socket_timeout'), ('Boto',
-                                                             'num_retries'),
-        ('Boto', 'max_retry_delay'), ('GSUtil', 'default_api_version'),
-        ('GSUtil',
-         'sliced_object_download_max_components'), ('GSUtil',
-                                                    'parallel_process_count'),
-        ('GSUtil', 'parallel_thread_count'), ('GSUtil',
-                                              'software_update_check_period'),
-        ('GSUtil', 'tab_completion_timeout'), ('OAuth2',
-                                               'oauth2_refresh_retries')):
+        ('Boto', 'debug'),
+        ('Boto', 'http_socket_timeout'),
+        ('Boto', 'num_retries'),
+        ('Boto', 'max_retry_delay'),
+        ('GSUtil', 'default_api_version'),
+        ('GSUtil', 'sliced_object_download_max_components'),
+        ('GSUtil', 'parallel_process_count'),
+        ('GSUtil', 'parallel_thread_count'),
+        ('GSUtil', 'software_update_check_period'),
+        ('GSUtil', 'tab_completion_timeout'),
+        ('OAuth2', 'oauth2_refresh_retries'),
+    ):
       GetAndValidateConfigValue(section=section,
                                 category=small_int_category,
                                 validation_fn=lambda val: str(val).isdigit() and
@@ -247,7 +249,8 @@ class MetricsCollector(object):
         ('GSUtil', 'parallel_composite_upload_component_size'),
         ('GSUtil', 'parallel_composite_upload_threshold'),
         ('GSUtil', 'sliced_object_download_component_size'),
-        ('GSUtil', 'sliced_object_download_threshold')):
+        ('GSUtil', 'sliced_object_download_threshold'),
+    ):
       config_value = boto.config.get_value(section, data_size_category)
       if config_value:
         try:
@@ -640,17 +643,15 @@ class MetricsCollector(object):
     custom_params = {}
 
     # These parameters need no further processing.
-    for attr_name, label in (('num_processes',
-                              'Num Processes'), ('num_threads', 'Num Threads'),
-                             ('num_retryable_service_errors',
-                              'Num Retryable Service Errors'),
-                             ('num_retryable_network_errors',
-                              'Num Retryable Network Errors'),
-                             ('avg_throughput', 'Average Overall Throughput'),
-                             ('num_objects_transferred',
-                              'Number of Files/Objects Transferred'),
-                             ('total_bytes_transferred',
-                              'Size of Files/Objects Transferred')):
+    for attr_name, label in (
+        ('num_processes', 'Num Processes'),
+        ('num_threads', 'Num Threads'),
+        ('num_retryable_service_errors', 'Num Retryable Service Errors'),
+        ('num_retryable_network_errors', 'Num Retryable Network Errors'),
+        ('avg_throughput', 'Average Overall Throughput'),
+        ('num_objects_transferred', 'Number of Files/Objects Transferred'),
+        ('total_bytes_transferred', 'Size of Files/Objects Transferred'),
+    ):
       custom_params[_GA_LABEL_MAP[label]] = getattr(self.perf_sum_params,
                                                     attr_name)
 
@@ -714,7 +715,7 @@ class MetricsCollector(object):
         self.perf_sum_params.has_file_src and
         self.perf_sum_params.has_cloud_dst,
         'FileToFile':
-        self.perf_sum_params.has_file_src and self.perf_sum_params.has_file_dst
+        self.perf_sum_params.has_file_src and self.perf_sum_params.has_file_dst,
     }
     action = ','.join(
         sorted([

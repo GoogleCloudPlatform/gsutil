@@ -35,5 +35,5 @@ Metric = namedtuple(
         # The URL-encoded body to send with the request.
         'body',
         # The user-agent string to send as a header.
-        'user_agent'
+        'user_agent',
     ])

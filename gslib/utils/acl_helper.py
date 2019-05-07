@@ -58,7 +58,7 @@ class AclChange(object):
       'O': 'OWNER',
       'READ': 'READER',
       'WRITE': 'WRITER',
-      'FULL_CONTROL': 'OWNER'
+      'FULL_CONTROL': 'OWNER',
   }
 
   def __init__(self, acl_change_descriptor, scope_type):
