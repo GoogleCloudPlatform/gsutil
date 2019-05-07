@@ -458,6 +458,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     buri_base = 'gsutil-test-%s' % self.GetTestMethodName()
     buri_base = buri_base[:MAX_BUCKET_LENGTH - 20]
     buri_base = '%s-%s' % (buri_base, self.MakeRandomTestString())
+    buri_base = 'aaa-' + buri_base
     buri_base = util.MakeBucketNameValid(buri_base)
     buri1 = self.CreateBucket(bucket_name='%s-tbuck1' % buri_base)
     buri2 = self.CreateBucket(bucket_name='%s-tbuck2' % buri_base)
