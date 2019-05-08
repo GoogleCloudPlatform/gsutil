@@ -445,7 +445,12 @@ class TestCommand(Command):
             for proc_num in range(len(process_list)):
               if not process_done[proc_num]:
                 still_running.append(parallel_integration_tests[proc_num])
-            print('Still running: %s' % still_running)
+            elapsed = time.time() - parallel_start_time
+            print(('{sec} seconds elapsed since beginning parallel tests.\n'
+                   'Still running: {procs}').format(
+                       sec=str(int(elapsed)),
+                       procs=still_running,
+                   ))
             # TODO: Terminate still-running processes if they
             # hang for a long time.
           last_log_time = time.time()
