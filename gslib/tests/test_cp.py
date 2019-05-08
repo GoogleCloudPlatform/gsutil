@@ -1744,15 +1744,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(expected_headers, lines[0].strip().split(','))
     results = lines[1].strip().split(',')
 
-    for header in results:
-      if isinstance(header, (six.string_types, six.text_type)):
-        header = six.ensure_str(header)
-
     results = dict(zip(expected_headers, results))
 
-    self.assertEqual(results['Source'][:7], 'file://')
-    self.assertEqual(results['Destination'][:5],
-                     '%s://' % self.default_provider)
+    self.assertEqual(
+        results['Source'],
+        'file://' + fpath,
+    )
+    self.assertEqual(
+        results['Destination'],
+        dsturi,
+    )
 
     date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
     start_date = datetime.datetime.strptime(results['Start'], date_format)
