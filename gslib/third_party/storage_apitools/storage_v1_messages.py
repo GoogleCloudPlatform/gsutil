@@ -88,6 +88,7 @@ class Bucket(_messages.Message):
     location: The location of the bucket. Object data for objects in the
       bucket resides in physical storage within this region. Defaults to US.
       See the developer's guide for the authoritative list.
+    locationType: The type of the bucket location.
     logging: The bucket's logging configuration, which defines the destination
       bucket and optional name prefix for the current bucket's logs.
     metageneration: The metadata generation of this bucket.
@@ -375,18 +376,19 @@ class Bucket(_messages.Message):
   labels = _messages.MessageField('LabelsValue', 11)
   lifecycle = _messages.MessageField('LifecycleValue', 12)
   location = _messages.StringField(13)
-  logging = _messages.MessageField('LoggingValue', 14)
-  metageneration = _messages.IntegerField(15)
-  name = _messages.StringField(16)
-  owner = _messages.MessageField('OwnerValue', 17)
-  projectNumber = _messages.IntegerField(18, variant=_messages.Variant.UINT64)
-  retentionPolicy = _messages.MessageField('RetentionPolicyValue', 19)
-  selfLink = _messages.StringField(20)
-  storageClass = _messages.StringField(21)
-  timeCreated = _message_types.DateTimeField(22)
-  updated = _message_types.DateTimeField(23)
-  versioning = _messages.MessageField('VersioningValue', 24)
-  website = _messages.MessageField('WebsiteValue', 25)
+  locationType = _messages.StringField(14)
+  logging = _messages.MessageField('LoggingValue', 15)
+  metageneration = _messages.IntegerField(16)
+  name = _messages.StringField(17)
+  owner = _messages.MessageField('OwnerValue', 18)
+  projectNumber = _messages.IntegerField(19, variant=_messages.Variant.UINT64)
+  retentionPolicy = _messages.MessageField('RetentionPolicyValue', 20)
+  selfLink = _messages.StringField(21)
+  storageClass = _messages.StringField(22)
+  timeCreated = _message_types.DateTimeField(23)
+  updated = _message_types.DateTimeField(24)
+  versioning = _messages.MessageField('VersioningValue', 25)
+  website = _messages.MessageField('WebsiteValue', 26)
 
 
 class BucketAccessControl(_messages.Message):
@@ -2825,5 +2827,4 @@ class TestIamPermissionsResponse(_messages.Message):
 
   kind = _messages.StringField(1, default=u'storage#testIamPermissionsResponse')
   permissions = _messages.StringField(2, repeated=True)
-
 

@@ -337,10 +337,12 @@ class LsCommand(Command):
     # We're guaranteed by the caller that the root object is populated.
     bucket = bucket_blr.root_object
     location_constraint = bucket.location
+    location_type = bucket.locationType
     storage_class = bucket.storageClass
     fields = {
         'bucket': bucket_blr.url_string,
         'storage_class': storage_class,
+        'location_type': location_type,
         'location_constraint': location_constraint,
         'acl': AclTranslation.JsonFromMessage(bucket.acl),
         'default_acl': AclTranslation.JsonFromMessage(bucket.defaultObjectAcl),
@@ -416,6 +418,7 @@ class LsCommand(Command):
     text_util.print_to_fd(
         ('{bucket} :\n'
          '\tStorage class:\t\t\t{storage_class}\n'
+         '\tLocation type:\t\t\t{location_type}\n'
          '\tLocation constraint:\t\t{location_constraint}\n'
          '\tVersioning enabled:\t\t{versioning}\n'
          '\tLogging configuration:\t\t{logging_config}\n'
