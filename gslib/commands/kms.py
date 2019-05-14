@@ -64,12 +64,12 @@ _AUTHORIZE_DESCRIPTION = """
   Authorize your default project to use a Cloud KMS key:
 
     gsutil kms authorize \\
-        -k projects/key-project/locations/global/keyRings/key-ring/cryptoKeys/my-key
+        -k projects/key-project/locations/us-east1/keyRings/key-ring/cryptoKeys/my-key
 
   Authorize "my-project" to use a Cloud KMS key:
 
     gsutil kms authorize -p my-project \\
-        -k projects/key-project/locations/global/keyRings/key-ring/cryptoKeys/my-key
+        -k projects/key-project/locations/us-east1/keyRings/key-ring/cryptoKeys/my-key
 """
 
 _ENCRYPTION_DESCRIPTION = """
@@ -82,7 +82,7 @@ _ENCRYPTION_DESCRIPTION = """
   Set the default KMS key for my-bucket:
 
     gsutil kms encryption \\
-        -k projects/key-project/locations/global/keyRings/key-ring/cryptoKeys/my-key \\
+        -k projects/key-project/locations/us-east1/keyRings/key-ring/cryptoKeys/my-key \\
         gs://my-bucket
 
   Show the default KMS key for my-bucket, if one is set:
