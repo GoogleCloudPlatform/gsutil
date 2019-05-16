@@ -420,8 +420,7 @@ class LsCommand(Command):
 
     text_util.print_to_fd(
         ('{bucket} :\n'
-         '\tStorage class:\t\t\t{storage_class}\n' +
-         location_type_line +
+         '\tStorage class:\t\t\t{storage_class}\n' + location_type_line +
          '\tLocation constraint:\t\t{location_constraint}\n'
          '\tVersioning enabled:\t\t{versioning}\n'
          '\tLogging configuration:\t\t{logging_config}\n'
