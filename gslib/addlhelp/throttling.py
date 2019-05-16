@@ -37,7 +37,8 @@ _DETAILED_HELP_TEXT = ("""
   consumes. For example, the following command would limit upload and download
   bandwidth consumed by gsutil rsync to 100 KBps:
 
-      trickle -d 100 -u 100 gsutil rsync -r ./dir gs://some bucket
+      trickle -d 100 -u 100 gsutil -o "GSUtil:parallel_process_count=1" \\
+        -o "GSUtil:parallel_thread_count=1" rsync -r ./dir gs://some bucket
 
   Note that we recommend against using the -m flag with gsutil when running via
   trickle, as this may cause resource starvation and prevent your command from
