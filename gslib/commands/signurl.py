@@ -539,7 +539,8 @@ class UrlSignCommand(Command):
         # Need to url encode the object name as Google Cloud Storage does when
         # computing the string to sign when checking the signature.
         gcs_path = '{0}/{1}'.format(
-            url.bucket_name, urllib.parse.quote(url.object_name.encode(UTF8)))
+            url.bucket_name,
+            urllib.parse.quote(url.object_name.encode(UTF8), safe='/~'))
 
       if region == _AUTO_DETECT_REGION:
         if url.bucket_name in region_cache:
