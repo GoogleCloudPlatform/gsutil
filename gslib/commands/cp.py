@@ -97,8 +97,8 @@ _DESCRIPTION_TEXT = """
     gsutil cp -r dir gs://my-bucket
 
   If you have a large number of files to transfer you might want to use the
-  gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
-  copy:
+  top-level gsutil -m option (see "gsutil help command_opts"), to perform a
+  parallel (multi-threaded/multi-processing) copy:
 
     gsutil -m cp -r dir gs://my-bucket
 
@@ -252,8 +252,8 @@ _COPY_IN_CLOUD_TEXT = """
 
     gsutil cp -A gs://bucket1/obj gs://bucket2
 
-  The gsutil -m flag is disallowed when using the cp -A flag, to ensure that
-  version ordering is preserved.
+  The top-level gsutil -m flag is disallowed when using the cp -A flag, to
+  ensure that version ordering is preserved.
 """
 
 _CHECKSUM_VALIDATION_TEXT = """
@@ -382,8 +382,8 @@ _STREAMING_TRANSFERS_TEXT = """
   validation, use a non-streaming transfer, which performs integrity checking
   automatically.
 
-  Note: Streaming transfers are not allowed when the gsutil -m option is in
-  force.
+  Note: Streaming transfers are not allowed when the top-level gsutil -m flag
+  is used.
 """
 
 _SLICED_OBJECT_DOWNLOADS_TEXT = """
@@ -605,7 +605,7 @@ _OPTIONS_TEXT = """
 
                    gsutil -o "GSUtil:parallel_process_count=8" \\
                      -o "GSUtil:parallel_thread_count=1" \\
-                     -m cp -r /local/source/dir gs://bucket/path
+                     -m cp -j html -r /local/source/dir gs://bucket/path
 
   -J             Applies gzip transport encoding to file uploads. This option
                  works like the -j option described above, but it applies to

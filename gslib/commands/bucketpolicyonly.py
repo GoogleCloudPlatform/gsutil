@@ -68,9 +68,11 @@ _GET_DESCRIPTION = """
 """
 
 _DESCRIPTION = """
-  The ``bucketpolicyonly`` command is used to retrieve or configure the Bucket
-  Policy Only setting of Cloud Storage bucket(s). This command has two
-  sub-commands, ``get`` and ``set``.
+  The ``bucketpolicyonly`` command is used to retrieve or configure the
+  `Bucket Policy Only (Beta)
+  <https://cloud.google.com/storage/docs/bucket-policy-only>`_ setting of
+  Cloud Storage bucket(s). This command has two sub-commands, ``get`` and
+  ``set``.
 """ + _GET_DESCRIPTION + _SET_DESCRIPTION
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)

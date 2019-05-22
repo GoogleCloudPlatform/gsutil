@@ -142,10 +142,11 @@ _CREATE_DESCRIPTION = """
   create command will use the Cloud Pub/Sub topic
   "projects/default-project/topics/example-bucket".
 
-  In order to enable notifications, a special Cloud Storage service account
-  unique to each project must have the IAM permission "projects.topics.publish".
-  This command will check to see if that permission exists and, if not, will
-  attempt to grant it.
+  In order to enable notifications, a `special Cloud Storage service account
+  <https://cloud.google.com/storage/docs/projects#service-accounts>`_ unique to
+  each project must have the IAM permission "projects.topics.publish". This
+  command will check to see if that permission exists and, if not, will attempt
+  to grant it.
 
   You can create multiple notification configurations for a bucket, but their
   triggers cannot overlap such that a single event could send multiple
