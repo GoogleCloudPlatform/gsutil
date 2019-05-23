@@ -97,7 +97,7 @@ _DESCRIPTION_TEXT = """
     gsutil cp -r dir gs://my-bucket
 
   If you have a large number of files to transfer you might want to use the
-  top-level gsutil -m option (see "gsutil help command_opts"), to perform a
+  top-level gsutil -m option (see "gsutil help options"), to perform a
   parallel (multi-threaded/multi-processing) copy:
 
     gsutil -m cp -r dir gs://my-bucket
