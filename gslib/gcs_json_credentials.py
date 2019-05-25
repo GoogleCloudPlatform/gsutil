@@ -30,6 +30,7 @@ import json
 import logging
 import os
 import io
+import six
 import traceback
 
 # pylint: disable=g-bad-import-order
@@ -128,7 +129,7 @@ def GetCredentialStoreKey(credentials, api_version):
   # interchangeable.  This applies for all credentials that store a token URI.
   if getattr(credentials, 'token_uri', None):
     key_parts.append(credentials.token_uri)
-
+  key_parts = [six.ensure_text(part) for part in key_parts]
   return '-'.join(key_parts)
 
 
