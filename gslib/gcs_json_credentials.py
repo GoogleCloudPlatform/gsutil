@@ -259,7 +259,8 @@ def _MaybeTextFile(filename):
   Returns:
     Boolean: True if the first 1024 bytes seem to indicate a text file
   """
-  textchars = bytearray({7,8,9,10,12,13,27} | set(range(0x20, 0x100)) - {0x7f})
+  textchars = bytearray({7, 8, 9, 10, 12, 13, 27} |
+                        set(range(0x20, 0x100)) - {0x7f})
   return lambda bytes: bool(bytes.translate(None, textchars))
 
 
@@ -272,8 +273,8 @@ def _MaybeP12File(filename):
     Boolean: True if file has expected ending and isn't text file
   """
   return not _MaybeTextFile(filename) and any(
-    filename.lower().endswith('.p12'),
-    filename.lower().endswith('.pfx'),
+      filename.lower().endswith('.p12'),
+      filename.lower().endswith('.pfx'),
   )
 
 
@@ -328,7 +329,7 @@ def _GetOauth2ServiceAccountCredentials():
     if json_key_dict:
       # Key file is in JSON format.
       for json_entry in ('client_id', 'client_email', 'private_key_id',
-                        'private_key'):
+                         'private_key'):
         if json_entry not in json_key_dict:
           raise Exception('The JSON private key file at %s '
                           'did not contain the required entry: %s' %
