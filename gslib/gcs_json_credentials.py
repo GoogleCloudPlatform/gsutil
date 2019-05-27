@@ -269,22 +269,20 @@ def _GetOauth2ServiceAccountCredentials():
     pass
 
   if keyfile_is_utf8:
-    json_key_dict = None
     try:
       json_key_dict = json.loads(private_key)
     except ValueError:
       raise Exception('Could not parse JSON keyfile "%s" as valid JSON' %
                       private_key_filename)
-    if json_key_dict:
-      # Key file is in JSON format.
-      for json_entry in ('client_id', 'client_email', 'private_key_id',
-                         'private_key'):
-        if json_entry not in json_key_dict:
-          raise Exception('The JSON private key file at %s '
-                          'did not contain the required entry: %s' %
-                          (private_key_filename, json_entry))
-      return ServiceAccountCredentials.from_json_keyfile_dict(
-          json_key_dict, scopes=DEFAULT_SCOPES, token_uri=provider_token_uri)
+    # Key file is in JSON format.
+    for json_entry in ('client_id', 'client_email', 'private_key_id',
+                       'private_key'):
+      if json_entry not in json_key_dict:
+        raise Exception('The JSON private key file at %s '
+                        'did not contain the required entry: %s' %
+                        (private_key_filename, json_entry))
+    return ServiceAccountCredentials.from_json_keyfile_dict(
+        json_key_dict, scopes=DEFAULT_SCOPES, token_uri=provider_token_uri)
   else:
     # Key file is in P12 format.
     if HAS_CRYPTO:
