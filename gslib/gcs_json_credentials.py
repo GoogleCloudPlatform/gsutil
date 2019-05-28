@@ -29,6 +29,7 @@ import json
 import logging
 import os
 import io
+import six
 import traceback
 
 # pylint: disable=g-bad-import-order
@@ -127,7 +128,7 @@ def GetCredentialStoreKey(credentials, api_version):
   # interchangeable.  This applies for all credentials that store a token URI.
   if getattr(credentials, 'token_uri', None):
     key_parts.append(credentials.token_uri)
-
+  key_parts = [six.ensure_text(part) for part in key_parts]
   return '-'.join(key_parts)
 
 
@@ -255,16 +256,24 @@ def _GetOauth2ServiceAccountCredentials():
   provider_token_uri = _GetProviderTokenUri()
   service_client_id = config.get('Credentials', 'gs_service_client_id', '')
   private_key_filename = config.get('Credentials', 'gs_service_key_file', '')
-  private_key = None
-  with io.open(private_key_filename, 'r', encoding=UTF8) as private_key_file:
+
+  with io.open(private_key_filename, 'rb') as private_key_file:
     private_key = private_key_file.read()
 
-  json_key_dict = None
+  keyfile_is_utf8 = False
   try:
-    json_key_dict = json.loads(private_key)
-  except ValueError:
+    private_key = private_key.decode(UTF8)
+    # P12 keys won't be encoded as UTF8 bytes.
+    keyfile_is_utf8 = True
+  except UnicodeDecodeError:
     pass
-  if json_key_dict:
+
+  if keyfile_is_utf8:
+    try:
+      json_key_dict = json.loads(private_key)
+    except ValueError:
+      raise Exception('Could not parse JSON keyfile "%s" as valid JSON' %
+                      private_key_filename)
     # Key file is in JSON format.
     for json_entry in ('client_id', 'client_email', 'private_key_id',
                        'private_key'):
@@ -284,12 +293,18 @@ def _GetOauth2ServiceAccountCredentials():
                                  GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD)
       # We use _from_p12_keyfile_contents to avoid reading the key file
       # again unnecessarily.
-      return ServiceAccountCredentials.from_p12_keyfile_buffer(
-          service_client_id,
-          BytesIO(private_key),
-          private_key_password=key_file_pass,
-          scopes=DEFAULT_SCOPES,
-          token_uri=provider_token_uri)
+      try:
+        return ServiceAccountCredentials.from_p12_keyfile_buffer(
+            service_client_id,
+            BytesIO(private_key),
+            private_key_password=key_file_pass,
+            scopes=DEFAULT_SCOPES,
+            token_uri=provider_token_uri)
+      except Exception as e:
+        raise Exception(
+            'OpenSSL unable to parse PKCS 12 key {}.'
+            'Please verify key integrity. Error message:\n{}'.format(
+                private_key_filename, str(e)))
 
 
 def _GetOauth2UserAccountCredentials():
