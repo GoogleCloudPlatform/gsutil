@@ -492,6 +492,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
     self.assertIn('Location constraint:\t\tUS', stdout)
 
+    # Location type is listed as MULTI_REGION
+    self.assertIn('Location type:\t\t\tMULTI_REGION', stdout)
+
   @SkipForS3('S3 bucket configuration values are not supported via ls.')
   def test_logging(self):
     """Tests listing a bucket with logging config."""

@@ -543,6 +543,7 @@ class LsCommand(Command):
             'iamConfiguration',
             'labels',
             'location',
+            'locationType',
             'logging',
             'lifecycle',
             'metageneration',
