@@ -1,3 +1,23 @@
+Release 4.39 (release date: 2019-05-29)
+=======================================
+New Features
+------------------
+- Compression level is now configurable by setting the `gzip_compression_level`
+  option under `[GSUtil]`. The default value is `9`.
+
+Bug Fixes
+------------------
+- Fixed bug where IAM operations failed on buckets whose names lacked any
+  letters.
+
+Other Changes
+------------------
+- Python 3 compatibility.
+- Continuous integration reimplemented and improved.
+- Several documentation and command help improvements.
+- Various improvements to test stability and feedback.
+
+
 Release 4.38 (release date: 2019-03-25)
 =======================================
 Bug Fixes
@@ -1126,7 +1146,7 @@ Major New Gsutil Version - Backwards-Incompatible Changes
 - Downloading object names ending with '/' is no longer supported to avoid
   problems this caused for directores using the Google Cloud Console.
 - rm -r now implies rm -ra (removing all object versions recursively).
-- All commands using the global -m option or a force option (such as 
+- All commands using the global -m option or a force option (such as
   rm -f or cp -c) will now return a non-zero exit code if there are any
   failures during the operation.
 - MD5 and CRC32c values are now represented in base64 encoding instead
@@ -2234,7 +2254,7 @@ New Features
 - Support for multi-threading and recursive operation for setacl command
   (see “gsutil help setacl”).
 - Ability to use the UNIX 'file' command to do content type recognition as
-  an alternative to filename extensions. 
+  an alternative to filename extensions.
 - Introduction of new end-to-end test suite.
 - The gsutil version command now computes a checksum of the code, to detect
   corruption and local modification when assisting with technical support.
