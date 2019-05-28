@@ -293,12 +293,18 @@ def _GetOauth2ServiceAccountCredentials():
                                  GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD)
       # We use _from_p12_keyfile_contents to avoid reading the key file
       # again unnecessarily.
-      return ServiceAccountCredentials.from_p12_keyfile_buffer(
-          service_client_id,
-          BytesIO(private_key),
-          private_key_password=key_file_pass,
-          scopes=DEFAULT_SCOPES,
-          token_uri=provider_token_uri)
+      try:
+        return ServiceAccountCredentials.from_p12_keyfile_buffer(
+            service_client_id,
+            BytesIO(private_key),
+            private_key_password=key_file_pass,
+            scopes=DEFAULT_SCOPES,
+            token_uri=provider_token_uri)
+      except Exception as e:
+        raise Exception(
+            'OpenSSL unable to parse PKCS 12 key {}.'
+            'Please verify key integrity. Error message:\n{}'.format(
+                private_key_filename, str(e)))
 
 
 def _GetOauth2UserAccountCredentials():
