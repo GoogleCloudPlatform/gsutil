@@ -85,7 +85,7 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     # .git*, etc.)
     os.makedirs(gsutil_dst)
     for comp in ('CHANGES.md', 'CHECKSUM', 'gslib', 'gsutil', 'gsutil.py',
-                 'LICENSE', 'MANIFEST.in', 'README.md', 'setup.py', 'test',
+                 'LICENSE', 'MANIFEST.in', 'README.md', 'setup.py',
                  'third_party', 'VERSION'):
       cp_src_path = os.path.join(GSUTIL_DIR, comp)
       cp_dst_path = os.path.join(gsutil_dst, comp)
