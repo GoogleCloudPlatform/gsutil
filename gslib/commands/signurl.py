@@ -540,7 +540,7 @@ class UrlSignCommand(Command):
         # computing the string to sign when checking the signature.
         gcs_path = '{0}/{1}'.format(
             url.bucket_name,
-            urllib.parse.quote(url.object_name.encode(UTF8), safe='/~'))
+            urllib.parse.quote(url.object_name.encode(UTF8), safe=b'/~'))
 
       if region == _AUTO_DETECT_REGION:
         if url.bucket_name in region_cache:
