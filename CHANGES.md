@@ -2,8 +2,9 @@ Release 4.39 (release date: 2019-05-29)
 =======================================
 New Features
 ------------------
-- Compression level is now configurable by setting the `gzip_compression_level`
-  option under `[GSUtil]`. The default value is `9`.
+- Python 3.5+ compatibility.
+- Compression level is now configurable by setting "gzip_compression_level"
+  under the "GSUtil" section in the boto config file. The default value is 9.
 
 Bug Fixes
 ------------------
@@ -12,8 +13,8 @@ Bug Fixes
 
 Other Changes
 ------------------
-- Python 3 compatibility.
-- Continuous integration reimplemented and improved.
+- Revised contribution guidelines to direct developers to submit GitHub pull
+  requests instead of using the Rietveld code review tool.
 - Several documentation and command help improvements.
 - Various improvements to test stability and feedback.
 
