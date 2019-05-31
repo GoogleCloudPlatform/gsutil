@@ -16,6 +16,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
@@ -196,8 +197,7 @@ class HmacCommand(Command):
       help_name='hmac',
       help_name_aliases=[],
       help_type='command_help',
-      help_one_line_summary=('Create, delete, get, list, or update'
-                             ' HMAC keys for service accounts.'),
+      help_one_line_summary=('CRUD operations on service account HMAC keys.'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'create': _create_help_text,
