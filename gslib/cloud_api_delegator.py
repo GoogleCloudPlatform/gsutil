@@ -517,6 +517,28 @@ class CloudApiDelegator(CloudApi):
     return self._GetApi(provider).ListObjectAccessControls(
         bucket_name, object_name)
 
+  def CreateHmacKey(self, project_id, service_account_email, provider=None):
+    return self._GetApi(provider).CreateHmacKey(project_id,
+                                                service_account_email)
+
+  def DeleteHmacKey(self, project_id, access_id, provider=None):
+    return self._GetApi(provider).DeleteHmacKey(project_id, access_id)
+
+  def GetHmacKey(self, project_id, access_id, provider=None):
+    return self._GetApi(provider).GetHmacKey(project_id, access_id)
+
+  def ListHmacKeys(self,
+                   project_id,
+                   service_account_email,
+                   show_deleted_keys=False,
+                   provider=None):
+    return self._GetApi(provider).ListHmacKeys(
+        project_id, service_account_email, show_deleted_keys)
+
+  def UpdateHmacKey(self, project_id, access_id, state, etag, provider=None):
+    return self._GetApi(provider).UpdateHmacKey(project_id, access_id, state,
+                                                etag)
+
   def XmlPassThroughGetAcl(self, storage_url, def_obj_acl=False, provider=None):
     """XML compatibility function for getting ACLs.
 

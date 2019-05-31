@@ -1980,6 +1980,83 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e)
 
+  def CreateHmacKey(self, project_id, service_account_email):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageProjectsHmacKeysCreateRequest(
+          projectId=project_id,
+          serviceAccountEmail=service_account_email)
+      return self.api_client.hmacKeys.Create(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(e)
+
+  def DeleteHmacKey(self, project_id, access_id):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageProjectsHmacKeysDeleteRequest(
+          projectId=project_id,
+          accessId=access_id)
+      return self.api_client.hmacKeys.Delete(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(e)
+
+  def GetHmacKey(self, project_id, access_id):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageProjectsHmacKeysGetRequest(
+          projectId=project_id,
+          accessId=access_id)
+      return self.api_client.hmacKeys.Get(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(e)
+
+
+  def ListHmacKeys(self, project_id, service_account_email,
+                   show_deleted_keys=True):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageProjectsHmacKeysListRequest(
+            projectId=project_id,
+            serviceAccountEmail=service_account_email,
+            showDeletedKeys=show_deleted_keys,
+            maxResults=NUM_BUCKETS_PER_LIST_PAGE)
+
+      response = self.api_client.hmacKeys.List(request)
+      for key in response.items:
+        yield key
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(e)
+
+    while response.nextPageToken:
+      request = apitools_messages.StorageProjectsHmacKeysListRequest(
+          projectId=project_id,
+          serviceAccountEmail=service_account_email,
+          showDeletedKeys=show_deleted_keys,
+          pageToken=response.nextPageToken,
+          maxResults=NUM_BUCKETS_PER_LIST_PAGE)
+      try:
+        response = self.api_client.hmacKeys.List(request)
+      except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+        self._TranslateExceptionAndRaise(e)
+
+      for key in response.items:
+        yield key
+
+  def UpdateHmacKey(self, project_id, access_id, state, etag):
+    """See CloudApi class for function doc strings."""
+    try:
+      request = apitools_messages.StorageProjectsHmacKeysUpdateRequest(
+          projectId=project_id,
+          accessId=access_id)
+      metadata = apitools_messages.HmacKeyMetadata()
+      metadata.state = state
+      if etag:
+        metadata.etag = etag
+      request.resource = metadata
+      return self.api_client.hmacKeys.Update(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(e)
+
   def _BucketCannedAclToPredefinedAcl(self, canned_acl_string):
     """Translates the input string to a bucket PredefinedAcl string.
 
@@ -2224,7 +2301,8 @@ class GcsJsonApi(CloudApi):
                                                  generation=generation)
           return CreateBucketNotFoundException(e.status_code, self.provider,
                                                bucket_name)
-        return NotFoundException(str(e), status=e.status_code)
+        return NotFoundException(message or e.message, status=e.status_code)
+
 
       elif e.status_code == 409 and bucket_name:
         if 'The bucket you tried to delete was not empty.' in str(e):
