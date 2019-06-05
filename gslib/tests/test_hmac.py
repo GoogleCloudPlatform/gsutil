@@ -20,7 +20,6 @@ from __future__ import unicode_literals
 
 import re
 import boto
-import time
 
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
@@ -109,9 +108,6 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
 
   def CreateHelper(self, service_account):
     stdout = self._CreateWithRetry(service_account)
-    print('-------------------------------')
-    print(stdout)
-    print('-------------------------------')
     return self.ExtractAccessId(stdout)
 
   def test_malformed_commands(self):
@@ -313,19 +309,9 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(['hmac', 'get', access_id], return_stdout=True)
     etag = self.ExtractEtag(stdout)
-    print('--------------------------')
-    print('----stdout----------------')
-    print(stdout)
-    print('--------------------------')
-    print('Etag (%s): %s' % (str(type(etag)), etag))
-    print('--------------------------')
 
     try:
       self.AssertKeyMetadataMatches(stdout, state='ACTIVE')
-
-      # TODO(b/134177907): Updates appear to not be strongly consistent; remove
-      # this sleep() once this has been fixed.
-      time.sleep(10)
 
       stdout = self.RunGsUtil(
           ['hmac', 'update', '-s', 'INACTIVE', '-e', etag, access_id],
