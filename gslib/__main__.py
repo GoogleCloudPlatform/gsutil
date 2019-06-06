@@ -408,7 +408,15 @@ def main():
 
     _CheckAndWarnForProxyDifferences()
 
-    if os.environ.get('_ARGCOMPLETE', '0') == '1':
+    # Both 1 and 2 are valid _ARGCOMPLETE values; this var tells argcomplete at
+    # what argv[] index the command to match starts. We want it to start at the
+    # value for the path to gsutil, so:
+    # $ gsutil <command>  # Should be the 1st argument, so '1'
+    # $ python gsutil <command>  # Should be the 2nd argument, so '2'
+    # Both are valid; most users invoke gsutil in the first style, but our
+    # integration and prerelease tests invoke it in the second style, as we need
+    # to specify the Python interpreter used to run gsutil.
+    if os.environ.get('_ARGCOMPLETE', '0') in ('1', '2'):
       return _PerformTabCompletion(command_runner)
 
     return _RunNamedCommandAndHandleExceptions(
