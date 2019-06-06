@@ -1005,7 +1005,6 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       expected_results: The expected tab completion results for the given input.
     """
     cmd = [gslib.GSUTIL_PATH] + ['--testexceptiontraces'] + cmd
-    cmd = [str(sys.executable)] + cmd if not InvokedFromParFile() else cmd
     cmd_str = ' '.join(cmd)
 
     @Retry(AssertionError, tries=5, timeout_secs=1)
