@@ -85,6 +85,9 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
                        'Test requires notification URL configuration.')
   def test_list_one_channel(self):
     """Tests listing notification channel on a bucket."""
+    # TODO(b/132277269): Re-enable these once the service-side bug is fixed.
+    return unittest.skip('Functionality has been disabled due to b/132277269')
+
     bucket_uri = self.CreateBucket()
 
     # Set up an OCN (object change notification) on the newly created bucket.
