@@ -1005,6 +1005,17 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       expected_results: The expected tab completion results for the given input.
     """
     cmd = [gslib.GSUTIL_PATH] + ['--testexceptiontraces'] + cmd
+    # TODO(b/134694311):
+    #    We're aware that when tabcomplete tests are invoked in a subprocess, they
+    #    use `python` from the path, rather than the current running python interpreter.
+    #    We want something that works approximately like:
+    #
+    #    cmd = [str(sys.executable)] + cmd if not InvokedFromParFile() else cmd
+    #
+    #    But unfortunately that doesn't seem to pick up the completion file, or possibly
+    #    fails to produce completions for some other reason we haven't been able to find
+    #    in debugging yet. We may want to refactor how completion testing is done, to use
+    #    the completion.bash.inc directly rather than emulating it as we de below.
     cmd_str = ' '.join(cmd)
 
     @Retry(AssertionError, tries=5, timeout_secs=1)
