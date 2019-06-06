@@ -1005,21 +1005,49 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       expected_results: The expected tab completion results for the given input.
     """
     cmd = [gslib.GSUTIL_PATH] + ['--testexceptiontraces'] + cmd
-    cmd = [str(sys.executable)] + cmd if not InvokedFromParFile() else cmd
+    if InvokedFromParFile():
+      argcomplete_start_idx = 1
+    else:
+      argcomplete_start_idx = 2
+      # Prepend the interpreter path; ensures we use the same interpreter that
+      # was used to invoke the integration tests. In practice, this only differs
+      # when you're running the tests using a different interpreter than
+      # whatever `/usr/bin/env python` resolves to.
+      cmd = [str(sys.executable)] + cmd
     cmd_str = ' '.join(cmd)
 
     @Retry(AssertionError, tries=5, timeout_secs=1)
     def _RunTabCompletion():
       """Runs the tab completion operation with retries."""
+      # Set this to True if the argcomplete tests start failing and you want to
+      # see any output you can get. I've had to do this so many times that I'm
+      # just going to leave this in the code for convenience ¯\_(ツ)_/¯
+      #
+      # If set, this will print out extra info from the argcomplete subprocess.
+      # You'll probably want to find one test that's failing and run it
+      # individually, e.g.:
+      #   python3 ./gsutil test tabcomplete.TestTabComplete.test_single_object
+      # so that only one subprocess is run, thus routing the output to your
+      # local terminal rather than swallowing it.
+      _hacky_debugging = False
+
       results_string = None
       with tempfile.NamedTemporaryFile(
           delete=False) as tab_complete_result_file:
-        # argcomplete returns results via the '8' file descriptor so we
-        # redirect to a file so we can capture them.
-        cmd_str_with_result_redirect = '%s 8>%s' % (
-            cmd_str, tab_complete_result_file.name)
+        if _hacky_debugging:
+          # These redirectons are valuable for debugging purposes. 1 and 2 are,
+          # obviously, stdout and stderr of the subprocess. 9 is the fd for
+          # argparse debug stream.
+          cmd_str_with_result_redirect = (
+              '{cs} 1>{fn} 2>{fn} 8>{fn} 9>{fn}'.format(
+                  cs=cmd_str, fn=tab_complete_result_file.name))
+        else:
+          # argcomplete returns results via the '8' file descriptor, so we
+          # redirect to a file so we can capture the completion results.
+          cmd_str_with_result_redirect = '{cs} 8>{fn}'.format(
+              cs=cmd_str, fn=tab_complete_result_file.name)
         env = os.environ.copy()
-        env['_ARGCOMPLETE'] = '1'
+        env['_ARGCOMPLETE'] = str(argcomplete_start_idx)
         # Use a sane default for COMP_WORDBREAKS.
         env['_ARGCOMPLETE_COMP_WORDBREAKS'] = '''"'@><=;|&(:'''
         if 'COMP_WORDBREAKS' in env:
@@ -1030,6 +1058,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         results_string = tab_complete_result_file.read().decode(
             locale.getpreferredencoding())
       if results_string:
+        if _hacky_debugging:
+          print('---------------------------------------')
+          print(results_string)
+          print('---------------------------------------')
         results = results_string.split('\013')
       else:
         results = []
