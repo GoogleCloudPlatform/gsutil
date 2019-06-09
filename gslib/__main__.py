@@ -363,7 +363,7 @@ def main():
       for config_section in ('Boto', 'GSUtil'):
         try:
           config_items.extend(boto.config.items(config_section))
-        except ConfigParser.NoSectionError:
+        except configparser.NoSectionError:
           pass
       for i in range(len(config_items)):
         config_item_key = config_items[i][0]
