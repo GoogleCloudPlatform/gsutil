@@ -127,6 +127,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         stderr = sys.stderr.buffer.read()
     [six.ensure_text(string) for string in self.accumulated_stderr]
     [six.ensure_text(string) for string in self.accumulated_stdout]
+    stdout = six.ensure_text(stdout)
+    stderr = six.ensure_text(stderr)
     stdout += ''.join(self.accumulated_stdout)
     stderr += ''.join(self.accumulated_stderr)
     sys.stdout.close()
