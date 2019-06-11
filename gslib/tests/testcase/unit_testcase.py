@@ -125,7 +125,11 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         sys.stderr.seek(0)
         stdout = sys.stdout.buffer.read()
         stderr = sys.stderr.buffer.read()
-    stdout += b''.join(self.accumulated_stdout)
+    [six.ensure_text(string) for string in self.accumulated_stderr]
+    [six.ensure_text(string) for string in self.accumulated_stdout]
+    stdout = six.ensure_text(stdout)
+    stderr = six.ensure_text(stderr)
+    stdout += ''.join(self.accumulated_stdout)
     stderr += ''.join(self.accumulated_stderr)
     sys.stdout.close()
     sys.stderr.close()
@@ -137,15 +141,15 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     _id = six.ensure_text(self.id())
     if self.is_debugging and stdout:
       sys.stderr.write('==== stdout {} ====\n'.format(_id))
-      sys.stderr.write(stdout)
+      sys.stderr.write(six.ensure_text(stdout))
       sys.stderr.write('==== end stdout ====\n')
     if self.is_debugging and stderr:
       sys.stderr.write('==== stderr {} ====\n'.format(_id))
-      sys.stderr.write(stderr)
+      sys.stderr.write(six.ensure_text(stderr))
       sys.stderr.write('==== end stderr ====\n')
     if self.is_debugging and log_output:
       sys.stderr.write('==== log output {} ====\n'.format(_id))
-      sys.stderr.write(log_output)
+      sys.stderr.write(six.ensure_text(log_output))
       sys.stderr.write('==== end log output ====\n')
 
   def RunCommand(self,
@@ -189,7 +193,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     """
     args = args or []
 
-    command_line = ' '.join([command_name] + args)
+    command_line = six.ensure_text(' '.join([command_name] + args))
     if self.is_debugging:
       self.stderr_save.write('\nRunCommand of {}\n'.format(command_line))
 
@@ -249,17 +253,17 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       if self.is_debugging and log_output:
         self.stderr_save.write('==== logging RunCommand {} {} ====\n'.format(
             _id, command_line))
-        self.stderr_save.write(log_output)
+        self.stderr_save.write(six.ensure_text(log_output))
         self.stderr_save.write('\n==== end logging ====\n')
       if self.is_debugging and stdout:
         self.stderr_save.write('==== stdout RunCommand {} {} ====\n'.format(
             _id, command_line))
-        self.stderr_save.write(stdout)
+        self.stderr_save.write(six.ensure_text(stdout))
         self.stderr_save.write('==== end stdout ====\n')
       if self.is_debugging and stderr:
         self.stderr_save.write('==== stderr RunCommand {} {} ====\n'.format(
             _id, command_line))
-        self.stderr_save.write(stderr)
+        self.stderr_save.write(six.ensure_text(stderr))
         self.stderr_save.write('==== end stderr ====\n')
 
       # Reset stdout and stderr files, so that we won't print them out again
