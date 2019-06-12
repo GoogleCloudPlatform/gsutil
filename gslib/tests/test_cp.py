@@ -15,8 +15,8 @@
 """Integration tests for cp command."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import base64
@@ -25,6 +25,7 @@ import datetime
 import gslib
 import gzip
 from hashlib import md5
+import io
 import logging
 import os
 import pickle
@@ -34,7 +35,6 @@ import re
 import string
 import sys
 import threading
-import io
 
 import six
 from six.moves import http_client
@@ -1001,6 +1001,42 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertNotRegex(stdout, r'image/gif,\s*image/gif')
 
     _Check2()
+
+  @SkipForXML('No compressed transport encoding support for the XML API.')
+  @SequentialAndParallelTransfer
+  def test_request_reason_header(self):
+    """Tests that x-goog-request-reason is set successfully on copy."""
+    bucket_uri = self.CreateBucket()
+    dst_uri = suri(bucket_uri, 'foo')
+    fpath = self._get_test_file('test.gif')
+
+    self.RunGsUtil(['-h', 'X-Goog-Request-Reason:b/this_is_reason', 'cp',
+                    fpath, dst_uri])
+    stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
+    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_reason')
+    dst_uri2 = suri(bucket_uri, 'bar')
+    self.RunGsUtil(['cp', dst_uri, dst_uri2])
+    # Ensure metadata was preserved across copy.
+    stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
+    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_reason')
+
+  @SkipForXML('No compressed transport encoding support for the XML API.')
+  @SequentialAndParallelTransfer
+  def test_request_reason_set_by_environment_var(self):
+    """Tests that request reason can be set successfully using the environment
+    variable CLOUDSDK_CORE_REQUEST_REASON."""
+    os.environ['CLOUDSDK_CORE_REQUEST_REASON'] = 'b/this_is_env_reason'
+    bucket_uri = self.CreateBucket()
+    dst_uri = suri(bucket_uri, 'foo')
+    fpath = self._get_test_file('test.gif')
+    self.RunGsUtil(['cp', fpath, dst_uri])
+    stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
+    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_env_reason')
+    dst_uri2 = suri(bucket_uri, 'bar')
+    self.RunGsUtil(['cp', dst_uri, dst_uri2])
+    # Ensure metadata was preserved across copy.
+    stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
+    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_env_reason')
 
   @SequentialAndParallelTransfer
   def test_other_headers(self):

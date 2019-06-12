@@ -26,6 +26,8 @@ import textwrap
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ParseError as XmlParseError
 
+import os
+
 import six
 from apitools.base.py import encoding
 import boto
@@ -115,6 +117,17 @@ def ObjectMetadataFromHeaders(headers):
     apitools Object with relevant fields populated from headers.
   """
   obj_metadata = apitools_messages.Object()
+  request_reason = os.environ.get('CLOUDSDK_CORE_REQUEST_REASON')
+  if request_reason:
+    request_reason_header_specified = False
+    for header in headers:
+      if header.lower() == 'x-goog-request-reason':
+        # if the request reason is also specified in X-Goog-Request-Reason,
+        # then use this one.
+        request_reason_header_specified = True
+        break
+    if not request_reason_header_specified:
+      headers['X-Goog-Request-Reason'] = request_reason
   for header, value in headers.items():
     if CACHE_CONTROL_REGEX.match(header):
       obj_metadata.cacheControl = value.strip()
@@ -146,7 +159,10 @@ def ObjectMetadataFromHeaders(headers):
       custom_amz_metadata_match = CUSTOM_AMZ_METADATA_REGEX.match(header)
       custom_amz_header_match = CUSTOM_AMZ_HEADER_REGEX.match(header)
       header_key = None
-      if custom_goog_metadata_match:
+      if header.lower() == 'x-goog-request-reason':
+        # Allow users to set the 'X-Goog-Request-Reason' header in HTTP requests
+        header_key = 'X-Goog-Request-Reason'
+      elif custom_goog_metadata_match:
         header_key = custom_goog_metadata_match.group('header_key')
       elif custom_amz_metadata_match:
         header_key = custom_amz_metadata_match.group('header_key')
@@ -237,7 +253,10 @@ def HeadersFromObjectMetadata(dst_obj_metadata, provider):
       if additional_property.key in S3_MARKER_GUIDS:
         continue
       if provider == 'gs':
-        header_name = 'x-goog-meta-' + additional_property.key
+        if additional_property.key.lower() == 'x-goog-request-reason':
+          header_name = additional_property.key
+        else:
+          header_name = 'x-goog-meta-' + additional_property.key
       elif provider == 's3':
         if additional_property.key.startswith(S3_HEADER_PREFIX):
           header_name = ('x-amz-' +
