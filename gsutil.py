@@ -26,11 +26,14 @@ import warnings
 
 # TODO: gsutil-beta: Distribute a pylint rc file.
 
-ver = sys.version_info
-if (ver.major == 2 and ver.minor < 7) or (ver.major == 3 and ver.minor < 5):
-  sys.exit('gsutil requires python 2.7 or 3.5+.')
-
-# setup a string to load the correct httplib2
+##### TODO(PY3-release): Remove these 2 lines and uncomment the following lines.
+if (2, 7) != sys.version_info[:2]:
+  sys.exit('gsutil requires python 2.7.')
+#ver = sys.version_info
+#if (ver.major == 2 and ver.minor < 7) or (ver.major == 3 and ver.minor < 5):
+#  sys.exit('gsutil requires python 2.7 or 3.5+.')
+#
+## setup a string to load the correct httplib2
 if sys.version_info.major == 2:
   submodule_pyvers = 'python2'
 else:
