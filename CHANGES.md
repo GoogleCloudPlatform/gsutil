@@ -1,3 +1,25 @@
+Release 4.39 (release date: 2019-06-13)
+=======================================
+New Features
+------------------
+- Compression level is now configurable by setting "gzip_compression_level"
+  under the "GSUtil" section in the boto config file. The default value is 9.
+
+ Bug Fixes
+------------------
+- Fixed bug where IAM operations failed on buckets whose names lacked any
+  letters.
+
+ Other Changes
+------------------
+- Revised contribution guidelines to direct developers to submit GitHub pull
+  requests instead of using the Rietveld code review tool.
+- Several code changes to work toward Python 3 support (coming in a subsequent
+  release).
+- Several documentation and command help improvements.
+- Various improvements to test stability and feedback.
+
+
 Release 4.38 (release date: 2019-03-25)
 =======================================
 Bug Fixes
