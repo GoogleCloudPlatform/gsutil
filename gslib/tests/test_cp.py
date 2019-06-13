@@ -1037,7 +1037,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # use the reason specified in http header
     self.RunGsUtil(['-h', 'X-Goog-Request-Reason:b/this_is_reason', 'cp',
                     dst_uri, dst_uri2])
-    # Ensure metadata was preserved across copy.
     stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
     self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_reason')
 
