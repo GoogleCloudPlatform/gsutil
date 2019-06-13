@@ -1033,10 +1033,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
     self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_env_reason')
     dst_uri2 = suri(bucket_uri, 'bar')
-    self.RunGsUtil(['cp', dst_uri, dst_uri2])
+    # test when both environment variable and http header is set,
+    # use the reason specified in http header
+    self.RunGsUtil(['-h', 'X-Goog-Request-Reason:b/this_is_reason', 'cp',
+                    dst_uri, dst_uri2])
     # Ensure metadata was preserved across copy.
     stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
-    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_env_reason')
+    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_reason')
 
   @SequentialAndParallelTransfer
   def test_other_headers(self):
