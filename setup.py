@@ -22,6 +22,8 @@ from setuptools import setup
 from setuptools.command import build_py
 from setuptools.command import sdist
 
+long_desc_content_type = 'text/plain'
+
 long_desc = """
 gsutil is a Python application that lets you access Google Cloud Storage from
 the command line. You can use gsutil to do a wide range of bucket and object
@@ -113,6 +115,7 @@ setup(
     description=('A command line tool for interacting with cloud storage '
                  'services.'),
     long_description=long_desc,
+    long_description_content_type=long_desc_content_type,
     zip_safe=True,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
