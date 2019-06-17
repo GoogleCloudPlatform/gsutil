@@ -1046,7 +1046,7 @@ class _DiffIterator(object):
                      crc32c, md5)
     """
     (encoded_url, size, time_created, atime, mtime, mode, uid, gid, crc32c,
-     md5) = line.split()
+     md5) = line.rsplit(None, 9)
     return (
         _DecodeUrl(encoded_url),
         int(size),
