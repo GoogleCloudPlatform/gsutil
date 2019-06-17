@@ -74,10 +74,15 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
   # subdirs (like gslib) because that would require deeper parsing of
   # MANFFEST.in, and most users who drop data into gsutil dir do so at the top
   # level directory.
+  addl_excludes = (
+      '.DS_Store',
+      '.style.yapf',
+      '.travis.yml',
+      '.yapfignore',
+      '__pycache__',
+  )
   for filename in os.listdir(directory):
-    if (filename.endswith('.pyc') or filename == '__pycache__' or
-        filename == '.travis.yml' or (IS_OSX and filename == '.DS_Store')):
-      # Ignore compiled code and travis config and macOS's .DS_Store file.
+    if filename.endswith('.pyc') or filename in addl_excludes:
       continue
     if filename not in manifest_lines:
       raise CommandException('\n'.join(
