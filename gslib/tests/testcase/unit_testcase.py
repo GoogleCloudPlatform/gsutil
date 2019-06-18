@@ -41,6 +41,8 @@ import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
 from gslib.utils.constants import UTF8
+from gslib.utils.text_util import get_utf8able_str
+from gslib.utils.text_util import print_to_fd
 
 
 class GsutilApiUnitTestClassMapFactory(object):
@@ -127,8 +129,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         stderr = sys.stderr.buffer.read()
     [six.ensure_text(string) for string in self.accumulated_stderr]
     [six.ensure_text(string) for string in self.accumulated_stdout]
-    stdout = six.ensure_text(stdout)
-    stderr = six.ensure_text(stderr)
+    stdout = six.ensure_text(get_utf8able_str(stdout))
+    stderr = six.ensure_text(get_utf8able_str(stderr))
     stdout += ''.join(self.accumulated_stdout)
     stderr += ''.join(self.accumulated_stderr)
     sys.stdout.close()
@@ -140,17 +142,17 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     _id = six.ensure_text(self.id())
     if self.is_debugging and stdout:
-      sys.stderr.write('==== stdout {} ====\n'.format(_id))
-      sys.stderr.write(six.ensure_text(stdout))
-      sys.stderr.write('==== end stdout ====\n')
+      print_to_fd('==== stdout {} ====\n'.format(_id), file=sys.stderr)
+      print_to_fd(stdout, file=sys.stderr)
+      print_to_fd('==== end stdout ====\n', file=sys.stderr)
     if self.is_debugging and stderr:
-      sys.stderr.write('==== stderr {} ====\n'.format(_id))
-      sys.stderr.write(six.ensure_text(stderr))
-      sys.stderr.write('==== end stderr ====\n')
+      print_to_fd('==== stderr {} ====\n'.format(_id), file=sys.stderr)
+      print_to_fd(stderr, file=sys.stderr)
+      print_to_fd('==== end stderr ====\n', file=sys.stderr)
     if self.is_debugging and log_output:
-      sys.stderr.write('==== log output {} ====\n'.format(_id))
-      sys.stderr.write(six.ensure_text(log_output))
-      sys.stderr.write('==== end log output ====\n')
+      print_to_fd('==== log output {} ====\n'.format(_id), file=sys.stderr)
+      print_to_fd(log_output, file=sys.stderr)
+      print_to_fd('==== end log output ====\n', file=sys.stderr)
 
   def RunCommand(self,
                  command_name,
@@ -195,7 +197,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     command_line = six.ensure_text(' '.join([command_name] + args))
     if self.is_debugging:
-      self.stderr_save.write('\nRunCommand of {}\n'.format(command_line))
+      print_to_fd('\nRunCommand of {}\n'.format(command_line), file=self.stderr_save)
 
     # Save and truncate stdout and stderr for the lifetime of RunCommand. This
     # way, we can return just the stdout and stderr that was output during the
@@ -251,20 +253,20 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
       _id = six.ensure_text(self.id())
       if self.is_debugging and log_output:
-        self.stderr_save.write('==== logging RunCommand {} {} ====\n'.format(
-            _id, command_line))
-        self.stderr_save.write(six.ensure_text(log_output))
-        self.stderr_save.write('\n==== end logging ====\n')
+        print_to_fd('==== logging RunCommand {} {} ====\n'.format(
+            _id, command_line), file=self.stderr_save)
+        print_to_fd(log_output, file=self.stderr_save)
+        print_to_fd('\n==== end logging ====\n', file=self.stderr_save)
       if self.is_debugging and stdout:
-        self.stderr_save.write('==== stdout RunCommand {} {} ====\n'.format(
-            _id, command_line))
-        self.stderr_save.write(six.ensure_text(stdout))
-        self.stderr_save.write('==== end stdout ====\n')
+        print_to_fd('==== stdout RunCommand {} {} ====\n'.format(
+            _id, command_line), file=self.stderr_save)
+        print_to_fd(stdout, file=self.stderr_save)
+        print_to_fd('==== end stdout ====\n', file=self.stderr_save)
       if self.is_debugging and stderr:
-        self.stderr_save.write('==== stderr RunCommand {} {} ====\n'.format(
-            _id, command_line))
-        self.stderr_save.write(six.ensure_text(stderr))
-        self.stderr_save.write('==== end stderr ====\n')
+        print_to_fd('==== stderr RunCommand {} {} ====\n'.format(
+            _id, command_line), file=self.stderr_save)
+        print_to_fd(stderr, file=self.stderr_save)
+        print_to_fd('==== end stderr ====\n', file=self.stderr_save)
 
       # Reset stdout and stderr files, so that we won't print them out again
       # in tearDown if debugging is enabled.
