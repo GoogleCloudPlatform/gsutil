@@ -2835,6 +2835,24 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check()
 
+  def test_rsync_files_with_whitespace(self):
+    """Test to ensure filenames with whitespace can be rsynced"""
+    filename = 'foo bar baz.txt'
+    local_uris = []
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    contents = 'File from rsync test: test_rsync_files_with_whitespace'
+    local_file = self.CreateTempFile(tmpdir, contents, filename)
+
+    expected_list_results = frozenset(['/foo bar baz.txt'])
+
+    # Tests rsync works as expected.
+    self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_uri)])
+    listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
+    listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+    self.assertEquals(set(listing1), expected_list_results)
+    self.assertEquals(set(listing2), expected_list_results)
+
   @SkipForS3('No compressed transport encoding support for S3.')
   @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer
