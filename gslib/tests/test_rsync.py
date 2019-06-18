@@ -2847,7 +2847,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     expected_list_results = frozenset(['/foo bar baz.txt'])
 
-    """Tests rsync works as expected."""
+    # Tests rsync works as expected.
     self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_uri)])
     listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
     listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
