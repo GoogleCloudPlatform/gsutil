@@ -1002,7 +1002,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     _Check2()
 
-  @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer
   def test_request_reason_header(self):
     """Tests that x-goog-request-reason is set successfully on copy."""
@@ -1013,14 +1012,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['-h', 'X-Goog-Request-Reason:b/this_is_reason', 'cp',
                     fpath, dst_uri])
     stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
-    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_reason')
+    self.assertRegex(stdout.lower(), r'x-goog-request-reason:b/this_is_reason')
     dst_uri2 = suri(bucket_uri, 'bar')
     self.RunGsUtil(['cp', dst_uri, dst_uri2])
     # Ensure metadata was preserved across copy.
     stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
-    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_reason')
+    self.assertRegex(stdout.lower(), r'x-goog-request-reason:b/this_is_reason')
 
-  @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer
   def test_request_reason_set_by_environment_var(self):
     """Tests that request reason can be set successfully using the environment
@@ -1031,14 +1029,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self._get_test_file('test.gif')
     self.RunGsUtil(['cp', fpath, dst_uri])
     stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
-    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_env_reason')
+    self.assertRegex(stdout.lower(), r'x-goog-request-reason:b/this_is_env_reason')
     dst_uri2 = suri(bucket_uri, 'bar')
     # test when both environment variable and http header is set,
     # use the reason specified in http header
     self.RunGsUtil(['-h', 'X-Goog-Request-Reason:b/this_is_reason', 'cp',
                     dst_uri, dst_uri2])
     stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
-    self.assertRegex(stdout, r'X-Goog-Request-Reason:b/this_is_reason')
+    self.assertRegex(stdout.lower(), r'x-goog-request-reason:b/this_is_reason')
 
   @SequentialAndParallelTransfer
   def test_other_headers(self):
