@@ -88,7 +88,8 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
       if '.git' not in comp:
         cp_src_path = os.path.join(GSUTIL_DIR, comp)
         cp_dst_path = os.path.join(gsutil_dst, comp)
-        func = shutil.copytree if os.path.isdir(cp_src_path) else shutil.copyfile
+        func = shutil.copytree if os.path.isdir(
+            cp_src_path) else shutil.copyfile
         func(cp_src_path, cp_dst_path)
 
     # Create a fake version number in the source so we can verify it in the
