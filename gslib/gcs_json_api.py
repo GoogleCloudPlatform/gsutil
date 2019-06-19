@@ -24,6 +24,7 @@ import functools
 from six.moves import http_client
 import json
 import logging
+import os
 import socket
 import ssl
 import time
@@ -83,6 +84,8 @@ from gslib.utils.boto_util import JsonResumableChunkSizeDefined
 from gslib.utils.cloud_api_helper import ListToGetFields
 from gslib.utils.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.utils.constants import NUM_OBJECTS_PER_LIST_PAGE
+from gslib.utils.constants import REQUEST_REASON_ENV_VAR
+from gslib.utils.constants import REQUEST_REASON_HEADER_KEY
 from gslib.utils.constants import UTF8
 from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.utils.encryption_helper import CryptoKeyType
@@ -259,6 +262,10 @@ class GcsJsonApi(CloudApi):
       additional_http_headers['Host'] = gs_json_host_header
 
     self._AddPerfTraceTokenToHeaders(additional_http_headers)
+
+    request_reason = os.environ.get(REQUEST_REASON_ENV_VAR)
+    if request_reason:
+      additional_http_headers[REQUEST_REASON_HEADER_KEY] = request_reason
 
     log_request = (debug >= 3)
     log_response = (debug >= 3)
