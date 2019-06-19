@@ -197,7 +197,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     command_line = six.ensure_text(' '.join([command_name] + args))
     if self.is_debugging:
-      print_to_fd('\nRunCommand of {}\n'.format(command_line), file=self.stderr_save)
+      print_to_fd('\nRunCommand of {}\n'.format(command_line),
+                  file=self.stderr_save)
 
     # Save and truncate stdout and stderr for the lifetime of RunCommand. This
     # way, we can return just the stdout and stderr that was output during the
@@ -254,17 +255,20 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       _id = six.ensure_text(self.id())
       if self.is_debugging and log_output:
         print_to_fd('==== logging RunCommand {} {} ====\n'.format(
-            _id, command_line), file=self.stderr_save)
+            _id, command_line),
+                    file=self.stderr_save)
         print_to_fd(log_output, file=self.stderr_save)
         print_to_fd('\n==== end logging ====\n', file=self.stderr_save)
       if self.is_debugging and stdout:
         print_to_fd('==== stdout RunCommand {} {} ====\n'.format(
-            _id, command_line), file=self.stderr_save)
+            _id, command_line),
+                    file=self.stderr_save)
         print_to_fd(stdout, file=self.stderr_save)
         print_to_fd('==== end stdout ====\n', file=self.stderr_save)
       if self.is_debugging and stderr:
         print_to_fd('==== stderr RunCommand {} {} ====\n'.format(
-            _id, command_line), file=self.stderr_save)
+            _id, command_line),
+                    file=self.stderr_save)
         print_to_fd(stderr, file=self.stderr_save)
         print_to_fd('==== end stderr ====\n', file=self.stderr_save)
 
