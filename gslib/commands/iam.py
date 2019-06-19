@@ -62,6 +62,9 @@ _GET_SYNOPSIS = """
   gsutil iam get url
 """
 
+# Note that the commands below are put in quotation marks instead of backticks;
+# this is done because the whole ch synopsis gets rendered in one <pre> tag in
+# the web docs, and having literal double-backticks looks weird.
 _CH_SYNOPSIS = """
   gsutil iam ch [-fRr] binding ... url
 
@@ -72,12 +75,12 @@ _CH_SYNOPSIS = """
       -d ("user"|"serviceAccount"|"domain"|"group"):id
       -d ("allUsers"|"allAuthenticatedUsers")
 
-  Note: The ``iam ch`` command does not support changing IAM policies with
-  bindings that contain conditions. As such, ``iam ch`` cannot be used to add
+  Note: The "iam ch" command does not support changing IAM policies with
+  bindings that contain conditions. As such, "iam ch" cannot be used to add
   conditions to a policy or to change the policy of a resource that already
   contains conditions. See additional details below.
 
-  Note: The ``gsutil iam`` command disallows using project convenience groups
+  Note: The "gsutil iam" command disallows using project convenience groups
   (projectOwner, projectEditor, projectViewer) as the first segment of a binding
   because these groups go against the principle of least privilege.
 
