@@ -364,6 +364,8 @@ class LsCommand(Command):
       fields['default_kms_key'] = 'None'
     fields['encryption_config'] = 'Present' if bucket.encryption else 'None'
     # Fields not available in all APIs (e.g. the XML API)
+    if bucket.locationType:
+      fields['location_type'] = bucket.locationType
     if bucket.metageneration:
       fields['metageneration'] = bucket.metageneration
     if bucket.timeCreated:
@@ -392,12 +394,15 @@ class LsCommand(Command):
 
     # Only display certain properties if the given API returned them (JSON API
     # returns many fields that the XML API does not).
+    location_type_line = ''
     metageneration_line = ''
     time_created_line = ''
     time_updated_line = ''
     default_eventbased_hold_line = ''
     retention_policy_line = ''
     bucket_policy_only_enabled_line = ''
+    if 'location_type' in fields:
+      location_type_line = '\tLocation type:\t\t\t{location_type}\n'
     if 'metageneration' in fields:
       metageneration_line = '\tMetageneration:\t\t\t{metageneration}\n'
     if 'time_created' in fields:
@@ -415,7 +420,7 @@ class LsCommand(Command):
 
     text_util.print_to_fd(
         ('{bucket} :\n'
-         '\tStorage class:\t\t\t{storage_class}\n'
+         '\tStorage class:\t\t\t{storage_class}\n' + location_type_line +
          '\tLocation constraint:\t\t{location_constraint}\n'
          '\tVersioning enabled:\t\t{versioning}\n'
          '\tLogging configuration:\t\t{logging_config}\n'
@@ -538,6 +543,7 @@ class LsCommand(Command):
             'iamConfiguration',
             'labels',
             'location',
+            'locationType',
             'logging',
             'lifecycle',
             'metageneration',

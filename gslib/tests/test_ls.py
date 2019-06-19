@@ -479,18 +479,36 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.assertRegex(stdout, label_regex)
 
   @SkipForS3('S3 bucket configuration values are not supported via ls.')
-  def test_location(self):
+  def test_location_constraint(self):
     """Tests listing a bucket with location constraint."""
     bucket_uri = self.CreateBucket()
     bucket_suri = suri(bucket_uri)
 
-    # No location info
+    # No location constraint should be shown for `-lb`
     stdout = self.RunGsUtil(['ls', '-lb', bucket_suri], return_stdout=True)
-    self.assertNotIn('Location constraint', stdout)
+    self.assertNotIn('Location constraint:', stdout)
 
     # Default location constraint is US
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Location constraint:\t\tUS', stdout)
+    # Default location may vary between test environments; test that some
+    # non-whitespace character is present after the whitespace:
+    self.assertRegex(stdout, r'Location constraint:\s+\S')
+
+  @SkipForXML('Location type not available when using the GCS XML API.')
+  @SkipForS3('Location type not printed for S3 buckets.')
+  def test_location_type(self):
+    """Tests listing a bucket with location constraint."""
+    bucket_uri = self.CreateBucket()
+    bucket_suri = suri(bucket_uri)
+
+    # No location type should be shown for `-lb`
+    stdout = self.RunGsUtil(['ls', '-lb', bucket_suri], return_stdout=True)
+    self.assertNotIn('Location type:', stdout)
+
+    # Default location type may vary between test environments; test that some
+    # non-whitespace character is present after the whitespace:
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
+    self.assertRegex(stdout, r'Location type:\s+\S')
 
   @SkipForS3('S3 bucket configuration values are not supported via ls.')
   def test_logging(self):
