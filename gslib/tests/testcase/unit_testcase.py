@@ -27,6 +27,7 @@ import tempfile
 import six
 
 import boto
+from boto.utils import get_utf8able_str
 from gslib import project_id
 from gslib import wildcard_iterator
 from gslib.boto_translation import BotoTranslation
@@ -41,7 +42,6 @@ import gslib.tests.util as util
 from gslib.tests.util import unittest
 from gslib.tests.util import WorkingDirectory
 from gslib.utils.constants import UTF8
-from gslib.utils.text_util import get_utf8able_str
 from gslib.utils.text_util import print_to_fd
 
 
