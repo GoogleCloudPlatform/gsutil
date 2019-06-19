@@ -404,4 +404,3 @@ def get_random_ascii_chars(size, seed=0):
   contents = six.ensure_binary(contents)
   random.seed()  # Reset the seed for any other tests.
   return contents
-
