@@ -494,6 +494,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # non-whitespace character is present after the whitespace:
     self.assertRegex(stdout, r'Location constraint:\s+\S')
 
+  # TODO(b/135700569): Stop skipping this once this field is available to all
+  # projects.
+  @unittest.skip('b/135700569')
   @SkipForXML('Location type not available when using the GCS XML API.')
   @SkipForS3('Location type not printed for S3 buckets.')
   def test_location_type(self):
