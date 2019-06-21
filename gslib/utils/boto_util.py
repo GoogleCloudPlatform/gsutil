@@ -396,8 +396,18 @@ def MonkeyPatchBoto():
         gcs_oauth2_boto_plugin.oauth2_plugin.OAuth2ServiceAccountAuth,
         gcs_oauth2_boto_plugin.oauth2_plugin.OAuth2Auth)
     new_result = (
-        [r for r in handler_subclasses if r not in xml_oauth2_handlers] +
-        [r for r in handler_subclasses if r in xml_oauth2_handlers])
+        # We need to sort each of these to avoid inconsistent handler selection
+        # when multiple credential types are configured in Python 3.5. See
+        # https://issuetracker.google.com/issues/135709541 for specific logs.
+        sorted(
+            [r for r in handler_subclasses if r not in xml_oauth2_handlers],
+            # Types aren't sortable, so we use their names:
+            key=(lambda handler_t: handler_t.__name__),
+        ) +  # Now append XML handlers to the end (highest precedence)
+        sorted(
+            [r for r in handler_subclasses if r in xml_oauth2_handlers],
+            key=(lambda handler_t: handler_t.__name__),
+        ))
     return new_result
 
   boto.plugin.get_plugin = _PatchedGetPluginMethod
