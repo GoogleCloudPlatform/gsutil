@@ -144,7 +144,7 @@ _CREATE_DESCRIPTION = """
 
   In order to enable notifications, a `special Cloud Storage service account
   <https://cloud.google.com/storage/docs/projects#service-accounts>`_ unique to
-  each project must have the IAM permission "projects.topics.publish". This
+  each project must have the IAM permission "pubsub.topics.publish". This
   command will check to see if that permission exists and, if not, will attempt
   to grant it.
 
