@@ -1026,6 +1026,20 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
 
   @SequentialAndParallelTransfer
+  def test_request_reason_header(self):
+    """Test that x-goog-request-header can be set using the environment variable."""
+    os.environ['CLOUDSDK_CORE_REQUEST_REASON'] = 'b/this_is_env_reason'
+    bucket_uri = self.CreateBucket()
+    dst_uri = suri(bucket_uri, 'foo')
+    fpath = self._get_test_file('test.gif')
+    # Ensure x-goog-request-header is set in cp command
+    stderr = self.RunGsUtil(['-D','cp', fpath, dst_uri], return_stderr=True)
+    self.assertRegex(stderr, r'\'x-goog-request-reason\': \'b/this_is_env_reason\'')
+    # Ensure x-goog-request-header is set in ls command
+    stderr = self.RunGsUtil(['-D', 'ls', '-L', dst_uri], return_stderr=True)
+    self.assertRegex(stderr, r'\'x-goog-request-reason\': \'b/this_is_env_reason\'')
+
+  @SequentialAndParallelTransfer
   def test_versioning(self):
     """Tests copy with versioning."""
     bucket_uri = self.CreateVersionedBucket()
