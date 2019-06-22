@@ -3807,8 +3807,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def start_over_error_test_helper(self, http_error_num):
     bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=get_random_ascii_chars(size=(ONE_MIB *
-                                                                      4)))
+    rand_chars = get_random_ascii_chars(size=(ONE_MIB * 4))
+    fpath = self.CreateTempFile(contents=rand_chars)
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     if self.test_api == ApiSelector.JSON:
       test_callback_file = self.CreateTempFile(
