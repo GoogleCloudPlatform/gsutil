@@ -3807,7 +3807,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   def start_over_error_test_helper(self, http_error_num):
     bucket_uri = self.CreateBucket()
-    # The bucket contents need to be fairly large to avoid the race condition
+    # The object contents need to be fairly large to avoid the race condition
     # where the contents finish uploading before we artifically halt the copy.
     rand_chars = get_random_ascii_chars(size=(ONE_MIB * 4))
     fpath = self.CreateTempFile(contents=rand_chars)
