@@ -964,7 +964,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                          stderr=subprocess.PIPE,
                          stdin=subprocess.PIPE,
                          env=envstr)
-    c_out = p.communicate(stdin)
+    comm_kwargs = {'input': stdin}
+    if six.PY3:
+      # TODO(b/135936279): Make this number configurable in .boto
+      comm_kwargs['timeout'] = 180
+    c_out = p.communicate(**comm_kwargs)
     try:
       c_out = [six.ensure_text(output) for output in c_out]
     except UnicodeDecodeError:
