@@ -621,6 +621,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
       self.assertEqual(f.read(), 'quux')
 
+  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents=b'foo')
     invalid_bucket_uri = ('%s://%s' %
@@ -1070,6 +1071,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn('cannot be the destination for gsutil cp', stderr)
 
+  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_versioning_no_parallelism(self):
     """Tests that copy all-versions errors when parallelism is enabled."""
     stderr = self.RunGsUtil([
