@@ -1033,11 +1033,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dst_uri = suri(bucket_uri, 'foo')
     fpath = self._get_test_file('test.gif')
     # Ensure x-goog-request-header is set in cp command
-    stderr = self.RunGsUtil(['-D','cp', fpath, dst_uri], return_stderr=True)
-    self.assertRegex(stderr, r'\'x-goog-request-reason\': \'b/this_is_env_reason\'')
+    stderr = self.RunGsUtil(['-D', 'cp', fpath, dst_uri], return_stderr=True)
+    self.assertRegex(stderr,
+                     r'\'x-goog-request-reason\': \'b/this_is_env_reason\'')
     # Ensure x-goog-request-header is set in ls command
     stderr = self.RunGsUtil(['-D', 'ls', '-L', dst_uri], return_stderr=True)
-    self.assertRegex(stderr, r'\'x-goog-request-reason\': \'b/this_is_env_reason\'')
+    self.assertRegex(stderr,
+                     r'\'x-goog-request-reason\': \'b/this_is_env_reason\'')
 
   @SequentialAndParallelTransfer
   def test_versioning(self):
