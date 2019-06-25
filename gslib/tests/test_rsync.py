@@ -2535,6 +2535,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check2()
 
+  # TODO(b/135780661): Remove retry after bug resolved
   @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_rsync_from_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
@@ -2551,6 +2552,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # Dir should have un-altered content.
     self.assertEquals(listing, set(['/obj1', '/.obj2']))
 
+  # TODO(b/135780661): Remove retry after bug resolved
   @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_rsync_to_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
