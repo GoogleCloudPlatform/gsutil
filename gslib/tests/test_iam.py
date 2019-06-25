@@ -615,26 +615,33 @@ class TestIamCh(TestIamIntegration):
     self.assertHas(bucket_iam_string, self.user, IAM_BUCKET_READ_ROLE)
     self.assertHas(bucket2_iam_string, self.user, IAM_BUCKET_READ_ROLE)
 
-  # TODO(b/135780661): Remove retry after bug resolved
-  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_patch_multithreaded_error(self):
     """See TestIamSet.test_set_multithreaded_error."""
-    stderr = self.RunGsUtil([
-        '-m', 'iam', 'ch', '-r',
-        '%s:legacyObjectReader' % self.user,
-        'gs://%s' % self.nonexistent_bucket_name, self.bucket.uri
-    ],
-                            return_stderr=True,
-                            expected_status=1)
-    self.assertIn('BucketNotFoundException', stderr)
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stderr = self.RunGsUtil([
+          '-m', 'iam', 'ch', '-r',
+          '%s:legacyObjectReader' % self.user,
+          'gs://%s' % self.nonexistent_bucket_name, self.bucket.uri
+      ],
+                              return_stderr=True,
+                              expected_status=1)
+      self.assertIn('BucketNotFoundException', stderr)
 
-    object_iam_string = self.RunGsUtil(['iam', 'get', self.object.uri],
-                                       return_stdout=True)
-    object2_iam_string = self.RunGsUtil(['iam', 'get', self.object2.uri],
-                                        return_stdout=True)
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      object_iam_string = self.RunGsUtil(['iam', 'get', self.object.uri],
+                                         return_stdout=True)
+      object2_iam_string = self.RunGsUtil(['iam', 'get', self.object2.uri],
+                                          return_stdout=True)
 
-    self.assertEqualsPoliciesString(self.object_iam_string, object_iam_string)
-    self.assertEqualsPoliciesString(self.object_iam_string, object2_iam_string)
+      self.assertEqualsPoliciesString(self.object_iam_string, object_iam_string)
+      self.assertEqualsPoliciesString(self.object_iam_string, object2_iam_string)
+
+    _Check1()
+    _Check2()
 
   def test_assert_has(self):
     test_policy = {
@@ -801,21 +808,29 @@ class TestIamSet(TestIamIntegration):
           return_stderr=True)
       self.assertIn('Estimated work for this command: objects: 1\n', stderr)
 
-  # TODO(b/135780661): Remove retry after bug resolved
-  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_set_invalid_iam_bucket(self):
     """Ensures invalid content returns error on input check."""
-    inpath = self.CreateTempFile(contents=b'badIam')
-    stderr = self.RunGsUtil(['iam', 'set', inpath, self.bucket.uri],
-                            return_stderr=True,
-                            expected_status=1)
-    self.assertIn('ArgumentException', stderr)
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      inpath = self.CreateTempFile(contents=b'badIam')
+      stderr = self.RunGsUtil(['iam', 'set', inpath, self.bucket.uri],
+                              return_stderr=True,
+                              expected_status=1)
+      self.assertIn('ArgumentException', stderr)
 
-    # Tests that setting with a non-existent file will also return error.
-    stderr = self.RunGsUtil(['iam', 'set', 'nonexistent/path', self.bucket.uri],
-                            return_stderr=True,
-                            expected_status=1)
-    self.assertIn('ArgumentException', stderr)
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      # Tests that setting with a non-existent file will also return error.
+      stderr = self.RunGsUtil(['iam', 'set', 'nonexistent/path', self.bucket.uri],
+                              return_stderr=True,
+                              expected_status=1)
+      self.assertIn('ArgumentException', stderr)
+
+    _Check1()
+    _Check2()
+
 
   def test_get_invalid_bucket(self):
     """Ensures that invalid bucket names returns an error."""
@@ -1150,8 +1165,6 @@ class TestIamSet(TestIamIntegration):
     # The IAM policy has also been set on Bucket "bucket2".
     self.assertEqualsPoliciesString(set_iam_string, set_iam_string2)
 
-  # TODO(b/135780661): Remove retry after bug resolved
-  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_set_multithreaded_error(self):
     """Tests fail-fast behavior of multithreaded iam set.
 
@@ -1171,24 +1184,34 @@ class TestIamSet(TestIamIntegration):
     iterating over gs://bad_bucket.
     """
 
-    gsutil_object = self.CreateObject(bucket_uri=self.bucket,
-                                      contents=b'foobar')
-    gsutil_object2 = self.CreateObject(bucket_uri=self.bucket,
-                                       contents=b'foobar')
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stderr = self.RunGsUtil([
+          '-m', 'iam', 'set', '-r', self.new_object_iam_path,
+          'gs://%s' % self.nonexistent_bucket_name, self.bucket.uri
+      ],
+                              return_stderr=True,
+                              expected_status=1)
+      self.assertIn('BucketNotFoundException', stderr)
 
-    stderr = self.RunGsUtil([
-        '-m', 'iam', 'set', '-r', self.new_object_iam_path,
-        'gs://%s' % self.nonexistent_bucket_name, self.bucket.uri
-    ],
-                            return_stderr=True,
-                            expected_status=1)
-    self.assertIn('BucketNotFoundException', stderr)
-    set_iam_string = self.RunGsUtil(['iam', 'get', gsutil_object.uri],
-                                    return_stdout=True)
-    set_iam_string2 = self.RunGsUtil(['iam', 'get', gsutil_object2.uri],
-                                     return_stdout=True)
-    self.assertEqualsPoliciesString(set_iam_string, set_iam_string2)
-    self.assertEqualsPoliciesString(self.object_iam_string, set_iam_string)
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      gsutil_object = self.CreateObject(bucket_uri=self.bucket,
+                                        contents=b'foobar')
+      gsutil_object2 = self.CreateObject(bucket_uri=self.bucket,
+                                         contents=b'foobar')
+      set_iam_string = self.RunGsUtil(['iam', 'get', gsutil_object.uri],
+                                      return_stdout=True)
+      set_iam_string2 = self.RunGsUtil(['iam', 'get', gsutil_object2.uri],
+                                       return_stdout=True)
+      self.assertEqualsPoliciesString(set_iam_string, set_iam_string2)
+      self.assertEqualsPoliciesString(self.object_iam_string, set_iam_string)
+
+    _Check1()
+    _Check2()
+
 
   def test_set_valid_iam_single_unversioned_object(self):
     """Tests setting a valid IAM on an object."""
