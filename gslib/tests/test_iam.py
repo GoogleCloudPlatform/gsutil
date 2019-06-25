@@ -615,6 +615,8 @@ class TestIamCh(TestIamIntegration):
     self.assertHas(bucket_iam_string, self.user, IAM_BUCKET_READ_ROLE)
     self.assertHas(bucket2_iam_string, self.user, IAM_BUCKET_READ_ROLE)
 
+  # TODO(b/135780661): Remove retry after bug resolved
+  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_patch_multithreaded_error(self):
     """See TestIamSet.test_set_multithreaded_error."""
     stderr = self.RunGsUtil([
@@ -799,6 +801,8 @@ class TestIamSet(TestIamIntegration):
           return_stderr=True)
       self.assertIn('Estimated work for this command: objects: 1\n', stderr)
 
+  # TODO(b/135780661): Remove retry after bug resolved
+  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_set_invalid_iam_bucket(self):
     """Ensures invalid content returns error on input check."""
     inpath = self.CreateTempFile(contents=b'badIam')
@@ -1146,6 +1150,8 @@ class TestIamSet(TestIamIntegration):
     # The IAM policy has also been set on Bucket "bucket2".
     self.assertEqualsPoliciesString(set_iam_string, set_iam_string2)
 
+  # TODO(b/135780661): Remove retry after bug resolved
+  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_set_multithreaded_error(self):
     """Tests fail-fast behavior of multithreaded iam set.
 
