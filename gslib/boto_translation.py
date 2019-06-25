@@ -80,6 +80,8 @@ from gslib.utils.boto_util import GetNumRetries
 from gslib.utils.cloud_api_helper import ListToGetFields
 from gslib.utils.cloud_api_helper import ValidateDstObjectMetadata
 from gslib.utils.constants import DEFAULT_FILE_BUFFER_SIZE
+from gslib.utils.constants import REQUEST_REASON_ENV_VAR
+from gslib.utils.constants import REQUEST_REASON_HEADER_KEY
 from gslib.utils.constants import S3_DELETE_MARKER_GUID
 from gslib.utils.constants import UTF8
 from gslib.utils.constants import XML_PROGRESS_CALLBACKS
@@ -1252,6 +1254,9 @@ class BotoTranslation(CloudApi):
       base_headers['x-goog-api-version'] = self.api_version
     if self.provider == 'gs' and self.perf_trace_token:
       base_headers['cookie'] = self.perf_trace_token
+    request_reason = os.environ.get(REQUEST_REASON_ENV_VAR)
+    if request_reason:
+      base_headers[REQUEST_REASON_HEADER_KEY] = request_reason
 
     return base_headers
 
