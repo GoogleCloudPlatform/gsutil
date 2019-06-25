@@ -621,16 +621,19 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
       self.assertEqual(f.read(), 'quux')
 
-  # TODO(b/135780661): Remove retry after bug resolved
-  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents=b'foo')
     invalid_bucket_uri = ('%s://%s' %
                           (self.default_provider, self.nonexistent_bucket_name))
-    stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
-                            expected_status=1,
-                            return_stderr=True)
-    self.assertIn('does not exist', stderr)
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
+                              expected_status=1,
+                              return_stderr=True)
+      self.assertIn('does not exist', stderr)
+
+    _Check()
 
   def test_copy_in_cloud_noclobber(self):
     bucket1_uri = self.CreateBucket()
@@ -1088,18 +1091,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn('cannot be the destination for gsutil cp', stderr)
 
-  # TODO(b/135780661): Remove retry after bug resolved
-  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_versioning_no_parallelism(self):
     """Tests that copy all-versions errors when parallelism is enabled."""
-    stderr = self.RunGsUtil([
-        '-m', 'cp', '-A',
-        suri(self.nonexistent_bucket_name, 'foo'),
-        suri(self.nonexistent_bucket_name, 'bar')
-    ],
-                            expected_status=1,
-                            return_stderr=True)
-    self.assertIn('-m option is not supported with the cp -A flag', stderr)
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      stderr = self.RunGsUtil([
+          '-m', 'cp', '-A',
+          suri(self.nonexistent_bucket_name, 'foo'),
+          suri(self.nonexistent_bucket_name, 'bar')
+      ],
+                              expected_status=1,
+                              return_stderr=True)
+      self.assertIn('-m option is not supported with the cp -A flag', stderr)
+
+    _Check()
 
   @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
   def test_recursive_copying_versioned_bucket(self):

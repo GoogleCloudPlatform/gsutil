@@ -2535,8 +2535,6 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check2()
 
-  # TODO(b/135780661): Remove retry after bug resolved
-  @Retry(AssertionError, tries=3, timeout_secs=1)
   def test_rsync_from_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
     tmpdir = self.CreateTempDir()
@@ -2544,16 +2542,19 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.obj2')
     bucket_url_str = '%s://%s' % (self.default_provider,
                                   self.nonexistent_bucket_name)
-    stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
-                            expected_status=1,
-                            return_stderr=True)
-    self.assertIn('Caught non-retryable exception', stderr)
-    listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
-    # Dir should have un-altered content.
-    self.assertEquals(listing, set(['/obj1', '/.obj2']))
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
+                              expected_status=1,
+                              return_stderr=True)
+      self.assertIn('Caught non-retryable exception', stderr)
+      listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
+      # Dir should have un-altered content.
+      self.assertEquals(listing, set(['/obj1', '/.obj2']))
 
-  # TODO(b/135780661): Remove retry after bug resolved
-  @Retry(AssertionError, tries=3, timeout_secs=1)
+    _Check()
+
   def test_rsync_to_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
     tmpdir = self.CreateTempDir()
@@ -2561,13 +2562,16 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.obj2')
     bucket_url_str = '%s://%s' % (self.default_provider,
                                   self.nonexistent_bucket_name)
-    stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
-                            expected_status=1,
-                            return_stderr=True)
-    self.assertIn('Caught non-retryable exception', stderr)
-    listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
-    # Dir should have un-altered content.
-    self.assertEquals(listing, set(['/obj1', '/.obj2']))
+    # TODO(b/135780661): Remove retry after bug resolved
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      stderr = self.RunGsUtil(['rsync', '-d', bucket_url_str, tmpdir],
+                              expected_status=1,
+                              return_stderr=True)
+      self.assertIn('Caught non-retryable exception', stderr)
+      listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
+      # Dir should have un-altered content.
+      self.assertEquals(listing, set(['/obj1', '/.obj2']))
 
   def test_bucket_to_bucket_minus_d_with_overwrite_and_punc_chars(self):
     """Tests that punc chars in filenames don't confuse sort order."""
