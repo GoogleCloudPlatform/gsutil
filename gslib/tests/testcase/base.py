@@ -109,7 +109,7 @@ class GsUtilTestCase(unittest.TestCase):
     """
     name = '{prefix}gsutil-test-{method}-{kind}'.format(
         prefix=prefix, method=self.GetTestMethodName(), kind=kind)
-    name = name[:MAX_BUCKET_LENGTH - 9]
+    name = name[:MAX_BUCKET_LENGTH - 13]
     name = '{name}-{rand}'.format(name=name, rand=self.MakeRandomTestString())
     total_name_len = len(name) + len(suffix)
     if suffix:

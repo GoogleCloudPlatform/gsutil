@@ -183,7 +183,7 @@ class TestTabComplete(testcase.GsUtilIntegrationTestCase):
     during tab completion may end in a dash and completion should still work.
     """
 
-    bucket_base_name = self.MakeTempName('bucket')
+    bucket_base_name = self.MakeTempName('bucket', prefix='aaa-')
     bucket_name = bucket_base_name + '-s'
     self.CreateBucket(bucket_name)
 
