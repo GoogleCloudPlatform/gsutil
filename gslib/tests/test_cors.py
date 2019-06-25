@@ -217,7 +217,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
         [suri(bucket1_uri), suri(bucket2_uri)])
     self.assertTrue(
         common_prefix.startswith(
-            'gs://%sgsutil-test-test-set-wildcard-non-null-cors-' %
+            'gs://%sgsutil-test-test-set-wildcard-non' %
             random_prefix))
     wildcard = '%s*' % common_prefix
 
