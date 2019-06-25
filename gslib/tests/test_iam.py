@@ -638,7 +638,8 @@ class TestIamCh(TestIamIntegration):
                                           return_stdout=True)
 
       self.assertEqualsPoliciesString(self.object_iam_string, object_iam_string)
-      self.assertEqualsPoliciesString(self.object_iam_string, object2_iam_string)
+      self.assertEqualsPoliciesString(self.object_iam_string,
+                                      object2_iam_string)
 
     _Check1()
     _Check2()
@@ -823,14 +824,14 @@ class TestIamSet(TestIamIntegration):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
       # Tests that setting with a non-existent file will also return error.
-      stderr = self.RunGsUtil(['iam', 'set', 'nonexistent/path', self.bucket.uri],
-                              return_stderr=True,
-                              expected_status=1)
+      stderr = self.RunGsUtil(
+          ['iam', 'set', 'nonexistent/path', self.bucket.uri],
+          return_stderr=True,
+          expected_status=1)
       self.assertIn('ArgumentException', stderr)
 
     _Check1()
     _Check2()
-
 
   def test_get_invalid_bucket(self):
     """Ensures that invalid bucket names returns an error."""
@@ -1211,7 +1212,6 @@ class TestIamSet(TestIamIntegration):
 
     _Check1()
     _Check2()
-
 
   def test_set_valid_iam_single_unversioned_object(self):
     """Tests setting a valid IAM on an object."""

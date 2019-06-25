@@ -2552,6 +2552,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Dir should have un-altered content.
       self.assertEquals(listing, set(['/obj1', '/.obj2']))
+
     _Check()
 
   def test_rsync_to_nonexistent_bucket(self):

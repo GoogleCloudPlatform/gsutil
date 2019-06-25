@@ -632,6 +632,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('does not exist', stderr)
+
     _Check()
 
   def test_copy_in_cloud_noclobber(self):
@@ -1103,6 +1104,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                               expected_status=1,
                               return_stderr=True)
       self.assertIn('-m option is not supported with the cp -A flag', stderr)
+
     _Check()
 
   @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
