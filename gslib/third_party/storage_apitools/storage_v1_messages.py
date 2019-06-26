@@ -994,6 +994,7 @@ class Policy(_messages.Message):
       the object name, e.g. projects/_/buckets/my-bucket/objects/data.txt#17.
       The current generation can be denoted with #0. This field is ignored on
       input.
+    version: The policy format version to be returned in the response.
   """
 
   class BindingsValueListEntry(_messages.Message):
@@ -1055,6 +1056,7 @@ class Policy(_messages.Message):
   etag = _messages.BytesField(2)
   kind = _messages.StringField(3, default=u'storage#policy')
   resourceId = _messages.StringField(4)
+  version = _messages.IntegerField(5, variant=_messages.Variant.INT32)
 
 
 class RewriteResponse(_messages.Message):
