@@ -40,7 +40,7 @@ requires = [
     'crcmod>=1.7',
     'fasteners>=0.14.1',
     'gcs-oauth2-boto-plugin>=2.5',
-    'google-apitools>=0.5.29',
+    'google-apitools>=0.5.30',
     'httplib2>=0.11.3',
     'google-reauth>=0.1.0',
     # TODO: Sync submodule with tag referenced here once #339 is fixed in mock.
