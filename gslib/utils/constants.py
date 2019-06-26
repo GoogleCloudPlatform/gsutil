@@ -50,6 +50,8 @@ DEFAULT_GSUTIL_STATE_DIR = os.path.expanduser(os.path.join('~', '.gsutil'))
 
 GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
 
+IAM_POLICY_VERSION = 3
+
 # Number of seconds to wait before printing a long retry warning message.
 LONG_RETRY_WARN_SEC = 10
 

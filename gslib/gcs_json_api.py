@@ -83,6 +83,7 @@ from gslib.utils.boto_util import GetNumRetries
 from gslib.utils.boto_util import JsonResumableChunkSizeDefined
 from gslib.utils.cloud_api_helper import ListToGetFields
 from gslib.utils.cloud_api_helper import ValidateDstObjectMetadata
+from gslib.utils.constants import IAM_POLICY_VERSION
 from gslib.utils.constants import NUM_OBJECTS_PER_LIST_PAGE
 from gslib.utils.constants import REQUEST_REASON_ENV_VAR
 from gslib.utils.constants import REQUEST_REASON_HEADER_KEY
@@ -335,7 +336,7 @@ class GcsJsonApi(CloudApi):
     apitools_request = apitools_messages.StorageBucketsGetIamPolicyRequest(
         bucket=bucket_name,
         userProject=self.user_project,
-        requestedPolicyVersion=3)
+        requestedPolicyVersion=IAM_POLICY_VERSION)
     global_params = apitools_messages.StandardQueryParameters()
     if fields:
       global_params.fields = ','.join(set(fields))
