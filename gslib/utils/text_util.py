@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import codecs
 import os
 import sys
 import io
@@ -148,10 +149,7 @@ def DecodeLongAsString(long_to_convert):
   Returns:
     String decoded from the input long.
   """
-  if isinstance(long_to_convert, basestring):
-    # Already converted.
-    return long_to_convert
-  return hex(long_to_convert)[2:-1].decode('hex')
+  return str(long_to_convert)
 
 
 def EncodeStringAsLong(string_to_convert):
@@ -166,7 +164,9 @@ def EncodeStringAsLong(string_to_convert):
   Returns:
     Long that represents the input string.
   """
-  return long(string_to_convert.encode('hex'), 16)
+  if six.PY2:
+    return long(codecs.encode(string_to_convert, 'hex_codec'))
+  return int(codecs.encode(string_to_convert, 'hex_codec'))
 
 
 def FixWindowsEncodingIfNeeded(input_str):
