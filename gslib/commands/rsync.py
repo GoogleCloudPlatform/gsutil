@@ -836,25 +836,28 @@ def _EncodeUrl(url_string):
   We use this for all URL encodings.
 
   Args:
-    url_string: String URL to encode.
+    url_string (unicode): String URL to encode.
 
   Returns:
-    encoded URL.
+    (str) A string encoded using urllib's `quote_plus()` method.
   """
-  url = urllib.parse.unquote_plus(url_string)
-  if six.PY2:
-    url = url.encode(constants.UTF8)
-  return url
+  # N.B.: `quote_plus()` raises an error for unicode characters like è if you
+  # don't pass it the language-appropriate string type. If you pass it `unicode`
+  # in Python 2 or `bytes` in Python 3, it leads to surprising behavior for text
+  # containing unicode chars.
+  url_string = six.ensure_str(url_string)
+  return urllib.parse.quote_plus(url_string)
 
 
 def _DecodeUrl(enc_url_string):
-  """Inverts encoding from EncodeUrl.
+  """Inverts encoding from `_EncodeUrl()`.
 
   Args:
-    enc_url_string: String URL to decode.
+    enc_url_string (str): String containing UTF-8-decodable characters that were
+        encoded using urllib's `quote_plus()`.
 
   Returns:
-    decoded URL.
+    (unicode) A decoded URL.
   """
   url = urllib.parse.unquote_plus(enc_url_string)
   if six.PY2:
