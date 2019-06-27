@@ -149,7 +149,8 @@ def DecodeLongAsString(long_to_convert):
   Returns:
     String decoded from the input long.
   """
-  return str(long_to_convert)
+  unhexed = binascii.unhexlify(hex(long_to_convert)[2:].rstrip('L'))
+  return six.ensure_str(unhexed)
 
 
 def EncodeStringAsLong(string_to_convert):
@@ -164,9 +165,12 @@ def EncodeStringAsLong(string_to_convert):
   Returns:
     Long that represents the input string.
   """
-  if six.PY2:
-    return long(codecs.encode(string_to_convert, 'hex_codec'))
-  return int(codecs.encode(string_to_convert, 'hex_codec'))
+  hex_bytestr = codecs.encode(six.ensure_binary(string_to_convert), 'hex_codec')
+  if six.PY3:
+    long = int
+  # Note that `long`/`int` accepts either `bytes` or `unicode` as the
+  # first arg in both py2 and py3:
+  return long(hex_bytestr, 16)
 
 
 def FixWindowsEncodingIfNeeded(input_str):
