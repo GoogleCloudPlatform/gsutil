@@ -42,6 +42,7 @@ from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
 from gslib.utils.unit_util import PrettyTime
 import httplib2
 
+import six
 from six import add_move, MovedModule
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
@@ -314,6 +315,14 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual('0 B', HumanReadableWithDecimalPlaces(0, 0))
     self.assertEqual('0.00 B', HumanReadableWithDecimalPlaces(0, 2))
     self.assertEqual('0.00000 B', HumanReadableWithDecimalPlaces(0, 5))
+
+  def testAmzGenerationTypeConversions(self):
+    amz_gen_as_str = six.ensure_str('9PpsRjBGjBh90IvIS96dgRc_UL6NyGqD')
+    amz_gen_as_long = 25923956239092482442895228561437790190304192615858167521375267910356975448388
+    self.assertEqual(text_util.DecodeLongAsString(amz_gen_as_long),
+                     amz_gen_as_str)
+    self.assertEqual(text_util.EncodeStringAsLong(amz_gen_as_str),
+                     amz_gen_as_long)
 
   def DoTestAddQueryParamToUrl(self, url, param_name, param_val, expected_url):
     new_url = text_util.AddQueryParamToUrl(url, param_name, param_val)

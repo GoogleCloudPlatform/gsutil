@@ -167,8 +167,6 @@ def EncodeStringAsLong(string_to_convert):
     Long that represents the input string.
   """
   hex_bytestr = codecs.encode(six.ensure_binary(string_to_convert), 'hex_codec')
-  if six.PY3:
-    long = int
   # Note that `long`/`int` accepts either `bytes` or `unicode` as the
   # first arg in both py2 and py3:
   return long(hex_bytestr, 16)
