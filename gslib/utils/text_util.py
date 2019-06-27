@@ -19,6 +19,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import binascii
+import codecs
 import os
 import sys
 import io
@@ -148,10 +150,8 @@ def DecodeLongAsString(long_to_convert):
   Returns:
     String decoded from the input long.
   """
-  if isinstance(long_to_convert, basestring):
-    # Already converted.
-    return long_to_convert
-  return hex(long_to_convert)[2:-1].decode('hex')
+  unhexed = binascii.unhexlify(hex(long_to_convert)[2:].rstrip('L'))
+  return six.ensure_str(unhexed)
 
 
 def EncodeStringAsLong(string_to_convert):
@@ -166,7 +166,10 @@ def EncodeStringAsLong(string_to_convert):
   Returns:
     Long that represents the input string.
   """
-  return long(string_to_convert.encode('hex'), 16)
+  hex_bytestr = codecs.encode(six.ensure_binary(string_to_convert), 'hex_codec')
+  # Note that `long`/`int` accepts either `bytes` or `unicode` as the
+  # first arg in both py2 and py3:
+  return long(hex_bytestr, 16)
 
 
 def FixWindowsEncodingIfNeeded(input_str):
