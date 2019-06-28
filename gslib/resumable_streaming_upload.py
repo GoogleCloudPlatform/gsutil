@@ -64,6 +64,11 @@ class ResumableStreamingJsonUploadWrapper(object):
     self._buffer_end = 0
     self._position = 0
 
+  @property
+  def mode(self):
+    """Returns the mode of the underlying file descriptor, or None."""
+    return getattr(self._orig_fp, 'mode', None)
+
   def read(self, size=-1):  # pylint: disable=invalid-name
     """"Reads from the wrapped stream.
 

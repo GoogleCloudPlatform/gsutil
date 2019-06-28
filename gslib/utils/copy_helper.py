@@ -2534,6 +2534,11 @@ class SlicedDownloadFileWrapper(object):
     self._start_byte = start_byte
     self._end_byte = end_byte
 
+  @property
+  def mode(self):
+    """Returns the mode of the underlying file descriptor, or None."""
+    return getattr(self._orig_fp, 'mode', None)
+
   def write(self, data):  # pylint: disable=invalid-name
     current_file_pos = self._orig_fp.tell()
     assert (self._start_byte <= current_file_pos and
