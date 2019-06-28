@@ -3347,7 +3347,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(ONE_KIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil([
-          'cp', '--testcallbackfile', test_callback_file,
+          '-D', 'cp', '--testcallbackfile', test_callback_file,
           suri(object_uri),
           suri(fpath2)
       ],
