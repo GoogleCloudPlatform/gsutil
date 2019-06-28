@@ -401,6 +401,11 @@ class HashingFileUploadWrapper(object):
     self._digesters_current_mark = 0
     self._hash_algs = hash_algs
 
+  @property
+  def mode(self):
+    """Returns the mode of the underlying file descriptor, or None."""
+    return getattr(self._orig_fp, 'mode', None)
+
   def read(self, size=-1):  # pylint: disable=invalid-name
     """"Reads from the wrapped file pointer and calculates hash digests.
 

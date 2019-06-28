@@ -1190,12 +1190,6 @@ class GcsJsonApi(CloudApi):
                                      end_byte=end_byte,
                                      serialization_data=serialization_data,
                                      decryption_tuple=decryption_tuple)
-      # If you are fighting a redacted exception spew in multiprocess/multithread
-      # calls, add your exception to HTTP_TRANSFER_EXCEPTIONS and put
-      # something like this immediately after the following except statement:
-      # import sys, traceback; sys.stderr.write('\n{}\n'.format(
-      #     traceback.format_exc())); sys.stderr.flush()
-      # This may hang, but you should get a stack trace spew after Ctrl-C.
       except HTTP_TRANSFER_EXCEPTIONS as e:
         self._ValidateHttpAccessTokenRefreshError(e)
         start_byte = download_stream.tell()
@@ -1206,6 +1200,24 @@ class GcsJsonApi(CloudApi):
           retries = 0
         retries += 1
         if retries > self.num_retries:
+          ##### DEBUG
+          # If you are fighting a redacted exception spew in
+          # multiprocess/multithread calls, add your exception to
+          # HTTP_TRANSFER_EXCEPTIONS and uncomment the following block.  This
+          # may hang, but you should get a stack trace spew after Ctrl-C.
+          #####
+          # import re, sys, traceback
+          # from gslib.utils import text_util
+          # message = 'some exception happened'
+          # stack_trace = traceback.format_exc()
+          # err = ('DEBUG: Exception stack trace:\n    %s\n%s\n' % (
+          #     re.sub('\\n', '\n    ', stack_trace),
+          #     message,
+          # ))
+          # dest_fd = sys.stderr
+          # text_util.print_to_fd(err, end='', file=dest_fd)
+          # dest_fd.flush()
+          ##### END DEBUG
           raise ResumableDownloadException(
               'Transfer failed after %d retries. Final exception: %s' %
               (self.num_retries, GetPrintableExceptionString(e)))
