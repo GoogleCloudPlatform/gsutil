@@ -3088,7 +3088,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   # TODO: Enable this test for sequential downloads when their tracker files are
   # modified to contain the source object generation.
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+  @unittest.skipUnless(UsingCrcmodExtension(),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def test_cp_resumable_download_generation_differs(self):
@@ -3363,7 +3363,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                           DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD))
       sliced_download = (len(contents) > sliced_download_threshold and
                          sliced_download_threshold > 0 and
-                         UsingCrcmodExtension(crcmod))
+                         UsingCrcmodExtension())
       if sliced_download:
         trackerfile_type = TrackerFileType.SLICED_DOWNLOAD
       else:
@@ -3506,7 +3506,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       with open(fpath, 'rb') as f:
         self.assertEqual(f.read(), b'abc' * ONE_KIB, 'File contents differ')
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+  @unittest.skipUnless(UsingCrcmodExtension(),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def test_cp_unresumable_sliced_download(self):
@@ -3554,7 +3554,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), b'abcd' * self.halt_size,
                          'File contents differ')
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+  @unittest.skipUnless(UsingCrcmodExtension(),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_resume(self):
@@ -3603,7 +3603,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), b'abc' * self.halt_size,
                          'File contents differ')
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+  @unittest.skipUnless(UsingCrcmodExtension(),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_partial_resume(self):
@@ -3653,7 +3653,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertEqual(f.read(), b'abc' * self.halt_size,
                          'File contents differ')
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+  @unittest.skipUnless(UsingCrcmodExtension(),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_resume_content_differs(self):
@@ -3712,7 +3712,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Final file should not exist.
       self.assertFalse(os.path.isfile(fpath))
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+  @unittest.skipUnless(UsingCrcmodExtension(),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_component_size_changed(self):
@@ -3762,7 +3762,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Restarting download from scratch', stderr)
       self.assertNotIn('Resuming download', stderr)
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+  @unittest.skipUnless(UsingCrcmodExtension(),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def test_cp_sliced_download_disabled_cross_process(self):
@@ -4129,8 +4129,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       DeleteTrackerFile(tracker_file_name)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_cp_preserve_posix_bucket_to_dir_no_errors(self):
     """Tests use of the -P flag with cp from a bucket to a local dir.
 

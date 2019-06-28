@@ -154,8 +154,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(contents, 'data2')
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_mv_preserve_posix_bucket_to_dir_no_errors(self):
     """Tests use of the -P flag with mv from a bucket to a local dir.
 

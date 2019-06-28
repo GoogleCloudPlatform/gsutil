@@ -37,11 +37,6 @@ else:
   submodule_pyvers = 'python3'
 
 
-def UsingCrcmodExtension(crcmod_module):
-  return (getattr(crcmod_module, 'crcmod', None) and
-          getattr(crcmod_module.crcmod, '_usingExtension', None))
-
-
 def OutputAndExit(message):
   sys.stderr.write('%s\n' % message)
   sys.exit(1)
