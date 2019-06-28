@@ -498,10 +498,24 @@ def ResumableThreshold():
   return config.getint('GSUtil', 'resumable_threshold', 8 * ONE_MIB)
 
 
-def UsingCrcmodExtension(crcmod):
-  return (boto.config.get('GSUtil', 'test_assume_fast_crcmod', None) or
-          (getattr(crcmod, 'crcmod', None) and
-           getattr(crcmod.crcmod, '_usingExtension', None)))
+def UsingCrcmodExtension():
+  boto_opt = boto.config.get('GSUtil', 'test_assume_fast_crcmod', None)
+  if boto_opt is not None:
+    return boto_opt
+  # Python 3 makes this attribute tough to access due to the way the top-level
+  # crcmod package imports and (identically) names its crcmod module. The only
+  # way to get it is "from crcmod.crcmod import _usingExtension". This is the
+  # alternative form of that statement, but doesn't pollute this module's
+  # namespace with a "_usingExtension" attribute. This also works in both Python
+  # 2.7 and 3.5+.
+  nested_crcmod = __import__(
+      'crcmod.crcmod',
+      globals(),
+      locals(),
+      ['_usingExtension'],
+      0,
+  )
+  return getattr(nested_crcmod, '_usingExtension', False)
 
 
 # TODO(boto-2.49.0): Remove when we pull in the next version of Boto.

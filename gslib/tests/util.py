@@ -403,7 +403,7 @@ def SequentialAndParallelTransfer(func):
     # Run the test normally once.
     func(*args, **kwargs)
 
-    if not RUN_S3_TESTS and UsingCrcmodExtension(crcmod):
+    if not RUN_S3_TESTS and UsingCrcmodExtension():
       # Try again, forcing parallel upload and sliced download.
       with SetBotoConfigForTest([
           ('GSUtil', 'parallel_composite_upload_threshold', '1'),
