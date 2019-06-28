@@ -73,6 +73,7 @@ if not UsingCrcmodExtension():
 
 class TestRsyncUnit(testcase.GsUtilUnitTestCase):
   """Unit tests for methods in the commands.rsync module."""
+
   def testUrlEncodeAndDecode(self):
     # Test special URL chars as well as unicode:
     decoded_url = 'gs://bkt/space fslash/plus+tilde~unicodeeè'
