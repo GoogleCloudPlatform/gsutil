@@ -632,7 +632,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
     """
     self._test_ui_composite_upload_resume_helper()
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
+  @unittest.skipUnless(UsingCrcmodExtension(),
                        'Sliced download requires fast crcmod.')
   @SkipForS3('No sliced download support for S3.')
   def _test_ui_sliced_download_partial_resume_helper(self, gsutil_flags=None):

@@ -133,7 +133,7 @@ class VersionCommand(Command):
               config_paths=config_paths,
               gsutil_path=(GetCloudSdkGsutilWrapperScriptPath() or
                            gslib.GSUTIL_PATH),
-              compiled_crcmod=UsingCrcmodExtension(crcmod),
+              compiled_crcmod=UsingCrcmodExtension(),
               is_package_install=gslib.IS_PACKAGE_INSTALL,
               is_editable_install=gslib.IS_EDITABLE_INSTALL,
           ))

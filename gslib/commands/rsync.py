@@ -1603,7 +1603,7 @@ class RsyncCommand(Command):
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
     self.stats_lock = parallelism_framework_util.CreateLock()
-    if not UsingCrcmodExtension(crcmod):
+    if not UsingCrcmodExtension():
       if self.compute_file_checksums:
         self.logger.warn(SLOW_CRCMOD_WARNING)
       else:

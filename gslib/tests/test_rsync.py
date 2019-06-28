@@ -67,7 +67,7 @@ if six.PY3:
   long = int
 
 NO_CHANGES = 'Building synchronization state...\nStarting synchronization...\n'
-if not UsingCrcmodExtension(crcmod):
+if not UsingCrcmodExtension():
   NO_CHANGES = SLOW_CRCMOD_RSYNC_WARNING + '\n' + NO_CHANGES
 
 
@@ -220,8 +220,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_bucket_to_bucket_preserve_posix(self):
     """Tests that rsync -P works with bucket to bucket."""
     # Note that unlike bucket to dir tests POSIX attributes cannot be verified
@@ -787,8 +786,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   # Test sequential upload as well as parallel composite upload case.
   @SequentialAndParallelTransfer
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_dir_to_bucket_mtime(self):
     """Tests dir to bucket with mtime.
 
@@ -950,8 +948,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   # Test sequential upload as well as parallel composite upload case.
   @SequentialAndParallelTransfer
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_dir_to_bucket_seek_ahead(self):
     """Tests that rsync seek-ahead iterator works correctly."""
     # Unfortunately, we have to retry the entire operation in the case of
@@ -1017,8 +1014,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   # Test sequential upload as well as parallel composite upload case.
   @SequentialAndParallelTransfer
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_dir_to_bucket_minus_d(self):
     """Tests that flat and recursive rsync dir to bucket works correctly."""
     # Create dir and bucket with 1 overlapping object, 1 extra object at root
@@ -1154,8 +1150,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check6()
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_dir_to_dir_mtime(self):
     """Tests that flat and recursive rsync dir to dir works correctly."""
     # Create 2 dirs with 1 overlapping file, 1 extra file at root
@@ -1295,8 +1290,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check3()
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_dir_to_dir_minus_d(self):
     """Tests that flat and recursive rsync dir to dir works correctly."""
     # Create 2 dirs with 1 overlapping file, 1 extra file at root
@@ -1472,8 +1466,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check()
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_bucket_to_dir_compressed_encoding(self):
     temp_file = self.CreateTempFile(contents=b'foo', file_name='bar')
     bucket_uri = self.CreateBucket()
@@ -1487,8 +1480,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertIn('bar has a compressed content-encoding', stderr)
 
   @SequentialAndParallelTransfer
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_bucket_to_dir_mtime(self):
     """Tests bucket to dir with mtime at the source."""
     # Create bucket and dir with overlapping content and other combinations of
@@ -1863,8 +1855,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   @SequentialAndParallelTransfer
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_bucket_to_dir_preserve_posix_no_errors(self):
     """Tests that rsync -P works properly with default file attributes."""
     bucket_uri = self.CreateBucket()
@@ -2004,8 +1995,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                                      uid=USER_ID,
                                      mode=0o444)
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_bucket_to_dir_minus_d(self):
     """Tests that flat and recursive rsync bucket to dir works correctly."""
     # Create bucket and dir with 1 overlapping object, 1 extra object at root
@@ -2140,8 +2130,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check6()
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_bucket_to_dir_minus_d_with_fname_case_change(self):
     """Tests that name case changes work correctly.
 
@@ -2181,8 +2170,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check1()
 
-  @unittest.skipUnless(UsingCrcmodExtension(crcmod),
-                       'Test requires fast crcmod.')
+  @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
   def test_bucket_to_dir_minus_d_with_leftover_dir_placeholder(self):
     """Tests that we correctly handle leftover dir placeholders.
 

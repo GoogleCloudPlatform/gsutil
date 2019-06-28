@@ -2346,7 +2346,7 @@ def _ShouldDoSlicedDownload(download_strategy, src_obj_metadata,
   # integrity check.
   check_hashes_config = config.get('GSUtil', 'check_hashes',
                                    CHECK_HASH_IF_FAST_ELSE_FAIL)
-  parallel_hashing = src_obj_metadata.crc32c and UsingCrcmodExtension(crcmod)
+  parallel_hashing = src_obj_metadata.crc32c and UsingCrcmodExtension()
   hashing_okay = parallel_hashing or check_hashes_config == CHECK_HASH_NEVER
 
   use_slice = (allow_splitting and
@@ -2357,8 +2357,7 @@ def _ShouldDoSlicedDownload(download_strategy, src_obj_metadata,
 
   if (not use_slice and
       src_obj_metadata.size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD and
-      not UsingCrcmodExtension(crcmod) and
-      check_hashes_config != CHECK_HASH_NEVER):
+      not UsingCrcmodExtension() and check_hashes_config != CHECK_HASH_NEVER):
     with suggested_sliced_transfers_lock:
       if not suggested_sliced_transfers.get('suggested'):
         logger.info('\n'.join(

@@ -145,7 +145,7 @@ class HashCommand(Command):
       calc_crc32c = True
       calc_md5 = True
 
-    if calc_crc32c and not boto_util.UsingCrcmodExtension(crcmod):
+    if calc_crc32c and not boto_util.UsingCrcmodExtension():
       logger.warn(hashing_helper.SLOW_CRCMOD_WARNING)
 
     return calc_crc32c, calc_md5, format_func, cloud_format_func, output_format
