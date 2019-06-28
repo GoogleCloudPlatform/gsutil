@@ -24,6 +24,7 @@ import os
 import six
 
 import crcmod
+from gslib.commands import rsync
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
@@ -68,6 +69,23 @@ if six.PY3:
 NO_CHANGES = 'Building synchronization state...\nStarting synchronization...\n'
 if not UsingCrcmodExtension(crcmod):
   NO_CHANGES = SLOW_CRCMOD_RSYNC_WARNING + '\n' + NO_CHANGES
+
+
+class TestRsyncUnit(testcase.GsUtilUnitTestCase):
+  """Unit tests for methods in the commands.rsync module."""
+
+  def testUrlEncodeAndDecode(self):
+    # Test special URL chars as well as unicode:
+    decoded_url = 'gs://bkt/space fslash/plus+tilde~unicodeeè'
+    encoded_url = (
+        'gs%3A%2F%2Fbkt%2Fspace+fslash%2Fplus%2Btilde%7Eunicodee%C3%A8')
+
+    # Encode accepts unicode, returns language-appropriate string type.
+    self.assertEqual(rsync._EncodeUrl(six.ensure_text(decoded_url)),
+                     six.ensure_str(encoded_url))
+    # Decode accepts language-appropriate string type, returns unicode.
+    self.assertEqual(rsync._DecodeUrl(six.ensure_str(encoded_url)),
+                     six.ensure_text(decoded_url))
 
 
 # TODO: Add inspection to the retry wrappers in this test suite where the state
