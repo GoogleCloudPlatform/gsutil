@@ -846,7 +846,7 @@ def _EncodeUrl(url_string):
   # in Python 2 or `bytes` in Python 3, it leads to surprising behavior for text
   # containing unicode chars.
   url_string = six.ensure_str(url_string)
-  return urllib.parse.quote_plus(url_string)
+  return urllib.parse.quote_plus(url_string, safe=b'~')
 
 
 def _DecodeUrl(enc_url_string):

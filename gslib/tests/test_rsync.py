@@ -78,7 +78,7 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
     # Test special URL chars as well as unicode:
     decoded_url = 'gs://bkt/space fslash/plus+tilde~unicodeeè'
     encoded_url = (
-        'gs%3A%2F%2Fbkt%2Fspace+fslash%2Fplus%2Btilde%7Eunicodee%C3%A8')
+        'gs%3A%2F%2Fbkt%2Fspace+fslash%2Fplus%2Btilde~unicodee%C3%A8')
 
     # Encode accepts unicode, returns language-appropriate string type.
     self.assertEqual(rsync._EncodeUrl(six.ensure_text(decoded_url)),
