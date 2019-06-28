@@ -1674,7 +1674,7 @@ def _UploadFileToObjectNonResumable(src_url,
   Args:
     src_url: Source StorageUrl to upload.
     src_obj_filestream: File pointer to uploadable bytes.
-    src_obj_size: Size of the source object.
+    src_obj_size (int or None): Size of the source object.
     dst_url: Destination StorageUrl for the upload.
     dst_obj_metadata: Metadata for the target object.
     preconditions: Preconditions for the upload, if any.
@@ -1744,7 +1744,7 @@ def _UploadFileToObjectResumable(src_url,
   Args:
     src_url: Source FileUrl to upload.  Must not be a stream.
     src_obj_filestream: File pointer to uploadable bytes.
-    src_obj_size: Size of the source object.
+    src_obj_size (int or None): Size of the source object.
     dst_url: Destination StorageUrl for the upload.
     dst_obj_metadata: Metadata for the target object.
     preconditions: Preconditions for the upload, if any.
@@ -1949,7 +1949,7 @@ def _ApplyZippedUploadCompression(src_url, src_obj_filestream, src_obj_size,
     src_url: Source FileUrl.
     src_obj_filestream: Read stream of the source file - will be consumed
       and closed.
-    src_obj_size: Size of the source file.
+    src_obj_size (int or None): Size of the source file.
     logger: for outputting log messages.
 
   Returns:
@@ -1972,7 +1972,8 @@ def _ApplyZippedUploadCompression(src_url, src_obj_filestream, src_obj_size,
           'gzip compression is not currently supported on streaming uploads. '
           'Remove the compression flag or save the streamed output '
           'temporarily to a file before uploading.')
-    if CheckFreeSpace(gzip_path) < 2 * int(src_obj_size):
+    if src_obj_size is not None and (CheckFreeSpace(gzip_path) <
+                                     2 * int(src_obj_size)):
       raise CommandException('Inadequate temp space available to compress '
                              '%s. See the CHANGING TEMP DIRECTORIES section '
                              'of "gsutil help cp" for more info.' % src_url)
@@ -2071,7 +2072,7 @@ def _UploadFileToObject(src_url,
   Args:
     src_url: Source FileUrl.
     src_obj_filestream: Read stream of the source file to be read and closed.
-    src_obj_size: Size of the source file.
+    src_obj_size (int or None): Size of the source file.
     dst_url: Destination CloudUrl.
     dst_obj_metadata: Metadata to be applied to the destination object.
     preconditions: Preconditions to use for the copy.
@@ -3771,8 +3772,9 @@ def PerformCopy(logger,
     # Set the source size in the manifest.
     manifest.Set(src_url.url_string, 'size', src_obj_size)
 
-  if (dst_url.scheme == 's3' and src_obj_size > S3_MAX_UPLOAD_SIZE and
-      src_url != 's3'):
+  if (dst_url.scheme == 's3' and src_url != 's3' and
+      src_obj_size is not None and  # Can't compare int to None in py3
+      src_obj_size > S3_MAX_UPLOAD_SIZE):
     raise CommandException(
         '"%s" exceeds the maximum gsutil-supported size for an S3 upload. S3 '
         'objects greater than %s in size require multipart uploads, which '

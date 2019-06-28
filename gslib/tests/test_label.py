@@ -60,6 +60,13 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     super(TestLabelS3, self).setUp()
     self.xml_fpath = self.CreateTempFile(contents=self._label_xml.encode(UTF8))
 
+  def DoAssertItemsMatch(self, item1, item2):
+    if six.PY2:
+      self.assertItemsEqual(item1, item2)
+    else:
+      # The name was switched, and to a more misleading name, in PY3. Oh well.
+      self.assertCountEqual(item1, item2)
+
   def _LabelDictFromXmlString(self, xml_str):
     label_dict = {}
     tags_list = Tags()
@@ -88,8 +95,8 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertItemsEqual(self._LabelDictFromXmlString(stdout),
-                            self._LabelDictFromXmlString(self._label_xml))
+      self.DoAssertItemsMatch(self._LabelDictFromXmlString(stdout),
+                              self._LabelDictFromXmlString(self._label_xml))
 
     _Check1()
 
@@ -108,8 +115,8 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertItemsEqual(self._LabelDictFromXmlString(stdout),
-                            self._LabelDictFromXmlString(self._label_xml))
+      self.DoAssertItemsMatch(self._LabelDictFromXmlString(stdout),
+                              self._LabelDictFromXmlString(self._label_xml))
 
     _Check1()
 
@@ -126,7 +133,8 @@ class TestLabelS3(testcase.GsUtilIntegrationTestCase):
     def _Check2():
       stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                               return_stdout=True)
-      self.assertItemsEqual(self._LabelDictFromXmlString(stdout), expected_dict)
+      self.DoAssertItemsMatch(self._LabelDictFromXmlString(stdout),
+                              expected_dict)
 
     _Check2()
 
