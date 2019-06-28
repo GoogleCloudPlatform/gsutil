@@ -1972,8 +1972,8 @@ def _ApplyZippedUploadCompression(src_url, src_obj_filestream, src_obj_size,
           'gzip compression is not currently supported on streaming uploads. '
           'Remove the compression flag or save the streamed output '
           'temporarily to a file before uploading.')
-    if src_obj_size is not None and (
-        CheckFreeSpace(gzip_path) < 2 * int(src_obj_size)):
+    if src_obj_size is not None and (CheckFreeSpace(gzip_path) <
+                                     2 * int(src_obj_size)):
       raise CommandException('Inadequate temp space available to compress '
                              '%s. See the CHANGING TEMP DIRECTORIES section '
                              'of "gsutil help cp" for more info.' % src_url)
@@ -3773,7 +3773,7 @@ def PerformCopy(logger,
     manifest.Set(src_url.url_string, 'size', src_obj_size)
 
   if (dst_url.scheme == 's3' and src_url != 's3' and
-      src_obj_size is not None  and # Can't compare int to None in py3
+      src_obj_size is not None and  # Can't compare int to None in py3
       src_obj_size > S3_MAX_UPLOAD_SIZE):
     raise CommandException(
         '"%s" exceeds the maximum gsutil-supported size for an S3 upload. S3 '
