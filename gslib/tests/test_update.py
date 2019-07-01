@@ -79,18 +79,28 @@ class UpdateTest(testcase.GsUtilIntegrationTestCase):
     # Path when executing from tmpdir (Windows doesn't support in-place rename)
     gsutil_relative_dst = os.path.join('gsutil', 'gsutil')
 
-    shutil.copytree(GSUTIL_DIR, gsutil_src)
+    ignore_callable = shutil.ignore_patterns(
+        '.git*',
+        '*.pyc',
+        '*.pyo',
+        '__pycache__',
+    )
+    shutil.copytree(GSUTIL_DIR, gsutil_src, ignore=ignore_callable)
     # Copy specific files rather than all of GSUTIL_DIR so we don't pick up temp
     # working files left in top-level directory by gsutil developers (like tags,
-    # .git*, etc.)
+    # .git*, .pyc files, etc.)
     os.makedirs(gsutil_dst)
     for comp in os.listdir(GSUTIL_DIR):
-      if '.git' not in comp:
+      if ('.git' not in comp and
+          '__pycache__' not in comp and
+           not comp.endswith('.pyc') and
+           not comp.endswith('.pyo')):  # yapf: disable
         cp_src_path = os.path.join(GSUTIL_DIR, comp)
         cp_dst_path = os.path.join(gsutil_dst, comp)
-        func = shutil.copytree if os.path.isdir(
-            cp_src_path) else shutil.copyfile
-        func(cp_src_path, cp_dst_path)
+        if os.path.isdir(cp_src_path):
+          shutil.copytree(cp_src_path, cp_dst_path, ignore=ignore_callable)
+        else:
+          shutil.copyfile(cp_src_path, cp_dst_path)
 
     # Create a fake version number in the source so we can verify it in the
     # destination.
