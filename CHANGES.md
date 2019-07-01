@@ -1,3 +1,24 @@
+Release 4.40 (release date: 2019-07-01)
+=======================================
+New Features
+------------------
+- Added support for running gsutil on Python 3.5+. Python 2 will reach its EOL
+  (End of Life) on Jan. 1, 2020, and gsutil will stop supporting Python 2.7 at
+  some point afterward (TBD).
+
+ Bug Fixes
+------------------
+- Fixed bug introduced in v4.39 where rsync would not correctly sync object/file
+  names containing some special URL-encodable characters (e.g. "+" and
+  whitespace characters).
+- Fixed the update command so that it no longer fails when it detects the
+  presence of additional top-level files that were added in the v4.39 release.
+
+ Other Changes
+------------------
+- Several documentation updates and clarifications.
+
+
 Release 4.39 (release date: 2019-06-13)
 =======================================
 New Features
