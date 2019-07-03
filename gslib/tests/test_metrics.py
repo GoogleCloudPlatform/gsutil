@@ -48,6 +48,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import HAS_S3_CREDS
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SkipForParFile
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FileMessage
@@ -139,6 +140,7 @@ class RetryableErrorsQueue(object):
       metrics.LogRetryableError(status_item)
 
 
+@SkipForParFile('Do not try spawning the interpreter nested in the archive.')
 @mock.patch('time.time', new=mock.MagicMock(return_value=0))
 class TestMetricsUnitTests(testcase.GsUtilUnitTestCase):
   """Unit tests for analytics data collection."""
@@ -607,6 +609,7 @@ class _ResumableUploadRetryHandler(object):
       raise self._exception_to_raise(*self._exception_args)
 
 
+@SkipForParFile('Do not try spawning the interpreter nested in the archive.')
 class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
   """Integration tests for analytics data collection."""
 
