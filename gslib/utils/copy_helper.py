@@ -1647,6 +1647,7 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
                 '(returncode=%d).\n%s' % (real_file_path, p.returncode, error))
           # Parse output by removing line delimiter
           content_type = output.rstrip()
+          content_type = six.ensure_str(content_type)
         except OSError as e:  # 'file' executable may not always be present.
           raise CommandException(
               'Encountered OSError running "file -b --mime %s"\n%s' %
