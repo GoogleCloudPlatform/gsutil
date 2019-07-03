@@ -632,6 +632,13 @@ def InvokedFromParFile():
   return 'zipimport' in loader.__class__.__module__
 
 
+def SkipForParFile(reason):
+  if InvokedFromParFile():
+    return unittest.skip(reason)
+  else:
+    return lambda func: func
+
+
 # Custom test callbacks must be pickleable, and therefore at global scope.
 class HaltingCopyCallbackHandler(object):
   """Test callback handler for intentionally stopping a resumable transfer."""

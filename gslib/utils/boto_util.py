@@ -93,6 +93,7 @@ def ConfigureCertsFile():
         if not certs_data:
           raise CommandException('Certificates file not found. Please '
                                  'reinstall gsutil from scratch')
+        certs_data = six.ensure_str(certs_data)
         fd, fname = tempfile.mkstemp(suffix='.txt', prefix='gsutil-cacerts')
         f = os.fdopen(fd, 'w')
         f.write(certs_data)

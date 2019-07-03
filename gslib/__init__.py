@@ -126,7 +126,7 @@ def _GetFileContents(filename):
 
   Returns:
     A tuple containing the absolute path to the requested file and the file's
-    contents. If the file is not actually on disk, the file path will be None.
+    contents as a string (or None if the file doesn't exist).
   """
   fpath = os.path.join(PROGRAM_FILES_DIR, filename)
   if os.path.isfile(fpath):
@@ -135,7 +135,11 @@ def _GetFileContents(filename):
   else:
     content = pkgutil.get_data('gslib', filename)
     fpath = None
-  return (fpath, content.strip())
+  if content is not None:
+    if sys.version_info.major > 2 and isinstance(content, bytes):
+      content = content.decode('utf-8')
+    content = content.strip()
+  return (fpath, content)
 
 
 # Get the version file and store it.
