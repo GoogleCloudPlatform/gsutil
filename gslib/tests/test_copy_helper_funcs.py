@@ -384,7 +384,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
     # The file command should detect HTML in the real file.
     with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'True')]):
       _SetContentTypeFromFile(src_url_stub, dst_obj_metadata_mock)
-    self.assertEqual(b'text/html; charset=us-ascii',
+    self.assertEqual('text/html; charset=us-ascii',
                      dst_obj_metadata_mock.contentType)
 
     dst_obj_metadata_mock = mock.MagicMock(contentType=None)
