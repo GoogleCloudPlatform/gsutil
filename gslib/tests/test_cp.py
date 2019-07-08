@@ -1382,6 +1382,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Ensure copy also works across json upload chunk boundaries.
       self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
 
+  @unittest.skipUnless(HAS_S3_CREDS, 'Test requires both S3 and GS credentials')
+  def test_gs_to_s3_multipart_cp(self):
+    """Ensure daisy_chain works for an object that is downloaded in 2 parts."""
+    s3_bucket = self.CreateBucket(provider='s3')
+    gs_bucket = self.CreateBucket(provider='gs', prefer_json_api=True)
+    gs_key = self.CreateObject(bucket_uri=gs_bucket,
+                               contents=b'b' * 101 * 1024 * 1024,
+                               prefer_json_api=True)
+    self.RunGsUtil(['cp', suri(gs_key), suri(s3_bucket)])
+
   @unittest.skip('This test is slow due to creating many objects, '
                  'but remains here for debugging purposes.')
   def test_daisy_chain_cp_file_sizes(self):

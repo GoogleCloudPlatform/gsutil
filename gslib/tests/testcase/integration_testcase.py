@@ -21,11 +21,13 @@ from __future__ import unicode_literals
 
 from contextlib import contextmanager
 from six.moves import cStringIO
+from threading import Timer
 import datetime
 import locale
 import logging
 import os
 import random
+import signal
 import string
 import subprocess
 import sys
@@ -958,17 +960,33 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     for k, v in six.iteritems(env):
       envstr[six.ensure_str(k)] = six.ensure_str(v)
     cmd = [six.ensure_str(part) for part in cmd]
-    # executing command
+
+    # executing command - the setsid allows us to kill the process group below
+    # if the execution times out.  With python 2.7, there's no other way to
+    # stop the execution (p.kill() doesn't work).
     p = subprocess.Popen(cmd,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          stdin=subprocess.PIPE,
-                         env=envstr)
+                         env=envstr,
+                         preexec_fn=os.setsid)
     comm_kwargs = {'input': stdin}
+
+    def kill():
+      os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+
     if six.PY3:
       # TODO(b/135936279): Make this number configurable in .boto
       comm_kwargs['timeout'] = 180
+    else:
+      timer = Timer(180, kill)
+      timer.start()
+
     c_out = p.communicate(**comm_kwargs)
+
+    if timer is not None:
+      timer.cancel()
+
     try:
       c_out = [six.ensure_text(output) for output in c_out]
     except UnicodeDecodeError:
