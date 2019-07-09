@@ -15,12 +15,12 @@
 """Wrapper for use in daisy-chained copies."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
-from collections import deque
-from contextlib import contextmanager
+import collections
+import contextlib
 import os
 import threading
 import time
@@ -66,8 +66,8 @@ class BufferWrapper(object):
         self.daisy_chain_wrapper.bytes_buffered += data_len
 
 
-@contextmanager
-def AcquireLockWithTimeout(lock, timeout):
+@contextlib.contextmanager
+def AcquireLockWithTimeout(lock, timeout):  # pylint: disable=invalid-name
   result = lock.acquire(timeout=timeout)
   yield result
   if result:
@@ -110,10 +110,12 @@ class DaisyChainWrapper(object):
           unnecessarily downloaded if there is a break in the resumable upload.
       decryption_key: Base64-encoded decryption key for the source object,
           if any.
+    Raises:
+      Exception: if the download thread doesn't start within 60 seconds
     """
     # Current read position for the upload file pointer.
     self.position = 0
-    self.buffer = deque()
+    self.buffer = collections.deque()
 
     self.bytes_buffered = 0
     # Maximum amount of bytes in memory at a time.
@@ -156,10 +158,10 @@ class DaisyChainWrapper(object):
     if not self.download_started.wait(60):
       raise Exception('Could not start download thread after 60 seconds.')
 
-  def StartDownloadThread(self, start_byte=0, progress_callback=None):
+  def StartDownloadThread(self, start_byte=0, progress_callback=None):  # pylint: disable=invalid-name
     """Starts the download thread for the source object (from start_byte)."""
 
-    def PerformDownload(start_byte, progress_callback):
+    def PerformDownload(start_byte, progress_callback):  # pylint: disable=invalid-name
       """Downloads the source object in chunks.
 
       This function checks the stop_download event and exits early if it is set.
@@ -267,6 +269,7 @@ class DaisyChainWrapper(object):
       return self.position
 
   def seek(self, offset, whence=os.SEEK_SET):  # pylint: disable=invalid-name
+    """Sets current read position of the stream."""
     restart_download = False
     if whence == os.SEEK_END:
       if offset:
@@ -311,7 +314,7 @@ class DaisyChainWrapper(object):
 
         with self.lock:
           self.position = offset
-          self.buffer = deque()
+          self.buffer = collections.deque()
           self.bytes_buffered = 0
           self.last_position = 0
           self.last_data = None
