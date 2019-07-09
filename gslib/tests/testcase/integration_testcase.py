@@ -996,7 +996,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     c_out = p.communicate(**comm_kwargs)
 
-    if timer is not None:
+    if not six.PY3:
       timer.cancel()
 
     try:
