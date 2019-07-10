@@ -1379,7 +1379,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     gs_key = self.CreateObject(bucket_uri=gs_bucket,
                                contents=b'b' * 101 * 1024 * 1024,
                                prefer_json_api=True)
-    self.RunGsUtil(['cp', suri(gs_key), suri(s3_bucket)])
+    self.RunGsUtil([
+        '-o', 's3:use-sigv4=True', '-o', 's3:host=s3.amazonaws.com', 'cp',
+        suri(gs_key),
+        suri(s3_bucket)
+    ])
 
   @unittest.skip('This test is slow due to creating many objects, '
                  'but remains here for debugging purposes.')
@@ -1925,11 +1929,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       contents = b'x' * 10000
       tmpdir = self.CreateTempDir()
 
-      local_uris = [
-          self.CreateTempFile(file_name=filename, tmpdir=tmpdir,
-                              contents=contents)
-          for filename in ('test.html', 'test.js', 'test.txt')
-      ]
+      local_uris = []
+      for filename in ('test.html', 'test.js', 'test.txt'):
+        local_uris.append(
+            self.CreateTempFile(file_name=filename,
+                                tmpdir=tmpdir,
+                                contents=contents))
 
       return (bucket_uri, tmpdir, local_uris)
 
