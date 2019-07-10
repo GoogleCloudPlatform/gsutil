@@ -104,10 +104,9 @@ _UPDATE_DESCRIPTION = """
     gsutil hmac update -s INACTIVE -e M42da= GOOG56JBMFZX6PMPTQ62VD2
 """
 
-_SYNOPSIS = (
-    _CREATE_SYNOPSIS + _DELETE_SYNOPSIS.lstrip('\n') +
-    _GET_SYNOPSIS.lstrip('\n') + _LIST_SYNOPSIS.lstrip('\n') +
-    _UPDATE_SYNOPSIS.lstrip('\n') + '\n\n')
+_SYNOPSIS = (_CREATE_SYNOPSIS + _DELETE_SYNOPSIS.lstrip('\n') +
+             _GET_SYNOPSIS.lstrip('\n') + _LIST_SYNOPSIS.lstrip('\n') +
+             _UPDATE_SYNOPSIS.lstrip('\n') + '\n\n')
 
 _DESCRIPTION = """
   The hmac command is used to interact with service account HMAC keys.
@@ -175,21 +174,11 @@ class HmacCommand(Command):
       gs_default_api=ApiSelector.JSON,
       usage_synopsis=_SYNOPSIS,
       argparse_arguments={
-          'create': [
-              CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
-          ],
-          'delete': [
-              CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
-          ],
-          'get': [
-              CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
-          ],
-          'list': [
-              CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
-          ],
-          'update': [
-              CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()
-          ],
+          'create': [CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()],
+          'delete': [CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()],
+          'get': [CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()],
+          'list': [CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()],
+          'update': [CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument()],
       },
   )
 
@@ -205,8 +194,7 @@ class HmacCommand(Command):
           'get': _get_help_text,
           'list': _list_help_text,
           'update': _update_help_text,
-      }
-  )
+      })
 
   def _CreateHmacKey(self, thread_state=None):
     """Creates HMAC key for a service account."""
@@ -216,13 +204,14 @@ class HmacCommand(Command):
       err_msg = ('%s %s requires a service account to be specified as the '
                  'last argument.\n%s')
       raise CommandException(
-          err_msg % (self.command_name, self.action_subcommand,
-                     _CREATE_SYNOPSIS))
+          err_msg %
+          (self.command_name, self.action_subcommand, _CREATE_SYNOPSIS))
 
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
-    response = gsutil_api.CreateHmacKey(
-        self.project_id, self.service_account_email, provider='gs')
+    response = gsutil_api.CreateHmacKey(self.project_id,
+                                        self.service_account_email,
+                                        provider='gs')
 
     print('%-12s %s' % ('Access ID:', response.metadata.accessId))
     print('%-12s %s' % ('Secret:', response.secret))
@@ -262,11 +251,10 @@ class HmacCommand(Command):
 
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
-    response = gsutil_api.ListHmacKeys(
-        self.project_id,
-        self.service_account_email,
-        self.show_all,
-        provider='gs')
+    response = gsutil_api.ListHmacKeys(self.project_id,
+                                       self.service_account_email,
+                                       self.show_all,
+                                       provider='gs')
 
     short_list_format = '%s\t%-12s %s'
     if self.long_list:
@@ -295,8 +283,11 @@ class HmacCommand(Command):
 
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
-    response = gsutil_api.UpdateHmacKey(
-        self.project_id, access_id, self.state, self.etag, provider='gs')
+    response = gsutil_api.UpdateHmacKey(self.project_id,
+                                        access_id,
+                                        self.state,
+                                        self.etag,
+                                        provider='gs')
 
     print(_KeyMetadataOutput(response))
 

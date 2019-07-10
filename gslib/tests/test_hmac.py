@@ -33,6 +33,7 @@ from gslib.utils.retry_util import Retry
 def _LoadServiceAccount(account_field):
   return boto.config.get_value('GSUtil', account_field)
 
+
 SERVICE_ACCOUNT = _LoadServiceAccount('test_hmac_service_account')
 ALT_SERVICE_ACCOUNT = _LoadServiceAccount('test_hmac_alt_service_account')
 LIST_SERVICE_ACCOUNT = _LoadServiceAccount('test_hmac_list_service_account')
@@ -58,15 +59,14 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
   def ExtractAccessId(self, output_string):
     id_match = re.search(r'(GOOG[\S]*)', output_string)
     if not id_match:
-      self.fail(
-          'Couldn\'t find Access Id in output string:\n"%s"' % output_string)
+      self.fail('Couldn\'t find Access Id in output string:\n"%s"' %
+                output_string)
     return id_match.group(0)
 
   def ExtractEtag(self, output_string):
     etag_match = re.search(r'\sEtag:\s+([\S]+)$', output_string)
     if not etag_match:
-      self.fail(
-          'Couldn\'t find Etag in output string:\n"%s"' % output_string)
+      self.fail('Couldn\'t find Etag in output string:\n"%s"' % output_string)
     return etag_match.group(1)
 
   def AssertKeyMetadataMatches(self,
@@ -126,8 +126,9 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
         ('hmac update -s INACTIVE -p proj', 'requires an Access ID'),
     ]
     for command, error_substr in params:
-      stderr = self.RunGsUtil(
-          command.split(), return_stderr=True, expected_status=1)
+      stderr = self.RunGsUtil(command.split(),
+                              return_stderr=True,
+                              expected_status=1)
       self.assertIn(error_substr, stderr)
 
   @unittest.skipUnless(SERVICE_ACCOUNT,

@@ -532,8 +532,9 @@ class CloudApiDelegator(CloudApi):
                    service_account_email,
                    show_deleted_keys=False,
                    provider=None):
-    return self._GetApi(provider).ListHmacKeys(
-        project_id, service_account_email, show_deleted_keys)
+    return self._GetApi(provider).ListHmacKeys(project_id,
+                                               service_account_email,
+                                               show_deleted_keys)
 
   def UpdateHmacKey(self, project_id, access_id, state, etag, provider=None):
     return self._GetApi(provider).UpdateHmacKey(project_id, access_id, state,
