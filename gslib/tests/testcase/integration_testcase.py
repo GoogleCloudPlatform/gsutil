@@ -15,32 +15,27 @@
 """Contains gsutil base integration test case class."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
-from contextlib import contextmanager
-from six.moves import cStringIO
+import contextlib
 import datetime
 import locale
 import logging
 import os
-import random
-import string
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
-
-import six
-from six.moves import range
 
 import boto
 from boto import config
 from boto.exception import StorageResponseError
 from boto.s3.deletemarker import DeleteMarker
 from boto.storage_uri import BucketStorageUri
-
 import gslib
 from gslib.boto_translation import BotoTranslation
 from gslib.cloud_api import PreconditionException
@@ -72,8 +67,9 @@ from gslib.utils.posix_util import GID_ATTR
 from gslib.utils.posix_util import MODE_ATTR
 from gslib.utils.posix_util import MTIME_ATTR
 from gslib.utils.posix_util import UID_ATTR
-from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.retry_util import Retry
+import six
+from six.moves import range
 
 LOGGER = logging.getLogger('integration-test')
 
@@ -395,6 +391,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     This check forces use of the JSON API, as encryption information is not
     returned in object metadata via the XML API.
+
+    Args:
+      object_uri_str: uri for the object.
+      encryption_key: expected CSEK key.
     """
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
       stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
@@ -410,6 +410,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     This check forces use of the JSON API, as encryption information is not
     returned in object metadata via the XML API.
+
+    Args:
+      object_uri_str: uri for the object.
+      encryption_key: expected CMEK key.
     """
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
       stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
@@ -420,6 +424,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     This check forces use of the JSON API, as encryption information is not
     returned in object metadata via the XML API.
+
+    Args:
+      object_uri_str: uri for the object.
     """
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
       stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
@@ -583,11 +590,18 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     else:
       headers = {}
 
-    # Parallel tests can easily run into bucket creation quotas.
-    # Retry with exponential backoff so that we create them as fast as we
-    # reasonably can.
+    #
     @Retry(StorageResponseError, tries=7, timeout_secs=1)
     def _CreateBucketWithExponentialBackoff():
+      """Creates a bucket, retrying with exponential backoff on error.
+
+      Parallel tests can easily run into bucket creation quotas.
+      Retry with exponential backoff so that we create them as fast as we
+      reasonably can.
+
+      Returns:
+        StorageUri for the created bucket
+      """
       try:
         bucket_uri.create_bucket(storage_class=storage_class,
                                  location=location or '',
@@ -958,17 +972,33 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     for k, v in six.iteritems(env):
       envstr[six.ensure_str(k)] = six.ensure_str(v)
     cmd = [six.ensure_str(part) for part in cmd]
-    # executing command
+
+    # executing command - the setsid allows us to kill the process group below
+    # if the execution times out.  With python 2.7, there's no other way to
+    # stop the execution (p.kill() doesn't work).
     p = subprocess.Popen(cmd,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          stdin=subprocess.PIPE,
-                         env=envstr)
+                         env=envstr,
+                         preexec_fn=os.setsid)
     comm_kwargs = {'input': stdin}
+
+    def Kill():
+      os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+
     if six.PY3:
       # TODO(b/135936279): Make this number configurable in .boto
       comm_kwargs['timeout'] = 180
+    else:
+      timer = threading.Timer(180, Kill)
+      timer.start()
+
     c_out = p.communicate(**comm_kwargs)
+
+    if not six.PY3:
+      timer.cancel()
+
     try:
       c_out = [six.ensure_text(output) for output in c_out]
     except UnicodeDecodeError:
@@ -1033,12 +1063,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       #   python3 ./gsutil test tabcomplete.TestTabComplete.test_single_object
       # so that only one subprocess is run, thus routing the output to your
       # local terminal rather than swallowing it.
-      _hacky_debugging = False
+      hacky_debugging = False
 
       results_string = None
       with tempfile.NamedTemporaryFile(
           delete=False) as tab_complete_result_file:
-        if _hacky_debugging:
+        if hacky_debugging:
           # These redirectons are valuable for debugging purposes. 1 and 2 are,
           # obviously, stdout and stderr of the subprocess. 9 is the fd for
           # argparse debug stream.
@@ -1062,7 +1092,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         results_string = tab_complete_result_file.read().decode(
             locale.getpreferredencoding())
       if results_string:
-        if _hacky_debugging:
+        if hacky_debugging:
           print('---------------------------------------')
           print(results_string)
           print('---------------------------------------')
@@ -1076,7 +1106,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     with SetBotoConfigForTest([('GSUtil', 'tab_completion_timeout', '120')]):
       _RunTabCompletion()
 
-  @contextmanager
+  @contextlib.contextmanager
   def SetAnonymousBotoCreds(self):
     # Tell gsutil not to override the real error message with a warning about
     # anonymous access if no credentials are provided in the config file.

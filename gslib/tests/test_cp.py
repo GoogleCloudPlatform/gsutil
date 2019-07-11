@@ -15,16 +15,16 @@
 """Integration tests for cp command."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
+import ast
 import base64
 import binascii
 import datetime
-import gslib
 import gzip
-from hashlib import md5
+import hashlib
 import logging
 import os
 import pickle
@@ -34,12 +34,6 @@ import re
 import string
 import sys
 import threading
-import io
-
-import six
-from six.moves import http_client
-from six.moves import xrange
-from six.moves import range
 
 from apitools.base.py import exceptions as apitools_exceptions
 import boto
@@ -47,10 +41,10 @@ from boto import storage_uri
 from boto.exception import ResumableTransferDisposition
 from boto.exception import StorageResponseError
 from boto.storage_uri import BucketStorageUri
-import crcmod
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
+from gslib.daisy_chain_wrapper import _DEFAULT_DOWNLOAD_CHUNK_SIZE
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.parallel_tracker_file import ObjectFromTracker
@@ -114,9 +108,13 @@ from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
+import six
+from six.moves import http_client
+from six.moves import range
+from six.moves import xrange
 
 if six.PY3:
-  long = int
+  long = int  # pylint: disable=redefined-builtin,invalid-name
 
 # These POSIX-specific variables aren't defined for Windows.
 # pylint: disable=g-import-not-at-top
@@ -380,9 +378,15 @@ def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
 
 
 def TestCpMvPOSIXLocalToBucketNoErrors(cls, bucket_uri, is_cp=True):
+  """Helper function for testing local to bucket POSIX preservation.
+
+  Args:
+    cls: An instance of either TestCp or TestMv.
+    bucket_uri: The uri of the bucket to cp/mv to.
+    is_cp: Whether or not the calling test suite is cp or mv.
+  """
   primary_gid = os.getgid()
   non_primary_gid = util.GetNonPrimaryGid()
-  """Helper function for testing local to bucket POSIX preservation."""
   test_params = {
       'obj1': {
           GID_ATTR: primary_gid
@@ -606,20 +610,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with open(fpath, 'rb') as f:
       self.assertIn('Skipping existing item: %s' % suri(f), stderr)
       self.assertEqual(f.read(), b'quux')
-
-  @SequentialAndParallelTransfer
-  def test_noclobber_different_size(self):
-    key_uri = self.CreateObject(contents='foo')
-    fpath = self.CreateTempFile(contents='quux')
-    stderr = self.RunGsUtil(
-        ['cp', '-n', fpath, suri(key_uri)], return_stderr=True)
-    self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
-    self.assertEqual(key_uri.get_contents_as_string(), b'foo')
-    stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
-                            return_stderr=True)
-    with open(fpath, 'r') as f:
-      self.assertIn('Skipping existing item: %s' % suri(f), stderr)
-      self.assertEqual(f.read(), 'quux')
 
   def test_dest_bucket_not_exist(self):
     fpath = self.CreateTempFile(contents=b'foo')
@@ -1382,6 +1372,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Ensure copy also works across json upload chunk boundaries.
       self.RunGsUtil(['cp', suri(s3_key), suri(gs_bucket)])
 
+  @unittest.skipUnless(HAS_S3_CREDS, 'Test requires both S3 and GS credentials')
+  def test_gs_to_s3_multipart_cp(self):
+    """Ensure daisy_chain works for an object that is downloaded in 2 parts."""
+    s3_bucket = self.CreateBucket(provider='s3')
+    gs_bucket = self.CreateBucket(provider='gs', prefer_json_api=True)
+    num_bytes = int(_DEFAULT_DOWNLOAD_CHUNK_SIZE * 1.1)
+    gs_key = self.CreateObject(bucket_uri=gs_bucket,
+                               contents=b'b' * num_bytes,
+                               prefer_json_api=True)
+    self.RunGsUtil([
+        '-o', 's3:use-sigv4=True', '-o', 's3:host=s3.amazonaws.com', 'cp',
+        suri(gs_key),
+        suri(s3_bucket)
+    ])
+
   @unittest.skip('This test is slow due to creating many objects, '
                  'but remains here for debugging purposes.')
   def test_daisy_chain_cp_file_sizes(self):
@@ -1911,38 +1916,40 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     -j flag to target specific extensions.
     """
 
-    def _create_test_data():
+    def _create_test_data():  # pylint: disable=invalid-name
       """Setup the bucket and local data to test with.
 
-        Returns:
-          Triplet containing the following values:
-            bucket_uri: String URI of cloud storage bucket to upload mock data to.
-            tmpdir: String, path of a temporary directory to write mock data to.
-            local_uris: Tuple of three strings; each is the file path to a file
-                        containing mock data.
+      Returns:
+        Triplet containing the following values:
+          bucket_uri: String URI of cloud storage bucket to upload mock data
+                      to.
+          tmpdir: String, path of a temporary directory to write mock data to.
+          local_uris: Tuple of three strings; each is the file path to a file
+                      containing mock data.
       """
       bucket_uri = self.CreateBucket()
       contents = b'x' * 10000
       tmpdir = self.CreateTempDir()
 
-      local_uris = [
-          self.CreateTempFile(file_name=filename,
-                              tmpdir=tmpdir,
-                              contents=contents)
-          for filename in ('test.html', 'test.js', 'test.txt')
-      ]
+      local_uris = []
+      for filename in ('test.html', 'test.js', 'test.txt'):
+        local_uris.append(
+            self.CreateTempFile(file_name=filename,
+                                tmpdir=tmpdir,
+                                contents=contents))
 
       return (bucket_uri, tmpdir, local_uris)
 
-    def _upload_test_data(tmpdir, bucket_uri):
+    def _upload_test_data(tmpdir, bucket_uri):  # pylint: disable=invalid-name
       """Upload local test data.
 
-        Args:
-          tmpdir: String, path of a temporary directory to write mock data to.
-          bucket_uri: String URI of cloud storage bucket to upload mock data to.
+      Args:
+        tmpdir: String, path of a temporary directory to write mock data to.
+        bucket_uri: String URI of cloud storage bucket to upload mock data to.
 
-        Returns:
-          stderr: String output from running the gsutil command to upload mock data.
+      Returns:
+        stderr: String output from running the gsutil command to upload mock
+                  data.
       """
       stderr = self.RunGsUtil([
           '-D', 'cp', '-j', 'js, html',
@@ -1953,13 +1960,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.AssertNObjectsInBucket(bucket_uri, 3)
       return stderr
 
-    def _assert_sent_compressed(local_uris, stderr):
+    def _assert_sent_compressed(local_uris, stderr):  # pylint: disable=invalid-name
       """Ensure the correct files were marked for compression.
 
-        Args:
-          local_uris: Tuple of three strings; each is the file path to a file
-                      containing mock data.
-          stderr: String output from running the gsutil command to upload mock data.
+      Args:
+        local_uris: Tuple of three strings; each is the file path to a file
+                    containing mock data.
+        stderr: String output from running the gsutil command to upload mock
+                data.
       """
       local_uri_html, local_uri_js, local_uri_txt = local_uris
       assert_base_string = 'Using compressed transport encoding for file://{}.'
@@ -1967,12 +1975,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn(assert_base_string.format(local_uri_js), stderr)
       self.assertNotIn(assert_base_string.format(local_uri_txt), stderr)
 
-    def _assert_stored_uncompressed(bucket_uri, contents=b'x' * 10000):
+    def _assert_stored_uncompressed(bucket_uri, contents=b'x' * 10000):  # pylint: disable=invalid-name
       """Ensure the files are not compressed when they are stored in the bucket.
 
-        Args:
-          bucket_uri: String with URI for bucket containing uploaded test data.
-          contents: Byte string that are stored in each file in the bucket.
+      Args:
+        bucket_uri: String with URI for bucket containing uploaded test data.
+        contents: Byte string that are stored in each file in the bucket.
       """
       local_uri_html = suri(bucket_uri, 'test.html')
       local_uri_js = suri(bucket_uri, 'test.js')
@@ -1997,7 +2005,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @SequentialAndParallelTransfer
   def test_gzip_transport_encoded_parallel_upload_non_resumable(self):
     """Test non resumable, gzip encoded files upload correctly in parallel.
-    
+
     This test generates a small amount of data (e.g. 100 chars) to upload.
     Due to the small size, it will be below the resumable threshold,
     and test the behavior of non-resumable uploads.
@@ -2024,7 +2032,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   @SequentialAndParallelTransfer
   def test_gzip_transport_encoded_parallel_upload_resumable(self):
     """Test resumable, gzip encoded files upload correctly in parallel.
-    
+
     This test generates a large amount of data (e.g. halt_size amount of chars)
     to upload. Due to the large size, it will be above the resumable threshold,
     and test the behavior of resumable uploads.
@@ -2789,7 +2797,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Create component 0 to be used in the resume; it must match the name
     # that will be generated in copy_helper, so we use the same scheme.
     encoded_name = (PARALLEL_UPLOAD_STATIC_SALT + source_file).encode(UTF8)
-    content_md5 = md5()
+    content_md5 = hashlib.md5()
     content_md5.update(encoded_name)
     digest = content_md5.hexdigest()
     component_object_name = (tracker_prefix + PARALLEL_UPLOAD_TEMP_NAMESPACE +
@@ -3395,10 +3403,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_cp_download_transfer_encoded(self):
     """Tests chunked transfer encoded download handling.
 
-   Tests that download works correctly with a gzipped chunked transfer-encoded
-   object (which therefore lacks Content-Length) of a size that gets fetched
-   in a single chunk (exercising downloading of objects lacking a length
-   response header).
+    Tests that download works correctly with a gzipped chunked transfer-encoded
+    object (which therefore lacks Content-Length) of a size that gets fetched
+    in a single chunk (exercising downloading of objects lacking a length
+    response header).
     """
     # Upload a file / content-encoding / content-type that triggers this flow.
     # Note: We need to use the file with pre-zipped format and manually set the
@@ -3414,7 +3422,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     ])
     # Compute the MD5 of the uncompressed bytes.
     with gzip.open(input_filename) as fp:
-      hash_dict = {'md5': md5()}
+      hash_dict = {'md5': hashlib.md5()}
       hashing_helper.CalculateHashesFromContents(fp, hash_dict)
       in_file_md5 = hash_dict['md5'].digest()
 
@@ -3423,7 +3431,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(object_uri), suri(fpath2)])
     # Compute MD5 of the downloaded (uncompressed) file, and validate it.
     with open(fpath2, 'rb') as fp:
-      hash_dict = {'md5': md5()}
+      hash_dict = {'md5': hashlib.md5()}
       hashing_helper.CalculateHashesFromContents(fp, hash_dict)
       out_file_md5 = hash_dict['md5'].digest()
     self.assertEqual(in_file_md5, out_file_md5)
