@@ -44,6 +44,7 @@ from boto.storage_uri import BucketStorageUri
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
+from gslib.daisy_chain_wrapper import _DEFAULT_DOWNLOAD_CHUNK_SIZE
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.parallel_tracker_file import ObjectFromTracker
@@ -1376,8 +1377,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     """Ensure daisy_chain works for an object that is downloaded in 2 parts."""
     s3_bucket = self.CreateBucket(provider='s3')
     gs_bucket = self.CreateBucket(provider='gs', prefer_json_api=True)
+    num_bytes = int(_DEFAULT_DOWNLOAD_CHUNK_SIZE * 1.1)
     gs_key = self.CreateObject(bucket_uri=gs_bucket,
-                               contents=b'b' * 101 * 1024 * 1024,
+                               contents=b'b' * num_bytes,
                                prefer_json_api=True)
     self.RunGsUtil([
         '-o', 's3:use-sigv4=True', '-o', 's3:host=s3.amazonaws.com', 'cp',
