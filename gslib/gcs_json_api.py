@@ -336,7 +336,7 @@ class GcsJsonApi(CloudApi):
     apitools_request = apitools_messages.StorageBucketsGetIamPolicyRequest(
         bucket=bucket_name,
         userProject=self.user_project,
-        requestedPolicyVersion=IAM_POLICY_VERSION)
+        optionsRequestedPolicyVersion=IAM_POLICY_VERSION)
     global_params = apitools_messages.StandardQueryParameters()
     if fields:
       global_params.fields = ','.join(set(fields))
