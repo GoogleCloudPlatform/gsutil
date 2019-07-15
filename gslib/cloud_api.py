@@ -743,6 +743,8 @@ class CloudApi(object):
 
     Args:
       bucket_name: Bucket containing the objects
+      provider: Cloud storage provider to connect to.  If not present,
+                class-wide default is used.
 
     Raises:
       ArgumentException for errors during input validation.
@@ -832,6 +834,87 @@ class CloudApi(object):
       List of notification objects.
     """
     raise NotImplementedError('ListNotificationConfig must be overloaded')
+
+  def CreateHmacKey(self, project_id, service_account_email):
+    """Creates a new HMAC key for the specified service account.
+
+    Args:
+      project_id: Project ID owning the service account for which the key is to
+                  be created.
+      service_account_email: Email address of the service account for which to
+                              create a key.
+
+    Raises:
+        NotImplementedError: not implemented TODO(tuckerkirven)
+
+    Returns
+      The key metadata and the secret key material.
+    """
+    raise NotImplementedError('CreateHmacKey must be overloaded')
+
+  def DeleteHmacKey(self, project_id, access_id):
+    """Deletes an HMAC key.
+
+    Args:
+      project_id: Project ID owning the requested key.
+      access_id: Name of the HMAC key to be deleted.
+
+    Raises:
+        NotImplementedError: not implemented TODO(tuckerkirven)
+    """
+    raise NotImplementedError('DeleteHmacKey must be overloaded')
+
+  def GetHmacKey(self, project_id, access_id):
+    """Retrieves an HMAC key's metadata.
+
+    Args:
+      project_id: Project ID owning the service account of the requested key.
+      access_id: Name of the HMAC key for which the metadata is being requested.
+
+    Raises:
+        NotImplementedError: not implemented TODO(tuckerkirven)
+
+    Returns:
+      Metadata for the specified key.
+    """
+    raise NotImplementedError('GetHmacKey must be overloaded')
+
+  def ListHmacKeys(self,
+                   project_id,
+                   service_account_email,
+                   show_deleted_keys=False):
+    """Lists HMAC keys matching the criteria.
+
+    Args:
+        project_id: Name of the project from which to list HMAC keys.
+        service_account_email: If present, only keys for the given service
+                               account will be returned.
+        show_deleted_keys: If set, show keys in the DELETED state.
+    Raises:
+        NotImplementedError: not implemented TODO(tuckerkirven)
+
+    Yields:
+      List of HMAC key metadata objects.
+    """
+    raise NotImplementedError('ListHmacKeys must be overloaded')
+
+  def UpdateHmacKey(self, project_id, access_id, state, etag):
+    """Updates the state of an HMAC key.
+
+    Args:
+      project_id: Project ID owning the service account of the updated key.
+      access_id: Name of the HMAC key being updated.
+      state: The state to which the key should be updated.
+      etag: None or a string matching the key's etag to ensure the appropriate
+            version of the key is updated.
+
+    Raises:
+        NotImplementedError: not implemented TODO(tuckerkirven)
+
+    Returns:
+        The updated key metadata.
+    """
+    raise NotImplementedError('UpdateHmacKey must be overloaded')
 
 
 class Preconditions(object):

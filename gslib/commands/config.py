@@ -261,6 +261,9 @@ _DETAILED_HELP_TEXT = ("""
       test_cmd_regional_bucket_location
       test_notification_url
       use_magicfile
+      test_hmac_service_account
+      test_hmac_alt_service_account
+      test_hmac_list_service_account
 
     [OAuth2]
       client_id
@@ -573,6 +576,13 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # UNIX-like commands). When available and enabled use_magicfile should be more
 # robust because it analyzes file contents in addition to extensions.
 #use_magicfile = False
+
+# Service account emails for testing the hmac command. If these fields are not
+# populated with distinct service accounts the tests for the hmac command will
+# not be run.  Primarily useful for tool developers.
+#test_hmac_service_account =
+#test_hmac_alt_service_account =
+#test_hmac_list_service_account =
 
 # 'content_language' specifies the ISO 639-1 language code of the content, to be
 # passed in the Content-Language header. By default no Content-Language is sent.
