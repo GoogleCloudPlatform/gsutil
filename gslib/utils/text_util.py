@@ -51,8 +51,8 @@ STORAGE_CLASS_SHORTHAND_TO_FULL_NAME = {
     'STD': 'STANDARD',
 }
 
-VERSION_MATCHER = LazyWrapper(lambda: re.compile(
-    r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
+VERSION_MATCHER = LazyWrapper(
+    lambda: re.compile(r'^(?P<maj>\d+)(\.(?P<min>\d+)(?P<suffix>.*))?'))
 
 
 def AddQueryParamToUrl(url_str, param_name, param_value):

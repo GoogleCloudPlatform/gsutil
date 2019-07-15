@@ -328,7 +328,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
     command_map = {
         FakeCommandWithInvalidCompleter.command_spec.command_name:
-        FakeCommandWithInvalidCompleter()
+            FakeCommandWithInvalidCompleter()
     }
 
     runner = CommandRunner(
@@ -347,7 +347,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   def test_command_argument_parser_setup_nested_argparse_arguments(self):
     command_map = {
         FakeCommandWithNestedArguments.command_spec.command_name:
-        FakeCommandWithNestedArguments(),
+            FakeCommandWithNestedArguments(),
     }
     runner = CommandRunner(
         bucket_storage_uri_class=self.mock_bucket_storage_uri,
@@ -382,7 +382,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
     command_map = {
         FakeCommandWithCompleters.command_spec.command_name:
-        FakeCommandWithCompleters()
+            FakeCommandWithCompleters()
     }
 
     runner = CommandRunner(

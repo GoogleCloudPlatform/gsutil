@@ -745,7 +745,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           key_uri.set_contents_from_string(contents,
                                            headers={
                                                'x-goog-if-generation-match':
-                                               str(gs_idempotent_generation)
+                                                   str(gs_idempotent_generation)
                                            })
         except StorageResponseError as e:
           if e.status == 412:

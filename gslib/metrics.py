@@ -209,10 +209,10 @@ class MetricsCollector(object):
                                    ('GSUtil', 'disable_analytics_prompt'),
                                    ('GSUtil', 'use_magicfile'),
                                    ('GSUtil', 'tab_completion_time_logs')):
-      GetAndValidateConfigValue(
-          section=section,
-          category=bool_category,
-          validation_fn=lambda val: str(val).lower() in ('true', 'false'))
+      GetAndValidateConfigValue(section=section,
+                                category=bool_category,
+                                validation_fn=lambda val: str(val).lower() in
+                                ('true', 'false'))
 
     # Define a threshold for some config values which should be reasonably low.
     small_int_threshold = 2000
@@ -264,8 +264,8 @@ class MetricsCollector(object):
     GetAndValidateConfigValue(
         section='GSUtil',
         category='check_hashes',
-        validation_fn=lambda val: val in (
-            'if_fast_else_fail', 'if_fast_else_skip', 'always', 'never'))
+        validation_fn=lambda val: val in
+        ('if_fast_else_fail', 'if_fast_else_skip', 'always', 'never'))
     # pylint: enable=g-long-lambda
     GetAndValidateConfigValue(
         section='GSUtil',
@@ -278,10 +278,10 @@ class MetricsCollector(object):
     GetAndValidateConfigValue(section='GSUtil',
                               category='prefer_api',
                               validation_fn=lambda val: val in ('json', 'xml'))
-    GetAndValidateConfigValue(
-        section='OAuth2',
-        category='token_cache',
-        validation_fn=lambda val: val in ('file_system', 'in_memory'))
+    GetAndValidateConfigValue(section='OAuth2',
+                              category='token_cache',
+                              validation_fn=lambda val: val in
+                              ('file_system', 'in_memory'))
 
     return ','.join(
         sorted([
@@ -620,7 +620,7 @@ class MetricsCollector(object):
                            action=command_name,
                            **{
                                _GA_LABEL_MAP['Retryable Errors']:
-                               sum(self.retryable_errors.values())
+                                   sum(self.retryable_errors.values())
                            })
 
     # Collect the retryable errors.
@@ -704,18 +704,19 @@ class MetricsCollector(object):
     # This maps a transfer type to whether the condition has been met for it.
     transfer_types = {
         'CloudToCloud':
-        self.perf_sum_params.has_cloud_src and
-        self.perf_sum_params.has_cloud_dst,
+            self.perf_sum_params.has_cloud_src
+            and self.perf_sum_params.has_cloud_dst,
         'CloudToFile':
-        self.perf_sum_params.has_cloud_src and
-        self.perf_sum_params.has_file_dst,
+            self.perf_sum_params.has_cloud_src
+            and self.perf_sum_params.has_file_dst,
         'DaisyChain':
-        self.perf_sum_params.is_daisy_chain,
+            self.perf_sum_params.is_daisy_chain,
         'FileToCloud':
-        self.perf_sum_params.has_file_src and
-        self.perf_sum_params.has_cloud_dst,
+            self.perf_sum_params.has_file_src
+            and self.perf_sum_params.has_cloud_dst,
         'FileToFile':
-        self.perf_sum_params.has_file_src and self.perf_sum_params.has_file_dst,
+            self.perf_sum_params.has_file_src
+            and self.perf_sum_params.has_file_dst,
     }
     action = ','.join(
         sorted([

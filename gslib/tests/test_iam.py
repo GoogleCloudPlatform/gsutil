@@ -651,8 +651,7 @@ class TestIamCh(TestIamIntegration):
             'role': 'roles/storage.admin'
         }, {
             'members': ['user:foo@bar.com', 'serviceAccount:bar@foo.com'],
-            'role':
-            IAM_BUCKET_READ_ROLE
+            'role': IAM_BUCKET_READ_ROLE
         }]
     }
 

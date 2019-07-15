@@ -90,9 +90,7 @@ class DefStorageClassCommand(Command):
               CommandArgument.MakeFreeTextArgument(),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
-          'get': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
-          ],
+          'get': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),],
       },
   )
   # Help specification. See help_provider.py for documentation.

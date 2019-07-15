@@ -30,11 +30,11 @@ from gslib.exception import CommandException
 from gslib.lazy_wrapper import LazyWrapper
 
 MAX_DECRYPTION_KEYS = 100
-VALID_CMEK_RE = LazyWrapper(lambda: re.compile(
-    'projects/([^/]+)/'
-    'locations/([a-zA-Z0-9_-]{1,63})/'
-    'keyRings/([a-zA-Z0-9_-]{1,63})/'
-    'cryptoKeys/([a-zA-Z0-9_-]{1,63})$'))
+VALID_CMEK_RE = LazyWrapper(
+    lambda: re.compile('projects/([^/]+)/'
+                       'locations/([a-zA-Z0-9_-]{1,63})/'
+                       'keyRings/([a-zA-Z0-9_-]{1,63})/'
+                       'cryptoKeys/([a-zA-Z0-9_-]{1,63})$'))
 
 
 class CryptoKeyType(object):
