@@ -292,10 +292,8 @@ def WriteParallelUploadTrackerFile(tracker_file_name,
   tracker_components = []
   for component in components:
     tracker_components.append({
-        _CompositeUploadTrackerEntry.COMPONENT_NAME:
-        component.object_name,
-        _CompositeUploadTrackerEntry.COMPONENT_GENERATION:
-        component.generation
+        _CompositeUploadTrackerEntry.COMPONENT_NAME: component.object_name,
+        _CompositeUploadTrackerEntry.COMPONENT_GENERATION: component.generation
     })
   tracker_file_data = {
       _CompositeUploadTrackerEntry.COMPONENTS_LIST: tracker_components,

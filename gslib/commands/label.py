@@ -157,12 +157,8 @@ class LabelCommand(Command):
               CommandArgument.MakeNFileURLsArgument(1),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
-          'get': [
-              CommandArgument.MakeNCloudURLsArgument(1),
-          ],
-          'ch': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
-          ],
+          'get': [CommandArgument.MakeNCloudURLsArgument(1),],
+          'ch': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),],
       },
   )
   # Help specification. See help_provider.py for documentation.

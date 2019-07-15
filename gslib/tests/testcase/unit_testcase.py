@@ -294,7 +294,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
   def MakeGsUtilApi(cls, debug=0):
     gsutil_api_map = {
         ApiMapConstants.API_MAP:
-        (cls.mock_gsutil_api_class_map_factory.GetClassMap()),
+            (cls.mock_gsutil_api_class_map_factory.GetClassMap()),
         ApiMapConstants.SUPPORT_MAP: {
             'gs': [ApiSelector.XML, ApiSelector.JSON],
             's3': [ApiSelector.XML]

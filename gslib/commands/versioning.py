@@ -89,9 +89,7 @@ class VersioningCommand(Command):
               CommandArgument('mode', choices=['on', 'off']),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
-          'get': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
-          ],
+          'get': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),],
       },
   )
   # Help specification. See help_provider.py for documentation.

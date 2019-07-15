@@ -266,9 +266,7 @@ class IamCommand(Command):
       gs_api_support=[ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
-          'get': [
-              CommandArgument.MakeNCloudURLsArgument(1),
-          ],
+          'get': [CommandArgument.MakeNCloudURLsArgument(1),],
           'set': [
               CommandArgument.MakeNFileURLsArgument(1),
               CommandArgument.MakeZeroOrMoreCloudURLsArgument(),

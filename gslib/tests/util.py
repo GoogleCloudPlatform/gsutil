@@ -107,8 +107,8 @@ if not IS_WINDOWS:
   # Take the current user's UID and increment it by one, this counts as an
   # invalid UID, as the metric used is if the UID matches the current user's,
   # exactly.
-  INVALID_UID = LazyWrapper(lambda: sorted(
-      [user.pw_uid for user in pwd.getpwall()])[-1] + 1)
+  INVALID_UID = LazyWrapper(
+      lambda: sorted([user.pw_uid for user in pwd.getpwall()])[-1] + 1)
 
   # Note that because the system's GID mapping can change mid-test, tests that
   # check for specific errors should always re-fetch these GID-related values,

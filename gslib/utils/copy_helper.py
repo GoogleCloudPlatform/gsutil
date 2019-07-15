@@ -1322,19 +1322,20 @@ def _ShouldDoParallelCompositeUpload(logger,
       file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD):
     with suggested_sliced_transfers_lock:
       if not suggested_sliced_transfers.get('suggested'):
-        logger.info('\n'.join(textwrap.wrap(
-            '==> NOTE: You are uploading one or more large file(s), which '
-            'would run significantly faster if you enable parallel composite '
-            'uploads. This feature can be enabled by editing the '
-            '"parallel_composite_upload_threshold" value in your .boto '
-            'configuration file. However, note that if you do this large files '
-            'will be uploaded as '
-            '`composite objects <https://cloud.google.com/storage/docs/composite-objects>`_,'  # pylint: disable=line-too-long
-            'which means that any user who downloads such objects will need to '
-            'have a compiled crcmod installed (see "gsutil help crcmod"). This '
-            'is because without a compiled crcmod, computing checksums on '
-            'composite objects is so slow that gsutil disables downloads of '
-            'composite objects.')) + '\n')
+        logger.info('\n'.join(
+            textwrap.wrap(
+                '==> NOTE: You are uploading one or more large file(s), which '
+                'would run significantly faster if you enable parallel composite '
+                'uploads. This feature can be enabled by editing the '
+                '"parallel_composite_upload_threshold" value in your .boto '
+                'configuration file. However, note that if you do this large files '
+                'will be uploaded as '
+                '`composite objects <https://cloud.google.com/storage/docs/composite-objects>`_,'  # pylint: disable=line-too-long
+                'which means that any user who downloads such objects will need to '
+                'have a compiled crcmod installed (see "gsutil help crcmod"). This '
+                'is because without a compiled crcmod, computing checksums on '
+                'composite objects is so slow that gsutil disables downloads of '
+                'composite objects.')) + '\n')
         suggested_sliced_transfers['suggested'] = True
 
   if not (all_factors_but_size and parallel_composite_upload_threshold > 0 and

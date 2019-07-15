@@ -188,20 +188,20 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
 
     write_values_dict = {
         'First byte first chunk unaligned':
-        (one_byte, chunk_minus_one_byte, chunk, chunk),
+            (one_byte, chunk_minus_one_byte, chunk, chunk),
         'Last byte first chunk unaligned': (chunk_minus_one_byte, chunk, chunk),
         'First byte second chunk unaligned':
-        (chunk, one_byte, chunk_minus_one_byte, chunk),
+            (chunk, one_byte, chunk_minus_one_byte, chunk),
         'Last byte second chunk unaligned':
-        (chunk, chunk_minus_one_byte, one_byte, chunk),
-        'First byte final chunk unaligned': (chunk, chunk, one_byte,
-                                             chunk_minus_one_byte),
-        'Last byte final chunk unaligned': (chunk, chunk, chunk_minus_one_byte,
-                                            one_byte),
+            (chunk, chunk_minus_one_byte, one_byte, chunk),
+        'First byte final chunk unaligned':
+            (chunk, chunk, one_byte, chunk_minus_one_byte),
+        'Last byte final chunk unaligned':
+            (chunk, chunk, chunk_minus_one_byte, one_byte),
         'Half chunks': (half_chunk, half_chunk, half_chunk),
         'Many unaligned':
-        (one_byte, half_chunk, one_byte, half_chunk, chunk,
-         chunk_minus_one_byte, chunk, one_byte, half_chunk, one_byte)
+            (one_byte, half_chunk, one_byte, half_chunk, chunk,
+             chunk_minus_one_byte, chunk, one_byte, half_chunk, one_byte)
     }
     upload_file = self.CreateTempFile()
     for case_name, write_values in six.iteritems(write_values_dict):

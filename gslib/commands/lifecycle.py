@@ -118,9 +118,7 @@ class LifecycleCommand(Command):
               CommandArgument.MakeNFileURLsArgument(1),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
-          'get': [
-              CommandArgument.MakeNCloudBucketURLsArgument(1),
-          ]
+          'get': [CommandArgument.MakeNCloudBucketURLsArgument(1),]
       })
   # Help specification. See help_provider.py for documentation.
   help_spec = Command.HelpSpec(

@@ -409,9 +409,7 @@ class NotificationCommand(Command):
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
           'stopchannel': [],
-          'list': [
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
-          ],
+          'list': [CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),],
           'delete': [
               # Takes a list of one of the following:
               #   notification: projects/_/buckets/bla/notificationConfigs/5,
