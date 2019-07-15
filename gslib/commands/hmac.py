@@ -17,7 +17,7 @@ Implementation of HMAC key management command for GCS.
 
 NOTE: Any modification to this file or corresponding HMAC logic
 should be submitted in its own PR and release to avoid
-concurrency issues.
+concurrency issues in testing.
 """
 from __future__ import absolute_import
 from __future__ import division
