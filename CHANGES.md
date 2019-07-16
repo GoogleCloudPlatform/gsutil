@@ -1,3 +1,18 @@
+Release 4.41 (release date: 2019-07-16)
+=======================================
+New Features
+------------------
+- Added HMAC key management for service accounts. This includes a new "hmac"
+  command to create/get/list/update/delete HMAC keys on service accounts.
+  Currently, your project must be whitelisted for use with this new HMAC
+  functionality. This restriction will be lifted in the near future.
+
+ Bug Fixes
+------------------
+- Fixed bug where copying files > 100MiB from GCS to S3 was hanging.
+- Fixed issue where content type was sometimes set improperly. 
+
+
 Release 4.40 (release date: 2019-07-01)
 =======================================
 New Features
