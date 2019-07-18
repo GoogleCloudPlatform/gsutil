@@ -140,7 +140,7 @@ _SYNOPSIS = (_CREATE_SYNOPSIS + _DELETE_SYNOPSIS.lstrip('\n') +
 
 _DESCRIPTION = """
   The hmac command is used to interact with service account `HMAC keys
-  <cloud.google.com/storage/docs/authentication/hmackeys>`.
+  <cloud.google.com/storage/docs/authentication/hmackeys>`_.
 
   The hmac command has five sub-commands:
 """ + '\n'.join([
