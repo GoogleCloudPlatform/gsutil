@@ -605,7 +605,7 @@ class IamCommand(Command):
       raise ArgumentException('Specified IAM policy file "%s" does not exist.' %
                               file_url)
     except ValueError as e:
-      self.logger.debug('Invalid IAM policy file, ValueError:\n', e)
+      self.logger.debug('Invalid IAM policy file, ValueError:\n%s', e)
       raise ArgumentException('Invalid IAM policy file "%s".' % file_url)
 
     bindings = policy.get('bindings', [])
