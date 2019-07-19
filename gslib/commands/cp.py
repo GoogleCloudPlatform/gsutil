@@ -83,7 +83,7 @@ _DESCRIPTION_TEXT = """
 <B>DESCRIPTION</B>
   The gsutil cp command allows you to copy data between your local file
   system and the cloud, copy data within the cloud, and copy data between
-  cloud storage providers. For example, to copy all text files from the
+  cloud storage providers. For example, to upload all text files from the
   local directory to a bucket you could do:
 
     gsutil cp *.txt gs://my-bucket
@@ -92,7 +92,8 @@ _DESCRIPTION_TEXT = """
 
     gsutil cp gs://my-bucket/*.txt .
 
-  If you want to copy an entire directory tree you need to use the -r option:
+  If you want to copy an entire directory tree you need to use the -r option.
+  For example, to upload the directory tree "dir":
 
     gsutil cp -r dir gs://my-bucket
 

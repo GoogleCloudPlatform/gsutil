@@ -975,13 +975,15 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     # executing command - the setsid allows us to kill the process group below
     # if the execution times out.  With python 2.7, there's no other way to
-    # stop the execution (p.kill() doesn't work).
+    # stop the execution (p.kill() doesn't work).  Since setsid is not available
+    # on Windows, we just deal with the occasional timeouts on Windows.
+    preexec_fn = os.setsid if hasattr(os, 'setsid') else None
     p = subprocess.Popen(cmd,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          stdin=subprocess.PIPE,
                          env=envstr,
-                         preexec_fn=os.setsid)
+                         preexec_fn=preexec_fn)
     comm_kwargs = {'input': stdin}
 
     def Kill():
