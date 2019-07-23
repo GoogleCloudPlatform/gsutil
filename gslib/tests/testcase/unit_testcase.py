@@ -45,6 +45,21 @@ from gslib.utils.constants import UTF8
 from gslib.utils.text_util import print_to_fd
 
 
+def _AttemptToCloseSysFd(fd):
+  """Suppress IOError when closing sys.stdout or sys.stderr in tearDown."""
+  # In PY2, if another sibling thread/process tried closing it at the same
+  # time we did, it succeeded either way, so we just continue. This approach
+  # was taken from https://github.com/pytest-dev/pytest/pull/3305.
+  if not six.PY2:  # This doesn't happen in PY3, AFAICT.
+    fd.close()
+    return
+
+  try:
+    fd.close()
+  except IOError:
+    pass
+
+
 class GsutilApiUnitTestClassMapFactory(object):
   """Class map factory for use in unit tests.
 
@@ -133,8 +148,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     stderr = six.ensure_text(get_utf8able_str(stderr))
     stdout += ''.join(self.accumulated_stdout)
     stderr += ''.join(self.accumulated_stderr)
-    sys.stdout.close()
-    sys.stderr.close()
+    _AttemptToCloseSysFd(sys.stdout)
+    _AttemptToCloseSysFd(sys.stderr)
     sys.stdout = self.stdout_save
     sys.stderr = self.stderr_save
     os.unlink(self.stdout_file)
