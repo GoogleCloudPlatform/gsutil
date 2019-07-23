@@ -520,7 +520,7 @@ class LsCommand(Command):
 
     def MaybePrintBucketHeader(blr):
       if len(self.args) > 1:
-        text_util.print_to_fd('%s:' % blr.url_string.decode(UTF8))
+        text_util.print_to_fd('%s:' % six.ensure_text(blr.url_string))
 
     print_bucket_header = MaybePrintBucketHeader
 
@@ -581,7 +581,8 @@ class LsCommand(Command):
         # URL names a bucket, object, or object subdir ->
         # list matching object(s) / subdirs.
         def _PrintPrefixLong(blr):
-          text_util.print_to_fd('%-33s%s' % ('', blr.url_string.decode(UTF8)))
+          text_util.print_to_fd('%-33s%s' %
+                                ('', six.ensure_text(blr.url_string)))
 
         if listing_style == ListingStyle.SHORT:
           # ls helper by default readies us for a short listing.
