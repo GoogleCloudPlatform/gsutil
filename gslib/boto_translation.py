@@ -1719,7 +1719,7 @@ class BotoTranslation(CloudApi):
         generation=generation,
         not_found_exception=not_found_exception)
     if translated_exception:
-      raise translated_exception
+      raise translated_exception  # pylint: disable=raising-bad-type
     else:
       raise
 
