@@ -1764,7 +1764,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with open(logpath, 'r') as f:
       lines = f.readlines()
     if six.PY2:
-      lines = [unicode(line, UTF8) for line in lines]
+      lines = [six.text_type(line, UTF8) for line in lines]
 
     self.assertEqual(len(lines), 2)
 

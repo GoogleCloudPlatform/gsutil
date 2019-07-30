@@ -574,7 +574,7 @@ def GetTestNames():
 
 def is_file(obj):
   if six.PY2:
-    return isinstance(obj, file)
+    return isinstance(obj, file)  # pylint: disable=undefined-variable
   return isinstance(obj, io.IOBase)
 
 
