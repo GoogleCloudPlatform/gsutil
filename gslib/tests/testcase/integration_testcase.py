@@ -77,7 +77,8 @@ LOGGER = logging.getLogger('integration-test')
 # TODO: Replace tests which looks for test_api == ApiSelector.(XML|JSON) with
 # these decorators.
 def SkipForXML(reason):
-  if not USING_JSON_API:
+  """Skips the test if running S3 tests, or if prefer_api isn't set to json."""
+  if not USING_JSON_API or RUN_S3_TESTS:
     return unittest.skip(reason)
   else:
     return lambda func: func

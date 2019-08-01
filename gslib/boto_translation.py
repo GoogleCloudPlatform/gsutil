@@ -992,7 +992,8 @@ class BotoTranslation(CloudApi):
                             gzip_encoded=False):
     """See CloudApi class for function doc strings."""
     if gzip_encoded:
-      raise NotImplementedError('XML API does not suport gzip-encoded uploads.')
+      raise NotImplementedError(
+          'XML API does not support gzip-encoded uploads.')
     if self.provider == 's3':
       # Resumable uploads are not supported for s3.
       return self.UploadObject(upload_stream,
