@@ -124,18 +124,18 @@ _CH_DESCRIPTION = """
 <B>CH OPTIONS</B>
   The "ch" sub-command has the following options
 
-    -d          Remove all roles associated with the matching entity.
+  -d          Remove all roles associated with the matching entity.
 
-    -f          Normally gsutil stops at the first error. The -f option causes
-                it to continue when it encounters errors. With this option the
-                gsutil exit status will be 0 even if some ACLs couldn't be
-                changed.
+  -f          Normally gsutil stops at the first error. The -f option causes
+              it to continue when it encounters errors. With this option the
+              gsutil exit status will be 0 even if some ACLs couldn't be
+              changed.
 
-    -g          Add or modify a group entity's role.
+  -g          Add or modify a group entity's role.
 
-    -p          Add or modify a project viewers/editors/owners role.
+  -p          Add or modify a project viewers/editors/owners role.
 
-    -u          Add or modify a user entity's role.
+  -u          Add or modify a user entity's role.
 """
 
 _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
