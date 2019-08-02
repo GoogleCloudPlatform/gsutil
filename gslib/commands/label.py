@@ -109,9 +109,9 @@ _CH_DESCRIPTION = """
 <B>CH OPTIONS</B>
   The "ch" sub-command has the following options
 
-    -l          Add or update a label with the specified key and value.
+  -l          Add or update a label with the specified key and value.
 
-    -d          Remove the label with the specified key.
+  -d          Remove the label with the specified key.
 """
 
 _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +

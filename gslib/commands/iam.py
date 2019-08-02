@@ -129,17 +129,17 @@ _SET_DESCRIPTION = """
 <B>SET OPTIONS</B>
   The ``set`` sub-command has the following options
 
-    -R, -r      Performs ``iam set`` recursively to all objects under the
-                specified bucket.
+  -R, -r      Performs ``iam set`` recursively to all objects under the
+              specified bucket.
 
-    -a          Performs ``iam set`` request on all object versions.
+  -a          Performs ``iam set`` request on all object versions.
 
-    -e <etag>   Performs the precondition check on each object with the
-                specified etag before setting the policy.
+  -e <etag>   Performs the precondition check on each object with the
+              specified etag before setting the policy.
 
-    -f          Default gsutil error handling is fail-fast. This flag
-                changes the request to fail-silent mode. This is implicitly
-                set when invoking the gsutil -m option.
+  -f          Default gsutil error handling is fail-fast. This flag
+              changes the request to fail-silent mode. This is implicitly
+              set when invoking the gsutil -m option.
 """
 
 _CH_DESCRIPTION = """
@@ -198,12 +198,12 @@ _CH_DESCRIPTION = """
 <B>CH OPTIONS</B>
   The ``ch`` sub-command has the following options
 
-    -R, -r      Performs ``iam ch`` recursively to all objects under the
-                specified bucket.
+  -R, -r      Performs ``iam ch`` recursively to all objects under the
+              specified bucket.
 
-    -f          Default gsutil error handling is fail-fast. This flag
-                changes the request to fail-silent mode. This is implicitly
-                set when invoking the gsutil -m option.
+  -f          Default gsutil error handling is fail-fast. This flag
+              changes the request to fail-silent mode. This is implicitly
+              set when invoking the gsutil -m option.
 """
 
 _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +

@@ -112,16 +112,16 @@ _SET_DESCRIPTION = """
 <B>SET OPTIONS</B>
   The "set" sub-command has the following options
 
-    -R, -r      Performs "acl set" request recursively, to all objects under
-                the specified URL.
+  -R, -r      Performs "acl set" request recursively, to all objects under
+              the specified URL.
 
-    -a          Performs "acl set" request on all object versions.
+  -a          Performs "acl set" request on all object versions.
 
-    -f          Normally gsutil stops at the first error. The -f option causes
-                it to continue when it encounters errors. If some of the ACLs
-                couldn't be set, gsutil's exit status will be non-zero even if
-                this flag is set. This option is implicitly set when running
-                "gsutil -m acl...".
+  -f          Normally gsutil stops at the first error. The -f option causes
+              it to continue when it encounters errors. If some of the ACLs
+              couldn't be set, gsutil's exit status will be non-zero even if
+              this flag is set. This option is implicitly set when running
+              "gsutil -m acl...".
 """
 
 _CH_DESCRIPTION = """
@@ -260,21 +260,21 @@ _CH_DESCRIPTION = """
 <B>CH OPTIONS</B>
   The "ch" sub-command has the following options
 
-    -d          Remove all roles associated with the matching entity.
+  -d          Remove all roles associated with the matching entity.
 
-    -f          Normally gsutil stops at the first error. The -f option causes
-                it to continue when it encounters errors. With this option the
-                gsutil exit status will be 0 even if some ACLs couldn't be
-                changed.
+  -f          Normally gsutil stops at the first error. The -f option causes
+              it to continue when it encounters errors. With this option the
+              gsutil exit status will be 0 even if some ACLs couldn't be
+              changed.
 
-    -g          Add or modify a group entity's role.
+  -g          Add or modify a group entity's role.
 
-    -p          Add or modify a project viewers/editors/owners role.
+  -p          Add or modify a project viewers/editors/owners role.
 
-    -R, -r      Performs acl ch request recursively, to all objects under the
-                specified URL.
+  -R, -r      Performs acl ch request recursively, to all objects under the
+              specified URL.
 
-    -u          Add or modify a user entity's role.
+  -u          Add or modify a user entity's role.
 """
 
 _SYNOPSIS = (_SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') +
