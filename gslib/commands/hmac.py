@@ -51,7 +51,7 @@ _LIST_SYNOPSIS = """
 """
 
 _UPDATE_SYNOPSIS = """
-  gsutil hmac update -s (ACTIVE|INACTIVE) [-e etag] [-p project] access_id
+  gsutil hmac update -s <ACTIVE|INACTIVE> [-e etag] [-p project] access_id
 """
 
 _CREATE_DESCRIPTION = """
