@@ -86,20 +86,21 @@ _DETAILED_HELP_TEXT = ("""
   of objects after uploading a newer replacement object. Note also that because
   objects can be cached at various places on the Internet there is no way to
   force a cached object to expire globally (unlike the way you can force your
-  browser to refresh its cache). If you want to prevent caching of publicly
-  readable objects you should set a Cache-Control:private header on the object.
-  You can do this with a command such as:
+  browser to refresh its cache). If you want to prevent serving cached versions
+  of publicly readable objects, set "Cache-Control:no-cache, max-age=0" on the
+  object. You can do this with a command such as:
 
-    gsutil -h Cache-Control:private cp -a public-read file.png gs://your-bucket
+    gsutil -h "Cache-Control:no-cache,max-age=0" \\
+           cp -a public-read file.png gs://your-bucket
 
   Another use of Cache-Control is through the "no-transform" value,
   which instructs Google Cloud Storage to not apply any content transformations
   based on specifics of a download request, such as removing gzip
   content-encoding for incompatible clients.  Note that this parameter is only
   respected by the XML API. The Google Cloud Storage JSON API respects only the
-  no-cache and max-age Cache-Control parameters.
+  public, private, no-cache, and max-age Cache-Control parameters.
 
-  For details about how to set the Cache-Control header see
+  For details about how to set the Cache-Control metadata see
   "gsutil help setmeta".
 
 
