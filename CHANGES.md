@@ -1,3 +1,18 @@
+Release 4.42 (release date: 2019-08-05)
+=======================================
+ Bug Fixes
+------------------
+- Fixed some text encoding/decoding issues in certain Python 3 environments.
+- Fixed issue where bundled crcmod for macOS could not be imported and would
+  crash gsutil on Python 3.
+- Fixed issue where trying to run gsutil on an unsupported version of Python 3
+  (3.4 or below) would crash instead of presenting an informative error.
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
+
 Release 4.41 (release date: 2019-07-16)
 =======================================
 New Features
