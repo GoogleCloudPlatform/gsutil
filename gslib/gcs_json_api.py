@@ -224,7 +224,7 @@ class GcsJsonApi(CloudApi):
 
     self.http_base = 'https://'
     gs_json_host = config.get('Credentials', 'gs_json_host', None)
-    self.host_base = gs_json_host or 'www.googleapis.com'
+    self.host_base = gs_json_host or 'storage.googleapis.com'
 
     if not gs_json_host:
       gs_host = config.get('Credentials', 'gs_host', None)
