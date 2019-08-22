@@ -198,7 +198,8 @@ class HelpCommand(Command):
       if pager[0].endswith('less'):
         pager.append('-r')
       try:
-        Popen(pager, stdin=PIPE, universal_newlines=True).communicate(input=help_str)
+        Popen(pager, stdin=PIPE,
+              universal_newlines=True).communicate(input=help_str)
       except OSError as e:
         raise CommandException('Unable to open pager (%s): %s' %
                                (' '.join(pager), e))
