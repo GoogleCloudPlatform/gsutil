@@ -43,6 +43,8 @@ import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.utils.retry_util import Retry
+from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.testcase.integration_testcase import SkipForXML
 
 
 class TestParallelCp(testcase.GsUtilIntegrationTestCase):
@@ -215,8 +217,9 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
   def testCopyingOneNestedFileToBucketSubDir(self):
     """Tests copying one nested file to a bucket subdir."""
     # Test with and without final slash on dest subdir.
-    for final_dst_char in ('', '/'):
 
+    for final_dst_char in ('', '/'):
+      final_dst_char = '/'
       dst_bucket_uri = self.CreateBucket()
       self.CreateObject(dst_bucket_uri,
                         object_name='d0/placeholder',
@@ -228,7 +231,7 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
       for i in range(2):
         src_dir = self.CreateTempDir(test_files=[('d3', 'd4', 'nested', 'f1')])
         self.RunGsUtil([
-            'cp', '-r',
+            '-D', 'cp', '-r',
             suri(src_dir, 'd3'),
             suri(dst_bucket_uri, 'd%d' % i) + final_dst_char
         ])

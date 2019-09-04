@@ -1441,16 +1441,14 @@ def ExpandUrlToSingleBlr(url_str,
   # destination folder semantics, but requires up to three HTTP calls, noted
   # below.
 
-  # Get version of object name with trailing slash for matching prefixes
-  prefix_match_object_name = storage_url.object_name
-  if prefix_match_object_name[-1] != '/':
-    prefix_match_object_name += '/'
+  # Get version of object name without trailing slash for matching prefixes
+  prefix = storage_url.object_name.rstrip('/')
 
   # HTTP call to make an eventually consistent check for a matching prefix,
   # _$folder$, or empty listing.
   expansion_empty = True
   list_iterator = gsutil_api.ListObjects(storage_url.bucket_name,
-                                         prefix=storage_url.object_name,
+                                         prefix=prefix,
                                          delimiter='/',
                                          provider=storage_url.scheme,
                                          fields=['prefixes', 'items/name'])
@@ -1471,7 +1469,7 @@ def ExpandUrlToSingleBlr(url_str,
     expansion_empty = False
 
     if (obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.PREFIX and
-        obj_or_prefix.data == prefix_match_object_name):
+        obj_or_prefix.data == prefix + '/'):
       # Case 1: If there is a matching prefix when listing the destination URL.
       return (storage_url, True)
     elif (obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT and
