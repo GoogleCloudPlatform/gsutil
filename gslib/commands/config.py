@@ -217,6 +217,7 @@ _DETAILED_HELP_TEXT = ("""
 
     [Boto]
       proxy
+      proxy_type
       proxy_port
       proxy_user
       proxy_pass
@@ -853,6 +854,8 @@ class ConfigCommand(Command):
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
         'proxy', 'What is your proxy host? ')
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
+        'proxy_type', 'What is your proxy type (socks4, socks5, http)? ')
+    self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
         'proxy_port', 'What is your proxy port? ')
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
         'proxy_user', 'What is your proxy user (leave blank if not used)? ')
@@ -907,6 +910,9 @@ class ConfigCommand(Command):
     self._WriteConfigLineMaybeCommented(config_file, 'proxy',
                                         config.get_value('Boto', 'proxy', None),
                                         'proxy host')
+    self._WriteConfigLineMaybeCommented(
+        config_file, 'proxy_type', config.get_value('Boto', 'proxy_type', None),
+        'proxy type')
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy_port', config.get_value('Boto', 'proxy_port', None),
         'proxy port')
