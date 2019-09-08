@@ -556,7 +556,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # (e.g., "2G" to represent 2 gibibytes)
 #max_upload_compression_buffer_size = %(max_upload_compression_buffer_size)s
 
-# GZIP compression level, if using compression. Reducing this can have 
+# GZIP compression level, if using compression. Reducing this can have
 # a dramatic impact on compression speed with minor size increases.
 # This is a value from 0-9, with 9 being max compression.
 # A good level to try is 6, which is the default used by the gzip tool.
@@ -864,7 +864,7 @@ class ConfigCommand(Command):
     self._PromptForProxyConfigVarAndMaybeSaveToBotoConfig(
         'proxy_rdns',
         'Should DNS lookups be resolved by your proxy? (Y if your site '
-        'disallows client DNS lookups)? ',
+        'disallows client DNS lookups; NOT supported for socks)? ',
         convert_to_bool=True)
 
   def _WriteConfigLineMaybeCommented(self, config_file, name, value, desc):
@@ -912,7 +912,7 @@ class ConfigCommand(Command):
                                         'proxy host')
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy_type', config.get_value('Boto', 'proxy_type', None),
-        'proxy type (socks4, socks5, http)')
+        'proxy type (socks4, socks5, http) | Defaults to http')
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy_port', config.get_value('Boto', 'proxy_port', None),
         'proxy port')
@@ -925,7 +925,7 @@ class ConfigCommand(Command):
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy_rdns', config.get_value('Boto', 'proxy_rdns',
                                                     False),
-        'let proxy server perform DNS lookups')
+        'let proxy server perform DNS lookups; Not supported for socks proxy types')
 
   # pylint: disable=dangerous-default-value,too-many-statements
   def _WriteBotoConfigFile(self,

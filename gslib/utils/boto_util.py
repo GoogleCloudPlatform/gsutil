@@ -495,21 +495,25 @@ def SetProxyInfo():
   """
   #Defining proxy_type based on httplib2 library, accounting for None entry too.
   proxy_type_spec = {'socks4':1,'socks5':2,'http':3,'https':3}
-  
+
   #proxy_type defaults to 'http (3)' for backwards compatibility
   proxy_type = proxy_type_spec.get(config.get('Boto', 'proxy_type', None)) or 3
   proxy_host = config.get('Boto', 'proxy', None)
-  
-  #For proxy_info below, proxy_rdns fails for socks4 and socks5 so restricting use 
+
+  #For proxy_info below, proxy_rdns fails for socks4 and socks5 so restricting use
   #to http only
-  proxy_info = httplib2.ProxyInfo(    
+  proxy_info = httplib2.ProxyInfo(
       proxy_host=proxy_host,
-      proxy_type=proxy_type, 
+      proxy_type=proxy_type,
       proxy_port=config.getint('Boto', 'proxy_port', 0),
       proxy_user=config.get('Boto', 'proxy_user', None),
       proxy_pass=config.get('Boto', 'proxy_pass', None),
       proxy_rdns=config.getbool('Boto', 'proxy_rdns',
                             True if proxy_type==3 else False))
+
+  #Added to force socks proxies not to use rdns
+  if not (proxy_info.proxy_type == 3):
+      proxy_info.proxy_rdns = False
 
   if not (proxy_info.proxy_host and proxy_info.proxy_port):
     # Fall back to using the environment variable. Use only http proxies
