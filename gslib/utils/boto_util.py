@@ -485,7 +485,7 @@ def ResumableThreshold():
   return config.getint('GSUtil', 'resumable_threshold', 8 * ONE_MIB)
 
 def SetProxyInfo():
-    """Sets proxy info from boto and environment and converts to httplib2.ProxyInfo.
+  """Sets proxy info from boto and environment and converts to httplib2.ProxyInfo.
 
   Args:
     None.
