@@ -912,7 +912,7 @@ class ConfigCommand(Command):
                                         'proxy host')
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy_type', config.get_value('Boto', 'proxy_type', None),
-        'proxy type')
+        'proxy type (socks4, socks5, http)')
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy_port', config.get_value('Boto', 'proxy_port', None),
         'proxy port')
