@@ -508,7 +508,7 @@ def SetProxyInfo():
       proxy_port=config.getint('Boto', 'proxy_port', 0),
       proxy_user=config.get('Boto', 'proxy_user', None),
       proxy_pass=config.get('Boto', 'proxy_pass', None),
-      proxy_rdns=config.get('Boto', 'proxy_rdns',
+      proxy_rdns=config.getbool('Boto', 'proxy_rdns',
                             True if proxy_type==3 else False))
 
   if not (proxy_info.proxy_host and proxy_info.proxy_port):
@@ -517,7 +517,7 @@ def SetProxyInfo():
       if proxy_env_var in os.environ and os.environ[proxy_env_var]:
         proxy_info = ProxyInfoFromEnvironmentVar(proxy_env_var)
         # Assume proxy_rnds is True if a proxy environment variable exists.
-        proxy_info.proxy_rdns = config.get('Boto', 'proxy_rdns', True)
+        proxy_info.proxy_rdns = config.getbool('Boto', 'proxy_rdns', True)
         break
 
   return proxy_info
