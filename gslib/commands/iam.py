@@ -372,9 +372,9 @@ class IamCommand(Command):
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
     if storage_url.IsBucket():
-      # Temporarily only placing version on bucket IAM policies, as doing this
-      # this on objects causes the API to incorrectly throw an error.
-      # See b/140734851.
+      # Temporarily setting version manually on bucket IAM policies, as
+      # setting version on objects incorrectly causes the API to throw an
+      # error. See b/140734851.
       policy.version = IAM_POLICY_VERSION
       gsutil_api.SetBucketIamPolicy(storage_url.bucket_name,
                                     policy,
