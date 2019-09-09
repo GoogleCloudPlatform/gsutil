@@ -484,6 +484,7 @@ def ProxyInfoFromEnvironmentVar(proxy_env_var):
 def ResumableThreshold():
   return config.getint('GSUtil', 'resumable_threshold', 8 * ONE_MIB)
 
+
 def SetProxyInfo():
   """Sets proxy info from boto and environment and converts to httplib2.ProxyInfo.
 
@@ -494,7 +495,7 @@ def SetProxyInfo():
     httplib2.ProxyInfo constructed from boto or environment variable string.
   """
   #Defining proxy_type based on httplib2 library, accounting for None entry too.
-  proxy_type_spec = {'socks4':1,'socks5':2,'http':3,'https':3}
+  proxy_type_spec = {'socks4': 1, 'socks5': 2, 'http': 3, 'https': 3}
 
   #proxy_type defaults to 'http (3)' for backwards compatibility
   proxy_type = proxy_type_spec.get(config.get('Boto', 'proxy_type', None)) or 3
@@ -509,14 +510,14 @@ def SetProxyInfo():
       proxy_user=config.get('Boto', 'proxy_user', None),
       proxy_pass=config.get('Boto', 'proxy_pass', None),
       proxy_rdns=config.getbool('Boto', 'proxy_rdns',
-                            True if proxy_type==3 else False))
+                                True if proxy_type == 3 else False))
 
   #Added to force socks proxies not to use rdns
   if not (proxy_info.proxy_type == 3):
-      proxy_info.proxy_rdns = False
+    proxy_info.proxy_rdns = False
 
   if not (proxy_info.proxy_host and proxy_info.proxy_port):
-    # Fall back to using the environment variable. Use only http proxies
+    # Fall back to using the environment variable. Use only http proxies.
     for proxy_env_var in ['http_proxy', 'https_proxy', 'HTTPS_PROXY']:
       if proxy_env_var in os.environ and os.environ[proxy_env_var]:
         proxy_info = ProxyInfoFromEnvironmentVar(proxy_env_var)
@@ -525,6 +526,7 @@ def SetProxyInfo():
         break
 
   return proxy_info
+
 
 def UsingCrcmodExtension():
   boto_opt = boto.config.get('GSUtil', 'test_assume_fast_crcmod', None)
