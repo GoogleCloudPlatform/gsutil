@@ -496,9 +496,10 @@ def SetProxyInfo():
   """
   #Defining proxy_type based on httplib2 library, accounting for None entry too.
   proxy_type_spec = {'socks4': 1, 'socks5': 2, 'http': 3, 'https': 3}
+  boto_proxy_val = config.get('Boto', 'proxy_type', None)
 
   #proxy_type defaults to 'http (3)' for backwards compatibility
-  proxy_type = proxy_type_spec.get(config.get('Boto', 'proxy_type', None)) or 3
+  proxy_type = proxy_type_spec.get(boto_proxy_val) or proxy_type_spec['http']
   proxy_host = config.get('Boto', 'proxy', None)
 
   #For proxy_info below, proxy_rdns fails for socks4 and socks5 so restricting use
@@ -509,11 +510,12 @@ def SetProxyInfo():
       proxy_port=config.getint('Boto', 'proxy_port', 0),
       proxy_user=config.get('Boto', 'proxy_user', None),
       proxy_pass=config.get('Boto', 'proxy_pass', None),
-      proxy_rdns=config.getbool('Boto', 'proxy_rdns',
-                                True if proxy_type == 3 else False))
+      proxy_rdns=config.getbool(
+          'Boto', 'proxy_rdns',
+          True if proxy_type == proxy_type_spec['http'] else False))
 
   #Added to force socks proxies not to use rdns
-  if not (proxy_info.proxy_type == 3):
+  if not (proxy_info.proxy_type == proxy_type_spec['http']):
     proxy_info.proxy_rdns = False
 
   if not (proxy_info.proxy_host and proxy_info.proxy_port):
