@@ -37,6 +37,6 @@ install:
 script:
   - gsutil version -l
   - gsutil test -u
-  - yapf -dr .
+  - if [[ "$TRAVIS_PYTHON_VERSION" =~ 3.6 ]]; then yapf -dr . ; fi
   - test/run_pylint.sh
 
