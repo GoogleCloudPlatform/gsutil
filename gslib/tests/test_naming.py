@@ -319,7 +319,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     actual = set(
         str(u) for u in self._test_wildcard_iterator(suri(
             dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'abc', 'dir1', 'f1')])
+    expected = set([suri(dst_bucket_uri, 'abc', 'f1')])
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
