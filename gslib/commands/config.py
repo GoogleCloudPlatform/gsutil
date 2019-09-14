@@ -925,7 +925,7 @@ class ConfigCommand(Command):
     self._WriteConfigLineMaybeCommented(
         config_file, 'proxy_rdns', config.get_value('Boto', 'proxy_rdns',
                                                     False),
-        'let proxy server perform DNS lookups; socks proxy not supported')
+        'let proxy server perform DNS lookups (True,False); socks proxy not supported')
 
   # pylint: disable=dangerous-default-value,too-many-statements
   def _WriteBotoConfigFile(self,

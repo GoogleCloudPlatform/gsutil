@@ -233,9 +233,10 @@ class TestUtil(testcase.GsUtilUnitTestCase):
       proxy_u = b_p.get('proxy_user')
       proxy_ps = b_p.get('proxy_pass')
       proxy_d = b_p.get('proxy_rdns')
-      #proxy_rdns is not supported for socks proxy
-      if not (proxy_t == proxy_type_spec['http']):
-        proxy_d = False
+
+      # Added to force socks proxies not to use rdns
+      if proxy_d == None:
+        proxy_d = True if (proxy_t == proxy_type_spec['http']) else False
 
       self._AssertProxyInfosEqual(boto_util.SetProxyInfo(b_p),
                                   httplib2.ProxyInfo(
