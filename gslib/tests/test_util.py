@@ -235,9 +235,13 @@ class TestUtil(testcase.GsUtilUnitTestCase):
       proxy_ps = b_p.get('proxy_pass')
       proxy_d = b_p.get('proxy_rdns')
 
-      # Added to force socks proxies not to use rdns
+      # Added to force default value behaviors in SetProxyInfo()
       if proxy_d == None:
         proxy_d = True if (proxy_t == proxy_type_spec['http']) else False
+
+      # Added to force socks proxies not to use rdns as in SetProxyInfo()
+      if not (proxy_t == proxy_type_spec['http']):
+        proxy_d = False
 
       self._AssertProxyInfosEqual(
           boto_util.SetProxyInfo(b_p),
