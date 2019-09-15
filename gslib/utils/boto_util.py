@@ -268,12 +268,13 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
 
   ##Get Proxy configuration from boto file, defaults are None, 0 and False
   boto_proxy_config = {
-      'proxy_host':config.get('Boto','proxy',None),
-      'proxy_type':config.get('Boto','proxy_type','http'),
-      'proxy_port':config.getint('Boto', 'proxy_port'),
-      'proxy_user':config.get('Boto', 'proxy_user', None),
-      'proxy_pass':config.get('Boto', 'proxy_pass', None),
-      'proxy_rdns':config.get('Boto', 'proxy_rdns')}
+      'proxy_host': config.get('Boto', 'proxy', None),
+      'proxy_type': config.get('Boto', 'proxy_type', 'http'),
+      'proxy_port': config.getint('Boto', 'proxy_port'),
+      'proxy_user': config.get('Boto', 'proxy_user', None),
+      'proxy_pass': config.get('Boto', 'proxy_pass', None),
+      'proxy_rdns': config.get('Boto', 'proxy_rdns')
+  }
 
   #Use SetProxyInfo to convert boto config to httplib2.proxyinfo object
   proxy_info = SetProxyInfo(boto_proxy_config)
@@ -516,21 +517,19 @@ def SetProxyInfo(boto_proxy_config):
 
   #For proxy_info below, proxy_rdns fails for socks4 and socks5 so restricting use
   #to http only
-  proxy_info = httplib2.ProxyInfo(
-      proxy_host=proxy_host,
-      proxy_type=proxy_type,
-      proxy_port=proxy_port,
-      proxy_user=proxy_user,
-      proxy_pass=proxy_pass,
-      proxy_rdns=proxy_rdns)
+  proxy_info = httplib2.ProxyInfo(proxy_host=proxy_host,
+                                  proxy_type=proxy_type,
+                                  proxy_port=proxy_port,
+                                  proxy_user=proxy_user,
+                                  proxy_pass=proxy_pass,
+                                  proxy_rdns=proxy_rdns)
 
   #Added to force socks proxies not to use rdns, and set default rdns for https to true
   if boto_proxy_config.get('proxy_rdns') == None:
-      if (proxy_info.proxy_type == proxy_type_spec['http']):
-          proxy_info.proxy_rdns = True #Use rdns unless explicity set as False in boto
-      else:
-          proxy_info.proxy_rdns = False
-
+    if (proxy_info.proxy_type == proxy_type_spec['http']):
+      proxy_info.proxy_rdns = True  #Use rdns unless explicity set as False in boto
+    else:
+      proxy_info.proxy_rdns = False
 
   if not (proxy_info.proxy_host and proxy_info.proxy_port):
     # Fall back to using the environment variable. Use only http proxies.
