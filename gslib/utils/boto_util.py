@@ -533,7 +533,7 @@ def SetProxyInfo(boto_proxy_config):
 
   #Added to force socks proxies not to use rdns
   if not (proxy_info.proxy_type == proxy_type_spec['http']):
-      proxy_info.proxy_rdns = False
+    proxy_info.proxy_rdns = False
 
   if not (proxy_info.proxy_host and proxy_info.proxy_port):
     # Fall back to using the environment variable. Use only http proxies.
