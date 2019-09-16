@@ -247,6 +247,8 @@ def _HasOauth2UserAccountCreds():
 def _HasGceCreds():
   return config.has_option('GoogleCompute', 'service_account')
 
+def _HasImpersonateServiceAccount():
+  return config.has_option('Credentials', 'gs_impersonate_service_account')
 
 def _GetOauth2ServiceAccountCredentials():
   """Retrieves OAuth2 service account credentials for a private key file."""
