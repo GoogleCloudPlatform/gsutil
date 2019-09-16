@@ -266,9 +266,18 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
     An initialized httplib2.Http instance.
   """
 
-  # Get proxy info, will get None if no proxies are set in boto or
-  # environment variables
-  proxy_info = SetProxyInfo()
+  ##Get Proxy configuration from boto file, defaults are None, 0 and False
+  boto_proxy_config = {
+      'proxy_host': config.get('Boto', 'proxy', None),
+      'proxy_type': config.get('Boto', 'proxy_type', 'http'),
+      'proxy_port': config.getint('Boto', 'proxy_port'),
+      'proxy_user': config.get('Boto', 'proxy_user', None),
+      'proxy_pass': config.get('Boto', 'proxy_pass', None),
+      'proxy_rdns': config.get('Boto', 'proxy_rdns')
+  }
+
+  #Use SetProxyInfo to convert boto config to httplib2.proxyinfo object
+  proxy_info = SetProxyInfo(boto_proxy_config)
 
   # Some installers don't package a certs file with httplib2, so use the
   # one included with gsutil.
@@ -485,34 +494,42 @@ def ResumableThreshold():
   return config.getint('GSUtil', 'resumable_threshold', 8 * ONE_MIB)
 
 
-def SetProxyInfo():
+def SetProxyInfo(boto_proxy_config):
   """Sets proxy info from boto and environment and converts to httplib2.ProxyInfo.
 
   Args:
-    None.
+    dict: Values read from the .boto file
 
   Returns:
     httplib2.ProxyInfo constructed from boto or environment variable string.
   """
   #Defining proxy_type based on httplib2 library, accounting for None entry too.
   proxy_type_spec = {'socks4': 1, 'socks5': 2, 'http': 3, 'https': 3}
-  boto_proxy_val = config.get('Boto', 'proxy_type', None)
+  _proxy_type_val = boto_proxy_config.get('proxy_type').lower()
 
   #proxy_type defaults to 'http (3)' for backwards compatibility
-  proxy_type = proxy_type_spec.get(boto_proxy_val) or proxy_type_spec['http']
-  proxy_host = config.get('Boto', 'proxy', None)
+  proxy_type = proxy_type_spec.get(_proxy_type_val) or proxy_type_spec['http']
+  proxy_host = boto_proxy_config.get('proxy_host')
+  proxy_port = boto_proxy_config.get('proxy_port')
+  proxy_user = boto_proxy_config.get('proxy_user')
+  proxy_pass = boto_proxy_config.get('proxy_pass')
+  proxy_rdns = boto_proxy_config.get('proxy_rdns')
 
   #For proxy_info below, proxy_rdns fails for socks4 and socks5 so restricting use
   #to http only
-  proxy_info = httplib2.ProxyInfo(
-      proxy_host=proxy_host,
-      proxy_type=proxy_type,
-      proxy_port=config.getint('Boto', 'proxy_port', 0),
-      proxy_user=config.get('Boto', 'proxy_user', None),
-      proxy_pass=config.get('Boto', 'proxy_pass', None),
-      proxy_rdns=config.getbool(
-          'Boto', 'proxy_rdns',
-          True if proxy_type == proxy_type_spec['http'] else False))
+  proxy_info = httplib2.ProxyInfo(proxy_host=proxy_host,
+                                  proxy_type=proxy_type,
+                                  proxy_port=proxy_port,
+                                  proxy_user=proxy_user,
+                                  proxy_pass=proxy_pass,
+                                  proxy_rdns=proxy_rdns)
+
+  #Added to force socks proxies not to use rdns, and set default rdns for https to true
+  if boto_proxy_config.get('proxy_rdns') == None:
+    if (proxy_info.proxy_type == proxy_type_spec['http']):
+      proxy_info.proxy_rdns = True  #Use rdns unless explicity set as False in boto
+    else:
+      proxy_info.proxy_rdns = False
 
   #Added to force socks proxies not to use rdns
   if not (proxy_info.proxy_type == proxy_type_spec['http']):

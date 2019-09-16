@@ -191,6 +191,67 @@ class TestUtil(testcase.GsUtilUnitTestCase):
       line = ls_helper.MakeMetadataLine(*(params.args), **(params.kwargs))
       self.assertEqual(line, params.expected)
 
+  def testSetProxyInfo(self):
+    """Tests SetProxyInfo for various proxy use cases in boto file."""
+    #Sample Values Read from Boto file
+    boto_proxy_config_default = {
+        'proxy_host': None,
+        'proxy_type': 'http',
+        'proxy_port': 0,
+        'proxy_user': None,
+        'proxy_pass': None,
+        'proxy_rdns': False
+    }
+
+    valid_proxy_types = ['socks4', 'socks5', 'http']
+    valid_proxy_host = ['hostname', '1.2.3.4', None]
+    valid_proxy_port = [8888, 0]
+    valid_proxy_user = ['foo', None]
+    valid_proxy_pass = ['Bar', None]
+    valid_proxy_rdns = [True, False, None]
+
+    proxy_type_spec = {'socks4': 1, 'socks5': 2, 'http': 3, 'https': 3}
+
+    #Generate all input combination values
+    boto_proxy_config_test_values = [{
+        'proxy_host': p_h,
+        'proxy_type': p_t,
+        'proxy_port': p_p,
+        'proxy_user': p_u,
+        'proxy_pass': p_s,
+        'proxy_rdns': p_d
+    } for p_h in valid_proxy_host for p_s in valid_proxy_pass
+                                     for p_p in valid_proxy_port
+                                     for p_u in valid_proxy_user
+                                     for p_t in valid_proxy_types
+                                     for p_d in valid_proxy_rdns]
+
+    #Test all input combination values
+    for b_p in boto_proxy_config_test_values:
+      proxy_t = proxy_type_spec.get(b_p.get('proxy_type'))
+      proxy_h = b_p.get('proxy_host')
+      proxy_p = b_p.get('proxy_port')
+      proxy_u = b_p.get('proxy_user')
+      proxy_ps = b_p.get('proxy_pass')
+      proxy_d = b_p.get('proxy_rdns')
+
+      # Added to force default value behaviors in SetProxyInfo()
+      if proxy_d == None:
+        proxy_d = True if (proxy_t == proxy_type_spec['http']) else False
+
+      # Added to force socks proxies not to use rdns as in SetProxyInfo()
+      if not (proxy_t == proxy_type_spec['http']):
+        proxy_d = False
+
+      self._AssertProxyInfosEqual(
+          boto_util.SetProxyInfo(b_p),
+          httplib2.ProxyInfo(proxy_host=proxy_h,
+                             proxy_type=proxy_t,
+                             proxy_port=proxy_p,
+                             proxy_user=proxy_u,
+                             proxy_pass=proxy_ps,
+                             proxy_rdns=proxy_d))
+
   def testProxyInfoFromEnvironmentVar(self):
     """Tests ProxyInfoFromEnvironmentVar for various cases."""
     valid_variables = ['http_proxy', 'https_proxy']
