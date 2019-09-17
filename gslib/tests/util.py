@@ -343,7 +343,7 @@ class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
     return boto.gs.encryptionconfig.EncryptionConfig()
 
   def get_lifecycle_config(self, headers=None):
-    return boto.gs.lifecycle.LifecycleConfig()
+    return None
 
   def get_website_config(self, headers=None):
     return None

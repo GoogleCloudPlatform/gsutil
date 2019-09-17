@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import getopt
-import sys
 import textwrap
 
 from gslib import metrics
@@ -182,9 +181,6 @@ class KmsCommand(Command):
     self.kms_key = None
     self.warn_on_key_authorize_failure = False
 
-    print(self.args)
-    print(self.sub_opts)
-
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-p':
@@ -248,7 +244,7 @@ class KmsCommand(Command):
         kms_api.SetKeyIamPolicy(kms_key, policy)
         added_new_binding = True
       return (service_account, added_new_binding)
-    except AccessDeniedException as e:
+    except AccessDeniedException:
       if self.warn_on_key_authorize_failure:
         print('\n'.join(
             textwrap.wrap(
@@ -303,7 +299,6 @@ class KmsCommand(Command):
           their corresponding service account.
     """
     bucket_project_number = bucket_metadata.projectNumber
-
     try:
       # newly_authorized will always be False if the project number is in our
       # cache dict, since we've already called _AuthorizeProject on it.
