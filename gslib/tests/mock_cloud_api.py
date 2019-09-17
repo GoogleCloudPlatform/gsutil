@@ -66,6 +66,8 @@ class MockObject(object):
 class MockBucket(object):
   """Defines a mock cloud storage provider bucket."""
 
+  get_tags = return []
+
   def __init__(self, bucket_name, versioned=False):
     self.root_object = apitools_messages.Bucket(
         name=bucket_name,

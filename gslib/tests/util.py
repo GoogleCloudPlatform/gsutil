@@ -336,6 +336,21 @@ class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
   def get_location(self, headers=None):
     return 'US'
 
+  def get_cors(self, headers=None):
+    return boto.gs.cors.Cors()
+
+  def get_encryption_config(self, headers=None):
+    return boto.gs.encryptionconfig.EncryptionConfig()
+
+  def get_lifecycle_config(self, headers=None):
+    return boto.gs.lifecycle.LifecycleConfig()
+
+  def get_website_config(self, headers=None):
+    return None
+
+  def get_versioning_config(self, headers=None):
+    return None
+
 
 TEST_BOTO_REMOVE_SECTION = 'TestRemoveSection'
 
