@@ -51,7 +51,7 @@ _SET_DESCRIPTION = """
 
     gsutil ubla set on gs://redbucket gs://bluebucket
 
-  Configure your buckets to NOT uniform bucket-level access:
+  Configure your buckets to NOT use uniform bucket-level access:
 
     gsutil ubla set off gs://redbucket gs://bluebucket
 """
