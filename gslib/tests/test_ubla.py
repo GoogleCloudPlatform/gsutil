@@ -33,12 +33,9 @@ class TestUbla(testcase.GsUtilIntegrationTestCase):
   def _AssertEnabled(self, bucket_uri, value):
     stdout = self.RunGsUtil(self._get_ubla_cmd + [suri(bucket_uri)],
                             return_stdout=True)
-    uniform_bucket_level_access_re = re.compile(
-        r'^\s*Enabled:\s+(?P<enabled_val>.+)$', re.MULTILINE)
-    uniform_bucket_level_access_match = re.search(
-        uniform_bucket_level_access_re, stdout)
-    uniform_bucket_level_access_val = uniform_bucket_level_access_match.group(
-        'enabled_val')
+    uniform_bucket_level_access_re = re.compile(r'^\s*Enabled:\s+(?P<enabled_val>.+)$', re.MULTILINE)
+    uniform_bucket_level_access_match = re.search(uniform_bucket_level_access_re, stdout)
+    uniform_bucket_level_access_val = uniform_bucket_level_access_match.group('enabled_val')
     self.assertEqual(str(value), uniform_bucket_level_access_val)
 
   def test_off_on_default_buckets(self):
@@ -52,8 +49,7 @@ class TestUbla(testcase.GsUtilIntegrationTestCase):
     if self.test_api == ApiSelector.XML:
       return unittest.skip(
           'XML API has no concept of Uniform bucket-level access')
-    # TODO(mynameisrafe): Replace bucket_policy_only with uniform_bucket_level_access  when the property is live.
-    bucket_uri = self.CreateBucket(bucket_policy_only=True,
+    bucket_uri = self.CreateBucket(uniform_bucket_level_access=True,
                                    prefer_json_api=True)
     self._AssertEnabled(bucket_uri, True)
 
@@ -98,5 +94,7 @@ class TestUbla(testcase.GsUtilIntegrationTestCase):
     self.assertIn('command requires at least', stderr)
 
     # Neither arguments nor subcommand.
-    stderr = self.RunGsUtil(['ubla'], return_stderr=True, expected_status=1)
+    stderr = self.RunGsUtil(['ubla'],
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)

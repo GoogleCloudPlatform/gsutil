@@ -81,7 +81,7 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 
 # Aliases to make these more likely to fit on one line.
 IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
-uniformBucketLevelAccessValue = IamConfigurationValue.BucketPolicyOnlyValue
+uniformBucketLevelAccessValue = IamConfigurationValue.UniformBucketLevelAccessValue
 
 
 class UblaCommand(Command):
@@ -134,9 +134,7 @@ class UblaCommand(Command):
                                                 fields=['iamConfiguration'],
                                                 provider=bucket_url.scheme)
     iam_config = bucket_metadata.iamConfiguration
-    # TODO(mynameisrafe): Replace bucketPolicyOnly with uniformBucketLevelAccess
-    # when the property is live.
-    uniform_bucket_level_access = iam_config.bucketPolicyOnly
+    uniform_bucket_level_access = iam_config.uniformBucketLevelAccess
 
     fields = {
         'bucket': str(bucket_url).rstrip('/'),
@@ -158,10 +156,8 @@ class UblaCommand(Command):
     bucket_url = blr.storage_url
 
     iam_config = IamConfigurationValue()
-    # TODO(mynameisrafe): Replace bucketPolicyOnly with uniformBucketLevelAccess
-    # when the property is live.
-    iam_config.bucketPolicyOnly = uniformBucketLevelAccessValue()
-    iam_config.bucketPolicyOnly.enabled = (setting_arg == 'on')
+    iam_config.uniformBucketLevelAccess = uniformBucketLevelAccessValue()
+    iam_config.uniformBucketLevelAccess.enabled = (setting_arg == 'on')
 
     bucket_metadata = apitools_messages.Bucket(iamConfiguration=iam_config)
 
