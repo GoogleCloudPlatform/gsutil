@@ -207,8 +207,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
         'kms', ['encryption', '-k', self.dummy_keyname,
                 suri(bucket_uri)],
         return_stdout=True)
-    self.assertIn(
-        b'Setting default KMS key for bucket %s...' % suri(bucket_uri), stdout)
+    self.assertIn(b'Setting default KMS key for bucket', stdout)
 
   @mock.patch('gslib.boto_translation.CloudApi.GetProjectServiceAccount')
   @mock.patch('gslib.boto_translation.CloudApi.PatchBucket')
@@ -226,8 +225,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
         'kms', ['encryption', '-k', self.dummy_keyname, '-w',
                 suri(bucket_uri)],
         return_stdout=True)
-    self.assertIn(
-        b'Setting default KMS key for bucket %s...' % suri(bucket_uri), stdout)
+    self.assertIn(b'Setting default KMS key for bucket', stdout)
 
   @mock.patch('gslib.boto_translation.CloudApi.GetProjectServiceAccount')
   @mock.patch('gslib.boto_translation.CloudApi.PatchBucket')

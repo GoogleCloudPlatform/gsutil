@@ -34,6 +34,7 @@ from gslib.kms_api import KmsApi
 from gslib.project_id import PopulateProjectId
 from gslib.third_party.kms_apitools.cloudkms_v1_messages import Binding
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils import text_util
 from gslib.utils.constants import NO_MAX
 from gslib.utils.encryption_helper import ValidateCMEK
 
@@ -246,7 +247,7 @@ class KmsCommand(Command):
       return (service_account, added_new_binding)
     except AccessDeniedException:
       if self.warn_on_key_authorize_failure:
-        print('\n'.join(
+        text_util.print_to_fd('\n'.join(
             textwrap.wrap(
                 'Warning: Unable to check the IAM policy for the specified '
                 'encryption key. Check that your Cloud Platform project\'s '
@@ -310,12 +311,12 @@ class KmsCommand(Command):
           bucket_project_number, self.kms_key)
       svc_acct_for_project_num[bucket_project_number] = service_account
     if newly_authorized:
-      print('Authorized service account %s to use key:\n%s' %
+      text_util.print_to_fd('Authorized service account %s to use key:\n%s' %
             (service_account, self.kms_key))
 
     bucket_metadata.encryption = apitools_messages.Bucket.EncryptionValue(
         defaultKmsKeyName=self.kms_key)
-    print('Setting default KMS key for bucket %s...' %
+    text_util.print_to_fd('Setting default KMS key for bucket %s...' %
           str(bucket_url).rstrip('/'))
     self.gsutil_api.PatchBucket(bucket_url.bucket_name,
                                 bucket_metadata,
