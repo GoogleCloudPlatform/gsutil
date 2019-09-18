@@ -218,6 +218,7 @@ class MbCommand(Command):
   def RunCommand(self):
     """Command entry point for the mb command."""
     bucket_policy_only = None
+    uniform_bucket_level_access = None
     location = None
     storage_class = None
     seconds = None
@@ -247,6 +248,12 @@ class MbCommand(Command):
       iam_config = bucket_metadata.iamConfiguration
       iam_config.bucketPolicyOnly = BucketPolicyOnlyValue()
       iam_config.bucketPolicyOnly.enabled = bucket_policy_only
+
+    if uniform_bucket_level_access:
+      bucket_metadata.iamConfiguration = IamConfigurationValue()
+      iam_config = bucket_metadata.iamConfiguration
+      iam_config.uniformBucketLevelAccess = UniformBucketLevelAccessValue()
+      iam_config.uniformBucketLevelAccess.enabled = uniformBucketLevelAccess
 
     for bucket_url_str in self.args:
       bucket_url = StorageUrlFromString(bucket_url_str)

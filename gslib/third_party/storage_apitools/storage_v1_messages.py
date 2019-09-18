@@ -166,9 +166,12 @@ class Bucket(_messages.Message):
 
     Messages:
       BucketPolicyOnlyValue: The bucket's Bucket Policy Only configuration.
+      UniformBucketLevelAccessValue: The bucket's Bucket Policy Only
+      configuration.
 
     Fields:
       bucketPolicyOnly: The bucket's Bucket Policy Only configuration.
+      uniformBucketLevelAccess: The bucket's Bucket Policy Only configuration.
     """
 
     class BucketPolicyOnlyValue(_messages.Message):
@@ -188,6 +191,24 @@ class Bucket(_messages.Message):
       lockedTime = _message_types.DateTimeField(2)
 
     bucketPolicyOnly = _messages.MessageField('BucketPolicyOnlyValue', 1)
+
+    class UniformBucketLevelAccessValue(_messages.Message):
+      r"""The bucket's Uniform Bucket Level Access configuration.
+
+      Fields:
+        enabled: If set, access checks only use bucket-level IAM policies or
+          above.
+        lockedTime: The deadline time for changing
+          iamConfiguration.uniformbBucketLevelAccess.enabled from true to false
+          in RFC 3339 format. iamConfiguration.uniformbBucketLevelAccess.enabled
+          may be changed from true to false until the locked time, after which
+          the field is immutable.
+      """
+
+      enabled = _messages.BooleanField(1)
+      lockedTime = _message_types.DateTimeField(2)
+
+    uniformBucketLevelAccess = _messages.MessageField('UniformBucketLevelAccessValue', 2)
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class LabelsValue(_messages.Message):

@@ -378,6 +378,9 @@ class LsCommand(Command):
     if bucket.iamConfiguration and bucket.iamConfiguration.bucketPolicyOnly:
       enabled = bucket.iamConfiguration.bucketPolicyOnly.enabled
       fields['bucket_policy_only_enabled'] = enabled
+    if bucket.iamConfiguration and bucket.iamConfiguration.uniformBucketLevelAccess:
+      enabled = bucket.iamConfiguration.uniformBucketLevelAccess.enabled
+      fields['uniform_bucket_level_access_enabled'] = enabled
 
     # For field values that are multiline, add indenting to make it look
     # prettier.

@@ -518,6 +518,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    prefer_json_api=False,
                    versioning_enabled=False,
                    bucket_policy_only=False,
+                   uniform_bucket_level_access=False,
                    bucket_name_prefix='',
                    bucket_name_suffix=''):
     """Creates a test bucket.
@@ -537,6 +538,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           True.
       bucket_policy_only: If True, set the bucket's iamConfiguration's
           bucketPolicyOnly attribute to True.
+      uniform_bucket_level_access: If True, set the bucket's iamConfiguration's
+          uniformBucketLevelAccess attribute to True.
       bucket_name_prefix: Unicode string to be prepended to bucket_name
       bucket_name_suffix: Unicode string to be appended to bucket_name
 

@@ -218,6 +218,21 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       # Check that for bucket policy only fields.
       self._AssertBucketPolicyOnly(False, stdout)
 
+  def test_bucket_with_Lb_uniform_bucket_level_access(self):
+    if self.test_api == ApiSelector.JSON:
+      bucket_uri = self.CreateBucket(uniform_bucket_level_access=True,
+                                     prefer_json_api=True)
+      stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
+                              return_stdout=True)
+      self._AssertUniformBucketLevelAccess(True, stdout)
+
+  def _AssertUniformBucketLevelAccess(self, value, stdout):
+    uniform_bucket_level_access_re = re.compile(
+        r'^\s*Uniform Bucket Level Access enabled:\s+(?P<bpo_val>.+)$', re.MULTILINE)
+    uniform_bucket_level_access_match = re.search(uniform_bucket_level_access_re, stdout)
+    uniform_bucket_level_access_val = uniform_bucket_level_access_match.group('bpo_val')
+    self.assertEqual(str(value), uniform_bucket_level_access_val)
+
   def test_bucket_with_Lb_bucket_policy_only(self):
     if self.test_api == ApiSelector.JSON:
       bucket_uri = self.CreateBucket(bucket_policy_only=True,
