@@ -23,14 +23,18 @@ from collections import defaultdict
 from collections import namedtuple
 
 import six
+import re
 from apitools.base.protorpclite import protojson
 from gslib.exception import CommandException
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 
 TYPES = set([
     'user',
+    'deleted:user',
     'serviceAccount',
+    'deleted:serviceAccount',
     'group',
+    'deleted:group'
     'domain',
 ])
 
@@ -68,6 +72,12 @@ BindingsTuple = namedtuple('BindingsTuple', ['is_grant', 'bindings'])
 # returned by PatchBindings are guaranteed to be "real" roles, i.e. not a
 # DROP_ALL role.
 DROP_ALL = ''
+
+# Users, ServiceAccounts and Groups can be deleted, but will stick around for
+# some time to allow customers to undelete if they made a mistake. This code
+# should treat deleted members the same as regular members. This regex will
+# strip out the delete markings.
+DELETED_MEMBER_REGEX = r"^deleted:(.*)\?uid=[0-9]+$"
 
 
 def SerializeBindingsTuple(bindings_tuple):
@@ -203,6 +213,9 @@ def BindingStringToTuple(is_grant, input_str):
                e.g. user:foo@bar.com:objectAdmin
                     user:foo@bar.com:objectAdmin,objectViewer
                     user:foo@bar.com
+                    allUsers
+                    deleted:user:foo@bar.com:objectAdmin,objectViewer
+                    deleted:user:foo@bar.com
 
   Raises:
     CommandException in the case of invalid input.
@@ -215,6 +228,9 @@ def BindingStringToTuple(is_grant, input_str):
     input_str += ':'
   if input_str.count(':') == 1:
     tokens = input_str.split(':')
+    if '%s:%s' % (tokens[0], tokens[1]) in TYPES:
+      raise CommandException('Incorrect public member type for binding %s' %
+                             input_str)
     if tokens[0] in PUBLIC_MEMBERS:
       (member, roles) = tokens
     elif tokens[0] in TYPES:
@@ -224,12 +240,23 @@ def BindingStringToTuple(is_grant, input_str):
       raise CommandException('Incorrect public member type for binding %s' %
                              input_str)
   elif input_str.count(':') == 2:
-    (member_type, member_id, roles) = input_str.split(':')
-    if member_type in DISCOURAGED_TYPES:
-      raise CommandException(DISCOURAGED_TYPES_MSG)
-    elif member_type not in TYPES:
-      raise CommandException('Incorrect member type for binding %s' % input_str)
+    tokens = input_str.split(':')
+    if '%s:%s' % (tokens[0], tokens[1]) in TYPES:
+      # case "deleted:user:foo@bar.com?uid=1234"
+      member = ':'.join(tokens)
+      member = _remove_deleted_markings(member)
+      roles = DROP_ALL
+    else:
+      (member_type, member_id, roles) = tokens
+      _check_member_type(member_type, input_str)
+      member = '%s:%s' % (member_type, member_id)
+  elif input_str.count(':') == 3:
+    # case "deleted:user:foo@bar.com?uid=1234:objectAdmin,objectViewer"
+    (member_type_p1, member_type_p2, member_id, roles) = input_str.split(':')
+    member_type = '%s:%s' % (member_type_p1, member_type_p2)
+    _check_member_type(member_type, input_str)
     member = '%s:%s' % (member_type, member_id)
+    member = _remove_deleted_markings(member)
   else:
     raise CommandException('Invalid ch format %s' % input_str)
 
@@ -243,6 +270,28 @@ def BindingStringToTuple(is_grant, input_str):
       for r in set(roles)
   ]
   return BindingsTuple(is_grant=is_grant, bindings=bindings)
+
+
+def _remove_deleted_markings(member):
+  """
+  Removes "?uid=..." suffix for deleted members. Raises CommandException if member is malformed
+  args:
+    deleted:user:foo@bar.com?query=param,uid=123?uid=456
+
+  returns:
+    user:foo@bar.com?query=param,uid=123
+  """
+  match = re.match(DELETED_MEMBER_REGEX, member)
+  if not match:
+    raise CommandException('Incorrectly formatted member %s' % member)
+  return match.group(1)
+
+
+def _check_member_type(member_type, input_str):
+  if member_type in DISCOURAGED_TYPES:
+    raise CommandException(DISCOURAGED_TYPES_MSG)
+  elif member_type not in TYPES:
+    raise CommandException('Incorrect member type for binding %s' % input_str)
 
 
 def ResolveRole(role):

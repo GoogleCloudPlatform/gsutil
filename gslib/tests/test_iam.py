@@ -310,6 +310,8 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
       bstt(True, 'user:foo@bar.com')
     with self.assertRaises(CommandException):
       bstt(True, 'user:foo@bar.com:')
+    with self.assertRaises(CommandException):
+      bstt(True, 'deleted:user:foo@bar.com?uid=1234:')
 
   def test_remove_all_roles(self):
     """Tests parsing a -d allUsers or -d user:foo@bar.com request."""
@@ -349,6 +351,35 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
         bvle(members=['user:foo@bar.com'], role='roles/storage.admin'),
         bindings)
 
+  def test_valid_deleted_member(self):
+    """Tests deleted member parsing."""
+    (_, bindings) = bstt(False, 'deleted:user:foo@bar.com?uid=123')
+    self.assertEquals(len(bindings), 1)
+    self.assertIn(bvle(members=['user:foo@bar.com'], role=''), bindings)
+    (_, bindings) = bstt(True, 'deleted:user:foo@bar.com?uid=123:admin')
+    self.assertEquals(len(bindings), 1)
+    self.assertIn(
+        bvle(members=['user:foo@bar.com'], role='roles/storage.admin'),
+        bindings)
+    # These emails can actually have multiple query params
+    (_, bindings) = bstt(
+        True,
+        'deleted:user:foo@bar.com?query=param,uid=123?uid=456:admin,admin2')
+    self.assertEquals(len(bindings), 2)
+    self.assertIn(
+        bvle(members=['user:foo@bar.com?query=param,uid=123'],
+             role='roles/storage.admin'), bindings)
+    self.assertIn(
+        bvle(members=['user:foo@bar.com?query=param,uid=123'],
+             role='roles/storage.admin2'), bindings)
+
+  def test_malformed_deleted_member(self):
+    """Tests that malformed deleted members raise exception"""
+    with self.assertRaises(CommandException):
+      (_, bindings) = bstt(True, 'deleted:user:foo@bar.com:admin,admin2')
+    with self.assertRaises(CommandException):
+      (_, bindings) = bstt(True, 'deleted:user:foo@bar.com')
+
   def test_duplicate_roles(self):
     """Tests that duplicate roles are ignored."""
     (_, bindings) = bstt(True, 'allUsers:a,a')
@@ -365,6 +396,10 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
       bstt(True, 'user:r')
     with self.assertRaises(CommandException):
       bstt(True, 'projectViewer:123424:admin')
+    with self.assertRaises(CommandException):
+      bstt(True, 'deleted:user')
+    with self.assertRaises(CommandException):
+      bstt(True, 'deleted:not_a_type')
 
   def test_invalid_n_args(self):
     """Tests invalid input due to too many colons."""
@@ -372,6 +407,8 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
       bstt(True, 'allUsers:some_id:some_role')
     with self.assertRaises(CommandException):
       bstt(True, 'user:foo@bar.com:r:nonsense')
+    with self.assertRaises(CommandException):
+      bstt(True, 'deleted:user:foo@bar.com?uid=1234:r:nonsense')
 
 
 @SkipForS3('Tests use GS IAM model.')
