@@ -1,3 +1,20 @@
+Release 4.43 (release date: 2019-08-20)
+=======================================
+New Features
+------------------
+- Added support for socks proxies, including socks4 and socks5.
+
+Bug Fixes
+------------------
+- Fixed cp/mv errors that occur when  destination directory is a substring of
+  another directory. Behavior now more closely matches OS cp/mv commands.
+- Fixed issue where set IAM policy on objects threw errors.
+- Fixed issue when showing help in a pager in Python 3 environments.
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 4.42 (release date: 2019-08-05)
 =======================================
  Bug Fixes
