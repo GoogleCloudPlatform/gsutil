@@ -29,8 +29,11 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 
 TYPES = set([
     'user',
+    'deleted:user',
     'serviceAccount',
+    'deleted:serviceAccount',
     'group',
+    'deleted:group',
     'domain',
 ])
 
@@ -88,12 +91,13 @@ def SerializeBindingsTuple(bindings_tuple):
 
 def DeserializeBindingsTuple(serialized_bindings_tuple):
   (is_grant, bindings) = serialized_bindings_tuple
-  return BindingsTuple(is_grant=is_grant,
-                       bindings=[
-                           protojson.decode_message(
-                               apitools_messages.Policy.BindingsValueListEntry,
-                               t) for t in bindings
-                       ])
+  return BindingsTuple(
+      is_grant=is_grant,
+      bindings=[
+          protojson.decode_message(
+              apitools_messages.Policy.BindingsValueListEntry, t)
+          for t in bindings
+      ])
 
 
 def BindingsToDict(bindings):
@@ -198,11 +202,13 @@ def BindingStringToTuple(is_grant, input_str):
 
   Args:
     is_grant: If true, binding is to be appended to IAM policy; else, delete
-              this binding from the policy.
+      this binding from the policy.
     input_str: A string representing a member-role binding.
                e.g. user:foo@bar.com:objectAdmin
                     user:foo@bar.com:objectAdmin,objectViewer
-                    user:foo@bar.com
+                    user:foo@bar.com allUsers
+                    deleted:user:foo@bar.com:objectAdmin,objectViewer
+                    deleted:user:foo@bar.com
 
   Raises:
     CommandException in the case of invalid input.
@@ -215,20 +221,32 @@ def BindingStringToTuple(is_grant, input_str):
     input_str += ':'
   if input_str.count(':') == 1:
     tokens = input_str.split(':')
+    if '%s:%s' % (tokens[0], tokens[1]) in TYPES:
+      raise CommandException(
+          'Incorrect public member type for binding %s' % input_str)
     if tokens[0] in PUBLIC_MEMBERS:
       (member, roles) = tokens
     elif tokens[0] in TYPES:
       member = ':'.join(tokens)
       roles = DROP_ALL
     else:
-      raise CommandException('Incorrect public member type for binding %s' %
-                             input_str)
+      raise CommandException(
+          'Incorrect public member type for binding %s' % input_str)
   elif input_str.count(':') == 2:
-    (member_type, member_id, roles) = input_str.split(':')
-    if member_type in DISCOURAGED_TYPES:
-      raise CommandException(DISCOURAGED_TYPES_MSG)
-    elif member_type not in TYPES:
-      raise CommandException('Incorrect member type for binding %s' % input_str)
+    tokens = input_str.split(':')
+    if '%s:%s' % (tokens[0], tokens[1]) in TYPES:
+      # case "deleted:user:foo@bar.com"
+      member = ':'.join(tokens)
+      roles = DROP_ALL
+    else:
+      (member_type, member_id, roles) = tokens
+      _check_member_type(member_type, input_str)
+      member = '%s:%s' % (member_type, member_id)
+  elif input_str.count(':') == 3:
+    # case "deleted:user:foo@bar.com:objectAdmin,objectViewer
+    (member_type_p1, member_type_p2, member_id, roles) = input_str.split(':')
+    member_type = '%s:%s' % (member_type_p1, member_type_p2)
+    _check_member_type(member_type, input_str)
     member = '%s:%s' % (member_type, member_id)
   else:
     raise CommandException('Invalid ch format %s' % input_str)
@@ -243,6 +261,13 @@ def BindingStringToTuple(is_grant, input_str):
       for r in set(roles)
   ]
   return BindingsTuple(is_grant=is_grant, bindings=bindings)
+
+
+def _check_member_type(member_type, input_str):
+  if member_type in DISCOURAGED_TYPES:
+    raise CommandException(DISCOURAGED_TYPES_MSG)
+  elif member_type not in TYPES:
+    raise CommandException('Incorrect member type for binding %s' % input_str)
 
 
 def ResolveRole(role):
