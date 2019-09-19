@@ -154,7 +154,7 @@ _DETAILED_HELP_TEXT = ("""
     gs://bucket/obj1:
             Creation time:                    Fri, 26 May 2017 22:55:44 GMT
             Update time:                      Tue, 18 Jul 2017 12:31:18 GMT
-            Storage class:                    MULTI_REGIONAL
+            Storage class:                    STANDARD
             Content-Length:                   60183
             Content-Type:                     image/jpeg
             Hash (crc32c):                    zlUhtg==
@@ -197,7 +197,7 @@ _DETAILED_HELP_TEXT = ("""
   will print something like:
 
     gs://bucket/ :
-            Storage class:                MULTI_REGIONAL
+            Storage class:                STANDARD
             Location constraint:          US
             Versioning enabled:           False
             Logging configuration:        None
