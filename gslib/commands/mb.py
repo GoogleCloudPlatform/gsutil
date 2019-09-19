@@ -85,9 +85,7 @@ _DETAILED_HELP_TEXT = ("""
   `SLA <https://cloud.google.com/storage/sla>`_ details.
 
   If you don't specify a -c option, the bucket is created with the
-  default storage class Standard Storage, which is equivalent to Multi-Regional
-  Storage or Regional Storage, depending on whether the bucket was created in
-  a multi-regional location or regional location, respectively.
+  default storage class Standard Storage.
 
 <B>BUCKET LOCATIONS</B>
   You can specify one of the `available locations
@@ -98,7 +96,7 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil mb -l asia gs://some-bucket
 
-    gsutil mb -c regional -l us-east1 gs://some-bucket
+    gsutil mb -c standard -l us-east1 gs://some-bucket
 
   If you don't specify a -l option, the bucket is created in the default
   location (US).
@@ -144,8 +142,8 @@ _DETAILED_HELP_TEXT = ("""
   -c class               Specifies the default storage class.
                          Default is "Standard".
 
-  -l location            Can be any multi-regional or regional location. See
-                         https://cloud.google.com/storage/docs/bucket-locations
+  -l location            Can be any supported location. See
+                         https://cloud.google.com/storage/docs/locations
                          for a discussion of this distinction. Default is US.
                          Locations are case insensitive.
 
