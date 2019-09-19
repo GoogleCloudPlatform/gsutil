@@ -42,6 +42,7 @@ from gslib.utils.unit_util import HumanReadableWithDecimalPlaces
 from gslib.utils.unit_util import PrettyTime
 import httplib2
 
+import os
 import six
 from six import add_move, MovedModule
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
@@ -193,16 +194,6 @@ class TestUtil(testcase.GsUtilUnitTestCase):
 
   def testSetProxyInfo(self):
     """Tests SetProxyInfo for various proxy use cases in boto file."""
-    #Sample Values Read from Boto file
-    boto_proxy_config_default = {
-        'proxy_host': None,
-        'proxy_type': 'http',
-        'proxy_port': 0,
-        'proxy_user': None,
-        'proxy_pass': None,
-        'proxy_rdns': False
-    }
-
     valid_proxy_types = ['socks4', 'socks5', 'http']
     valid_proxy_host = ['hostname', '1.2.3.4', None]
     valid_proxy_port = [8888, 0]
@@ -210,7 +201,12 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     valid_proxy_pass = ['Bar', None]
     valid_proxy_rdns = [True, False, None]
 
-    proxy_type_spec = {'socks4': 1, 'socks5': 2, 'http': 3, 'https': 3}
+    proxy_type_spec = {
+        'socks4': httplib2.socks.PROXY_TYPE_SOCKS4,
+        'socks5': httplib2.socks.PROXY_TYPE_SOCKS5,
+        'http': httplib2.socks.PROXY_TYPE_HTTP,
+        'https': httplib2.socks.PROXY_TYPE_HTTP
+    }
 
     #Generate all input combination values
     boto_proxy_config_test_values = [{
@@ -227,30 +223,34 @@ class TestUtil(testcase.GsUtilUnitTestCase):
                                      for p_d in valid_proxy_rdns]
 
     #Test all input combination values
-    for b_p in boto_proxy_config_test_values:
-      proxy_t = proxy_type_spec.get(b_p.get('proxy_type'))
-      proxy_h = b_p.get('proxy_host')
-      proxy_p = b_p.get('proxy_port')
-      proxy_u = b_p.get('proxy_user')
-      proxy_ps = b_p.get('proxy_pass')
-      proxy_d = b_p.get('proxy_rdns')
+    with SetEnvironmentForTest({'http_proxy': 'http://host:50'}):
+      for test_values in boto_proxy_config_test_values:
+        proxy_type = proxy_type_spec.get(test_values.get('proxy_type'))
+        proxy_host = test_values.get('proxy_host')
+        proxy_port = test_values.get('proxy_port')
+        proxy_user = test_values.get('proxy_user')
+        proxy_pass = test_values.get('proxy_pass')
+        proxy_rdns = test_values.get('proxy_rdns',
+                                     True if proxy_host else False)
 
-      # Added to force default value behaviors in SetProxyInfo()
-      if proxy_d == None:
-        proxy_d = True if (proxy_t == proxy_type_spec['http']) else False
+        # Added to force socks proxies not to use rdns as in SetProxyInfo()
+        if not (proxy_type == proxy_type_spec['http']):
+          proxy_rdns = False
 
-      # Added to force socks proxies not to use rdns as in SetProxyInfo()
-      if not (proxy_t == proxy_type_spec['http']):
-        proxy_d = False
+        expected = httplib2.ProxyInfo(proxy_host=proxy_host,
+                                      proxy_type=proxy_type,
+                                      proxy_port=proxy_port,
+                                      proxy_user=proxy_user,
+                                      proxy_pass=proxy_pass,
+                                      proxy_rdns=proxy_rdns)
 
-      self._AssertProxyInfosEqual(
-          boto_util.SetProxyInfo(b_p),
-          httplib2.ProxyInfo(proxy_host=proxy_h,
-                             proxy_type=proxy_t,
-                             proxy_port=proxy_p,
-                             proxy_user=proxy_u,
-                             proxy_pass=proxy_ps,
-                             proxy_rdns=proxy_d))
+        # Checks to make sure environment variable fallbacks are working
+        if not (expected.proxy_host and expected.proxy_port):
+          expected = httplib2.ProxyInfo(proxy_type_spec['http'], 'host', 50)
+          expected.proxy_rdns = test_values.get('proxy_rdns', True)
+
+        self._AssertProxyInfosEqual(boto_util.SetProxyInfo(test_values),
+                                    expected)
 
   def testProxyInfoFromEnvironmentVar(self):
     """Tests ProxyInfoFromEnvironmentVar for various cases."""

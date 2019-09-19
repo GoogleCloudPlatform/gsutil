@@ -171,7 +171,7 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
 
     try:
-      self.assertIn('400 Cannot delete keys in \'ACTIVE\' state.', stderr)
+      self.assertIn('400 Cannot delete keys in ACTIVE state.', stderr)
     finally:
       self.CleanupHelper(access_id)
 
