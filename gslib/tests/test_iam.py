@@ -66,12 +66,12 @@ def gen_binding(role, members=None, condition=None):
 
   Args:
     role: (str) An IAM policy role (e.g. "roles/storage.objectViewer"). Fully
-      specified in BindingsValueListEntry.
+        specified in BindingsValueListEntry.
     members: (List[str]) A list of members (e.g. ["user:foo@bar.com"]). If None,
-      bind to ["allUsers"]. Fully specified in BindingsValueListEntry.
+        bind to ["allUsers"]. Fully specified in BindingsValueListEntry.
     condition: (Dict) A dictionary representing the JSON used to define a
-      binding condition, containing the keys "description", "expression", and
-      "title".
+        binding condition, containing the keys "description", "expression", and
+        "title".
 
   Returns:
     (List[Dict[str, Any]]) A Python representation of the "bindings" portion of
@@ -299,8 +299,8 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     """Tests parsing single role."""
     (_, bindings) = bstt(True, 'allUsers:admin')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(
-        bvle(members=['allUsers'], role='roles/storage.admin'), bindings)
+    self.assertIn(bvle(members=['allUsers'], role='roles/storage.admin'),
+                  bindings)
 
   def test_grant_no_role_error(self):
     """Tests that an error is raised when no role is specified for a grant."""
@@ -338,10 +338,10 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     """Tests parsing of custom roles bound to one user."""
     (_, bindings) = bstt(True, 'user:foo@bar.com:roles/custom1,roles/custom2')
     self.assertEquals(len(bindings), 2)
-    self.assertIn(
-        bvle(members=['user:foo@bar.com'], role='roles/custom1'), bindings)
-    self.assertIn(
-        bvle(members=['user:foo@bar.com'], role='roles/custom2'), bindings)
+    self.assertIn(bvle(members=['user:foo@bar.com'], role='roles/custom1'),
+                  bindings)
+    self.assertIn(bvle(members=['user:foo@bar.com'], role='roles/custom2'),
+                  bindings)
 
   def test_valid_member(self):
     """Tests member parsing."""
@@ -661,21 +661,18 @@ class TestIamCh(TestIamIntegration):
         'bindings': [{
             'members': ['allUsers'],
             'role': 'roles/storage.admin'
-        },
-                     {
-                         'members':
-                         ['user:foo@bar.com', 'serviceAccount:bar@foo.com'],
-                         'role':
-                         IAM_BUCKET_READ_ROLE
-                     }]
+        }, {
+            'members': ['user:foo@bar.com', 'serviceAccount:bar@foo.com'],
+            'role': IAM_BUCKET_READ_ROLE
+        }]
     }
 
     self.assertHas(json.dumps(test_policy), 'allUsers', 'roles/storage.admin')
-    self.assertHas(
-        json.dumps(test_policy), 'user:foo@bar.com', IAM_BUCKET_READ_ROLE)
+    self.assertHas(json.dumps(test_policy), 'user:foo@bar.com',
+                   IAM_BUCKET_READ_ROLE)
     self.assertHasNo(json.dumps(test_policy), 'allUsers', IAM_BUCKET_READ_ROLE)
-    self.assertHasNo(
-        json.dumps(test_policy), 'user:foo@bar.com', 'roles/storage.admin')
+    self.assertHasNo(json.dumps(test_policy), 'user:foo@bar.com',
+                     'roles/storage.admin')
 
   def assertHas(self, policy, member, role):
     """Asserts a member has permission for role.
@@ -732,9 +729,9 @@ class TestIamSet(TestIamIntegration):
     Args:
       policy: Python dict representation of a Policy instance.
       role: An IAM policy role (e.g. "roles/storage.objectViewer"). Fully
-        specified in BindingsValueListEntry.
+            specified in BindingsValueListEntry.
       new_policy: A Python dict representation of a Policy instance, with a
-        single BindingsValueListEntry entry.
+                  single BindingsValueListEntry entry.
 
     Returns:
       A Python dict representation of the patched IAM Policy object.
@@ -812,8 +809,8 @@ class TestIamSet(TestIamIntegration):
   def test_seek_ahead_iam(self):
     """Ensures that the seek-ahead iterator is being used with iam commands."""
 
-    gsutil_object = self.CreateObject(
-        bucket_uri=self.bucket, contents=b'foobar')
+    gsutil_object = self.CreateObject(bucket_uri=self.bucket,
+                                      contents=b'foobar')
 
     # This forces the seek-ahead iterator to be utilized.
     with SetBotoConfigForTest([('GSUtil', 'task_estimation_threshold', '1'),
@@ -1015,10 +1012,10 @@ class TestIamSet(TestIamIntegration):
       A four-tuple (a, b, a*, b*) of storage_uri.BucketStorageUri instances.
     """
 
-    old_gsutil_object = self.CreateObject(
-        bucket_uri=self.versioned_bucket, contents=b'foo')
-    old_gsutil_object2 = self.CreateObject(
-        bucket_uri=self.versioned_bucket, contents=b'bar')
+    old_gsutil_object = self.CreateObject(bucket_uri=self.versioned_bucket,
+                                          contents=b'foo')
+    old_gsutil_object2 = self.CreateObject(bucket_uri=self.versioned_bucket,
+                                           contents=b'bar')
     gsutil_object = self.CreateObject(
         bucket_uri=self.versioned_bucket,
         object_name=old_gsutil_object.object_name,
@@ -1213,10 +1210,10 @@ class TestIamSet(TestIamIntegration):
     # TODO(b/135780661): Remove retry after bug resolved
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check2():
-      gsutil_object = self.CreateObject(
-          bucket_uri=self.bucket, contents=b'foobar')
-      gsutil_object2 = self.CreateObject(
-          bucket_uri=self.bucket, contents=b'foobar')
+      gsutil_object = self.CreateObject(bucket_uri=self.bucket,
+                                        contents=b'foobar')
+      gsutil_object2 = self.CreateObject(bucket_uri=self.bucket,
+                                         contents=b'foobar')
       set_iam_string = self.RunGsUtil(['iam', 'get', gsutil_object.uri],
                                       return_stdout=True)
       set_iam_string2 = self.RunGsUtil(['iam', 'get', gsutil_object2.uri],
@@ -1229,8 +1226,8 @@ class TestIamSet(TestIamIntegration):
 
   def test_set_valid_iam_single_unversioned_object(self):
     """Tests setting a valid IAM on an object."""
-    gsutil_object = self.CreateObject(
-        bucket_uri=self.bucket, contents=b'foobar')
+    gsutil_object = self.CreateObject(bucket_uri=self.bucket,
+                                      contents=b'foobar')
 
     lookup_uri = gsutil_object.uri
     self.RunGsUtil(['iam', 'set', self.new_object_iam_path, lookup_uri])
@@ -1249,8 +1246,8 @@ class TestIamSet(TestIamIntegration):
 
   def test_set_valid_iam_single_versioned_object(self):
     """Tests setting a valid IAM on a versioned object."""
-    gsutil_object = self.CreateObject(
-        bucket_uri=self.bucket, contents=b'foobar')
+    gsutil_object = self.CreateObject(bucket_uri=self.bucket,
+                                      contents=b'foobar')
 
     lookup_uri = gsutil_object.version_specific_uri
     self.RunGsUtil(['iam', 'set', self.new_object_iam_path, lookup_uri])
@@ -1269,8 +1266,8 @@ class TestIamSet(TestIamIntegration):
 
   def test_set_valid_iam_multithreaded_single_object(self):
     """Tests setting a valid IAM on a single object with multithreading."""
-    gsutil_object = self.CreateObject(
-        bucket_uri=self.bucket, contents=b'foobar')
+    gsutil_object = self.CreateObject(bucket_uri=self.bucket,
+                                      contents=b'foobar')
 
     lookup_uri = gsutil_object.version_specific_uri
     self.RunGsUtil(
