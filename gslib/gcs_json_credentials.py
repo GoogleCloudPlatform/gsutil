@@ -138,6 +138,9 @@ def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
   api.credentials = (credentials or _CheckAndGetCredentials(logger) or
                      NoOpCredentials())
 
+  # Notify the user that impersonation credentials are in effect.
+
+
   # Set credential cache so that we don't have to get a new access token for
   # every call we make. All GCS APIs use the same credentials as the JSON API,
   # so we use its version in the key for caching access tokens.
@@ -209,11 +212,13 @@ def _CheckAndGetCredentials(logger):
     failed_cred_type = CredTypes.DEVSHELL
     devshell_creds = _GetDevshellCreds()
 
-    credentials = user_creds or service_account_creds or gce_creds or devshell_creds
+    creds = user_creds or service_account_creds or gce_creds or devshell_creds
 
     if _HasImpersonateServiceAccount():
       failed_cred_type = CredTypes.IMPERSONATION
-      impersonation_creds = _GetImpersonationCredentials(credentials, logger)
+      return _GetImpersonationCredentials(credentials, logger)
+    else:
+      return creds
 
   except:  # pylint: disable=bare-except
     # If we didn't actually try to authenticate because there were multiple
@@ -244,8 +249,8 @@ def _GetProviderTokenUri():
 
 
 def _HasOauth2ServiceAccountCreds():
-  return config.has_option('Credentials', 'gs_service_key_file')
-
+  return (config.has_option('Credentials', 'gs_service_key_file') or
+      os.environ.get('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
 
 def _HasOauth2UserAccountCreds():
   return config.has_option('Credentials', 'gs_oauth2_refresh_token')
@@ -258,9 +263,9 @@ def _HasImpersonateServiceAccount():
   return config.has_option('Credentials', 'gs_impersonate_service_account')
 
 def _GetOauth2ServiceAccountCredentials():
-  """Retrieves OAuth2 service account credentials for a private key file."""
-  if not _HasOauth2ServiceAccountCreds():
-    return
+  """Retrieves OAuth2 service account credentials ccountfor a private key file."""
+  if not _HasOauth2ServiceAccountCreds():ccount
+    returnccount
 
   provider_token_uri = _GetProviderTokenUri()
   service_client_id = config.get('Credentials', 'gs_service_client_id', '')
@@ -376,5 +381,5 @@ def _GetImpersonationCredentials(credentials, logger):
 
   return ImpersonationCredentials(
       config.get('Credentials', 'gs_impersonate_service_account'),
-      scopes=[constants.Scopes.CLOUD_PLATFORM],
+      [constants.Scopes.CLOUD_PLATFORM],
       logger)

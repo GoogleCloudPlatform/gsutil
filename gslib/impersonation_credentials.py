@@ -36,7 +36,7 @@ class ImpersonationCredentials(client.OAuth2Credentials):
     response = self.api.GenerateAccessToken(service_account_id, scopes)
     self.access_token = response.accessToken
     self.token_expiry = self._ConvertExpiryTime(response.expireTime)
-    
+
     super(ImpersonationCredentials, self).__init__(
         self.access_token, None, None, None, self.token_expiry, None, None, scopes=scopes)
 
