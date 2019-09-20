@@ -38,6 +38,7 @@ from apitools.base.py import exceptions as apitools_exceptions
 from boto import config
 from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
+from gslib.impersonation_credentials import ImpersonationCredentials
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.utils import constants
 from gslib.utils import system_util
@@ -207,7 +208,13 @@ def _CheckAndGetCredentials(logger):
     gce_creds = _GetGceCreds()
     failed_cred_type = CredTypes.DEVSHELL
     devshell_creds = _GetDevshellCreds()
-    return user_creds or service_account_creds or gce_creds or devshell_creds
+
+    credentials = user_creds or service_account_creds or gce_creds or devshell_creds
+
+    if _HasImpersonateServiceAccount():
+      failed_cred_type = CredTypes.IMPERSONATION
+      impersonation_creds = _GetImpersonationCredentials(credentials, logger)
+
   except:  # pylint: disable=bare-except
     # If we didn't actually try to authenticate because there were multiple
     # types of configured credentials, don't emit this warning.
@@ -361,3 +368,13 @@ def _GetDevshellCreds():
     return None
   except:
     raise
+
+def _GetImpersonationCredentials(credentials, logger):
+  """Retrieves temporary credentials"""
+  if isinstance(credentials, ImpersonationCredentials):
+    return
+
+  return ImpersonationCredentials(
+      config.get('Credentials', 'gs_impersonate_service_account'),
+      scopes=[constants.Scopes.CLOUD_PLATFORM],
+      logger)

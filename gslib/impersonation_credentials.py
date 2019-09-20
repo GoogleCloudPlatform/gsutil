@@ -23,41 +23,27 @@ import datetime
 
 from oauth2client import client
 
-def GenerateAccessToken(service_account_id, scopes):
-  """Generates an access token for the given service account."""
-  service_account_ref = resources.REGISTRY.Parse(
-      service_account_id, collection='iamcredentials.serviceAccounts',
-      params={'projectsId': '-', 'serviceAccountsId': service_account_id})
-
-  # pylint: disable=protected-access
-  http_client = http_creds.Http(
-      response_encoding=http_creds.ENCODING,
-      allow_account_impersonation=False, force_resource_quota=True)
-  iam_client = apis_internal._GetClientInstance(
-      'iamcredentials', 'v1', http_client=http_client)
-  response = iam_client.projects_serviceAccounts.GenerateAccessToken(
-      iam_client.MESSAGES_MODULE
-      .IamcredentialsProjectsServiceAccountsGenerateAccessTokenRequest(
-          name=service_account_ref.RelativeName(),
-          generateAccessTokenRequest=iam_client.MESSAGES_MODULE
-          .GenerateAccessTokenRequest(scope=scopes)
-      )
-  )
-  return response
+from gslib.iamcredentials_api import IamcredentailsApi
 
 class ImpersonationCredentials(client.OAuth2Credentials):
   _EXPIRY_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
-  def __init__(self, service_account_id, access_token, token_expiry, scopes):
+  def __init__(self, service_account_id, scopes, credentials, logger):
     self._service_account_id = service_account_id
     token_expiry = self._ConvertExpiryTime(token_expiry)
+    self.api = IamcredentailsApi(logger, credentials)
+
+    response = self.api.GenerateAccessToken(service_account_id, scopes)
+    self.access_token = response.accessToken
+    self.token_expiry = self._ConvertExpiryTime(response.expireTime)
+    
     super(ImpersonationCredentials, self).__init__(
-        access_token, None, None, None, token_expiry, None, None, scopes=scopes)
+        self.access_token, None, None, None, self.token_expiry, None, None, scopes=scopes)
 
   def _refresh(self, http):
     # client.Oauth2Credentials converts scopes into a set, so we need to convert
     # back to a list before making the API request.
-    response = GenerateAccessToken(self._service_account_id, list(self.scopes))
+    response = self.api.GenerateAccessToken(self._service_account_id, list(self.scopes))
     self.access_token = response.accessToken
     self.token_expiry = self._ConvertExpiryTime(response.expireTime)
 
