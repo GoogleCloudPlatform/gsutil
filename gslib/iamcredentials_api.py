@@ -68,6 +68,7 @@ class IamcredentailsApi(object):
     super(IamcredentailsApi, self).__init__()
 
     self.logger = logger
+    self.credentials = credentials
 
     self.certs_file = GetCertsFile()
     self.http = GetNewHttp()
@@ -105,7 +106,7 @@ class IamcredentailsApi(object):
     generate_access_token_request = apitools_messages.GenerateAccessTokenRequest(scopes)
     request = (apitools_messages.
                IamcredentialsProjectsServiceAccountsGenerateAccessTokenRequest(
-                  name=name, generateAccessTokenRequest=generate_access_token_request))
+                  name, generate_access_token_request))
     
     try:
       return self.api_client.projects_serviceAccounts.GenerateAccessToken(request)
@@ -164,12 +165,12 @@ class IamcredentailsApi(object):
       # Return None if we have any trouble parsing out the acceptable scopes.
       pass
 
-  def _TranslateApitoolsException(self, e, key_name=None):
+  def _TranslateApitoolsException(self, e, service_account_id=None):
     """Translates apitools exceptions into their gsutil equivalents.
 
     Args:
       e: Any exception in TRANSLATABLE_APITOOLS_EXCEPTIONS.
-      key_name: Optional key name in request that caused the exception.
+      service_account_id: Optional service account ID that caused the exception.
 
     Returns:
       CloudStorageApiServiceException for translatable exceptions, None
@@ -225,13 +226,13 @@ class IamcredentailsApi(object):
               status=e.status_code,
               body=self._GetAcceptableScopesFromHttpError(e))
         else:
-          return AccessDeniedException(message or e.message or key_name,
+          return AccessDeniedException(message or e.message or service_account_id,
                                        status=e.status_code)
       elif e.status_code == 404:
         return NotFoundException(message or e.message, status=e.status_code)
 
       elif e.status_code == 409 and key_name:
-        return ServiceException('The key %s already exists.' % key_name,
+        return ServiceException('The key %s already exists.' % service_account_id,
                                 status=e.status_code)
       elif e.status_code == 412:
         return PreconditionException(message, status=e.status_code)

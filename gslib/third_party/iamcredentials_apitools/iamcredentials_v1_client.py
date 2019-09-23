@@ -9,7 +9,7 @@ import platform
 import sys
 
 from apitools.base.py import base_api
-import gslib.third_party.iamcredentials.iamcredentials_v1_messages as messages
+import gslib.third_party.iamcredentials_apitools.iamcredentials_v1_messages as messages
 
 import gslib
 from gslib.metrics import MetricsCollector
@@ -69,7 +69,7 @@ class IamcredentialsV1(base_api.BaseApiClient):
           }
 
     def GenerateAccessToken(self, request, global_params=None):
-      r"""Generates an OAuth 2.0 access token for a service account.
+      """Generates an OAuth 2.0 access token for a service account.
 
       Args:
         request: (IamcredentialsProjectsServiceAccountsGenerateAccessTokenRequest) input message
