@@ -99,15 +99,15 @@ class IamcredentailsApi(object):
       # anonymous requests.
       self.api_client.AddGlobalParam(
           'key', u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
-  
+
   def GenerateAccessToken(self, service_account_id, scopes):
     """Generates an access token for the given service account."""
     name = 'projects/-/serviceAccounts/%s' % service_account_id
-    generate_access_token_request = apitools_messages.GenerateAccessTokenRequest(scopes)
+    generate_access_token_request = apitools_messages.GenerateAccessTokenRequest(scope=scopes)
     request = (apitools_messages.
                IamcredentialsProjectsServiceAccountsGenerateAccessTokenRequest(
-                  name, generate_access_token_request))
-    
+                  name=name, generateAccessTokenRequest=generate_access_token_request))
+
     try:
       return self.api_client.projects_serviceAccounts.GenerateAccessToken(request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
