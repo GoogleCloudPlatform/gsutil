@@ -43,6 +43,7 @@ from gslib.cloud_api import Preconditions
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
+from gslib.impersonation_credentials import ImpersonationCredentials
 from gslib.kms_api import KmsApi
 from gslib.project_id import GOOG_PROJ_ID_HDR
 from gslib.project_id import PopulateProjectId
@@ -138,7 +139,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                DiscardMessagesQueue(), 'gs')
     self.xml_api = BotoTranslation(BucketStorageUri, logging.getLogger(),
                                    DiscardMessagesQueue, self.default_provider)
-    self.kms_api = KmsApi()
+    self.kms_api = KmsApi(logging.getLogger())
 
     self.multiregional_buckets = util.USE_MULTIREGIONAL_BUCKETS
 

@@ -115,7 +115,7 @@ class IamcredentailsApi(object):
       return self.api_client.projects_serviceAccounts.GenerateAccessToken(
           request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
-      self._TranslateExceptionAndRaise(e, service_account_id=service_account_id)
+      raise e
 
   def _TranslateExceptionAndRaise(self, e, service_account_id=None):
     """Translates an HTTP exception and raises the translated or original value.

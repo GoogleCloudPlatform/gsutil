@@ -217,11 +217,6 @@ def _CheckAndGetCredentials(logger):
 
     creds = user_creds or service_account_creds or gce_creds or devshell_creds
 
-    if _HasImpersonateServiceAccount() and creds:
-      failed_cred_type = CredTypes.IMPERSONATION
-      return _GetImpersonationCredentials(creds, logger)
-    else:
-      return creds
 
   except:  # pylint: disable=bare-except
     # If we didn't actually try to authenticate because there were multiple
@@ -245,11 +240,19 @@ def _CheckAndGetCredentials(logger):
     # realize their credentials are invalid.
     raise
 
+  if _HasImpersonateServiceAccount() and creds:
+    try:
+      return _GetImpersonationCredentials(creds, logger)
+    except apitools_exceptions.HttpError as e:
+      
+      raise e
+
+  else:
+    return creds
 
 def _GetProviderTokenUri():
   return config.get('OAuth2', 'provider_token_uri',
                     DEFAULT_GOOGLE_OAUTH2_PROVIDER_TOKEN_URI)
-
 
 def _HasOauth2ServiceAccountCreds():
   return config.has_option('Credentials', 'gs_service_key_file')
