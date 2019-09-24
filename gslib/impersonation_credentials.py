@@ -25,6 +25,7 @@ from oauth2client import client
 
 from gslib.iamcredentials_api import IamcredentailsApi
 
+
 class ImpersonationCredentials(client.OAuth2Credentials):
   _EXPIRY_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
@@ -36,13 +37,20 @@ class ImpersonationCredentials(client.OAuth2Credentials):
     self.access_token = response.accessToken
     self.token_expiry = self._ConvertExpiryTime(response.expireTime)
 
-    super(ImpersonationCredentials, self).__init__(
-        self.access_token, None, None, None, self.token_expiry, None, None, scopes=scopes)
+    super(ImpersonationCredentials, self).__init__(self.access_token,
+                                                   None,
+                                                   None,
+                                                   None,
+                                                   self.token_expiry,
+                                                   None,
+                                                   None,
+                                                   scopes=scopes)
 
   def _refresh(self, http):
     # client.Oauth2Credentials converts scopes into a set, so we need to convert
     # back to a list before making the API request.
-    response = self.api.GenerateAccessToken(self._service_account_id, list(self.scopes))
+    response = self.api.GenerateAccessToken(self._service_account_id,
+                                            list(self.scopes))
     self.access_token = response.accessToken
     self.token_expiry = self._ConvertExpiryTime(response.expireTime)
 

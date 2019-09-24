@@ -217,7 +217,7 @@ def _CheckAndGetCredentials(logger):
 
     creds = user_creds or service_account_creds or gce_creds or devshell_creds
 
-    if _HasImpersonateServiceAccount():
+    if _HasImpersonateServiceAccount() and creds:
       failed_cred_type = CredTypes.IMPERSONATION
       return _GetImpersonationCredentials(creds, logger)
     else:
@@ -254,6 +254,7 @@ def _GetProviderTokenUri():
 def _HasOauth2ServiceAccountCreds():
   return config.has_option('Credentials', 'gs_service_key_file')
 
+
 def _HasOauth2UserAccountCreds():
   return config.has_option('Credentials', 'gs_oauth2_refresh_token')
 
@@ -261,13 +262,16 @@ def _HasOauth2UserAccountCreds():
 def _HasGceCreds():
   return config.has_option('GoogleCompute', 'service_account')
 
+
 def _HasImpersonateServiceAccount():
   return (config.has_option('Credentials', 'gs_impersonate_service_account') or
-      os.environ.has_key('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
+          os.environ.has_key('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
+
 
 def _GetImpersonateServiceAccount():
   return (config.get('Credentials', 'gs_impersonate_service_account') or
-      os.environ.has_key('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
+          os.environ.has_key('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
+
 
 def _GetOauth2ServiceAccountCredentials():
   """Retrieves OAuth2 service account credentials for a private key file."""
@@ -381,6 +385,7 @@ def _GetDevshellCreds():
   except:
     raise
 
+
 def _GetImpersonationCredentials(credentials, logger):
   """Retrieves temporary credentials impersonating a service account"""
 
@@ -388,8 +393,6 @@ def _GetImpersonationCredentials(credentials, logger):
   if isinstance(credentials, ImpersonationCredentials):
     return
 
-  return ImpersonationCredentials(
-      _GetImpersonateServiceAccount(),
-      [constants.Scopes.CLOUD_PLATFORM],
-      credentials,
-      logger)
+  return ImpersonationCredentials(_GetImpersonateServiceAccount(),
+                                  [constants.Scopes.CLOUD_PLATFORM],
+                                  credentials, logger)

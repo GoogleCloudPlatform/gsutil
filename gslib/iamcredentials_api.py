@@ -82,11 +82,12 @@ class IamcredentailsApi(object):
     log_request = (debug >= 3)
     log_response = (debug >= 3)
 
-    self.api_client = apitools_client.IamcredentialsV1(url=self.url_base,
-                                                       http=self.http,
-                                                       log_request=log_request,
-                                                       log_response=log_response,
-                                                       credentials=self.credentials)
+    self.api_client = apitools_client.IamcredentialsV1(
+        url=self.url_base,
+        http=self.http,
+        log_request=log_request,
+        log_response=log_response,
+        credentials=self.credentials)
 
     self.num_retries = GetNumRetries()
     self.api_client.num_retries = self.num_retries
@@ -103,13 +104,16 @@ class IamcredentailsApi(object):
   def GenerateAccessToken(self, service_account_id, scopes):
     """Generates an access token for the given service account."""
     name = 'projects/-/serviceAccounts/%s' % service_account_id
-    generate_access_token_request = apitools_messages.GenerateAccessTokenRequest(scope=scopes)
+    generate_access_token_request = apitools_messages.GenerateAccessTokenRequest(
+        scope=scopes)
     request = (apitools_messages.
                IamcredentialsProjectsServiceAccountsGenerateAccessTokenRequest(
-                  name=name, generateAccessTokenRequest=generate_access_token_request))
+                   name=name,
+                   generateAccessTokenRequest=generate_access_token_request))
 
     try:
-      return self.api_client.projects_serviceAccounts.GenerateAccessToken(request)
+      return self.api_client.projects_serviceAccounts.GenerateAccessToken(
+          request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, service_account_id=service_account_id)
 
@@ -127,8 +131,8 @@ class IamcredentailsApi(object):
     if self.logger.isEnabledFor(logging.DEBUG):
       self.logger.debug('TranslateExceptionAndRaise: %s',
                         traceback.format_exc())
-    translated_exception = self._TranslateApitoolsException(e,
-                                                            service_account_id=service_account_id)
+    translated_exception = self._TranslateApitoolsException(
+        e, service_account_id=service_account_id)
     if translated_exception:
       raise translated_exception
     else:
@@ -226,13 +230,15 @@ class IamcredentailsApi(object):
               status=e.status_code,
               body=self._GetAcceptableScopesFromHttpError(e))
         else:
-          return AccessDeniedException(message or e.message or service_account_id,
+          return AccessDeniedException(message or e.message or
+                                       service_account_id,
                                        status=e.status_code)
       elif e.status_code == 404:
         return NotFoundException(message or e.message, status=e.status_code)
 
       elif e.status_code == 409 and key_name:
-        return ServiceException('The key %s already exists.' % service_account_id,
+        return ServiceException('The key %s already exists.' %
+                                service_account_id,
                                 status=e.status_code)
       elif e.status_code == 412:
         return PreconditionException(message, status=e.status_code)
