@@ -93,7 +93,7 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
       except apitools_exceptions.HttpError as e:
         msg = str(e)
         self.assertIn('IAM Service Account Credentials API has not been used',
-            msg)
+                      msg)
 
 
 class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
