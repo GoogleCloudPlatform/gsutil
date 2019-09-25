@@ -206,7 +206,7 @@ class IamcredentailsApi(object):
         # to impersonate a service account.
         if 'The caller does not have permission' in str(e):
           return AccessDeniedException(
-              'Service account impersonation failed. Please go to the Google'
+              'Service account impersonation failed. Please go to the Google '
               'Cloud Platform Console (https://cloud.google.com/console), '
               'select IAM & admin, then Service Accounts, and grant your '
               'originating account the Service Account Token Creator role on '
