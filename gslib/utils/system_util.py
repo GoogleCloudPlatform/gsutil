@@ -195,7 +195,7 @@ def GetGsutilClientIdAndSecret():
 
 def GetStreamFromFileUrl(storage_url, mode='rb'):
   if storage_url.IsStream():
-    return sys.stdin
+    return sys.stdin if six.PY2 else sys.stdin.buffer
   else:
     return open(storage_url.object_name, mode)
 
