@@ -249,7 +249,7 @@ class IamcredentailsApi(object):
       elif e.status_code == 404:
         return NotFoundException(message or e.message, status=e.status_code)
 
-      elif e.status_code == 409 and key_name:
+      elif e.status_code == 409 and service_account_id:
         return ServiceException('The key %s already exists.' %
                                 service_account_id,
                                 status=e.status_code)
