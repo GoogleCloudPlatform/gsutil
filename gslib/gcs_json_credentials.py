@@ -271,9 +271,9 @@ def _HasImpersonateServiceAccount():
 
 
 def _GetImpersonateServiceAccount():
-  return (constants.IMPERSONATE_SERVICE_ACCOUNT or
-         config.get('Credentials', 'gs_impersonate_service_account',
-                    os.environ.get('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT')))
+  return (constants.IMPERSONATE_SERVICE_ACCOUNT or config.get(
+      'Credentials', 'gs_impersonate_service_account',
+      os.environ.get('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT')))
 
 
 def _GetOauth2ServiceAccountCredentials():

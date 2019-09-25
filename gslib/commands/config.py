@@ -1126,8 +1126,7 @@ class ConfigCommand(Command):
         config_file.write(
             '# To impersonate a service account for "%s://" URIs over\n'
             '# JSON API, edit and uncomment the following line:\n'
-            '#%s_impersonate_service_account = <service account email>\n\n'
-        )
+            '#%s_impersonate_service_account = <service account email>\n\n')
       config_file.write('\n')
 
     # Write the config file Boto section.
