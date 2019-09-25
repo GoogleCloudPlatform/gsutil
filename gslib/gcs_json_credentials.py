@@ -268,13 +268,12 @@ def _HasGceCreds():
 
 
 def _HasImpersonateServiceAccount():
-  return (config.has_option('Credentials', 'gs_impersonate_service_account') or
-          os.environ.has_key('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
+  return _GetImpersonateServiceAccount() not in (None, '')
 
 
 def _GetImpersonateServiceAccount():
-  return (config.get('Credentials', 'gs_impersonate_service_account') or
-          os.environ.get('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
+  return config.get('Credentials', 'gs_impersonate_service_account',
+                    os.environ.get('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
 
 
 def _GetOauth2ServiceAccountCredentials():

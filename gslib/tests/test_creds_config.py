@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import boto
 
+from apitools.base.py import exceptions as apitools_exceptions
 from gslib.cred_types import CredTypes
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.exception import CommandException
@@ -33,6 +34,10 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
+
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 
 def _LoadServiceAccount(account_field):
@@ -67,6 +72,28 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         self.assertIn('types of configured credentials', msg)
         self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, msg)
         self.assertIn(CredTypes.OAUTH2_SERVICE_ACCOUNT, msg)
+
+  @mock.patch('gslib.iamcredentials_api.IamcredentailsApi.GenerateAccessToken')
+  def testImpersonationBlockedByIamCredentialsApiErrors(
+      self, mock_iam_creds_generate_access_token):
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_oauth2_refresh_token', 'foo'),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None),
+        ('Credentials', 'gs_impersonate_service_account', 'bar')
+    ]):
+      mock_iam_creds_generate_access_token.side_effect = (
+          apitools_exceptions.HttpError({'status': 403}, {
+              'code': 403,
+              'message': 'IAM Service Account Credentials API has not been used'
+          }, None))
+      try:
+        GcsJsonApi(None, self.logger, DiscardMessagesQueue())
+        self.fail('Succeeded with multiple types of configured creds.')
+      except apitools_exceptions.HttpError as e:
+        msg = str(e)
+        self.assertIn('IAM Service Account Credentials API has not been used',
+            msg)
 
 
 class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
