@@ -115,7 +115,7 @@ class IamcredentailsApi(object):
       return self.api_client.projects_serviceAccounts.GenerateAccessToken(
           request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
-      raise e
+      raise self._TranslateExceptionAndRaise(e, service_account_id)
 
   def _TranslateExceptionAndRaise(self, e, service_account_id=None):
     """Translates an HTTP exception and raises the translated or original value.
@@ -202,6 +202,19 @@ class IamcredentailsApi(object):
               status=e.status_code,
               body=self._GetAcceptableScopesFromHttpError(e))
       elif e.status_code == 403:
+        # Messaging for when the the originating credentials don't have access
+        # to impersonate a service account.
+        if 'The caller does not have permission' in str(e):
+          return AccessDeniedException(
+              'Service account impersonation failed. Please go to the Google'
+              'Cloud Platform Console (https://cloud.google.com/console), '
+              'select IAM & admin, then Service Accounts, and grant your '
+              'originating account the Service Account Token Creator role on '
+              'the target service account.')
+        # The server's errors message when IAM Credentials API aren't enabled
+        # are pretty great so we just display them.
+        if 'IAM Service Account Credentials API has not been used' in str(e):
+          return AccessDeniedException(message)
         if 'The account for the specified project has been disabled' in str(e):
           return AccessDeniedException(message or 'Account disabled.',
                                        status=e.status_code)

@@ -217,7 +217,6 @@ def _CheckAndGetCredentials(logger):
 
     creds = user_creds or service_account_creds or gce_creds or devshell_creds
 
-
   except:  # pylint: disable=bare-except
     # If we didn't actually try to authenticate because there were multiple
     # types of configured credentials, don't emit this warning.
@@ -244,15 +243,17 @@ def _CheckAndGetCredentials(logger):
     try:
       return _GetImpersonationCredentials(creds, logger)
     except apitools_exceptions.HttpError as e:
-      
+
       raise e
 
   else:
     return creds
 
+
 def _GetProviderTokenUri():
   return config.get('OAuth2', 'provider_token_uri',
                     DEFAULT_GOOGLE_OAUTH2_PROVIDER_TOKEN_URI)
+
 
 def _HasOauth2ServiceAccountCreds():
   return config.has_option('Credentials', 'gs_service_key_file')
@@ -273,7 +274,7 @@ def _HasImpersonateServiceAccount():
 
 def _GetImpersonateServiceAccount():
   return (config.get('Credentials', 'gs_impersonate_service_account') or
-          os.environ.has_key('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
+          os.environ.get('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT'))
 
 
 def _GetOauth2ServiceAccountCredentials():
