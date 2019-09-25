@@ -22,6 +22,8 @@ from __future__ import unicode_literals
 import boto
 
 from apitools.base.py import exceptions as apitools_exceptions
+from apitools.base.py import http_wrapper
+from gslib.cloud_api import AccessDeniedException
 from gslib.cred_types import CredTypes
 from gslib.discard_messages_queue import DiscardMessagesQueue
 from gslib.exception import CommandException
@@ -40,12 +42,15 @@ add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
 
-def _LoadServiceAccount(account_field):
-  return boto.config.get_value('GSUtil', account_field)
+def _Make403(message):
+  return (apitools_exceptions.HttpError.FromResponse(
+      http_wrapper.Response(info={'status': 403},
+                            content='{"error": {"message": "%s"}}' % message,
+                            request_url='http://www.google.com')))
 
 
-SERVICE_ACCOUNT = _LoadServiceAccount('test_impersonate_service_account')
-FAILURE_ACCOUNT = _LoadServiceAccount('test_impersonate_failure_account')
+SERVICE_ACCOUNT = boto.config.get_value('GSUtil',
+                                        'test_impersonate_service_account')
 
 
 class TestCredsConfig(testcase.GsUtilUnitTestCase):
@@ -73,7 +78,11 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, msg)
         self.assertIn(CredTypes.OAUTH2_SERVICE_ACCOUNT, msg)
 
-  @mock.patch('gslib.iamcredentials_api.IamcredentailsApi.GenerateAccessToken')
+  @SkipForS3('Tests only uses gs credentials.')
+  @SkipForXML('Tests only run on JSON API.')
+  @mock.patch('gslib.third_party.iamcredentials_apitools'
+              '.iamcredentials_v1_client.IamcredentialsV1'
+              '.ProjectsServiceAccountsService.GenerateAccessToken')
   def testImpersonationBlockedByIamCredentialsApiErrors(
       self, mock_iam_creds_generate_access_token):
     with SetBotoConfigForTest([
@@ -82,18 +91,23 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         ('Credentials', 'gs_service_key_file', None),
         ('Credentials', 'gs_impersonate_service_account', 'bar')
     ]):
+      bucket_uri = self.CreateBucket()
+
       mock_iam_creds_generate_access_token.side_effect = (
-          apitools_exceptions.HttpError({'status': 403}, {
-              'code': 403,
-              'message': 'IAM Service Account Credentials API has not been used'
-          }, None))
+          _Make403('The caller does not have permission'))
       try:
         GcsJsonApi(None, self.logger, DiscardMessagesQueue())
-        self.fail('Succeeded with multiple types of configured creds.')
-      except apitools_exceptions.HttpError as e:
-        msg = str(e)
-        self.assertIn('IAM Service Account Credentials API has not been used',
-                      msg)
+        self.fail('Succeeded when IAM Credentials threw an error')
+      except AccessDeniedException as e:
+        self.assertIn('Service account impersonation failed.', str(e))
+
+      mock_iam_creds_generate_access_token.side_effect = (
+          _Make403('IAM Service Account Credentials API has not been used'))
+      try:
+        GcsJsonApi(None, self.logger, DiscardMessagesQueue())
+        self.fail('Succeeded when IAM Credentials threw an error')
+      except AccessDeniedException as e:
+        self.assertIn('IAM Service Account Credentials API has not', str(e))
 
 
 class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
@@ -142,18 +156,6 @@ class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
   def testImpersonationSuccess(self):
     with SetBotoConfigForTest([('Credentials', 'gs_impersonate_service_account',
                                 SERVICE_ACCOUNT)]):
-      stdout = self.RunGsUtil(['ls', 'gs://pub'], return_stderr=True)
+      stderr = self.RunGsUtil(['ls', 'gs://pub'], return_stderr=True)
       self.assertIn('API calls will be executed as [%s' % SERVICE_ACCOUNT,
-                    stdout)
-
-  @unittest.skipUnless(FAILURE_ACCOUNT,
-                       'Test requires service account configuration.')
-  @SkipForS3('Tests only uses gs credentials.')
-  @SkipForXML('Tests only run on JSON API.')
-  def testImpersonationFailure(self):
-    with SetBotoConfigForTest([('Credentials', 'gs_impersonate_service_account',
-                                FAILURE_ACCOUNT)]):
-      stdout = self.RunGsUtil(['ls', 'gs://pub'],
-                              expected_status=1,
-                              return_stderr=True)
-      self.assertIn('Service account impersonation failed.', stdout)
+                    stderr)
