@@ -153,6 +153,20 @@ class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
                        'Test requires service account configuration.')
   @SkipForS3('Tests only uses gs credentials.')
   @SkipForXML('Tests only run on JSON API.')
+  def testImpersonationCredentialsFromOptionOverridesOthers(self):
+    with SetBotoConfigForTest([('Credentials', 'gs_impersonate_service_account',
+                                'foo@google.com')]):
+      with SetEnvironmentForTest(
+          {'CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT': 'bar@google.com'}):
+        stderr = self.RunGsUtil(['-i', SERVICE_ACCOUNT, 'ls', 'gs://pub'],
+                                return_stderr=True)
+        self.assertIn('API calls will be executed as [%s' % SERVICE_ACCOUNT,
+                      stderr)
+
+  @unittest.skipUnless(SERVICE_ACCOUNT,
+                       'Test requires service account configuration.')
+  @SkipForS3('Tests only uses gs credentials.')
+  @SkipForXML('Tests only run on JSON API.')
   def testImpersonationSuccess(self):
     with SetBotoConfigForTest([('Credentials', 'gs_impersonate_service_account',
                                 SERVICE_ACCOUNT)]):
