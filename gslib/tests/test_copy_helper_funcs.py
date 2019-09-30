@@ -709,11 +709,10 @@ class TestExpandUrlToSingleBlr(GsUtilUnitTestCase):
 
   @mock.patch('gslib.cloud_api.CloudApi')
   def testWithSlashNoMatch(self, mock_gsutil_api):
-    """Tests use case that was removed"""
     mock_gsutil_api.ListObjects.return_value = iter([])
     (exp_url, have_existing_dst_container) = ExpandUrlToSingleBlr(
         'gs://test/folder/', mock_gsutil_api, 'project_id', False,
         CreateOrGetGsutilLogger('copy_test'))
 
-    self.assertFalse(have_existing_dst_container)
+    self.assertTrue(have_existing_dst_container)
     self.assertEqual(exp_url, StorageUrlFromString('gs://test/folder/'))
