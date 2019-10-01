@@ -217,13 +217,24 @@ def _CheckAndGetCredentials(logger):
 
     creds = user_creds or service_account_creds or gce_creds or devshell_creds
 
-  except:  # pylint: disable=bare-except
+    # Use one of the above credential types to impersonate, if configured.
+    if _HasImpersonateServiceAccount() and creds:
+      failed_cred_type = CredTypes.IMPERSONATION
+      return _GetImpersonationCredentials(creds, logger)
+    else:
+      return creds
+
+  except Exception as e:
     # If we didn't actually try to authenticate because there were multiple
     # types of configured credentials, don't emit this warning.
     if failed_cred_type:
       if logger.isEnabledFor(logging.DEBUG):
         logger.debug(traceback.format_exc())
-      if system_util.InvokedViaCloudSdk():
+      # If impersonation fails, show the user the actual error, since we handle
+      # errors in iamcredentials_api.
+      if failed_cred_type == CredTypes.IMPERSONATION:
+        raise e
+      elif system_util.InvokedViaCloudSdk():
         logger.warn(
             'Your "%s" credentials are invalid. Please run\n'
             '  $ gcloud auth login', failed_cred_type)
@@ -238,15 +249,6 @@ def _CheckAndGetCredentials(logger):
     # boto does). That approach leads to much confusion if users don't
     # realize their credentials are invalid.
     raise
-
-  if _HasImpersonateServiceAccount() and creds:
-    try:
-      return _GetImpersonationCredentials(creds, logger)
-    except Exception as e:
-      raise e
-
-  else:
-    return creds
 
 
 def _GetProviderTokenUri():

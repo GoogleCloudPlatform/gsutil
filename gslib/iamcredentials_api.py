@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2017 Google Inc. All Rights Reserved.
+# Copyright 2019 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -138,37 +138,6 @@ class IamcredentailsApi(object):
     else:
       raise
 
-  def _GetMessageFromHttpError(self, http_error):
-    if isinstance(http_error, apitools_exceptions.HttpError):
-      if getattr(http_error, 'content', None):
-        try:
-          json_obj = json.loads(http_error.content)
-          if 'error' in json_obj and 'message' in json_obj['error']:
-            return json_obj['error']['message']
-        except Exception:  # pylint: disable=broad-except
-          # If we couldn't decode anything, just leave the message as None.
-          pass
-
-  def _GetAcceptableScopesFromHttpError(self, http_error):
-    try:
-      www_authenticate = http_error.response['www-authenticate']
-      # In the event of a scope error, the www-authenticate field of the HTTP
-      # response should contain text of the form
-      #
-      # 'Bearer realm="https://oauth2.googleapis.com/",
-      # error=insufficient_scope,
-      # scope="${space separated list of acceptable scopes}"'
-      #
-      # Here we use a quick string search to find the scope list, just looking
-      # for a substring with the form 'scope="${scopes}"'.
-      scope_idx = www_authenticate.find('scope="')
-      if scope_idx >= 0:
-        scopes = www_authenticate[scope_idx:].split('"')[1]
-        return 'Acceptable scopes: %s' % scopes
-    except Exception:  # pylint: disable=broad-except
-      # Return None if we have any trouble parsing out the acceptable scopes.
-      pass
-
   def _TranslateApitoolsException(self, e, service_account_id=None):
     """Translates apitools exceptions into their gsutil equivalents.
 
@@ -256,3 +225,34 @@ class IamcredentailsApi(object):
       elif e.status_code == 412:
         return PreconditionException(message, status=e.status_code)
       return ServiceException(message, status=e.status_code)
+
+  def _GetMessageFromHttpError(self, http_error):
+    if isinstance(http_error, apitools_exceptions.HttpError):
+      if getattr(http_error, 'content', None):
+        try:
+          json_obj = json.loads(http_error.content)
+          if 'error' in json_obj and 'message' in json_obj['error']:
+            return json_obj['error']['message']
+        except Exception:  # pylint: disable=broad-except
+          # If we couldn't decode anything, just leave the message as None.
+          pass
+
+  def _GetAcceptableScopesFromHttpError(self, http_error):
+    try:
+      www_authenticate = http_error.response['www-authenticate']
+      # In the event of a scope error, the www-authenticate field of the HTTP
+      # response should contain text of the form
+      #
+      # 'Bearer realm="https://oauth2.googleapis.com/",
+      # error=insufficient_scope,
+      # scope="${space separated list of acceptable scopes}"'
+      #
+      # Here we use a quick string search to find the scope list, just looking
+      # for a substring with the form 'scope="${scopes}"'.
+      scope_idx = www_authenticate.find('scope="')
+      if scope_idx >= 0:
+        scopes = www_authenticate[scope_idx:].split('"')[1]
+        return 'Acceptable scopes: %s' % scopes
+    except Exception:  # pylint: disable=broad-except
+      # Return None if we have any trouble parsing out the acceptable scopes.
+      pass

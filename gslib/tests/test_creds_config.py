@@ -41,6 +41,8 @@ from six import add_move, MovedModule
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
+from datetime import datetime
+
 
 def _Make403(message):
   return (apitools_exceptions.HttpError.FromResponse(
@@ -91,8 +93,6 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         ('Credentials', 'gs_service_key_file', None),
         ('Credentials', 'gs_impersonate_service_account', 'bar')
     ]):
-      bucket_uri = self.CreateBucket()
-
       mock_iam_creds_generate_access_token.side_effect = (
           _Make403('The caller does not have permission'))
       try:
@@ -108,6 +108,26 @@ class TestCredsConfig(testcase.GsUtilUnitTestCase):
         self.fail('Succeeded when IAM Credentials threw an error')
       except AccessDeniedException as e:
         self.assertIn('IAM Service Account Credentials API has not', str(e))
+
+  @SkipForS3('Tests only uses gs credentials.')
+  @SkipForXML('Tests only run on JSON API.')
+  @mock.patch('gslib.third_party.iamcredentials_apitools'
+              '.iamcredentials_v1_client.IamcredentialsV1'
+              '.ProjectsServiceAccountsService.GenerateAccessToken')
+  def testImpersonationSuccessfullyUsesToken(
+      self, mock_iam_creds_generate_access_token):
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_oauth2_refresh_token', 'foo'),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None),
+        ('Credentials', 'gs_impersonate_service_account', 'bar')
+    ]):
+      fake_token = 'Mock token from IAM Credentials API'
+      expire_time = datetime.now().strftime("%Y-%m-%dT23:59:59Z")
+      mock_iam_creds_generate_access_token.return_value.accessToken = fake_token
+      mock_iam_creds_generate_access_token.return_value.expireTime = expire_time
+      api = GcsJsonApi(None, self.logger, DiscardMessagesQueue())
+      self.assertIn(fake_token, str(api.credentials.access_token))
 
 
 class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
@@ -127,7 +147,7 @@ class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
       self.assertIn('credentials are invalid', stderr)
 
   @unittest.skipUnless(SERVICE_ACCOUNT,
-                       'Test requires service account configuration.')
+                       'Test requires test_impersonate_service_account.')
   @SkipForS3('Tests only uses gs credentials.')
   @SkipForXML('Tests only run on JSON API.')
   def testImpersonationCredentialsFromBotoConfig(self):
@@ -138,7 +158,7 @@ class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
         self.assertIn('using service account impersonation', stderr)
 
   @unittest.skipUnless(SERVICE_ACCOUNT,
-                       'Test requires service account configuration.')
+                       'Test requires test_impersonate_service_account.')
   @SkipForS3('Tests only uses gs credentials.')
   @SkipForXML('Tests only run on JSON API.')
   def testImpersonationCredentialsFromGCloud(self):
@@ -150,7 +170,7 @@ class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
         self.assertIn('using service account impersonation', stderr)
 
   @unittest.skipUnless(SERVICE_ACCOUNT,
-                       'Test requires service account configuration.')
+                       'Test requires test_impersonate_service_account.')
   @SkipForS3('Tests only uses gs credentials.')
   @SkipForXML('Tests only run on JSON API.')
   def testImpersonationCredentialsFromOptionOverridesOthers(self):
@@ -164,7 +184,7 @@ class TestCredsConfigIntegration(testcase.GsUtilIntegrationTestCase):
                       stderr)
 
   @unittest.skipUnless(SERVICE_ACCOUNT,
-                       'Test requires service account configuration.')
+                       'Test requires test_impersonate_service_account.')
   @SkipForS3('Tests only uses gs credentials.')
   @SkipForXML('Tests only run on JSON API.')
   def testImpersonationSuccess(self):
