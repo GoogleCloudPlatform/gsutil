@@ -89,6 +89,7 @@ from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import GenerationFromUrlAndString
+from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FileMessage
@@ -1434,11 +1435,15 @@ def ExpandUrlToSingleBlr(url_str,
   if storage_url.IsBucket():
     return (storage_url, True)
 
-  # For object/prefix URLs, there are three cases that indicate the destination
+  # For object/prefix URLs, there are four cases that indicate the destination
   # is a cloud subdirectory; these are always considered to be an existing
   # container. Checking each case allows gsutil to provide Unix-like
   # destination folder semantics, but requires up to three HTTP calls, noted
   # below.
+
+  # Case 1: If a placeholder object ending with '/' exists.
+  if IsCloudSubdirPlaceholder(storage_url):
+    return (storage_url, True)
 
   # Get version of object name without trailing slash for matching prefixes
   prefix = storage_url.object_name.rstrip('/')
@@ -1469,15 +1474,15 @@ def ExpandUrlToSingleBlr(url_str,
 
     if (obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.PREFIX and
         obj_or_prefix.data == prefix + '/'):
-      # Case 1: If there is a matching prefix when listing the destination URL.
+      # Case 2: If there is a matching prefix when listing the destination URL.
       return (storage_url, True)
     elif (obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT and
           obj_or_prefix.data.name == storage_url.object_name + '_$folder$'):
-      # Case 2: If a placeholder object matching destination + _$folder$
+      # Case 3: If a placeholder object matching destination + _$folder$
       # exists.
       return (storage_url, True)
 
-  # Case 3: If no objects/prefixes matched, and nonexistent objects should be
+  # Case 4: If no objects/prefixes matched, and nonexistent objects should be
   # treated as subdirectories.
   return (storage_url, expansion_empty and treat_nonexistent_object_as_subdir)
 

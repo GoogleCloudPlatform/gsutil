@@ -319,7 +319,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     actual = set(
         str(u) for u in self._test_wildcard_iterator(suri(
             dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
-    expected = set([suri(dst_bucket_uri, 'abc', 'f1')])
+    expected = set([suri(dst_bucket_uri, 'abc', 'dir1', 'f1')])
     self.assertEqual(expected, actual)
 
   # @SequentialAndParallelTransfer
@@ -637,6 +637,20 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     src_file = self.CreateTempFile(file_name='foo')
     dst_bucket_uri = self.CreateBucket()
     self.RunCommand('cp', ['-R', src_file, suri(dst_bucket_uri, 'dir/foo')])
+    actual = set(
+        str(u) for u in self._test_wildcard_iterator(suri(
+            dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
+    expected = set([suri(dst_bucket_uri, 'dir/foo')])
+    self.assertEqual(expected, actual)
+
+  def testCopyingFileToNonExistentDir(self):
+    """Tests copying a file to a non-existent directory.
+
+    Should create the directory and add the file to it
+    """
+    src_file = self.CreateTempFile(file_name='foo')
+    dst_bucket_uri = self.CreateBucket()
+    self.RunCommand('cp', [src_file, suri(dst_bucket_uri, 'dir') + '/'])
     actual = set(
         str(u) for u in self._test_wildcard_iterator(suri(
             dst_bucket_uri, '**')).IterAll(expand_top_level_buckets=True))
