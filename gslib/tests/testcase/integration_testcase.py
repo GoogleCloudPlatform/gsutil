@@ -138,7 +138,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                DiscardMessagesQueue(), 'gs')
     self.xml_api = BotoTranslation(BucketStorageUri, logging.getLogger(),
                                    DiscardMessagesQueue, self.default_provider)
-    self.kms_api = KmsApi()
+    self.kms_api = KmsApi(logging.getLogger())
 
     self.multiregional_buckets = util.USE_MULTIREGIONAL_BUCKETS
 

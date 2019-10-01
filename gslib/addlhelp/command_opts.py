@@ -80,6 +80,15 @@ _DETAILED_HELP_TEXT = ("""
               See also "gsutil help setmeta" for the ability to set metadata
               fields on objects after they have been uploaded.
 
+  -i          Allows you to use the configured credentials to impersonate a
+              service account, for example:
+
+                gsutil -i "service-account@google.com" ls gs://pub
+
+              Note that this setting will be ignored by the XML API and S3. See
+              'gsutil help creds' for more information on impersonating service
+              accounts.
+
   -m          Causes supported operations (acl ch, acl set, cp, mv, rm, rsync,
               and setmeta) to run in parallel. This can significantly improve
               performance if you are performing operations on a large number of
@@ -110,7 +119,7 @@ _DETAILED_HELP_TEXT = ("""
               an error when the -m flag is disabled, all commands will
               continue to try all operations when -m is enabled with multiple
               threads or processes, and the number of failed operations (if any)
-              will be reported as an exception at the end of the command's 
+              will be reported as an exception at the end of the command's
               execution.
 
   -o          Set/override values in the boto configuration value, in the format

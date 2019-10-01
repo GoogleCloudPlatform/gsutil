@@ -38,6 +38,7 @@ from apitools.base.py import exceptions as apitools_exceptions
 from boto import config
 from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
+from gslib.impersonation_credentials import ImpersonationCredentials
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.utils import constants
 from gslib.utils import system_util
@@ -137,6 +138,12 @@ def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
   api.credentials = (credentials or _CheckAndGetCredentials(logger) or
                      NoOpCredentials())
 
+  # Notify the user that impersonation credentials are in effect.
+  if isinstance(api.credentials, ImpersonationCredentials):
+    logger.warn(
+        'WARNING: This command is using service account impersonation. All '
+        'API calls will be executed as [%s].', _GetImpersonateServiceAccount())
+
   # Set credential cache so that we don't have to get a new access token for
   # every call we make. All GCS APIs use the same credentials as the JSON API,
   # so we use its version in the key for caching access tokens.
@@ -207,14 +214,27 @@ def _CheckAndGetCredentials(logger):
     gce_creds = _GetGceCreds()
     failed_cred_type = CredTypes.DEVSHELL
     devshell_creds = _GetDevshellCreds()
-    return user_creds or service_account_creds or gce_creds or devshell_creds
-  except:  # pylint: disable=bare-except
+
+    creds = user_creds or service_account_creds or gce_creds or devshell_creds
+
+    # Use one of the above credential types to impersonate, if configured.
+    if _HasImpersonateServiceAccount() and creds:
+      failed_cred_type = CredTypes.IMPERSONATION
+      return _GetImpersonationCredentials(creds, logger)
+    else:
+      return creds
+
+  except Exception as e:
     # If we didn't actually try to authenticate because there were multiple
     # types of configured credentials, don't emit this warning.
     if failed_cred_type:
       if logger.isEnabledFor(logging.DEBUG):
         logger.debug(traceback.format_exc())
-      if system_util.InvokedViaCloudSdk():
+      # If impersonation fails, show the user the actual error, since we handle
+      # errors in iamcredentials_api.
+      if failed_cred_type == CredTypes.IMPERSONATION:
+        raise e
+      elif system_util.InvokedViaCloudSdk():
         logger.warn(
             'Your "%s" credentials are invalid. Please run\n'
             '  $ gcloud auth login', failed_cred_type)
@@ -246,6 +266,16 @@ def _HasOauth2UserAccountCreds():
 
 def _HasGceCreds():
   return config.has_option('GoogleCompute', 'service_account')
+
+
+def _HasImpersonateServiceAccount():
+  return _GetImpersonateServiceAccount() not in (None, '')
+
+
+def _GetImpersonateServiceAccount():
+  return (constants.IMPERSONATE_SERVICE_ACCOUNT or config.get(
+      'Credentials', 'gs_impersonate_service_account',
+      os.environ.get('CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT')))
 
 
 def _GetOauth2ServiceAccountCredentials():
@@ -359,3 +389,15 @@ def _GetDevshellCreds():
     return None
   except:
     raise
+
+
+def _GetImpersonationCredentials(credentials, logger):
+  """Retrieves temporary credentials impersonating a service account"""
+
+  # We don't use impersoned credentials to impersonate.
+  if isinstance(credentials, ImpersonationCredentials):
+    return
+
+  return ImpersonationCredentials(_GetImpersonateServiceAccount(),
+                                  [constants.Scopes.CLOUD_PLATFORM],
+                                  credentials, logger)

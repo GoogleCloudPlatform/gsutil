@@ -585,6 +585,11 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 #test_hmac_alt_service_account =
 #test_hmac_list_service_account =
 
+# Service account emails for testing impersonation credentials. If this field is
+# not populated with a service account the tests for service account
+# impersonation will not run.  Primarily useful for tool developers.
+#test_impersonate_service_account =
+
 # 'content_language' specifies the ISO 639-1 language code of the content, to be
 # passed in the Content-Language header. By default no Content-Language is sent.
 # See the ISO 639-1 column of
@@ -1118,6 +1123,10 @@ class ConfigCommand(Command):
             '#%s_json_port = <alternate JSON API storage host port>\n'
             '#%s_json_host_header = <alternate JSON API storage host header>\n\n'
             % (host_key, host_key, host_key))
+        config_file.write(
+            '# To impersonate a service account for "%s://" URIs over\n'
+            '# JSON API, edit and uncomment the following line:\n'
+            '#%s_impersonate_service_account = <service account email>\n\n')
       config_file.write('\n')
 
     # Write the config file Boto section.
