@@ -1,4 +1,25 @@
-Release 4.43 (release date: 2019-08-20)
+Release 4.44 (release date: 2019-10-02)
+=======================================
+New Features
+------------------
+- Added support for service account impersonation. This a new "-i" option to
+  specify a service account to impersonate.
+- Added support for members using the deleted syntax (i.e. `deleted:user:...`,
+  `deleted:group:...`, `deleted:serviceAccount:...`).
+- Added support for the new uniform bucket-level access (ubla) command
+  (currently an alias of bucketpolicyonly).
+- Added -w flag to kms command, which shows a warning rather than failing when
+  updating key permissions does not succeed.
+
+Bug Fixes
+------------------
+- Fixed regression in cp where a statement like
+  `cp my-file gs://my-bucket/non-existent-folder/` would create a file called
+  `non-existent-folder` rather than `non-existent-folder/my-file`.
+- Fixed streaming uploads for Python 3.
+
+
+Release 4.43 (release date: 2019-09-20)
 =======================================
 New Features
 ------------------
@@ -42,7 +63,7 @@ New Features
  Bug Fixes
 ------------------
 - Fixed bug where copying files > 100MiB from GCS to S3 was hanging.
-- Fixed issue where content type was sometimes set improperly. 
+- Fixed issue where content type was sometimes set improperly.
 
 
 Release 4.40 (release date: 2019-07-01)
@@ -1216,7 +1237,7 @@ Major New Gsutil Version - Backwards-Incompatible Changes
 - Downloading object names ending with '/' is no longer supported to avoid
   problems this caused for directores using the Google Cloud Console.
 - rm -r now implies rm -ra (removing all object versions recursively).
-- All commands using the global -m option or a force option (such as 
+- All commands using the global -m option or a force option (such as
   rm -f or cp -c) will now return a non-zero exit code if there are any
   failures during the operation.
 - MD5 and CRC32c values are now represented in base64 encoding instead
@@ -2324,7 +2345,7 @@ New Features
 - Support for multi-threading and recursive operation for setacl command
   (see “gsutil help setacl”).
 - Ability to use the UNIX 'file' command to do content type recognition as
-  an alternative to filename extensions. 
+  an alternative to filename extensions.
 - Introduction of new end-to-end test suite.
 - The gsutil version command now computes a checksum of the code, to detect
   corruption and local modification when assisting with technical support.
