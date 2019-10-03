@@ -44,7 +44,7 @@ _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 _SET_DESCRIPTION = """
 <B>SET</B>
   The ``ubla set`` command enables or disables uniform
-  bucket-level access for Google Cloud Storage bucket(s).
+  bucket-level access for Google Cloud Storage buckets.
 
 <B>SET EXAMPLES</B>
   Configure your buckets to use uniform bucket-level access:
@@ -69,7 +69,7 @@ _GET_DESCRIPTION = """
 
 _DESCRIPTION = """
   The ``ubla`` command is used to retrieve or configure the
-  `Access controls (Beta)
+  `uniform bucket-level access
   <https://cloud.google.com/storage/docs/bucket-policy-only>`_ setting of
   Cloud Storage bucket(s). This command has two sub-commands, ``get`` and
   ``set``.
