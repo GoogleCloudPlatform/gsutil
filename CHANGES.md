@@ -2,14 +2,14 @@ Release 4.44 (release date: 2019-10-02)
 =======================================
 New Features
 ------------------
-- Added support for service account impersonation. This a new "-i" option to
+- Added support for service account impersonation through a new `-i` option to
   specify a service account to impersonate.
 - Added support for members using the deleted syntax (i.e. `deleted:user:...`,
   `deleted:group:...`, `deleted:serviceAccount:...`).
-- Added support for the new uniform bucket-level access (ubla) command
-  (currently an alias of bucketpolicyonly).
-- Added -w flag to kms command, which shows a warning rather than failing when
-  updating key permissions does not succeed.
+- Added support for the new uniform bucket-level access (`ubla`) command
+  (currently an alias of `bucketpolicyonly`).
+- Added `-w` flag to `kms` command, which shows a warning rather than failing
+  when updating key permissions does not succeed.
 
 Bug Fixes
 ------------------
