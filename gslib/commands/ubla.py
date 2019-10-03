@@ -89,7 +89,7 @@ class UblaCommand(Command):
 
   command_spec = Command.CreateCommandSpec(
       'ubla',
-      command_name_aliases='uniformbucketlevelaccess',
+      command_name_aliases=['uniformbucketlevelaccess'],
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
