@@ -153,8 +153,11 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil -h x-goog-meta-reviewer:jane cp mycode.java gs://bucket/reviews
 
-  You can add multiple differently-named custom metadata fields to each object.
+  would store the custom metadata key-value pair of "reviewer" and "jane". You can add multiple differently-named custom metadata fields to each object. For example:
 
+    gsutil -h x-goog-meta-reviewer:jane -h x-goog-meta-approver:padin cp mycode.java gs://bucket/reviews
+
+  would store two custom metadata key-value pairs of "reviewer": "jane" and "approver": "padin".
 
 <B>SETTABLE FIELDS; FIELD VALUES</B>
   You can't set some metadata fields, such as ETag and Content-Length. The
