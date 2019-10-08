@@ -230,8 +230,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
         proxy_port = test_values.get('proxy_port')
         proxy_user = test_values.get('proxy_user')
         proxy_pass = test_values.get('proxy_pass')
-        proxy_rdns = test_values.get('proxy_rdns',
-                                     True if proxy_host else False)
+        proxy_rdns = bool(test_values.get('proxy_rdns'))
 
         # Added to force socks proxies not to use rdns as in SetProxyInfo()
         if not (proxy_type == proxy_type_spec['http']):
@@ -247,7 +246,9 @@ class TestUtil(testcase.GsUtilUnitTestCase):
         # Checks to make sure environment variable fallbacks are working
         if not (expected.proxy_host and expected.proxy_port):
           expected = httplib2.ProxyInfo(proxy_type_spec['http'], 'host', 50)
-          expected.proxy_rdns = test_values.get('proxy_rdns', True)
+          # Assume proxy_rnds is True if a proxy environment variable exists.
+          if test_values.get('proxy_rdns') == None:
+            expected.proxy_rdns = True
 
         self._AssertProxyInfosEqual(boto_util.SetProxyInfo(test_values),
                                     expected)
