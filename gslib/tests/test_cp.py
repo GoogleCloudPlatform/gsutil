@@ -4291,7 +4291,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('Test uses gs-specific KMS encryption')
   def test_kms_key_works_with_resumable_upload(self):
-    resumable_threshold = 1024 * 1024 # 1M
+    resumable_threshold = 1024 * 1024  # 1M
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=b'a' * resumable_threshold)
     obj_name = 'foo'
@@ -4299,7 +4299,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     key_fqn = self.authorize_project_to_use_testing_kms_key()
 
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn),
-                               ('GSUtil', 'resumable_threshold', str(resumable_threshold))]):
+                               ('GSUtil', 'resumable_threshold',
+                                str(resumable_threshold))]):
       self.RunGsUtil(['cp', fpath, obj_suri])
 
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
