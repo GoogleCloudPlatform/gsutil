@@ -267,13 +267,20 @@ def GetNewHttp(http_class=httplib2.Http, **kwargs):
   """
 
   ##Get Proxy configuration from boto file, defaults are None, 0 and False
+  proxy_host = config.get('Boto', 'proxy', None)  #needed for if clause below
   boto_proxy_config = {
-      'proxy_host': config.get('Boto', 'proxy', None),
-      'proxy_type': config.get('Boto', 'proxy_type', 'http'),
-      'proxy_port': config.getint('Boto', 'proxy_port'),
-      'proxy_user': config.get('Boto', 'proxy_user', None),
-      'proxy_pass': config.get('Boto', 'proxy_pass', None),
-      'proxy_rdns': config.get('Boto', 'proxy_rdns', None)
+      'proxy_host':
+          proxy_host,
+      'proxy_type':
+          config.get('Boto', 'proxy_type', 'http'),
+      'proxy_port':
+          config.getint('Boto', 'proxy_port'),
+      'proxy_user':
+          config.get('Boto', 'proxy_user', None),
+      'proxy_pass':
+          config.get('Boto', 'proxy_pass', None),
+      'proxy_rdns':
+          config.get('Boto', 'proxy_rdns', True if proxy_host else None)
   }
 
   #Use SetProxyInfo to convert boto config to httplib2.proxyinfo object
@@ -513,8 +520,7 @@ def SetProxyInfo(boto_proxy_config):
   proxy_port = boto_proxy_config.get('proxy_port')
   proxy_user = boto_proxy_config.get('proxy_user')
   proxy_pass = boto_proxy_config.get('proxy_pass')
-  proxy_rdns = boto_proxy_config.get('proxy_rdns',
-                                     True if proxy_host else False)
+  proxy_rdns = bool(boto_proxy_config.get('proxy_rdns'))
 
   #For proxy_info below, proxy_rdns fails for socks4 and socks5 so restricting use
   #to http only
@@ -535,7 +541,8 @@ def SetProxyInfo(boto_proxy_config):
       if proxy_env_var in os.environ and os.environ[proxy_env_var]:
         proxy_info = ProxyInfoFromEnvironmentVar(proxy_env_var)
         # Assume proxy_rnds is True if a proxy environment variable exists.
-        proxy_info.proxy_rdns = boto_proxy_config.get('proxy_rdns', True)
+        if boto_proxy_config.get('proxy_rdns') == None:
+          proxy_info.proxy_rdns = True
         break
 
   return proxy_info
