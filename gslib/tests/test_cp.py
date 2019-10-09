@@ -4290,6 +4290,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.AssertObjectUsesCMEK(obj_suri, key_fqn)
 
   @SkipForS3('Test uses gs-specific KMS encryption')
+  def test_kms_key_works_with_resumable_upload(self):
+    resumable_threshold = 1024 * 1024  # 1M
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=b'a' * resumable_threshold)
+    obj_name = 'foo'
+    obj_suri = suri(bucket_uri) + '/' + obj_name
+    key_fqn = self.authorize_project_to_use_testing_kms_key()
+
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn),
+                               ('GSUtil', 'resumable_threshold',
+                                str(resumable_threshold))]):
+      self.RunGsUtil(['cp', fpath, obj_suri])
+
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      self.AssertObjectUsesCMEK(obj_suri, key_fqn)
+
+  @SkipForS3('Test uses gs-specific KMS encryption')
   def test_kms_key_correctly_applied_to_dst_obj_from_src_with_diff_key(self):
     bucket_uri = self.CreateBucket()
     obj1_name = 'foo'

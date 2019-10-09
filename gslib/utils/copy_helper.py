@@ -1770,7 +1770,8 @@ def _UploadFileToObjectResumable(src_url,
   encryption_keywrapper = GetEncryptionKeyWrapper(config)
   encryption_key_sha256 = (
       encryption_keywrapper.crypto_key_sha256.decode('ascii')
-      if encryption_keywrapper else None)
+      if encryption_keywrapper and encryption_keywrapper.crypto_key_sha256 else
+      None)
 
   def _UploadTrackerCallback(serialization_data):
     """Creates a new tracker file for starting an upload from scratch.
