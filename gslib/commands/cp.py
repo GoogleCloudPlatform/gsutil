@@ -248,8 +248,8 @@ _COPY_IN_CLOUD_TEXT = """
     gsutil cp gs://bucket1/obj gs://bucket2
 
   will cause only the single live version of gs://bucket1/obj to be copied to
-  gs://bucket2, even if there are archived versions of gs://bucket1/obj. To also
-  copy archived versions, use the -A flag:
+  gs://bucket2, even if there are noncurrent versions of gs://bucket1/obj. To
+  also copy noncurrent versions, use the -A flag:
 
     gsutil cp -A gs://bucket1/obj gs://bucket2
 
