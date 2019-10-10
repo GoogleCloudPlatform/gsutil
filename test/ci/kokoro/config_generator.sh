@@ -28,6 +28,11 @@ gs_service_key_file = $GSUTIL_KEY
 [GSUtil]
 default_project_id = bigstore-gsutil-testing
 prefer_api = $API
+test_hmac_service_account = sa-hmac@bigstore-gsutil-testing.iam.gserviceaccount.com
+test_hmac_list_service_account = sa-hmac-list@bigstore-gsutil-testing.iam.gserviceaccount.com
+test_hmac_alt_service_account = sa-hmac2@bigstore-gsutil-testing.iam.gserviceaccount.com
+test_impersonate_service_account = bigstore-gsutil-impersonation@bigstore-gsutil-testing.iam.gserviceaccount.com
+test_impersonate_failure_account = no-impersonation@bigstore-gsutil-testing.iam.gserviceaccount.com
 
 [OAuth2]
 client_id = 909320924072.apps.googleusercontent.com
