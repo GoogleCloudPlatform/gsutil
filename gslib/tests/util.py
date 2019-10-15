@@ -35,7 +35,8 @@ from six.moves import cStringIO
 
 import boto
 import crcmod
-import mock_storage_service  # From boto/tests/integration/s3
+#commented for python3 support
+#import mock_storage_service  # From boto/tests/integration/s3
 
 from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadException
@@ -312,7 +313,7 @@ def ObjectToURI(obj, *suffixes):
     uri = uri[:-1]
   return uri
 
-
+'''
 class GSMockConnection(mock_storage_service.MockConnection):
 
   def __init__(self, *args, **kwargs):
@@ -350,7 +351,7 @@ class GSMockBucketStorageUri(mock_storage_service.MockBucketStorageUri):
 
   def get_versioning_config(self, headers=None):
     return None
-
+'''
 
 TEST_BOTO_REMOVE_SECTION = 'TestRemoveSection'
 
