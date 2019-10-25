@@ -2871,7 +2871,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     """Test to ensure filenames with special characters can be rsynced"""
     filename = 'Æ.txt'
     local_uris = []
-    bucket_uri = self.CreateBucket()
+    bucket_uri = self.CreateBucket() + '/special_characters_test/'
     tmpdir = self.CreateTempDir()
     contents = 'File from rsync test: test_rsync_files_with_special_characters'
     local_file = self.CreateTempFile(tmpdir, contents, filename)
@@ -2879,7 +2879,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     expected_list_results = frozenset(['/Æ.txt'])
 
     # Tests rsync works as expected.
-    self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_uri)])
+    self.RunGsUtil(['rsync', '-r', './' + tmpdir, suri(bucket_uri)])
     listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
     listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
     self.assertEquals(set(listing1), expected_list_results)
