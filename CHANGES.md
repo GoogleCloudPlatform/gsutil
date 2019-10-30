@@ -1,3 +1,9 @@
+Release 4.46 (release date: 2019-10-31)
+=======================================
+Bug Fixes
+------------------
+ - Fixed issue with domain permissions functionality.
+
 Release 4.45 (release date: 2019-10-18)
 =======================================
 Bug Fixes
