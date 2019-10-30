@@ -445,6 +445,11 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   Warning: Parallel composite uploads should not be used with NEARLINE or
   COLDLINE storage class buckets, because doing so incurs an early deletion
   charge for each component object.
+  
+  Warning: Parallel composite uploads should not be used in buckets that have a
+  `retention policy <https://cloud.google.com/storage/docs/bucket-lock>`_,
+  because the component pieces cannot be deleted until each has met the
+  bucket's minimum retention period.
 
   To try parallel composite uploads you can run the command:
 
