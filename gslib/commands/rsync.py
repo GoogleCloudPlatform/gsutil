@@ -352,11 +352,11 @@ _DETAILED_HELP_TEXT = ("""
      times to be used in its comparisons. This means gsutil rsync will resort to
      using checksums for any file with a timestamp before 1970-01-01 UTC.
 
-  2. The gsutil rsync command considers only the current object generations in
+  2. The gsutil rsync command considers only the live object version in
      the source and destination buckets when deciding what to copy / delete. If
      versioning is enabled in the destination bucket then gsutil rsync's
      overwriting or deleting objects will end up creating versions, but the
-     command doesn't try to make the archived generations match in the source
+     command doesn't try to make any noncurrent versions match in the source
      and destination buckets.
 
   3. The gsutil rsync command does not support copying special file types
