@@ -37,6 +37,7 @@ from gslib.cloud_api import CloudApi
 from gslib.cloud_api import NotFoundException
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
+from gslib.storage_url import IsCloudSubdirPlaceholder
 from gslib.storage_url import GenerationFromUrlAndString
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import StripOneSlash
@@ -104,7 +105,8 @@ class CloudWildcardIterator(WildcardIterator):
       logger: logging.Logger used for outputting debug messages during
               iteration. If None, the root logger will be used.
     """
-    self.wildcard_url = wildcard_url
+    self.wildcard_url = wildcard_url.AsPrefixedUrl()
+    self.wildcard_url_raw = wildcard_url
     self.all_versions = all_versions
     self.gsutil_api = gsutil_api
     self.project_id = project_id
@@ -180,10 +182,16 @@ class CloudWildcardIterator(WildcardIterator):
         else:
           yield bucket_listing_ref
       else:
-        # By default, assume a non-wildcarded URL is an object, not a prefix.
-        # This prevents unnecessary listings (which are slower, more expensive,
-        # and also subject to eventual consistency).
-        if (not ContainsWildcard(self.wildcard_url.url_string) and
+        # By default, assume a non-wildcarded and non-prefix ending URL is an object.
+        # The prefix-ending check case is important since it prevents us from reporting
+        # a prefix as an object in the output instead of listing the contents, as the user
+        # probably intended for us to when an object and prefix with the same root name
+        # exist in the bucket. i.e: gs:bucket//foo/ and gs:bucket//foo
+        # Checking object(s) first prevents unnecessary listings (which are slower,
+        # more expensive, and also subject to eventual consistency).
+        contains_wildcard = ContainsWildcard(self.wildcard_url.url_string)
+        is_prefix = IsCloudSubdirPlaceholder(self.wildcard_url_raw)
+        if ((not contains_wildcard) and (not is_prefix) and
             self.wildcard_url.IsObject() and not self.all_versions):
           try:
             get_object = self.gsutil_api.GetObjectMetadata(

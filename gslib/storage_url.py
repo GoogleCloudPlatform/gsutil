@@ -261,6 +261,10 @@ class _CloudUrl(StorageUrl):
       prefix = '%s/%s' % (prefix, wildcard_suffix)
     return prefix
 
+  def AsPrefixedUrl(self, wildcard_suffix=None):
+    url_string = self.CreatePrefixUrl(wildcard_suffix)
+    return _CloudUrl(url_string)
+
   @property
   def bucket_url_string(self):
     return '%s://%s/' % (self.scheme, self.bucket_name)

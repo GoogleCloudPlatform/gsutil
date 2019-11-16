@@ -369,6 +369,27 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
     _Check1()
 
+  def test_subdir_with_same_name_as_object_running_without_trailing_slash_lists_just_file(
+      self):
+    """Tests listing a bucket contents when there is an object with the same name
+    minus the prefix in the same directory as the subdir prefix"""
+    bucket_uri = self.CreateBucket()
+
+    # Two objects;
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                object_name='foo',
+                                contents=b'something')
+    prefix_uri = self.CreateObject(bucket_uri=bucket_uri, object_name='foo/')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(['ls', '%s/foo' % suri(bucket_uri)],
+                              return_stdout=True)
+      self.assertEqual('%s\n' % (obj_uri), stdout)
+
+    _Check1()
+
   def test_subdir_nocontents(self):
     """Tests listing a bucket subdirectory using -d.
 
