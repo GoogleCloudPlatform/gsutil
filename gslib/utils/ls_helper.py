@@ -371,7 +371,7 @@ class LsHelper(object):
       # User provided a prefix or object URL, but it's impossible to tell
       # which until we do a listing and see what matches.
       top_level_iterator = PluralityCheckableIterator(
-          self._iterator_func(str(url), all_versions=self.all_versions).IterAll(
+          self._iterator_func(url.url_string, all_versions=self.all_versions).IterAll(
               expand_top_level_buckets=True,
               bucket_listing_fields=self.bucket_listing_fields))
       plurality = top_level_iterator.HasPlurality()
@@ -384,7 +384,7 @@ class LsHelper(object):
         # Re-iterate without requesting encrypted fields.
         top_level_iterator = PluralityCheckableIterator(
             self._iterator_func(
-                str(url), all_versions=self.all_versions).IterAll(
+                url.url_string, all_versions=self.all_versions).IterAll(
                     expand_top_level_buckets=True,
                     bucket_listing_fields=UNENCRYPTED_FULL_LISTING_FIELDS))
         plurality = top_level_iterator.HasPlurality()
