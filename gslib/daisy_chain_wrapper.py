@@ -41,7 +41,7 @@ _DEFAULT_DOWNLOAD_CHUNK_SIZE = 1024 * 1024 * 100
 class BufferWrapper(object):
   """Wraps the download file pointer to use our in-memory buffer."""
 
-  def __init__(self, daisy_chain_wrapper):
+  def __init__(self, daisy_chain_wrapper, mode='b'):
     """Provides a buffered write interface for a file download.
 
     Args:
@@ -49,6 +49,10 @@ class BufferWrapper(object):
                            locking.
     """
     self.daisy_chain_wrapper = daisy_chain_wrapper
+    if hasattr(daisy_chain_wrapper, 'mode'):
+      self.mode = daisy_chain_wrapper.mode
+    else:
+      self.mode = mode
 
   def write(self, data):  # pylint: disable=invalid-name
     """Waits for space in the buffer, then writes data to the buffer."""
