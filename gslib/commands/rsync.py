@@ -506,6 +506,8 @@ _DETAILED_HELP_TEXT = ("""
                  for example:
 
                    gsutil rsync -x ".*\.txt$|.*\.jpg$" dir gs://my-bucket
+                   
+                 will skip all .txt and .jpg files in dir.
 
                  NOTE: When using this on the Windows command line, use ^ as an
                  escape character instead of \ and escape the | character.
