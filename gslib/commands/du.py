@@ -50,7 +50,8 @@ _DETAILED_HELP_TEXT = ("""
 <B>DESCRIPTION</B>
   The du command displays the amount of space (in bytes) being used by the
   objects in the file or object hierarchy under a given URL. The syntax emulates
-  the Linux du command (which stands for disk usage). For example, the command:
+  the Linux du -b command (which stands for disk usage). For example, the
+  command:
 
   gsutil du -s gs://your-bucket/dir
 
