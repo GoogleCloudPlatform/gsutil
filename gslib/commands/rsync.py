@@ -119,11 +119,11 @@ _DETAILED_HELP_TEXT = ("""
   subdirectory. For example, to make gs://mybucket/data match the contents of
   the local directory "data" you could do:
 
-    gsutil rsync -d data gs://mybucket/data
+    gsutil rsync data gs://mybucket/data
 
   To recurse into directories use the -r option:
 
-    gsutil rsync -d -r data gs://mybucket/data
+    gsutil rsync -r data gs://mybucket/data
 
   To copy only new/changed files without deleting extra files from
   gs://mybucket/data leave off the -d option:
@@ -134,7 +134,7 @@ _DETAILED_HELP_TEXT = ("""
   gsutil -m option, to perform parallel (multi-threaded/multi-processing)
   synchronization:
 
-    gsutil -m rsync -d -r data gs://mybucket/data
+    gsutil -m rsync -r data gs://mybucket/data
 
   The -m option typically will provide a large performance boost if either the
   source or destination (or both) is a cloud URL. If both source and
@@ -144,19 +144,19 @@ _DETAILED_HELP_TEXT = ("""
   To make the local directory "data" the same as the contents of
   gs://mybucket/data:
 
-    gsutil rsync -d -r gs://mybucket/data data
+    gsutil rsync -r gs://mybucket/data data
 
   To make the contents of gs://mybucket2 the same as gs://mybucket1:
 
-    gsutil rsync -d -r gs://mybucket1 gs://mybucket2
+    gsutil rsync -r gs://mybucket1 gs://mybucket2
 
   You can also mirror data across local directories:
 
-    gsutil rsync -d -r dir1 dir2
+    gsutil rsync -r dir1 dir2
 
   To mirror your content across clouds:
 
-    gsutil rsync -d -r gs://my-gs-bucket s3://my-s3-bucket
+    gsutil rsync -r gs://my-gs-bucket s3://my-s3-bucket
 
   Note 1: Shells (like bash, zsh) sometimes attempt to expand wildcards in ways
   that can be surprising. Also, attempting to copy files whose names contain
