@@ -125,11 +125,6 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil rsync -r data gs://mybucket/data
 
-  To copy only new/changed files without deleting extra files from
-  gs://mybucket/data leave off the -d option:
-
-    gsutil rsync -r data gs://mybucket/data
-
   If you have a large number of objects to synchronize you might want to use the
   gsutil -m option, to perform parallel (multi-threaded/multi-processing)
   synchronization:
