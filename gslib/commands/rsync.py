@@ -160,14 +160,14 @@ _DETAILED_HELP_TEXT = ("""
   use this option: It's possible to delete large amounts of data accidentally
   if, for example, you erroneously reverse source and destination. 
   
-  To make the local directory "data" the same as the contents of
-  gs://mybucket/data, meaning DELETE all other data in the remote bucket that
-  is not found in the local directory:
+  To make the local directory my-data the same as the contents of
+  gs://mybucket/data and delete objects in the local directory that are not in
+  gs://mybucket/data:
 
-    gsutil rsync -d -r gs://mybucket/data data
+    gsutil rsync -d -r gs://mybucket/data my-data
 
-  To make the contents of gs://mybucket2 the same as gs://mybucket1 and deleting
-  objects that aren't in the source bucket:
+  To make the contents of gs://mybucket2 the same as gs://mybucket1 and delete
+  objects in gs://mybucket2 that are not in gs://mybucket1:
 
     gsutil rsync -d -r gs://mybucket1 gs://mybucket2
 
