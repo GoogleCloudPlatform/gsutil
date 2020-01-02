@@ -437,6 +437,21 @@ class TestCpFuncs(GsUtilUnitTestCase):
             'according to the local system time.', 'coldline',
             src_url.url_string, 90)
 
+    # Recent archive objects should generate a warning.
+    for object_time_created in (self._PI_DAY, self._PI_DAY -
+                                datetime.timedelta(days=364, hours=23)):
+      recent_archive_obj = apitools_messages.Object(
+          storageClass='ARCHIVE', timeCreated=object_time_created)
+
+      with mock.patch.object(test_logger, 'warn') as mocked_warn:
+        WarnIfMvEarlyDeletionChargeApplies(src_url, recent_archive_obj,
+                                           test_logger)
+        mocked_warn.assert_called_with(
+            'Warning: moving %s object %s may incur an early deletion '
+            'charge, because the original object is less than %s days old '
+            'according to the local system time.', 'archive',
+            src_url.url_string, 365)
+
     # Sufficiently old objects should not generate a warning.
     with mock.patch.object(test_logger, 'warn') as mocked_warn:
       old_nearline_obj = apitools_messages.Object(
@@ -449,6 +464,12 @@ class TestCpFuncs(GsUtilUnitTestCase):
           storageClass='COLDLINE',
           timeCreated=self._PI_DAY - datetime.timedelta(days=90, seconds=1))
       WarnIfMvEarlyDeletionChargeApplies(src_url, old_coldline_obj, test_logger)
+      mocked_warn.assert_not_called()
+    with mock.patch.object(test_logger, 'warn') as mocked_warn:
+      old_archive_obj = apitools_messages.Object(
+          storageClass='ARCHIVE',
+          timeCreated=self._PI_DAY - datetime.timedelta(days=365, seconds=1))
+      WarnIfMvEarlyDeletionChargeApplies(src_url, old_archive_obj, test_logger)
       mocked_warn.assert_not_called()
 
     # Recent standard storage class object should not generate a warning.

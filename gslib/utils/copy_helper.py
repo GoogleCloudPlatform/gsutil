@@ -3580,7 +3580,8 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud,
 # minimum lifetime in seconds.
 EARLY_DELETION_MINIMUM_LIFETIME = {
     'nearline': 30 * SECONDS_PER_DAY,
-    'coldline': 90 * SECONDS_PER_DAY
+    'coldline': 90 * SECONDS_PER_DAY,
+    'archive': 365 * SECONDS_PER_DAY
 }
 
 
