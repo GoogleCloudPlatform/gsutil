@@ -190,7 +190,7 @@ class CloudWildcardIterator(WildcardIterator):
         # Checking object(s) first prevents unnecessary listings (which are slower,
         # more expensive, and also subject to eventual consistency).
         contains_wildcard = ContainsWildcard(self.wildcard_url.url_string)
-        is_prefix = self.wildcard_url_raw.endswith('/')
+        is_prefix = self.wildcard_url_raw.url_string.endswith('/')
         if ((not contains_wildcard) and (not is_prefix) and
             self.wildcard_url.IsObject() and not self.all_versions):
           try:
