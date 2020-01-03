@@ -86,8 +86,8 @@ _DETAILED_HELP_TEXT = ("""
     gsutil rewrite -k -r gs://bucket/subdir
 
   The rewrite command acts only on live object versions, so specifying a
-  URL with a generation will fail. If you want to rewrite an archived
-  generation, first copy it to the live version, then rewrite it, for example:
+  URL with a generation number fails. If you want to rewrite a noncurrent
+  version, first copy it to the live version, then rewrite it, for example:
 
     gsutil cp gs://bucket/object#123 gs://bucket/object
     gsutil rewrite -k gs://bucket/object

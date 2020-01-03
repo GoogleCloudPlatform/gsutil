@@ -1,3 +1,21 @@
+Release 4.46 (release date: 2019-10-31)
+=======================================
+Bug Fixes
+------------------
+ - Fixed issue with domain permissions functionality.
+
+Release 4.45 (release date: 2019-10-18)
+=======================================
+Bug Fixes
+------------------
+ - Fixed exception when using CMEK with resumable uploads.
+ - Fixed alias for new ubla command.
+ - Fixed default RDNS behavior for backwards compatibility with 4.42 and earlier.
+ 
+Other Changes
+------------------
+- Improvements to continuous integration workflow.
+
 Release 4.44 (release date: 2019-10-02)
 =======================================
 New Features

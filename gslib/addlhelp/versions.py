@@ -23,13 +23,12 @@ from gslib.help_provider import HelpProvider
 
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
-  Versioning-enabled buckets maintain an archive of objects, providing a way to
-  un-delete data that you accidentally deleted, or to retrieve older versions of
-  your data. You can turn versioning on or off for a bucket at any time. Turning
-  versioning off leaves existing object versions in place, and simply causes the
-  bucket to stop accumulating new object versions. In this case, if you upload
-  to an existing object the current version is overwritten instead of creating
-  a new version.
+  Versioning-enabled buckets maintain noncurrent versions of objects, providing
+  a way to un-delete data that you accidentally deleted, or to retrieve older
+  versions of your data. You can turn versioning on or off for a bucket at any
+  time. Turning versioning off leaves existing object versions in place and
+  simply causes the bucket to overwrite the live version of the object whenever
+  a new version is uploaded.
 
   Regardless of whether you have enabled versioning on a bucket, every object
   has two associated positive integer fields:
@@ -101,9 +100,8 @@ _DETAILED_HELP_TEXT = ("""
     gsutil rm gs://bucket/object
 
   The same is true when using wildcards like * and **. These will operate only
-  on the live version of matching objects. For example, this
-  command will remove the live version and create an archived version for each
-  object in a bucket:
+  on the live version of matching objects. For example, this command will remove
+  the live version and create a noncurrent version for each object in a bucket:
 
     gsutil rm gs://bucket/**
 
@@ -147,7 +145,7 @@ _DETAILED_HELP_TEXT = ("""
     gsutil mv gs://bucket/object#1360101007329000 gs://bucket/object
 
   If you remove the live version of an object in a versioning-enabled bucket,
-  an archived version will be preserved:
+  a noncurrent version will be preserved:
 
     gsutil rm gs://bucket/object
 

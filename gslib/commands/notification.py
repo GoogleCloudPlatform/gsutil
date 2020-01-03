@@ -206,7 +206,8 @@ _CREATE_DESCRIPTION = """
               OBJECT_FINALIZE - An object has been created.
               OBJECT_METADATA_UPDATE - The metadata of an object has changed.
               OBJECT_DELETE - An object has been permanently deleted.
-              OBJECT_ARCHIVE - A live Cloud Storage object has been archived.
+              OBJECT_ARCHIVE - A live version of an object has become a
+                noncurrent version.
 
   -f        Specifies the payload format of notification messages. Must be
             either "json" for a payload matches the object metadata for the

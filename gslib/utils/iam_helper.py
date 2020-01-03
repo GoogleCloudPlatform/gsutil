@@ -33,7 +33,7 @@ TYPES = set([
     'serviceAccount',
     'deleted:serviceAccount',
     'group',
-    'deleted:group'
+    'deleted:group',
     'domain',
 ])
 
