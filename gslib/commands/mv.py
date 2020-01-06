@@ -84,8 +84,8 @@ _DETAILED_HELP_TEXT = ("""
   to destination followed by removing the source for each object.
 
   A consequence of this is that, in addition to normal network and operation
-  charges, if you move a Nearline Storage or Coldline Storage object, deletion
-  and data retrieval charges apply. See the `documentation
+  charges, if you move a Nearline Storage, Coldline Storage, or Archive Storage
+  object, deletion and data retrieval charges apply. See the `documentation
   <https://cloud.google.com/storage/pricing>`_ for pricing details.
 
 

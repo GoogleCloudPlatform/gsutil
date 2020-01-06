@@ -442,9 +442,9 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   distributions to get crcmod included with the stock distribution. Once that is
   done we will re-enable parallel composite uploads by default in gsutil.
 
-  Warning: Parallel composite uploads should not be used with NEARLINE or
-  COLDLINE storage class buckets, because doing so incurs an early deletion
-  charge for each component object.
+  Warning: Parallel composite uploads should not be used with NEARLINE,
+  COLDLINE, or ARCHIVE storage class buckets, because doing so incurs an early
+  deletion charge for each component object.
   
   Warning: Parallel composite uploads should not be used in buckets that have a
   `retention policy <https://cloud.google.com/storage/docs/bucket-lock>`_,
