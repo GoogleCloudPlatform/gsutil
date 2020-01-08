@@ -23,25 +23,23 @@ from gslib.help_provider import HelpProvider
 
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
-  gsutil users can access publicly readable data without obtaining
+  You can access publicly readable data through gsutil without obtaining
   credentials. For example, the gs://uspto-pair bucket contains a number
-  of publicly readable objects, so any user can run the following command
+  of publicly readable objects, so you can run the following command
   without first obtaining credentials:
 
     gsutil ls gs://uspto-pair/applications/0800401*
 
-  Users can similarly download objects they find via the above gsutil ls
-  command.
+  You can also download publicly readable objects.
 
-  See "gsutil help acls" for more details about data protection.
+  Run the ``gsutil help acls`` command for more details about data protection.
 
-<B>Configuring/Using Credentials via Cloud SDK Distribution of gsutil</B>
-  If a user without credentials attempts to access protected data using gsutil,
-  they will be prompted to run gcloud init to obtain credentials.
-
-<B>Configuring/Using Credentials via Standalone gsutil Distribution</B>
-  If a user without credentials attempts to access protected data using gsutil,
-  they will be prompted to run gsutil config to obtain credentials.
+<B>Configuring/Using Credentials</B>
+  To obtain credentials to access protected data using gsutil, run the following
+  command:
+  
+  -  ``gcloud init`` if you are using the Google Cloud SDK distribution of gsutil
+  -  ``gsutil config`` if you are using the stand-alone distribution of gsutil
 """)
 
 
