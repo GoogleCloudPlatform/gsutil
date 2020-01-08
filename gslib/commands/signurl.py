@@ -98,7 +98,7 @@ _DETAILED_HELP_TEXT = ("""
   will be produced for each provided url, authorized
   for the specified HTTP method and valid for the given duration.
 
-  Note: Unlike the gsutil ls command, the signurl command does not support
+  NOTE: Unlike the gsutil ls command, the signurl command does not support
   operations on sub-directories. For example, if you run the command:
 
     gsutil signurl <private-key-file> gs://some-bucket/some-object/
