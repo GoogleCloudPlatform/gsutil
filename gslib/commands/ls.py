@@ -241,11 +241,12 @@ _DETAILED_HELP_TEXT = ("""
 <B>OPTIONS</B>
   -l          Prints long listing (owner, length).
 
-  -L          Prints even more detail than -l.  Note: If you use this option
-              with the (non-default) XML API it will generate an additional
-              request per object being listed, which makes the -L option run
-              much more slowly (and cost more) using the XML API than the
-              default JSON API.
+  -L          Prints even more detail than -l.
+  
+              Note: If you use this option with the (non-default) XML API it
+              will generate an additional request per object being listed,
+              which makes the -L option run much more slowly (and cost more)
+              using the XML API than the default JSON API.
 
   -d          List matching subdirectory names instead of contents, and do not
               recurse into matching subdirectories even if the -R option is
