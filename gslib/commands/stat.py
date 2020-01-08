@@ -71,7 +71,7 @@ _DETAILED_HELP_TEXT = ("""
   printed from the command, it still has an exit status of 0 for an existing
   object and 1 for a non-existent object.
 
-  Note: Unlike the gsutil ls command, the stat command does not support
+  NOTE: Unlike the gsutil ls command, the stat command does not support
   operations on sub-directories. For example, if you run the command:
 
     gsutil -q stat gs://some-bucket/some-subdir/
