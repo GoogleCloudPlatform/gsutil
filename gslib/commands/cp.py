@@ -442,11 +442,11 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   distributions to get crcmod included with the stock distribution. Once that is
   done we will re-enable parallel composite uploads by default in gsutil.
 
-  Warning: Parallel composite uploads should not be used with NEARLINE,
+  WARNING: Parallel composite uploads should not be used with NEARLINE,
   COLDLINE, or ARCHIVE storage class buckets, because doing so incurs an early
   deletion charge for each component object.
   
-  Warning: Parallel composite uploads should not be used in buckets that have a
+  WARNING: Parallel composite uploads should not be used in buckets that have a
   `retention policy <https://cloud.google.com/storage/docs/bucket-lock>`_,
   because the component pieces cannot be deleted until each has met the
   bucket's minimum retention period.
@@ -617,7 +617,7 @@ _OPTIONS_TEXT = """
                  works like the -j option described above, but it applies to
                  all uploaded files, regardless of extension.
 
-                 Warning: If you use this option and some of the source files
+                 CAUTION: If you use this option and some of the source files
                  don't compress well (e.g., that's often true of binary data),
                  this option may result in longer uploads.
 
@@ -764,7 +764,7 @@ _OPTIONS_TEXT = """
                  works like the -z option described above, but it applies to
                  all uploaded files, regardless of extension.
 
-                 Warning: If you use this option and some of the source files
+                 CAUTION: If you use this option and some of the source files
                  don't compress well (e.g., that's often true of binary data),
                  this option may result in files taking up more space in the
                  cloud than they would if left uncompressed.
