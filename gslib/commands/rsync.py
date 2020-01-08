@@ -436,7 +436,7 @@ _DETAILED_HELP_TEXT = ("""
                  works like the -j option described above, but it applies to
                  all uploaded files, regardless of extension.
 
-                 Warning: If you use this option and some of the source files
+                 CAUTION: If you use this option and some of the source files
                  don't compress well (e.g., that's often true of binary data),
                  this option may result in longer uploads.
 
