@@ -99,10 +99,11 @@ _DESCRIPTION = """
      c.storage.googleapis.com (ask your DNS administrator for help with this).
 
   Now if you open a browser and navigate to http://www.example.com, it will
-  display the main page instead of the default bucket listing. Note: It can
-  take time for DNS updates to propagate because of caching used by the DNS,
-  so it may take up to a day for the domain-named bucket website to work after
-  you create the CNAME DNS record.
+  display the main page instead of the default bucket listing.
+  
+  NOTE: It can take time for DNS updates to propagate because of caching used
+  by the DNS, so it may take up to a day for the domain-named bucket website to
+  work after you create the CNAME DNS record.
 
   Additional notes:
 
