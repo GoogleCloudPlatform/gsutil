@@ -1,3 +1,13 @@
+Release 4.47 (release date: 2020-01-10)
+======================================
+New Features
+------------------
+- Added support for the new archive storage class.
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 4.46 (release date: 2019-10-31)
 =======================================
 Bug Fixes
