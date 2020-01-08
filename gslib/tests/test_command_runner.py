@@ -260,6 +260,15 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
         self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('update', 0))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
+  def test_fails_silently_when_version_check_fails(self):
+    """Tests that update is not triggered for certain commands."""
+
+    command_runner.LookUpGsutilVersion = self.old_look_up_gsutil_version
+    self.assertEqual(
+        False,
+        self.command_runner.MaybeCheckForAndOfferSoftwareUpdate('update', 0))
+
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_invalid_file_contents(self):
     """Tests no update if timestamp file has invalid value."""
     with open(self.timestamp_file_path, 'w') as f:

@@ -498,7 +498,12 @@ class CommandRunner(object):
                               credentials=NoOpCredentials(),
                               debug=debug)
 
-      cur_ver = LookUpGsutilVersion(gsutil_api, GSUTIL_PUB_TARBALL)
+      cur_ver = gslib.VERSION
+      try:
+        cur_ver = LookUpGsutilVersion(gsutil_api, GSUTIL_PUB_TARBALL)
+      except:
+        return False
+
       with open(last_checked_for_gsutil_update_timestamp_file, 'w') as f:
         f.write(str(cur_ts))
       (g, m) = CompareVersions(cur_ver, gslib.VERSION)
