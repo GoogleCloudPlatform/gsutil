@@ -150,8 +150,9 @@ _CH_DESCRIPTION = """
   Cache-Control header of "Cache-Control:private, max-age=0, no-transform" on
   such objects. For help doing this, see "gsutil help setmeta".
 
-  Grant anyone on the internet WRITE access to the bucket example-bucket
-  (WARNING: this is not recommended as you will be responsible for the content):
+  Grant anyone on the internet WRITE access to the bucket example-bucket:
+  
+  WARNING: this is not recommended as you will be responsible for the content
 
     gsutil acl ch -u AllUsers:W gs://example-bucket
 
