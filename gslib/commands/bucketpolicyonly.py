@@ -69,9 +69,9 @@ _GET_DESCRIPTION = """
 
 _DESCRIPTION = """
   The Bucket Policy Only feature is now known as `uniform bucket-level access
-  <https://cloud.google.com/storage/docs/uniform-bucket-level-access>`_. 
+  <https://cloud.google.com/storage/docs/uniform-bucket-level-access>`_.
   The ``bucketpolicyonly`` command is still supported, but we recommend using
-  the equivalent ```ubla``<https://cloud.google.com/storage/docs/gsutil/commands/ubla>`_ command.
+  the equivalent ``ubla`` `command<https://cloud.google.com/storage/docs/gsutil/commands/ubla>`_.
 
   The ``bucketpolicyonly`` command is used to retrieve or configure the
   uniform bucket-level access setting of Cloud Storage buckets. This command has
@@ -113,7 +113,7 @@ class BucketPolicyOnlyCommand(Command):
       help_name='bucketpolicyonly',
       help_name_aliases=[],
       help_type='command_help',
-      help_one_line_summary='Configure Bucket Policy Only (Beta)',
+      help_one_line_summary='Configure uniform bucket-level access',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
