@@ -151,15 +151,15 @@ _DETAILED_HELP_TEXT = ("""
   workstation.
 
 
-<B>Using -d Option (with caution!) to mirror source and destination.</B>
+<B>Using ``-d`` Option (with caution!) to mirror source and destination.</B>
   The rsync -d option is very useful and commonly used, because it provides a
   means of making the contents of a destination bucket or directory match those
   of a source bucket or directory. This is done by copying all data from the
   source to the destination and deleting all other data in the destination that
   is not in the source. Please exercise caution when you
   use this option: It's possible to delete large amounts of data accidentally
-  if, for example, you erroneously reverse source and destination. 
-  
+  if, for example, you erroneously reverse source and destination.
+
   To make the local directory my-data the same as the contents of
   gs://mybucket/data and delete objects in the local directory that are not in
   gs://mybucket/data:
@@ -183,7 +183,7 @@ _DETAILED_HELP_TEXT = ("""
   As mentioned above, using -d can be dangerous because of how quickly data can
   be deleted. For example, if you meant to synchronize a local directory from
   a bucket in the cloud but instead run the command:
-  
+
     gsutil -m rsync -r -d ./your-dir gs://your-bucket
 
   and your-dir is currently empty, you will quickly delete all of the objects in
@@ -487,7 +487,7 @@ _DETAILED_HELP_TEXT = ("""
   -u             When a file/object is present in both the source and
                  destination, if mtime is available for both, do not perform
                  the copy if the destination mtime is newer.
-                 
+
   -U             Skip objects with unsupported object types instead of failing.
                  Unsupported object types are Amazon S3 Objects in the GLACIER
                  storage class.
@@ -508,7 +508,7 @@ _DETAILED_HELP_TEXT = ("""
                  for example:
 
                    gsutil rsync -x ".*\.txt$|.*\.jpg$" dir gs://my-bucket
-                   
+
                  will skip all .txt and .jpg files in dir.
 
                  NOTE: When using this on the Windows command line, use ^ as an
