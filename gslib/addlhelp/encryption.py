@@ -29,8 +29,10 @@ _DETAILED_HELP_TEXT = ("""
   customer-supplied encryption keys (CSEK), or those that you manage through
   Google Cloud KMS, called customer-managed encryption keys (CMEK). Google Cloud
   Storage does not permanently store CSEKs on Google's servers or otherwise
-  manage them. You can read more about CMEKS at
-  https://cloud.google.com/kms/docs.
+  manage them. You can read more about these encryption options at
+  `CMEK <https://cloud.google.com/storage/docs/encryption/customer-managed-keys>`_
+  and
+  `CSEK <https://cloud.google.com/storage/docs/encryption/customer-supplied-keys>`_.
 
   gsutil accepts CSEKs for interacting with Google Cloud Storage objects using
   the JSON API. The keys are provided via the .boto configuration file like so:
