@@ -274,7 +274,7 @@ class TestUtil(testcase.GsUtilUnitTestCase):
                     443 if env_var.lower().startswith('https') else 80))
             # Shouldn't populate info for other variables
             for other_env_var in valid_variables:
-              if other_env_var == env_var: 
+              if other_env_var == env_var:
                 continue
               self._AssertProxyInfosEqual(
                   boto_util.ProxyInfoFromEnvironmentVar(other_env_var),
