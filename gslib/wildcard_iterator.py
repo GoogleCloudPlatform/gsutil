@@ -110,7 +110,8 @@ class CloudWildcardIterator(WildcardIterator):
     self.project_id = project_id
     self.logger = logger or logging.getLogger()
 
-  def __iter__(self, bucket_listing_fields=None,
+  def __iter__(self, 
+               bucket_listing_fields=None,
                expand_top_level_buckets=False):
     """Iterator that gets called when iterating over the cloud wildcard.
 

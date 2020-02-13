@@ -279,7 +279,8 @@ def GenerationFromURI(uri):
     Generation string for the URI.
   """
   if not (uri.generation or uri.version_id):
-    if uri.scheme == 's3': return 'null'
+    if uri.scheme == 's3': 
+      return 'null'
   return uri.generation or uri.version_id
 
 

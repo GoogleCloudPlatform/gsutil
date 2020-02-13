@@ -697,8 +697,8 @@ def ConstructDstUrl(src_url,
     # src_subdir/obj.
     src_url_path_sans_final_dir = GetPathBeforeFinalDir(src_url, exp_src_url)
 
-    dst_key_name = exp_src_url.versionless_url_string[len(
-        src_url_path_sans_final_dir):].lstrip(src_url.delim)
+    dst_key_name = exp_src_url.versionless_url_string[
+        len(src_url_path_sans_final_dir):].lstrip(src_url.delim)
     # Handle case where dst_url is a non-existent subdir.
     if not have_existing_dest_subdir:
       dst_key_name = dst_key_name.partition(src_url.delim)[-1]
