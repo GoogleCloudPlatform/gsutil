@@ -76,6 +76,10 @@ _DESCRIPTION = ("""
   The above JSON document explicitly allows cross-origin GET requests from
   http://origin1.example.com and may include the Content-Type response header.
   The preflight request may be cached for 1 hour.
+  
+  Note that requests to the authenticated browser download endpoint ``storage.cloud.google.com``
+  do not allow CORS requests. For more information about supported endpoints for CORS, see
+  `Cloud Storage CORS support <https://cloud.google.com/storage/docs/cross-origin#server-side-support>`_.
 
   The following (empty) CORS JSON document removes all CORS configuration for
   a bucket:
