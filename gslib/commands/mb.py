@@ -66,10 +66,10 @@ _DETAILED_HELP_TEXT = ("""
   The --retention option specifies the retention period for the bucket. For more
   details about retention policy see "gsutil help retention".
 
-  The -b option specifies the Bucket Policy Only setting of the bucket.
-  ACLs assigned to objects are not evaluated in buckets with Bucket Policy Only
-  enabled. Consequently, only IAM policies grant access to objects in these
-  buckets.
+  The -b option specifies the uniform bucket-level access setting of the bucket.
+  ACLs assigned to objects are not evaluated in buckets with uniform bucket-
+  level access enabled. Consequently, only IAM policies grant access to objects
+  in these buckets.
 
 <B>BUCKET STORAGE CLASSES</B>
   You can specify one of the `storage classes
@@ -125,7 +125,7 @@ _DETAILED_HELP_TEXT = ("""
   If you don't specify a --retention option, the bucket is created with no
   retention policy.
 
-<B>BUCKET POLICY ONLY</B>
+<B>UNIFORM BUCKET-LEVEL ACCESS</B>
   You can specify one of the available settings for a bucket
   with the -b option.
 
@@ -136,7 +136,7 @@ _DETAILED_HELP_TEXT = ("""
     gsutil mb -b on gs://bucket-with-no-acls
 
 <B>OPTIONS</B>
-  -b <on|off>            Specifies the Bucket Policy Only setting.
+  -b <on|off>            Specifies the uniform bucket-level access setting.
                          Default is "off"
 
   -c class               Specifies the default storage class.
