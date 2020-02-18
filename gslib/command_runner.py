@@ -501,7 +501,7 @@ class CommandRunner(object):
       cur_ver = gslib.VERSION
       try:
         cur_ver = LookUpGsutilVersion(gsutil_api, GSUTIL_PUB_TARBALL)
-      except:
+      except Exception:
         return False
 
       with open(last_checked_for_gsutil_update_timestamp_file, 'w') as f:

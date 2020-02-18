@@ -544,7 +544,10 @@ class _DeleteBucketThenStartOverCopyCallbackHandler(object):
 class _ResumableUploadRetryHandler(object):
   """Test callback handler for causing retries during a resumable transfer."""
 
-  def __init__(self, retry_at_byte, exception_to_raise, exc_args,
+  def __init__(self,
+               retry_at_byte,
+               exception_to_raise,
+               exc_args,
                num_retries=1):
     self._retry_at_byte = retry_at_byte
     self._exception_to_raise = exception_to_raise
