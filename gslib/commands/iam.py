@@ -198,6 +198,8 @@ _CH_DESCRIPTION = """
 <B>CH OPTIONS</B>
   The ``ch`` sub-command has the following options
 
+  -d          Removes roles granted to the specified member.
+
   -R, -r      Performs ``iam ch`` recursively to all objects under the
               specified bucket.
 
