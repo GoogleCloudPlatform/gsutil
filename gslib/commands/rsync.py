@@ -392,17 +392,19 @@ _DETAILED_HELP_TEXT = ("""
   -C             If an error occurs, continue to attempt to copy the remaining
                  files. If errors occurred, gsutil's exit status will be
                  non-zero even if this flag is set. This option is implicitly
-                 set when running "gsutil -m rsync...".  Note: -C only applies
-                 to the actual copying operation. If an error occurs while
-                 iterating over the files in the local directory (e.g., invalid
-                 Unicode file name) gsutil will print an error message and
-                 abort.
+                 set when running "gsutil -m rsync...".
+                 
+                 NOTE: -C only applies to the actual copying operation. If an
+                 error occurs while iterating over the files in the local
+                 directory (e.g., invalid Unicode file name) gsutil will print
+                 an error message and abort.
 
   -d             Delete extra files under dst_url not found under src_url. By
-                 default extra files are not deleted. Note: this option can
-                 delete data quickly if you specify the wrong source/destination
-                 combination. See the help section above,
-                 "BE CAREFUL WHEN USING -d OPTION!".
+                 default extra files are not deleted.
+                 
+                 NOTE: this option can delete data quickly if you specify the
+                 wrong source/destination combination. See the help section
+                 above, "BE CAREFUL WHEN USING -d OPTION!".
 
   -e             Exclude symlinks. When specified, symbolic links will be
                  ignored. Note that gsutil does not follow directory symlinks,
@@ -436,7 +438,7 @@ _DETAILED_HELP_TEXT = ("""
                  works like the -j option described above, but it applies to
                  all uploaded files, regardless of extension.
 
-                 Warning: If you use this option and some of the source files
+                 CAUTION: If you use this option and some of the source files
                  don't compress well (e.g., that's often true of binary data),
                  this option may result in longer uploads.
 

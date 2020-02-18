@@ -117,7 +117,7 @@ _DESCRIPTION_TEXT = """
   The contents of stdin can name files, cloud URLs, and wildcards of files
   and cloud URLs.
 
-  Note: Shells (like bash, zsh) sometimes attempt to expand wildcards in ways
+  NOTE: Shells (like bash, zsh) sometimes attempt to expand wildcards in ways
   that can be surprising. Also, attempting to copy files whose names contain
   wildcard characters can result in problems. For more details about these
   issues see the section "POTENTIALLY SURPRISING BEHAVIOR WHEN USING WILDCARDS"
@@ -167,7 +167,7 @@ _NAME_CONSTRUCTION_TEXT = """
   gs://my-bucket/subdir does not exist, this same gsutil cp command will create
   the object gs://my-bucket/subdir/a/b/c.
 
-  Note: If you use the
+  NOTE: If you use the
   `Google Cloud Platform Console <https://console.cloud.google.com>`_
   to create folders, it does so by creating a "placeholder" object that ends
   with a "/" character. gsutil skips these objects when downloading from the
@@ -314,7 +314,7 @@ _CHECKSUM_VALIDATION_TEXT = """
      by your content pipeline and the time it was uploaded to Google Cloud
      Storage).
 
-  Note: The Content-MD5 header is ignored for composite objects, because such
+  NOTE: The Content-MD5 header is ignored for composite objects, because such
   objects only have a CRC32C checksum.
 """
 
@@ -383,7 +383,7 @@ _STREAMING_TRANSFERS_TEXT = """
   validation, use a non-streaming transfer, which performs integrity checking
   automatically.
 
-  Note: Streaming transfers are not allowed when the top-level gsutil -m flag
+  NOTE: Streaming transfers are not allowed when the top-level gsutil -m flag
   is used.
 """
 
@@ -404,7 +404,7 @@ _SLICED_OBJECT_DOWNLOADS_TEXT = """
   the machine performing the download. If compiled crcmod is not available,
   a non-sliced object download will instead be performed.
 
-  Note: since sliced object downloads cause multiple writes to occur at various
+  NOTE: since sliced object downloads cause multiple writes to occur at various
   locations on disk, this mechanism can degrade performance for disks with slow
   seek times, especially for large numbers of slices. While the default number
   of slices is set small to avoid this problem, you can disable sliced object
@@ -442,11 +442,11 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   distributions to get crcmod included with the stock distribution. Once that is
   done we will re-enable parallel composite uploads by default in gsutil.
 
-  Warning: Parallel composite uploads should not be used with NEARLINE,
+  WARNING: Parallel composite uploads should not be used with NEARLINE,
   COLDLINE, or ARCHIVE storage class buckets, because doing so incurs an early
   deletion charge for each component object.
   
-  Warning: Parallel composite uploads should not be used in buckets that have a
+  WARNING: Parallel composite uploads should not be used in buckets that have a
   `retention policy <https://cloud.google.com/storage/docs/bucket-lock>`_,
   because the component pieces cannot be deleted until each has met the
   bucket's minimum retention period.
@@ -552,17 +552,20 @@ _OPTIONS_TEXT = """
 
   -A             Copy all source versions from a source buckets/folders.
                  If not set, only the live version of each source object is
-                 copied. Note: this option is only useful when the destination
+                 copied.
+                 
+                 NOTE: this option is only useful when the destination
                  bucket has versioning enabled.
 
   -c             If an error occurs, continue to attempt to copy the remaining
                  files. If any copies were unsuccessful, gsutil's exit status
                  will be non-zero even if this flag is set. This option is
-                 implicitly set when running "gsutil -m cp...". Note: -c only
-                 applies to the actual copying operation. If an error occurs
-                 while iterating over the files in the local directory (e.g.,
-                 invalid Unicode file name) gsutil will print an error message
-                 and abort.
+                 implicitly set when running "gsutil -m cp...".
+                 
+                 NOTE: -c only applies to the actual copying operation. If an
+                 error occurs while iterating over the files in the local
+                 directory (e.g., invalid Unicode file name) gsutil will print
+                 an error message and abort.
 
   -D             Copy in "daisy chain" mode, i.e., copying between two buckets
                  by hooking a download to an upload, via the machine where
@@ -578,7 +581,7 @@ _OPTIONS_TEXT = """
                      gsutil cp -D -p gs://bucket/obj gs://bucket/obj_tmp
                      gsutil mv -p gs://bucket/obj_tmp gs://bucket/obj
 
-                 Note: Daisy chain mode is automatically used when copying
+                 NOTE: Daisy chain mode is automatically used when copying
                  between providers (e.g., to copy data from Google Cloud Storage
                  to another provider).
 
@@ -617,7 +620,7 @@ _OPTIONS_TEXT = """
                  works like the -j option described above, but it applies to
                  all uploaded files, regardless of extension.
 
-                 Warning: If you use this option and some of the source files
+                 CAUTION: If you use this option and some of the source files
                  don't compress well (e.g., that's often true of binary data),
                  this option may result in longer uploads.
 
@@ -657,7 +660,7 @@ _OPTIONS_TEXT = """
                  status indicates there was at least one failure during the
                  gsutil run).
 
-                 Note: If you're trying to synchronize the contents of a
+                 NOTE: If you're trying to synchronize the contents of a
                  directory and a bucket (or two buckets), see
                  "gsutil help rsync".
 
@@ -764,7 +767,7 @@ _OPTIONS_TEXT = """
                  works like the -z option described above, but it applies to
                  all uploaded files, regardless of extension.
 
-                 Warning: If you use this option and some of the source files
+                 CAUTION: If you use this option and some of the source files
                  don't compress well (e.g., that's often true of binary data),
                  this option may result in files taking up more space in the
                  cloud than they would if left uncompressed.

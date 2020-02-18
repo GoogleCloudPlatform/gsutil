@@ -124,7 +124,7 @@ _DETAILED_HELP_TEXT = ("""
               throughput experiments. Each process will receive an equal number
               of threads. The default value is 1.
 
-              Note: All specified threads and processes will be created, but may
+              NOTE: All specified threads and processes will be created, but may
               not by saturated with work if too few objects (specified with -n)
               and too few components (specified with -y) are specified.
 
@@ -156,9 +156,11 @@ _DETAILED_HELP_TEXT = ("""
   -s          Sets the size (in bytes) for each of the N (set with -n) objects
               used in the read and write throughput tests. The default is 1 MiB.
               This can also be specified using byte suffixes such as 500K or 1M.
-              Note: these values are interpreted as multiples of 1024 (K=1024,
+              
+              NOTE: these values are interpreted as multiples of 1024 (K=1024,
               M=1024*1024, etc.)
-              Note: If rthru_file or wthru_file are performed, N (set with -n)
+              
+              NOTE: If rthru_file or wthru_file are performed, N (set with -n)
               times as much disk space as specified will be required for the
               operation.
 

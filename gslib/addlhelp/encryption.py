@@ -77,6 +77,7 @@ _DETAILED_HELP_TEXT = ("""
   copies instead uses the destination bucket's default encryption type - if the
   bucket has a default KMS key set, that CMEK is used for encryption; if not,
   Google-managed encryption is used.
+  
   WARNING: This means that when overwriting or rewriting a CSEK- or
   CMEK-encrypted object, if encryption_key is not specified, gsutil will replace
   customer-supplied or customer-managed encryption with Google-managed

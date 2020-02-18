@@ -147,7 +147,7 @@ _DETAILED_HELP_TEXT = ("""
   Python it won't work with 32-bit crcmod, and instead you'll need to install
   32-bit Python in order to use crcmod.
 
-  Note: If you have installed crcmod and gsutil hasn't detected it, it may have
+  NOTE: If you have installed crcmod and gsutil hasn't detected it, it may have
   been installed to the wrong directory. It should be located at
   <python_dir>\\files\\Lib\\site-packages\\crcmod\\
 
