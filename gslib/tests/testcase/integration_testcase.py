@@ -1219,7 +1219,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
 class KmsTestingResources(object):
   """Constants for KMS resource names to be used in integration testing."""
-  KEYRING_LOCATION = 'global'
+  KEYRING_LOCATION = 'us-central1'
   # Since KeyRings and their child resources cannot be deleted, we minimize the
   # number of resources created by using a hard-coded keyRing name.
   KEYRING_NAME = 'keyring-for-gsutil-integration-tests'
