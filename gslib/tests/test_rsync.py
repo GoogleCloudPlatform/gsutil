@@ -2879,9 +2879,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     expected_list_results = frozenset(['/Æ.txt'])
 
     # Tests rsync works as expected.
-    self.RunGsUtil(
-        ['rsync', '-r', tmpdir,
-         suri(bucket_uri) + '/special_characters_test/'])
+    self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_uri)])
     listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
     listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
     self.assertEquals(set(listing1), expected_list_results)
