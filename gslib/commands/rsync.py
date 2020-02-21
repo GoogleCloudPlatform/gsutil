@@ -513,8 +513,14 @@ _DETAILED_HELP_TEXT = ("""
 
                  will skip all .txt and .jpg files in dir.
 
-                 NOTE: When using this on the Windows command line, use ^ as an
+                 NOTE: When using this in the Windows cmd.exe command line interpreter, use ^ as an
                  escape character instead of \ and escape the | character.
+                 
+                   gsutil rsync -x ".*\.txt$^|.*\.jpg$"
+                   
+                 NOTE: Windows Powershell requires single-quoted regex
+                 
+                   gsutil rsync -x '.*\.txt$^|.*\.jpg$'
 """)
 # pylint: enable=anomalous-backslash-in-string
 
