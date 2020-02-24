@@ -15,8 +15,8 @@
 """Gsutil API for interacting with cloud storage providers."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
 
@@ -118,13 +118,13 @@ class CloudApi(object):
     raise NotImplementedError('SetBucketIamPolicy must be overloaded')
 
   def SignUrl(self,
-      method,
-      duration,
-      path,
-      logger,
-      region,
-      signed_headers,
-      string_to_sign_debug):
+              method,
+              duration,
+              path,
+              logger,
+              region,
+              signed_headers,
+              string_to_sign_debug):
     """Sign a url using service account's system managed private key.
 
     Args:
@@ -134,8 +134,8 @@ class CloudApi(object):
           'bucket' or 'bucket/object'.
       logger: logging.Logger for warning and debug output.
       region: Geographic region in which the requested resource resides.
-      content_type: Optional Content-Type for the signed URL.
-          HTTP requests using the URL must match this Content-Type.
+      signed_headers: Dict containing the header  info like host
+          content-type etc.
       string_to_sign_debug: If true AND logger is enabled for debug level,
           print string to sign to debug. Used to differentiate user's
           signed URL from the probing permissions-check signed URL.

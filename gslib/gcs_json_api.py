@@ -65,7 +65,6 @@ from gslib.gcs_json_media import HttpWithNoRetries
 from gslib.gcs_json_media import UploadCallbackConnectionClassFactory
 from gslib.gcs_json_media import WrapDownloadHttpRequest
 from gslib.gcs_json_media import WrapUploadHttpRequest
-from gslib.iamcredentials_api import IamcredentailsApi
 from gslib.impersonation_credentials import ImpersonationCredentials
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.progress_callback import ProgressCallbackWithTimeout

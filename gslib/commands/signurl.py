@@ -22,12 +22,10 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-import base64
 import calendar
 from datetime import datetime
 from datetime import timedelta
 import getpass
-# import hashlib
 import json
 import re
 import sys
@@ -40,12 +38,10 @@ from apitools.base.py.http_wrapper import Request
 
 from boto import config
 
-from gslib.cloud_api import AccessDeniedException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.impersonation_credentials import ImpersonationCredentials
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.utils.boto_util import GetNewHttp
@@ -73,7 +69,7 @@ _MAX_EXPIRATION_TIME = timedelta(days=7)
 
 _SYNOPSIS = """
   gsutil signurl [-c <content_type>] [-d <duration>] [-m <http_method>] \\
-      [-p <password>] [-r <region>] [-s] keystore-file url...
+      [-p <password>] [-r <region>] [-u] keystore-file url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -241,6 +237,9 @@ def _GenSignedUrl(key,
 
   Args:
     key: The private key to use for signing the URL.
+    api: The CloudApiDelegator instance
+    use_service_account: If True, use the service account credentials
+        instead of using the key file to sign the url
     client_id: Client ID signing this URL.
     method: The HTTP method to be used with the signed URL.
     duration: timedelta for which the constructed signed URL should be valid.

@@ -17,14 +17,12 @@
 import base64
 from datetime import datetime
 import hashlib
+
+from gslib.utils.constants import UTF8
 import six
 from six.moves import urllib
 
-from boto import config
-
-from gslib.utils.constants import UTF8
-
-_CANONICAL_REQUEST_FORMAT = ('{method}\n{resource}\n{query_string}\n{headers}'                             
+_CANONICAL_REQUEST_FORMAT = ('{method}\n{resource}\n{query_string}\n{headers}'
                              '\n{signed_headers}\n{hashed_payload}')
 _SIGNING_ALGO = 'GOOG4-RSA-SHA256'
 _STRING_TO_SIGN_FORMAT = ('{signing_algo}\n{request_time}\n{credential_scope}'
@@ -35,13 +33,13 @@ _UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
 
 
 def CreatePayload(client_id,
-                   method,
-                   duration,
-                   path,
-                   logger,
-                   region,
-                   signed_headers,
-                   string_to_sign_debug=False):
+                  method,
+                  duration,
+                  path,
+                  logger,
+                  region,
+                  signed_headers,
+                  string_to_sign_debug=False):
   """TODO: Add function description."""
   signing_time = datetime.utcnow()
 
@@ -102,12 +100,7 @@ def CreatePayload(client_id,
 
 
 def GetFinalUrl(raw_signature, host, path, canonical_query_string):
-  signature = (
-      base64.b16encode(raw_signature)
-        .lower()
-        .decode()
-  )  # yapf: disable
-
+  signature = base64.b16encode(raw_signature).lower().decode()
   return _SIGNED_URL_FORMAT.format(host=host,
                                    path=path,
                                    sig=signature,

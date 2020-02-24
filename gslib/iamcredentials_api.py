@@ -19,7 +19,6 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-import datetime
 import json
 import logging
 import traceback
@@ -39,7 +38,6 @@ from gslib.utils.boto_util import GetCertsFile
 from gslib.utils.boto_util import GetMaxRetryDelay
 from gslib.utils.boto_util import GetNewHttp
 from gslib.utils.boto_util import GetNumRetries
-from oauth2client import client
 
 TRANSLATABLE_APITOOLS_EXCEPTIONS = (apitools_exceptions.HttpError)
 
@@ -102,12 +100,13 @@ class IamcredentailsApi(object):
           'key', u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
 
   def SignBlob(self, service_account_id, message):
+    """Sign the blob using iamcredentials.SinbBlob API."""
     name = 'projects/-/serviceAccounts/%s' % service_account_id
     sign_blob_request = apitools_messages.SignBlobRequest(payload=message)
     request = (apitools_messages.
                IamcredentialsProjectsServiceAccountsSignBlobRequest(
-                  name=name,
-                  signBlobRequest=sign_blob_request))
+                   name=name,
+                   signBlobRequest=sign_blob_request))
     try:
       return self.api_client.projects_serviceAccounts.SignBlob(request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
