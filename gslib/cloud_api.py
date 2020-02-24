@@ -117,6 +117,39 @@ class CloudApi(object):
     """
     raise NotImplementedError('SetBucketIamPolicy must be overloaded')
 
+  def SignUrl(self,
+      method,
+      duration,
+      path,
+      logger,
+      region,
+      signed_headers,
+      string_to_sign_debug):
+    """Sign a url using service account's system managed private key.
+
+    Args:
+      method: The HTTP method to be used with the signed URL.
+      duration: timedelta for which the constructed signed URL should be valid.
+      path: String path to the bucket of object for signing, in the form
+          'bucket' or 'bucket/object'.
+      logger: logging.Logger for warning and debug output.
+      region: Geographic region in which the requested resource resides.
+      content_type: Optional Content-Type for the signed URL.
+          HTTP requests using the URL must match this Content-Type.
+      string_to_sign_debug: If true AND logger is enabled for debug level,
+          print string to sign to debug. Used to differentiate user's
+          signed URL from the probing permissions-check signed URL.
+
+    Raises:
+      ArgumentException for errors during input validation.
+      ServiceException for errors interacting with cloud storage providers.
+      CommandException for errors because of invalid account used for signing.
+
+    Returns:
+      The signed url.
+    """
+    raise NotImplementedError('GetBucket must be overloaded')
+
   def ListBuckets(self, project_id=None, provider=None, fields=None):
     """Lists bucket metadata for the given project.
 

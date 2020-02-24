@@ -101,6 +101,18 @@ class IamcredentailsApi(object):
       self.api_client.AddGlobalParam(
           'key', u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
 
+  def SignBlob(self, service_account_id, message):
+    name = 'projects/-/serviceAccounts/%s' % service_account_id
+    sign_blob_request = apitools_messages.SignBlobRequest(payload=message)
+    request = (apitools_messages.
+               IamcredentialsProjectsServiceAccountsSignBlobRequest(
+                  name=name,
+                  signBlobRequest=sign_blob_request))
+    try:
+      return self.api_client.projects_serviceAccounts.SignBlob(request)
+    except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
+      raise self._TranslateExceptionAndRaise(e, service_account_id)
+
   def GenerateAccessToken(self, service_account_id, scopes):
     """Generates an access token for the given service account."""
     name = 'projects/-/serviceAccounts/%s' % service_account_id
