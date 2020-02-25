@@ -2867,6 +2867,24 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertEquals(set(listing1), expected_list_results)
     self.assertEquals(set(listing2), expected_list_results)
 
+  def test_rsync_files_with_special_characters(self):
+    """Test to ensure filenames with special characters can be rsynced"""
+    filename = 'Æ.txt'
+    local_uris = []
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir()
+    contents = 'File from rsync test: test_rsync_files_with_special_characters'
+    local_file = self.CreateTempFile(tmpdir, contents, filename)
+
+    expected_list_results = frozenset(['/Æ.txt'])
+
+    # Tests rsync works as expected.
+    self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_uri)])
+    listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
+    listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+    self.assertEquals(set(listing1), expected_list_results)
+    self.assertEquals(set(listing2), expected_list_results)
+
   @SkipForS3('No compressed transport encoding support for S3.')
   @SkipForXML('No compressed transport encoding support for the XML API.')
   @SequentialAndParallelTransfer
