@@ -1,3 +1,15 @@
+Release 4.48 (release date: 2020-02-28)
+======================================
+Bug Fixes
+------------------
+- Python3 on Windows now supports special characters in file names.
+- Fixed issue while transferring binary file from S3 with Python3.
+- Fixed issue with KMS tests.
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 4.47 (release date: 2020-01-10)
 ======================================
 New Features
