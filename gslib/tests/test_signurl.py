@@ -185,7 +185,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     def fake_now():
       return datetime(1900, 1, 1, 0, 5, 55)
 
-    gslib.commands.signurl._NowUTC = fake_now
+    gslib.utils.signurl_helper._NowUTC = fake_now
 
   def testDurationSpec(self):
     tests = [
@@ -208,8 +208,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
         if expected is not None:
           self.fail('{0} failed to parse')
 
-  def testSignPut(self):
-    """Tests the _GenSignedUrl function with a PUT method."""
+  def testSignPutUsingKeyFile(self):
+    """Tests the _GenSignedUrl function with a PUT method using Key file."""
     expected = sigs.TEST_SIGN_PUT_SIG
 
     duration = timedelta(seconds=3600)
@@ -217,6 +217,9 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                                 'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
+          api=None,
+          use_service_account=False,
+          provider='gs',
           client_id=self.client_email,
           method='RESUMABLE',
           gcs_path='test/test.txt',
@@ -226,8 +229,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           content_type='')
     self.assertEquals(expected, signed_url)
 
-  def testSignResumable(self):
-    """Tests the _GenSignedUrl function with a RESUMABLE method."""
+  def testSignResumableWithKeyFile(self):
+    """Tests _GenSignedUrl using key file with a RESUMABLE method."""
     expected = sigs.TEST_SIGN_RESUMABLE
 
     class MockLogger(object):
@@ -244,6 +247,9 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                                 'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
+          api=None,
+          use_service_account=False,
+          provider='gs',
           client_id=self.client_email,
           method='RESUMABLE',
           gcs_path='test/test.txt',
@@ -260,6 +266,9 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                                 'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
+          api=None,
+          use_service_account=False,
+          provider='gs',
           client_id=self.client_email,
           method='RESUMABLE',
           gcs_path='test/test.txt',
@@ -270,8 +279,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     # No warning, since content type was included.
     self.assertFalse(mock_logger2.warning_issued)
 
-  def testSignurlPutContentype(self):
-    """Tests the _GenSignedUrl function a PUT method and content type."""
+  def testSignurlPutContentypeUsingKeyFile(self):
+    """Tests _GenSignedUrl using key file with a PUT method and content type."""
     expected = sigs.TEST_SIGN_URL_PUT_CONTENT
 
     duration = timedelta(seconds=3600)
@@ -279,6 +288,9 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                                 'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
+          api=None,
+          use_service_account=False,
+          provider='gs',
           client_id=self.client_email,
           method='PUT',
           gcs_path='test/test.txt',
@@ -288,8 +300,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           content_type='text/plain')
     self.assertEquals(expected, signed_url)
 
-  def testSignurlGet(self):
-    """Tests the _GenSignedUrl function with a GET method."""
+  def testSignurlGetUsingKeyFile(self):
+    """Tests the _GenSignedUrl function using key file with a GET method."""
     expected = sigs.TEST_SIGN_URL_GET
 
     duration = timedelta(seconds=0)
@@ -297,6 +309,9 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                                 'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           self.key,
+          api=None,
+          use_service_account=False,
+          provider='gs',
           client_id=self.client_email,
           method='GET',
           gcs_path='test/test.txt',
@@ -306,7 +321,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           content_type='')
     self.assertEquals(expected, signed_url)
 
-  def testSignurlGetWithJSONKey(self):
+  def testSignurlGetWithJSONKeyUsingKeyFile(self):
     """Tests _GenSignedUrl with a GET method and the test JSON private key."""
     expected = sigs.TEST_SIGN_URL_GET_WITH_JSON_KEY
 
@@ -319,6 +334,9 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                                 'storage.googleapis.com')]):
       signed_url = gslib.commands.signurl._GenSignedUrl(
           key,
+          api=None,
+          use_service_account=False,
+          provider='gs',
           client_id=client_email,
           method='GET',
           gcs_path='test/test.txt',

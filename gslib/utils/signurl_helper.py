@@ -32,6 +32,10 @@ _SIGNED_URL_FORMAT = ('https://{host}/{path}?x-goog-signature={sig}&'
 _UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
 
 
+def _NowUTC():
+  return datetime.utcnow()
+
+
 def CreatePayload(client_id,
                   method,
                   duration,
@@ -40,8 +44,27 @@ def CreatePayload(client_id,
                   region,
                   signed_headers,
                   string_to_sign_debug=False):
-  """TODO: Add function description."""
-  signing_time = datetime.utcnow()
+  """Create a string that needs to be signed.
+
+  Args:
+    client_id: Client ID signing this URL.
+    method: The HTTP method to be used with the signed URL.
+    duration: timedelta for which the constructed signed URL should be valid.
+    path: String path to the bucket of object for signing, in the form
+        'bucket' or 'bucket/object'.
+    logger: logging.Logger for warning and debug output.
+    region: Geographic region in which the requested resource resides.
+    signed_headers: Dict containing the header  info like host
+          content-type etc.
+    string_to_sign_debug: If true AND logger is enabled for debug level,
+        print string to sign to debug. Used to differentiate user's
+        signed URL from the probing permissions-check signed URL.
+
+  Returns:
+    A tuple where the 1st element is the string to sign.
+    The second element is the query string.
+  """
+  signing_time = _NowUTC()
 
   canonical_day = signing_time.strftime('%Y%m%d')
   canonical_time = signing_time.strftime('%Y%m%dT%H%M%SZ')
@@ -100,6 +123,7 @@ def CreatePayload(client_id,
 
 
 def GetFinalUrl(raw_signature, host, path, canonical_query_string):
+  """Get the final signed url."""
   signature = base64.b16encode(raw_signature).lower().decode()
   return _SIGNED_URL_FORMAT.format(host=host,
                                    path=path,
