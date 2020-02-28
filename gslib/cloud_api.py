@@ -148,7 +148,7 @@ class CloudApi(object):
     Returns:
       The signed url.
     """
-    raise NotImplementedError('GetBucket must be overloaded')
+    raise NotImplementedError('SignUrl must be overloaded')
 
   def ListBuckets(self, project_id=None, provider=None, fields=None):
     """Lists bucket metadata for the given project.

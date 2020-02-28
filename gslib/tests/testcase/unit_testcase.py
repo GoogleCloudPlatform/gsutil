@@ -36,6 +36,7 @@ from gslib.command_runner import CommandRunner
 from gslib.cs_api_map import ApiMapConstants
 from gslib.cs_api_map import ApiSelector
 from gslib.discard_messages_queue import DiscardMessagesQueue
+from gslib.gcs_json_api import GcsJsonApi
 from gslib.tests.mock_logging_handler import MockLoggingHandler
 from gslib.tests.testcase import base
 import gslib.tests.util as util
@@ -73,6 +74,7 @@ class GsutilApiUnitTestClassMapFactory(object):
     gs_class_map = {
         ApiSelector.XML: BotoTranslation,
         ApiSelector.JSON: BotoTranslation
+        #ApiSelector.JSON: GcsJsonApi
     }
     s3_class_map = {ApiSelector.XML: BotoTranslation}
     class_map = {'gs': gs_class_map, 's3': s3_class_map}
