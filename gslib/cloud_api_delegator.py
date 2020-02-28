@@ -536,15 +536,8 @@ class CloudApiDelegator(CloudApi):
                                                service_account_email,
                                                show_deleted_keys)
 
-  def SignUrl(self,
-              provider,
-              method,
-              duration,
-              path,
-              logger,
-              region,
-              signed_headers,
-              string_to_sign_debug):
+  def SignUrl(self, provider, method, duration, path, logger, region,
+              signed_headers, string_to_sign_debug):
     return self._GetApi(provider).SignUrl(
         method=method,
         duration=duration,
@@ -552,8 +545,7 @@ class CloudApiDelegator(CloudApi):
         logger=logger,
         region=region,
         signed_headers=signed_headers,
-        string_to_sign_debug=string_to_sign_debug
-    )
+        string_to_sign_debug=string_to_sign_debug)
 
   def UpdateHmacKey(self, project_id, access_id, state, etag, provider=None):
     return self._GetApi(provider).UpdateHmacKey(project_id, access_id, state,

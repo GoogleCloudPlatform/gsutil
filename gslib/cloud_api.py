@@ -117,13 +117,7 @@ class CloudApi(object):
     """
     raise NotImplementedError('SetBucketIamPolicy must be overloaded')
 
-  def SignUrl(self,
-              method,
-              duration,
-              path,
-              logger,
-              region,
-              signed_headers,
+  def SignUrl(self, method, duration, path, logger, region, signed_headers,
               string_to_sign_debug):
     """Sign a url using service account's system managed private key.
 

@@ -103,10 +103,9 @@ class IamcredentailsApi(object):
     """Sign the blob using iamcredentials.SinbBlob API."""
     name = 'projects/-/serviceAccounts/%s' % service_account_id
     sign_blob_request = apitools_messages.SignBlobRequest(payload=message)
-    request = (apitools_messages.
-               IamcredentialsProjectsServiceAccountsSignBlobRequest(
-                   name=name,
-                   signBlobRequest=sign_blob_request))
+    request = (
+        apitools_messages.IamcredentialsProjectsServiceAccountsSignBlobRequest(
+            name=name, signBlobRequest=sign_blob_request))
     try:
       return self.api_client.projects_serviceAccounts.SignBlob(request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:

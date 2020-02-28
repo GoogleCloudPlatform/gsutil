@@ -296,9 +296,7 @@ def _GenSignedUrl(key,
         signed_headers=signed_headers,
         string_to_sign_debug=string_to_sign_debug)
     raw_signature = sign(key, string_to_sign, digest)
-    final_url = GetFinalUrl(raw_signature,
-                            gs_host,
-                            gcs_path,
+    final_url = GetFinalUrl(raw_signature, gs_host, gcs_path,
                             canonical_query_string)
   return final_url
 
@@ -434,14 +432,8 @@ class UrlSignCommand(Command):
 
     return method, delta, content_type, passwd, region, use_service_account
 
-  def _ProbeObjectAccessWithClient(self,
-                                   key,
-                                   use_service_account,
-                                   provider,
-                                   client_email,
-                                   gcs_path,
-                                   logger,
-                                   region):
+  def _ProbeObjectAccessWithClient(self, key, use_service_account, provider,
+                                   client_email, gcs_path, logger, region):
     """Performs a head request against a signed url to check for read access."""
 
     # Choose a reasonable time in the future; if the user's system clock is
@@ -591,13 +583,9 @@ class UrlSignCommand(Command):
 
       print(url_info_str)
 
-      response_code = self._ProbeObjectAccessWithClient(key,
-                                                        use_service_account,
-                                                        url.scheme,
-                                                        client_email,
-                                                        gcs_path,
-                                                        self.logger,
-                                                        bucket_region)
+      response_code = self._ProbeObjectAccessWithClient(
+          key, use_service_account, url.scheme, client_email, gcs_path,
+          self.logger, bucket_region)
 
       if response_code == 404:
         if url.IsBucket() and method != 'PUT':

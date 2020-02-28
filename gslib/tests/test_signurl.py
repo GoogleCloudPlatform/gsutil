@@ -32,8 +32,7 @@ from gslib.gcs_json_api import GcsJsonApi
 from gslib.iamcredentials_api import IamcredentailsApi
 from gslib.impersonation_credentials import ImpersonationCredentials
 import gslib.tests.testcase as testcase
-from gslib.tests.testcase.integration_testcase import (
-  SkipForS3, SkipForXML)
+from gslib.tests.testcase.integration_testcase import (SkipForS3, SkipForXML)
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
@@ -44,7 +43,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 from six import add_move, MovedModule
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
-
 
 SERVICE_ACCOUNT = boto.config.get_value('GSUtil',
                                         'test_impersonate_service_account')
@@ -191,9 +189,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     # We are not able to mock the datetime here because RunGsUtil creates
     # a separate process and runs the command.
     self.assertIn('https://storage.googleapis.com/pub', stdout)
-    self.assertIn(
-        'All API calls will be executed as [%s]' % SERVICE_ACCOUNT,
-        stderr)
+    self.assertIn('All API calls will be executed as [%s]' % SERVICE_ACCOUNT,
+                  stderr)
 
   def testSignUrlOfNonObjectUrl(self):
     """Tests the signurl output of a non-existent file."""
@@ -345,8 +342,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
   @SkipForXML('Tests only run on JSON API.')
   @mock.patch('gslib.iamcredentials_api.apitools_client')
   @mock.patch('gslib.iamcredentials_api.apitools_messages')
-  def testSignPutUsingImersonatedServiceAccount(self,
-                                                mock_api_messages,
+  def testSignPutUsingImersonatedServiceAccount(self, mock_api_messages,
                                                 mock_apiclient):
     """Tests the _GenSignedUrl function PUT method with impersonation.
 
@@ -393,8 +389,8 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     self.assertEqual(expected, signed_url)
     mock_api_messages.SignBlobRequest.assert_called_once_with(
         payload=b'GOOG4-RSA-SHA256\n19000101T000555Z\n19000101/us-east1'
-                b'/storage/goog4_request\n7f110b30eeca7fdd8846e876bceee'
-                b'85384d8e4c7388b3596544b1b503f9e2320')
+        b'/storage/goog4_request\n7f110b30eeca7fdd8846e876bceee'
+        b'85384d8e4c7388b3596544b1b503f9e2320')
 
   def testSignResumableWithKeyFile(self):
     """Tests _GenSignedUrl using key file with a RESUMABLE method."""
