@@ -72,9 +72,12 @@ class GsutilApiUnitTestClassMapFactory(object):
   def GetClassMap(cls):
     """Returns a class map for use in unit tests."""
     gs_class_map = {
-        ApiSelector.XML: BotoTranslation,
-        ApiSelector.JSON: BotoTranslation
-        #ApiSelector.JSON: GcsJsonApi
+        ApiSelector.XML:
+            BotoTranslation,
+        # TODO: This should be replaced with 'ApiSelector.JSON: GcsJsonApi'.
+        # Refer Issue https://github.com/GoogleCloudPlatform/gsutil/issues/970
+        ApiSelector.JSON:
+            BotoTranslation
     }
     s3_class_map = {ApiSelector.XML: BotoTranslation}
     class_map = {'gs': gs_class_map, 's3': s3_class_map}

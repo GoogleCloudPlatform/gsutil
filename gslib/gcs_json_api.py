@@ -319,8 +319,8 @@ class GcsJsonApi(CloudApi):
       return self.credentials.service_account_email
     else:
       raise CommandException(
-          'signurl command can be performed only with a service account or '
-          'imperonsating a service account.')
+          'Cannot get service account email id for the given '
+          'credential type.')
 
   def _GetSignedContent(self, string_to_sign):
     """Returns the Signed Content."""
@@ -333,8 +333,8 @@ class GcsJsonApi(CloudApi):
       return self.credentials.sign_blob(string_to_sign)[1]
     else:
       raise CommandException(
-          'signurl command can be performed only with a service account or '
-          'imperonsating a service account.')
+          'Authentication using a service account is required for signing '
+          'the content.')
 
   def _FieldsContainsAclField(self, fields=None):
     """Checks Returns true if ACL related values are in fields set.

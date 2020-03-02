@@ -108,7 +108,7 @@ _DETAILED_HELP_TEXT = ("""
   objects nested under gs://some-bucket/some-object. Unless you actually
   have an object with that name, the operation will fail.
   
-  If the service account credentials were used for authentication then the 
+  If service account credentials were used for authentication then the 
   <private-key-file> argument can be replaced by -u or --use-service-account
   option to use the system-managed private key directly. This avoids the need
   to download the private key file.
@@ -160,7 +160,7 @@ _DETAILED_HELP_TEXT = ("""
     gsutil signurl -d 10m <private-key-file> gs://<bucket>/<object>
     
   
-  Create a signed url without the private-key:
+  Create a signed url without a private-key:
   
     Only applicable if service account's credentials
     were used to run the command
@@ -240,6 +240,8 @@ def _GenSignedUrl(key,
     api: The CloudApiDelegator instance
     use_service_account: If True, use the service account credentials
         instead of using the key file to sign the url
+    provider: Cloud storage provider to connect to.  If not present,
+        class-wide default is used.
     client_id: Client ID signing this URL.
     method: The HTTP method to be used with the signed URL.
     duration: timedelta for which the constructed signed URL should be valid.

@@ -100,7 +100,7 @@ class IamcredentailsApi(object):
           'key', u'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
 
   def SignBlob(self, service_account_id, message):
-    """Sign the blob using iamcredentials.SinbBlob API."""
+    """Sign the blob using iamcredentials.SignBlob API."""
     name = 'projects/-/serviceAccounts/%s' % service_account_id
     sign_blob_request = apitools_messages.SignBlobRequest(payload=message)
     request = (

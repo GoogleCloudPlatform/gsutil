@@ -16,7 +16,6 @@
 
 from __future__ import absolute_import
 from __future__ import division
-from __future__ import print_function
 from __future__ import unicode_literals
 
 
@@ -124,7 +123,7 @@ class CloudApi(object):
     Args:
       method: The HTTP method to be used with the signed URL.
       duration: timedelta for which the constructed signed URL should be valid.
-      path: String path to the bucket of object for signing, in the form
+      path: String path to the bucket or object for signing, in the form
           'bucket' or 'bucket/object'.
       logger: logging.Logger for warning and debug output.
       region: Geographic region in which the requested resource resides.
