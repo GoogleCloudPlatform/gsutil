@@ -316,8 +316,8 @@ class KmsCommand(Command):
 
     bucket_metadata.encryption = apitools_messages.Bucket.EncryptionValue(
         defaultKmsKeyName=self.kms_key)
-    text_util.print_to_fd('Setting default KMS key for bucket %s...' %
-                          str(bucket_url).rstrip('/'))
+    print('Setting default KMS key for bucket %s...' %
+          str(bucket_url).rstrip('/'))
     self.gsutil_api.PatchBucket(bucket_url.bucket_name,
                                 bucket_metadata,
                                 fields=['encryption'],
