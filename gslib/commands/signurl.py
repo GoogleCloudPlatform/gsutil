@@ -89,9 +89,11 @@ _DETAILED_HELP_TEXT = ("""
   for the specified HTTP method and valid for the given duration.
 
   NOTE: Unlike the gsutil ls command, the signurl command does not support
-  operations on sub-directories. For example, if you run the command:
+  operations on sub-directories. For example, unless you have an object named
+  `some-directory/` stored inside the bucket `some-bucket`, the following
+  command returns an error:
 
-    gsutil signurl <private-key-file> gs://some-bucket/some-object/
+    gsutil signurl <private-key-file> gs://some-bucket/some-directory/
 
   The signurl command uses the private key for a service account (the
   '<private-key-file>' argument) to generate the cryptographic
@@ -102,16 +104,12 @@ _DETAILED_HELP_TEXT = ("""
   key for use with the signurl command please see the `Authentication
   documentation.
   <https://cloud.google.com/storage/docs/authentication#generating-a-private-key>`_
-
-  gsutil will look up information about the object "some-object/" (with a
-  trailing slash) inside bucket "some-bucket", as opposed to operating on
-  objects nested under gs://some-bucket/some-object. Unless you actually
-  have an object with that name, the operation will fail.
   
-  If service account credentials were used for authentication then the 
-  <private-key-file> argument can be replaced by -u or --use-service-account
-  option to use the system-managed private key directly. This avoids the need
-  to download the private key file.
+  If you used `service account credentials
+  <https://cloud.google.com/storage/docs/gsutil/addlhelp/CredentialTypesSupportingVariousUseCases#supported-credential-types_1>`_
+  for authentication then you can replace the  <private-key-file> argument
+  by -u or --use-service-account option to use the system-managed private key
+  directly. This avoids the need to download the private key file.
 
 <B>OPTIONS</B>
   -m           Specifies the HTTP method to be authorized for use
@@ -152,7 +150,8 @@ _DETAILED_HELP_TEXT = ("""
                signed URL to create a bucket.
                
   -u --use-service-account
-               Use service account instead of a key file to sign the url.
+               Use service account credentials instead of a private key file
+               to sign the url.
 
 <B>USAGE</B>
   Create a signed url for downloading an object valid for 10 minutes:
@@ -160,14 +159,12 @@ _DETAILED_HELP_TEXT = ("""
     gsutil signurl -d 10m <private-key-file> gs://<bucket>/<object>
     
   
-  Create a signed url without a private-key:
-  
-    Only applicable if service account's credentials
-    were used to run the command
+  Create a signed url without a private key, using a service account's
+  credentials:
     
     gsutil signurl -d 10m -u gs://<bucket>/<object>
     
-    If impersonating a service account
+  Create a signed url by impersonating a service account:
     
     gsutil -i <service account email> signurl -d 10m -u gs://<bucket>/<object>  
 
