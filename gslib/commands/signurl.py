@@ -105,8 +105,8 @@ _DETAILED_HELP_TEXT = ("""
   
   If you used `service account credentials
   <https://cloud.google.com/storage/docs/gsutil/addlhelp/CredentialTypesSupportingVariousUseCases#supported-credential-types_1>`_
-  for authentication, you can replace the  <private-key-file> argument
-  by -u or --use-service-account option to use the system-managed private key
+  for authentication, you can replace the  <private-key-file> argument with
+  the -u or --use-service-account option to use the system-managed private key
   directly. This avoids the need to download the private key file.
 
 <B>OPTIONS</B>
