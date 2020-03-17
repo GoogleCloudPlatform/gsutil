@@ -91,9 +91,7 @@ _DETAILED_HELP_TEXT = ("""
   NOTE: Unlike the gsutil ls command, the signurl command does not support
   operations on sub-directories. For example, unless you have an object named
   `some-directory/` stored inside the bucket `some-bucket`, the following
-  command returns an error:
-
-    gsutil signurl <private-key-file> gs://some-bucket/some-directory/
+  command returns an error: `gsutil signurl <private-key-file> gs://some-bucket/some-directory/`
 
   The signurl command uses the private key for a service account (the
   '<private-key-file>' argument) to generate the cryptographic
@@ -107,7 +105,7 @@ _DETAILED_HELP_TEXT = ("""
   
   If you used `service account credentials
   <https://cloud.google.com/storage/docs/gsutil/addlhelp/CredentialTypesSupportingVariousUseCases#supported-credential-types_1>`_
-  for authentication then you can replace the  <private-key-file> argument
+  for authentication, you can replace the  <private-key-file> argument
   by -u or --use-service-account option to use the system-managed private key
   directly. This avoids the need to download the private key file.
 
