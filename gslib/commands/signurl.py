@@ -90,8 +90,8 @@ _DETAILED_HELP_TEXT = ("""
 
   NOTE: Unlike the gsutil ls command, the signurl command does not support
   operations on sub-directories. For example, unless you have an object named
-  `some-directory/` stored inside the bucket `some-bucket`, the following
-  command returns an error: `gsutil signurl <private-key-file> gs://some-bucket/some-directory/`
+  ``some-directory/`` stored inside the bucket ``some-bucket``, the following
+  command returns an error: ``gsutil signurl <private-key-file> gs://some-bucket/some-directory/``
 
   The signurl command uses the private key for a service account (the
   '<private-key-file>' argument) to generate the cryptographic
