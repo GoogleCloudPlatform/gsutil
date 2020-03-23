@@ -1678,6 +1678,42 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     _CopyAndCheck()
 
+  @unittest.skipUnless(HAS_S3_CREDS, 'Test requires both S3 and GS credentials')
+  def test_copy_object_to_dir_s3_v4(self):
+    """Tests copying object from s3 to local dir with v4 signature.
+
+    Regions like us-east2 accept only V4 signature, hence we will create
+    the bucket in us-east2 region to enforce testing with V4 signature.
+    """
+    src_bucket_uri = self.CreateBucket(provider='s3')
+    dst_dir = self.CreateTempDir()
+    self.CreateObject(bucket_uri=src_bucket_uri,
+                      object_name='obj0',
+                      contents=b'abc')
+    self.CreateObject(bucket_uri=src_bucket_uri,
+                      object_name='obj1',
+                      contents=b'def')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _CopyAndCheck():
+      """Copies the bucket recursively and validates the results."""
+      self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), dst_dir])
+      dir_list = []
+      for dirname, _, filenames in os.walk(dst_dir):
+        for filename in filenames:
+          dir_list.append(os.path.join(dirname, filename))
+      dir_list = sorted(dir_list)
+      self.assertEqual(len(dir_list), 2)
+      self.assertEqual(
+          os.path.join(dst_dir, src_bucket_uri.bucket_name, 'obj0'),
+          dir_list[0])
+      self.assertEqual(
+          os.path.join(dst_dir, src_bucket_uri.bucket_name, 'obj1'),
+          dir_list[1])
+
+    _CopyAndCheck()
+
   def test_recursive_download_with_leftover_dir_placeholder(self):
     """Tests that we correctly handle leftover dir placeholders."""
     src_bucket_uri = self.CreateBucket()

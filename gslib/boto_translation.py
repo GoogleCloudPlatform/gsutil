@@ -685,6 +685,8 @@ class BotoTranslation(CloudApi):
       try:
         cb_handler = DownloadProxyCallbackHandler(start_byte, callback)
         headers = headers.copy()
+        if 'range' in headers:
+          headers.pop('range')
         headers['Range'] = 'bytes=%d-%d' % (start_byte, end_byte)
 
         # Disable AWSAuthConnection-level retry behavior, since that would
