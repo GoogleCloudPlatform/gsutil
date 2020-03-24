@@ -1450,7 +1450,6 @@ def ExpandUrlToSingleBlr(url_str,
 
   # HTTP call to make an eventually consistent check for a matching prefix,
   # _$folder$, or empty listing.
-  expansion_empty = True
   list_iterator = gsutil_api.ListObjects(storage_url.bucket_name,
                                          prefix=prefix,
                                          delimiter='/',
@@ -1470,8 +1469,6 @@ def ExpandUrlToSingleBlr(url_str,
     # save up to 1ms in determining that a destination is a prefix if we had a
     # way to yield prefixes first, but this would require poking a major hole
     # through the abstraction to control this iteration order.
-    expansion_empty = False
-
     if (obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.PREFIX and
         obj_or_prefix.data == prefix + '/'):
       # Case 2: If there is a matching prefix when listing the destination URL.
@@ -1481,10 +1478,14 @@ def ExpandUrlToSingleBlr(url_str,
       # Case 3: If a placeholder object matching destination + _$folder$
       # exists.
       return (storage_url, True)
+    elif (obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT and
+          obj_or_prefix.data.name == storage_url.object_name):
+      # The object exists but it is not a container
+      return (storage_url, False)
 
   # Case 4: If no objects/prefixes matched, and nonexistent objects should be
   # treated as subdirectories.
-  return (storage_url, expansion_empty and treat_nonexistent_object_as_subdir)
+  return (storage_url, treat_nonexistent_object_as_subdir)
 
 
 def FixWindowsNaming(src_url, dst_url):

@@ -2541,6 +2541,52 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check2()
 
+  def test_rsync_to_nonexistent_bucket_subdir_prefix_of_existing_obj(self):
+    """Tests that rsync with destination url as a prefix of existing obj works.
+
+    Test to make sure that a dir/subdir gets created if it does not exist
+    even when the new dir is a prefix of an existing dir.
+    e.g if gs://some_bucket/foobar exists, and we run the command
+    rsync some_dir gs://some_bucket/foo
+    this should create a subdir foo
+    """
+    # Create dir with some objects and empty bucket.
+    tmpdir = self.CreateTempDir()
+    bucket_url = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_url,
+                      object_name='foobar',
+                      contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1')
+    self.CreateTempFile(tmpdir=tmpdir, file_name='.obj2', contents=b'.obj2')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      """Tests rsync works as expected."""
+      self.RunGsUtil(['rsync', '-r', tmpdir, suri(bucket_url, 'foo')])
+      listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
+      listing2 = TailSet(
+          suri(bucket_url, 'foo'),
+          self.FlatListBucket(bucket_url.clone_replace_name('foo')))
+      # Dir should have un-altered content.
+      self.assertEquals(listing1, set(['/obj1', '/.obj2']))
+      # Bucket subdir should have content like dir.
+      self.assertEquals(listing2, set(['/obj1', '/.obj2']))
+
+    _Check1()
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check2():
+      # Check that re-running the same rsync command causes no more changes.
+      self.assertEquals(
+          NO_CHANGES,
+          self.RunGsUtil(['rsync', '-r', tmpdir,
+                          suri(bucket_url, 'foo')],
+                         return_stderr=True))
+
+    _Check2()
+
   def test_rsync_from_nonexistent_bucket(self):
     """Tests that rsync from a non-existent bucket subdir fails gracefully."""
     tmpdir = self.CreateTempDir()
@@ -2578,6 +2624,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
       # Dir should have un-altered content.
       self.assertEquals(listing, set(['/obj1', '/.obj2']))
+
+    _Check()
 
   def test_bucket_to_bucket_minus_d_with_overwrite_and_punc_chars(self):
     """Tests that punc chars in filenames don't confuse sort order."""
