@@ -56,6 +56,7 @@ from gslib.cloud_api import ResumableUploadAbortException
 from gslib.cloud_api import ResumableUploadException
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.cloud_api import ServiceException
+from gslib.exception import CommandException
 from gslib.gcs_json_credentials import SetUpJsonCredentialsAndCache
 from gslib.gcs_json_media import BytesTransferredContainer
 from gslib.gcs_json_media import DownloadCallbackConnectionClassFactory
@@ -64,6 +65,7 @@ from gslib.gcs_json_media import HttpWithNoRetries
 from gslib.gcs_json_media import UploadCallbackConnectionClassFactory
 from gslib.gcs_json_media import WrapDownloadHttpRequest
 from gslib.gcs_json_media import WrapUploadHttpRequest
+from gslib.impersonation_credentials import ImpersonationCredentials
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.project_id import PopulateProjectId
@@ -94,6 +96,7 @@ from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
 from gslib.utils.metadata_util import AddAcceptEncodingGzipIfNeeded
 from gslib.utils.retry_util import LogAndHandleRetries
+from gslib.utils.signurl_helper import CreatePayload, GetFinalUrl
 from gslib.utils.text_util import GetPrintableExceptionString
 from gslib.utils.translation_helper import CreateBucketNotFoundException
 from gslib.utils.translation_helper import CreateNotFoundExceptionForObjectWrite
@@ -101,6 +104,7 @@ from gslib.utils.translation_helper import CreateObjectNotFoundException
 from gslib.utils.translation_helper import DEFAULT_CONTENT_TYPE
 from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.utils.translation_helper import REMOVE_CORS_CONFIG
+from oauth2client.service_account import ServiceAccountCredentials
 
 if six.PY3:
   long = int
@@ -307,6 +311,31 @@ class GcsJsonApi(CloudApi):
     """Returns an upload-safe Http object (by disabling httplib2 retries)."""
     return GetNewHttp(http_class=HttpWithNoRetries)
 
+  def _GetServiceAccountId(self):
+    """Returns the service account email id."""
+    if isinstance(self.credentials, ImpersonationCredentials):
+      return self.credentials.service_account_id
+    elif isinstance(self.credentials, ServiceAccountCredentials):
+      return self.credentials.service_account_email
+    else:
+      raise CommandException(
+          'Cannot get service account email id for the given '
+          'credential type.')
+
+  def _GetSignedContent(self, string_to_sign):
+    """Returns the Signed Content."""
+    if isinstance(self.credentials, ImpersonationCredentials):
+      iam_cred_api = self.credentials.api
+      service_account_id = self.credentials.service_account_id
+      response = iam_cred_api.SignBlob(service_account_id, string_to_sign)
+      return response.signedBlob
+    elif isinstance(self.credentials, ServiceAccountCredentials):
+      return self.credentials.sign_blob(string_to_sign)[1]
+    else:
+      raise CommandException(
+          'Authentication using a service account is required for signing '
+          'the content.')
+
   def _FieldsContainsAclField(self, fields=None):
     """Checks Returns true if ACL related values are in fields set.
 
@@ -403,6 +432,27 @@ class GcsJsonApi(CloudApi):
                                                   global_params=global_params)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
+
+  def SignUrl(self, method, duration, path, logger, region, signed_headers,
+              string_to_sign_debug):
+    """See CloudApi class for function doc strings."""
+    service_account_id = self._GetServiceAccountId()
+    string_to_sign, canonical_query_string = CreatePayload(
+        client_id=service_account_id,
+        method=method,
+        duration=duration,
+        path=path,
+        logger=logger,
+        region=region,
+        signed_headers=signed_headers,
+        string_to_sign_debug=string_to_sign_debug)
+
+    if six.PY3:
+      string_to_sign = string_to_sign.encode(UTF8)
+
+    raw_signature = self._GetSignedContent(string_to_sign)
+    return GetFinalUrl(raw_signature, signed_headers['host'], path,
+                       canonical_query_string)
 
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""

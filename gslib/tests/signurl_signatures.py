@@ -72,3 +72,10 @@ TEST_SIGN_URL_GET_WITH_JSON_KEY = (
     'ential=test%40developer.gserviceaccount.com%2F19000101%2Fasia%'
     '2Fstorage%2Fgoog4_request&x-goog-date=19000101T000555Z&x-goog-'
     'expires=0&x-goog-signedheaders=host')
+
+TEST_SIGN_URL_PUT_WITH_SERVICE_ACCOUNT = (
+    'https://storage.googleapis.com/test/test.txt?x-goog-signature='
+    '66616b655f7369676e6174757265&x-goog-algorithm=GOOG4-RSA-SHA256'
+    '&x-goog-credential=fake_service_account_email%2F19000101%2Fus-'
+    'east1%2Fstorage%2Fgoog4_request&x-goog-date=19000101T000555Z&x'
+    '-goog-expires=3600&x-goog-signedheaders=host')

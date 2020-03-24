@@ -75,6 +75,7 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
   # MANFFEST.in, and most users who drop data into gsutil dir do so at the top
   # level directory.
   addl_excludes = (
+      '.coverage',
       '.DS_Store',
       '.style.yapf',
       '.travis.yml',
