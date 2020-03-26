@@ -1,3 +1,18 @@
+Release 4.49 (release date: 2020-03-26)
+======================================
+New Features
+------------------
+- Added support for service account impersonation for signurl.
+
+Bug Fixes
+------------------
+- Fixed an issue with rsync throwing error when the destination url is a prefix of
+  an existing object.
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 4.48 (release date: 2020-02-28)
 ======================================
 Bug Fixes
