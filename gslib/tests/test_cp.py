@@ -1714,7 +1714,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     _CopyAndCheck()
 
-  def test_recursive_download_with_leftover_dir_placeholder(self):
+  @SkipForS3('Boto lib required for S3 does not handle paths '
+             'starting with slash.')
+  def test_recursive_download_with_leftover_slash_only_dir_placeholder(self):
     """Tests that we correctly handle leftover dir placeholders."""
     src_bucket_uri = self.CreateBucket()
     dst_dir = self.CreateTempDir()
@@ -1727,6 +1729,34 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     # Create a placeholder like what can be left over by web GUI tools.
     key_uri = src_bucket_uri.clone_replace_name('/')
+    key_uri.set_contents_from_string('')
+    self.AssertNObjectsInBucket(src_bucket_uri, 3)
+
+    self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), dst_dir])
+    dir_list = []
+    for dirname, _, filenames in os.walk(dst_dir):
+      for filename in filenames:
+        dir_list.append(os.path.join(dirname, filename))
+    dir_list = sorted(dir_list)
+    self.assertEqual(len(dir_list), 2)
+    self.assertEqual(os.path.join(dst_dir, src_bucket_uri.bucket_name, 'obj0'),
+                     dir_list[0])
+    self.assertEqual(os.path.join(dst_dir, src_bucket_uri.bucket_name, 'obj1'),
+                     dir_list[1])
+
+  def test_recursive_download_with_leftover_dir_placeholder(self):
+    """Tests that we correctly handle leftover dir placeholders."""
+    src_bucket_uri = self.CreateBucket()
+    dst_dir = self.CreateTempDir()
+    self.CreateObject(bucket_uri=src_bucket_uri,
+                      object_name='obj0',
+                      contents=b'abc')
+    self.CreateObject(bucket_uri=src_bucket_uri,
+                      object_name='obj1',
+                      contents=b'def')
+
+    # Create a placeholder like what can be left over by web GUI tools.
+    key_uri = src_bucket_uri.clone_replace_name('foo/')
     key_uri.set_contents_from_string('')
     self.AssertNObjectsInBucket(src_bucket_uri, 3)
 
