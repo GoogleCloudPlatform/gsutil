@@ -508,11 +508,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     if self.multiregional_buckets:
       self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
 
-    self._RunRemoveCommandAndCheck(['rm', '-r', suri(bucket_uri)],
-                                   objects_to_remove=[
-                                       '%s#%s' % (suri(ouri1), urigen(ouri1))
-                                   ],
-                                   buckets_to_remove=[suri(bucket_uri)])
+    self._RunRemoveCommandAndCheck(
+        ['rm', '-r', suri(bucket_uri)],
+        objects_to_remove=['%s#%s' % (suri(ouri1), urigen(ouri1))],
+        buckets_to_remove=[suri(bucket_uri)])
 
   def test_rm_object_with_slashes(self):
     """Tests removing a bucket that has objects with slashes."""

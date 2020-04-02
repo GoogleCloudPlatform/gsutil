@@ -732,7 +732,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_recursive_list_trailing_slash(self):
     """Tests listing an object with a trailing slash."""
     bucket_uri = self.CreateBucket()
-    self.CreateObject(bucket_uri=bucket_uri, object_name='foo/',
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='foo/',
                       contents=b'foo')
     self.AssertNObjectsInBucket(bucket_uri, 1)
     stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
