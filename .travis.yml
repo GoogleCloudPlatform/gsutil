@@ -9,6 +9,9 @@ matrix:
     # Xenial Tests
     - os: linux
       dist: xenial
+      python: "pypy"
+    - os: linux
+      dist: xenial
       python: "2.7"
     - os: linux
       dist: xenial
