@@ -2,10 +2,6 @@ language: python
 
 matrix:
   include:
-    # Trusty Tests
-    - os: linux
-      dist: trusty
-      python: "pypy"
     # Xenial Tests
     - os: linux
       dist: xenial
