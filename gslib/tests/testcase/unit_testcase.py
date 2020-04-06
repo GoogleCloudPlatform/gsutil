@@ -107,10 +107,18 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     self.stdout_save = sys.stdout
     self.stderr_save = sys.stderr
     fd, self.stdout_file = tempfile.mkstemp()
-    sys.stdout = os.fdopen(fd, 'wb+')
+    # Specify the encoding explicitly to ensure Windows uses 'utf-8' instead of
+    # the default of 'cp1252'.
+    if six.PY2:
+      sys.stdout = os.fdopen(fd, 'w+')
+    else:
+      sys.stdout = os.fdopen(fd, 'w+', encoding='utf-8')
     fd, self.stderr_file = tempfile.mkstemp()
     # do not set sys.stderr to be 'wb+' - it will blow up the logger
-    sys.stderr = os.fdopen(fd, 'w+')
+    if six.PY2:
+      sys.stderr = os.fdopen(fd, 'w+')
+    else:
+      sys.stderr = os.fdopen(fd, 'w+', encoding='utf-8')
     self.accumulated_stdout = []
     self.accumulated_stderr = []
 
@@ -209,7 +217,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
       One or a tuple of requested return values, depending on whether
       return_stdout, return_stderr, and/or return_log_handler were specified.
       Return Types:
-        stdout - binary
+        stdout - str (binary in Py2, text in Py3)
         stderr - str (binary in Py2, text in Py3)
         log_handler - MockLoggingHandler
     """
@@ -262,8 +270,8 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
         except UnicodeDecodeError:
           sys.stdout.seek(0)
           sys.stderr.seek(0)
-          stdout = sys.stdout.buffer.read().decode(UTF8)
-          stderr = sys.stderr.buffer.read().decode(UTF8)
+          stdout = sys.stdout.buffer.read()
+          stderr = sys.stderr.buffer.read()
       logging.getLogger(command_name).removeHandler(mock_log_handler)
       mock_log_handler.close()
 
