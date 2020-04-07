@@ -125,8 +125,8 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
     lines = self.AssertNObjectsInBucket(dst_bucket_uri, 1)
     self.assertEqual(suri(dst_bucket_uri, 'dir1', 'foo'), lines[0])
 
-  @SkipForS3('Boto lib required for S3 does not handle paths '
-             'starting with slash.')
+  @SkipForS3('The boto lib used for S3 does not handle objects '
+            'starting with slashes if we use V4 signature')
   @SequentialAndParallelTransfer
   def testCopyingFileToObjectWithConsecutiveSlashes(self):
     """Tests copying a file to an object containing consecutive slashes."""

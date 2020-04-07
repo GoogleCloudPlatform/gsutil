@@ -492,8 +492,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self._RunRemoveCommandAndCheck(['-q', 'rm', suri(key_uri)], [])
     self.AssertNObjectsInBucket(bucket_uri, 0)
 
-  @SkipForS3('Boto lib required for S3 does not handle paths '
-             'starting with slash.')
+  @SkipForS3('The boto lib used for S3 does not handle objects '
+             'starting with slashes if we use V4 signature')
   def test_rm_object_with_prefix_slash(self):
     """Tests removing a bucket that has an object starting with slash.
 
@@ -536,8 +536,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                                    ],
                                    buckets_to_remove=[suri(bucket_uri)])
 
-  @SkipForS3('Boto lib required for S3 does not handle paths '
-             'starting with slash.')
+  @SkipForS3('The boto lib used for S3 does not handle objects '
+             'starting with slashes if we use V4 signature')
   def test_slasher_horror_film(self):
     """Tests removing a bucket with objects that are filled with slashes."""
     bucket_uri = self.CreateVersionedBucket()

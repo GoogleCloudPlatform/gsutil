@@ -1685,7 +1685,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     Regions like us-east2 accept only V4 signature, hence we will create
     the bucket in us-east2 region to enforce testing with V4 signature.
     """
-    src_bucket_uri = self.CreateBucket(provider='s3')
+    src_bucket_uri = self.CreateBucket(provider='s3', location='us-east-2')
     dst_dir = self.CreateTempDir()
     self.CreateObject(bucket_uri=src_bucket_uri,
                       object_name='obj0',
@@ -1714,8 +1714,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     _CopyAndCheck()
 
-  @SkipForS3('Boto lib required for S3 does not handle paths '
-             'starting with slash.')
+  @SkipForS3('The boto lib used for S3 does not handle objects '
+             'starting with slashes if we use V4 signature')
   def test_recursive_download_with_leftover_slash_only_dir_placeholder(self):
     """Tests that we correctly handle leftover dir placeholders."""
     src_bucket_uri = self.CreateBucket()
