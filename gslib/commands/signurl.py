@@ -69,7 +69,7 @@ _MAX_EXPIRATION_TIME = timedelta(days=7)
 
 _SYNOPSIS = """
   gsutil signurl [-c <content_type>] [-d <duration>] [-m <http_method>] \\
-      [-p <password>] [-r <region>] [-u] keystore-file url...
+      [-p <password>] [-r <region>] (-u | private-key-file) url...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -102,7 +102,7 @@ _DETAILED_HELP_TEXT = ("""
   key for use with the signurl command please see the `Authentication
   documentation.
   <https://cloud.google.com/storage/docs/authentication#generating-a-private-key>`_
-  
+
   If you used `service account credentials
   <https://cloud.google.com/storage/docs/gsutil/addlhelp/CredentialTypesSupportingVariousUseCases#supported-credential-types_1>`_
   for authentication, you can replace the  <private-key-file> argument with
@@ -132,7 +132,7 @@ _DETAILED_HELP_TEXT = ("""
   -c           Specifies the content type for which the signed url is
                valid for.
 
-  -p           Specify the keystore password instead of prompting.
+  -p           Specify the private key password instead of prompting.
 
   -r <region>  Specifies the `region
                <https://cloud.google.com/storage/docs/locations>`_ in
@@ -146,24 +146,24 @@ _DETAILED_HELP_TEXT = ("""
 
                This option must be specified and not 'auto' when generating a
                signed URL to create a bucket.
-               
-  -u --use-service-account
-               Use service account credentials instead of a private key file
+
+  -u           Use service account credentials instead of a private key file
                to sign the url.
+
+               You can equivalently use --use-service-account instead of -u
 
 <B>USAGE</B>
   Create a signed url for downloading an object valid for 10 minutes:
-  
+
     gsutil signurl -d 10m <private-key-file> gs://<bucket>/<object>
-    
-  
+
   Create a signed url without a private key, using a service account's
   credentials:
-    
+
     gsutil signurl -d 10m -u gs://<bucket>/<object>
-    
+
   Create a signed url by impersonating a service account:
-    
+
     gsutil -i <service account email> signurl -d 10m -u gs://<bucket>/<object>  
 
   Create a signed url, valid for one hour, for uploading a plain text
