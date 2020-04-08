@@ -492,11 +492,32 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self._RunRemoveCommandAndCheck(['-q', 'rm', suri(key_uri)], [])
     self.AssertNObjectsInBucket(bucket_uri, 0)
 
-  def test_rm_object_with_slash(self):
-    """Tests removing a bucket that has an object with a slash in it."""
+  @SkipForS3('The boto lib used for S3 does not handle objects '
+             'starting with slashes if we use V4 signature')
+  def test_rm_object_with_prefix_slash(self):
+    """Tests removing a bucket that has an object starting with slash.
+
+    The boto lib used for S3 does not handle objects starting with slashes
+    if we use V4 signature. Hence we are testing objects with prefix
+    slashes separately.
+    """
     bucket_uri = self.CreateVersionedBucket()
     ouri1 = self.CreateObject(bucket_uri=bucket_uri,
                               object_name='/dirwithslash/foo',
+                              contents=b'z')
+    if self.multiregional_buckets:
+      self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
+
+    self._RunRemoveCommandAndCheck(
+        ['rm', '-r', suri(bucket_uri)],
+        objects_to_remove=['%s#%s' % (suri(ouri1), urigen(ouri1))],
+        buckets_to_remove=[suri(bucket_uri)])
+
+  def test_rm_object_with_slashes(self):
+    """Tests removing a bucket that has objects with slashes."""
+    bucket_uri = self.CreateVersionedBucket()
+    ouri1 = self.CreateObject(bucket_uri=bucket_uri,
+                              object_name='h/e/l//lo',
                               contents=b'z')
     ouri2 = self.CreateObject(bucket_uri=bucket_uri,
                               object_name='dirnoslash/foo',
@@ -515,6 +536,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                                    ],
                                    buckets_to_remove=[suri(bucket_uri)])
 
+  @SkipForS3('The boto lib used for S3 does not handle objects '
+             'starting with slashes if we use V4 signature')
   def test_slasher_horror_film(self):
     """Tests removing a bucket with objects that are filled with slashes."""
     bucket_uri = self.CreateVersionedBucket()

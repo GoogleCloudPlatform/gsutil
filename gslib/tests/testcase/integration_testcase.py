@@ -519,7 +519,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    versioning_enabled=False,
                    bucket_policy_only=False,
                    bucket_name_prefix='',
-                   bucket_name_suffix=''):
+                   bucket_name_suffix='',
+                   location=None):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -539,6 +540,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           bucketPolicyOnly attribute to True.
       bucket_name_prefix: Unicode string to be prepended to bucket_name
       bucket_name_suffix: Unicode string to be appended to bucket_name
+      location: The location/region in which the bucket should be created.
 
     Returns:
       StorageUri for the created bucket.
@@ -547,13 +549,15 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       provider = self.default_provider
 
     # Location is controlled by the -b test flag.
-    if self.multiregional_buckets or provider == 's3':
-      location = None
-    else:
-      # We default to the "us-central1" location for regional buckets, but allow
-      # overriding this value in the Boto config.
-      location = boto.config.get('GSUtil', 'test_cmd_regional_bucket_location',
-                                 'us-central1')
+    if location is None:
+      if self.multiregional_buckets or provider == 's3':
+        location = None
+      else:
+        # We default to the "us-central1" location for regional buckets,
+        # but allow overriding this value in the Boto config.
+        location = boto.config.get('GSUtil',
+                                   'test_cmd_regional_bucket_location',
+                                   'us-central1')
 
     bucket_name_prefix = six.ensure_text(bucket_name_prefix)
     bucket_name_suffix = six.ensure_text(bucket_name_suffix)

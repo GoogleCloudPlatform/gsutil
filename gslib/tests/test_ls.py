@@ -717,7 +717,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Make sure it still exited cleanly.
     self.assertEqual(p.returncode, 0)
 
-  def test_recursive_list_trailing_slash(self):
+  @SkipForS3('Boto lib required for S3 does not handle paths '
+             'starting with slash.')
+  def test_recursive_list_slash_only(self):
     """Tests listing an object with a trailing slash."""
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri=bucket_uri, object_name='/', contents=b'foo')
@@ -727,6 +729,20 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # removed.
     self.assertIn(suri(bucket_uri) + '/', stdout)
 
+  def test_recursive_list_trailing_slash(self):
+    """Tests listing an object with a trailing slash."""
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='foo/',
+                      contents=b'foo')
+    self.AssertNObjectsInBucket(bucket_uri, 1)
+    stdout = self.RunGsUtil(['ls', '-R', suri(bucket_uri)], return_stdout=True)
+    # Note: The suri function normalizes the URI, so the double slash gets
+    # removed.
+    self.assertIn(suri(bucket_uri) + '/foo/', stdout)
+
+  @SkipForS3('Boto lib required for S3 does not handle paths '
+             'starting with slash.')
   def test_recursive_list_trailing_two_slash(self):
     """Tests listing an object with two trailing slashes."""
     bucket_uri = self.CreateBucket()
