@@ -29,7 +29,7 @@ def GetUserAgent(metrics_off=True):
   Returns:
     str, A string value that can be appended to an existing UserAgent.
   """
-  args, opts = GetArgumentsAndOptions()
+  _, opts = GetArgumentsAndOptions()
 
   user_agent = ' gsutil/%s' % gslib.VERSION
   user_agent += ' (%s)' % sys.platform
