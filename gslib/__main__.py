@@ -37,6 +37,8 @@ from six.moves import configparser
 from six.moves import range
 
 from gslib.utils.version_check import check_python_version_support
+from gslib.utils.arg_helper import GetArgumentsAndOptions
+from gslib.utils.user_agent_helper import GetUserAgent
 
 # Load the gsutil version number and append it to boto.UserAgent so the value is
 # set before anything instantiates boto. This has to run after THIRD_PARTY_DIR
@@ -48,19 +50,11 @@ import boto
 import gslib
 from gslib.utils import system_util
 
-boto.UserAgent += ' gsutil/%s (%s)' % (gslib.VERSION, sys.platform)
-if system_util.InvokedViaCloudSdk():
-  boto.UserAgent += ' google-cloud-sdk'
-  if system_util.CloudSdkVersion():
-    boto.UserAgent += '/%s' % system_util.CloudSdkVersion()
 # pylint: disable=g-import-not-at-top
 # This module also imports boto, and will override the UserAgent global variable
 # if imported above.
 from gslib import metrics
-if metrics.MetricsCollector.IsDisabled():
-  boto.UserAgent += ' analytics/disabled'
-else:
-  boto.UserAgent += ' analytics/enabled'
+boto.UserAgent += GetUserAgent(metrics.MetricsCollector.IsDisabled())
 
 # pylint: disable=g-bad-import-order
 import httplib2
@@ -291,13 +285,9 @@ def main():
 
   try:
     try:
-      opts, args = getopt.getopt(sys.argv[1:], 'dDvo:?h:i:u:mq', [
-          'debug', 'detailedDebug', 'version', 'option', 'help', 'header',
-          'impersonate-service-account=', 'multithreaded', 'quiet',
-          'testexceptiontraces', 'trace-token=', 'perf-trace-token='
-      ])
-    except getopt.GetoptError as e:
-      _HandleCommandException(CommandException(e.msg))
+      opts, args = GetArgumentsAndOptions()
+    except e:
+      _HandleCommandException(e)
     for o, a in opts:
       if o in ('-d', '--debug'):
         # Also causes boto to include httplib header output.
@@ -407,6 +397,9 @@ def main():
       command_name = 'help'
     else:
       command_name = args[0]
+    
+    # Now that we have the command name, update the Boto user agent.
+    boto.UserAgent += ' command/%s' % command_name
 
     _CheckAndWarnForProxyDifferences()
 

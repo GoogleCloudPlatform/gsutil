@@ -21,7 +21,7 @@ from apitools.base.py import base_api
 import gslib
 from gslib.metrics import MetricsCollector
 from gslib.third_party.storage_apitools import storage_v1_messages as messages
-from gslib.utils import system_util
+from gslib.utils.user_agent_helper import GetUserAgent
 
 
 class StorageV1(base_api.BaseApiClient):
@@ -35,16 +35,8 @@ class StorageV1(base_api.BaseApiClient):
   _VERSION = u'v1'
   _CLIENT_ID = 'nomatter'
   _CLIENT_SECRET = 'nomatter'
-  _USER_AGENT = 'apitools gsutil/%s Python/%s (%s)' % (
-      gslib.VERSION, platform.python_version(), sys.platform)
-  if system_util.InvokedViaCloudSdk():
-    _USER_AGENT += ' google-cloud-sdk'
-    if system_util.CloudSdkVersion():
-      _USER_AGENT += '/%s' % system_util.CloudSdkVersion()
-  if MetricsCollector.IsDisabled():
-    _USER_AGENT += ' analytics/disabled'
-  else:
-    _USER_AGENT += ' analytics/enabled'
+  _USER_AGENT = ' Python/%s' % platform.python_version()
+  _USER_AGENT += GetUserAgent(MetricsCollector.IsDisabled())
 
   _CLIENT_CLASS_NAME = u'StorageV1'
   _URL_VERSION = u'v1'
