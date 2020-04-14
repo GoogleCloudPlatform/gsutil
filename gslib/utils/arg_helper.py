@@ -12,18 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains helper for parsing command arguments and options"""
+"""Contains helper for parsing command arguments and options."""
 
 import getopt
 import sys
 
-import gslib
-import gslib.exception
 from gslib.exception import CommandException
 
 
 def GetArgumentsAndOptions():
-  """Gets the list of arguments and options from the command input
+  """Gets the list of arguments and options from the command input.
 
   Returns:
     The return value consists of two elements: the first is a list of (option,

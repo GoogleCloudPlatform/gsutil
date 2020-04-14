@@ -12,15 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains helper for appending user agent information"""
+"""Contains helper for appending user agent information."""
 
-import platform
 import sys
 import gslib
-from gslib.utils.arg_helper import GetArgumentsAndOptions
 from gslib.utils import system_util
+from gslib.utils.arg_helper import GetArgumentsAndOptions
 
-def GetUserAgent(metrics_off = True):
+
+def GetUserAgent(metrics_off=True):
   """Using the command arguments return a suffix for the UserAgent string.
 
   Args:
@@ -36,8 +36,8 @@ def GetUserAgent(metrics_off = True):
   user_agent += ' analytics/%s ' % ('disabled' if metrics_off else 'enabled')
   user_agent += ' interactive/%s' % sys.stdin.isatty()
   user_agent += ' command/%s' % opts[0]
-  
-  if len([segment for segment in opts if "://" in segment]) > 1:
+
+  if len([segment for segment in opts if '://' in segment]) > 1:
     user_agent += '-CloudToCloud'
 
   if system_util.InvokedViaCloudSdk():
