@@ -35,7 +35,7 @@ class StorageV1(base_api.BaseApiClient):
   _VERSION = u'v1'
   _CLIENT_ID = 'nomatter'
   _CLIENT_SECRET = 'nomatter'
-  _USER_AGENT = ' Python/%s' % platform.python_version()
+  _USER_AGENT = 'apitools Python/%s' % platform.python_version()
   _USER_AGENT += GetUserAgent(MetricsCollector.IsDisabled())
 
   _CLIENT_CLASS_NAME = u'StorageV1'
