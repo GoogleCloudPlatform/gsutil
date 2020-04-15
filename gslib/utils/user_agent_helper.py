@@ -35,10 +35,11 @@ def GetUserAgent(metrics_off=True):
   user_agent += ' (%s)' % sys.platform
   user_agent += ' analytics/%s ' % ('disabled' if metrics_off else 'enabled')
   user_agent += ' interactive/%s' % sys.stdin.isatty()
-  user_agent += ' command/%s' % opts[0]
 
-  if len([segment for segment in opts if '://' in segment]) > 1:
-    user_agent += '-CloudToCloud'
+  if len(opts) > 0:
+    user_agent += ' command/%s' % opts[0]
+    if len([segment for segment in opts if '://' in segment]) > 1:
+      user_agent += '-CloudToCloud'
 
   if system_util.InvokedViaCloudSdk():
     user_agent += ' google-cloud-sdk'
