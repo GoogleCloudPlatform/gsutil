@@ -33,6 +33,6 @@ def GetArgumentsAndOptions():
         'debug', 'detailedDebug', 'version', 'option', 'help', 'header',
         'impersonate-service-account=', 'multithreaded', 'quiet',
         'testexceptiontraces', 'trace-token=', 'perf-trace-token='
-        ])
+    ])
   except getopt.GetoptError as e:
     raise CommandException(e.msg)

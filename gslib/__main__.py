@@ -397,7 +397,7 @@ def main():
       command_name = 'help'
     else:
       command_name = args[0]
-    
+
     # Now that we have the command name, update the Boto user agent.
     boto.UserAgent += ' command/%s' % command_name
 
