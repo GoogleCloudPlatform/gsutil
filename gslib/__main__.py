@@ -286,7 +286,7 @@ def main():
   try:
     try:
       opts, args = GetArgumentsAndOptions()
-    except e:
+    except CommandException as e:
       _HandleCommandException(e)
     for o, a in opts:
       if o in ('-d', '--debug'):
