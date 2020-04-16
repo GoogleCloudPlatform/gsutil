@@ -37,8 +37,16 @@ def GetUserAgent(args, metrics_off=True):
 
   if len(args) > 0:
     user_agent += ' command/%s' % args[0]
-    if len([arg for arg in args if re.search('^(gs|s3)\://', arg)]) > 1:
-      user_agent += '-CloudToCloud'
+
+    if args[0] in ['cp', 'rsync']:
+      # Any cp or rsync commands that have both a source and destination in the
+      # cloud should be noted as that represents a unique use case that may be
+      # better served by the transfer service.
+      cloud_uri_pattern = '^(gs|s3)\://'
+      cloud_uris = [arg for arg in args if re.search(cloud_uri_pattern, arg)]
+      cloud_uri_dst = re.search(cloud_uri_pattern, args[-1])
+
+      user_agent += ' cloud-to-cloud/%s' % len(cloud_uris) > 1 & cloud_uri_dst
 
   if system_util.InvokedViaCloudSdk():
     user_agent += ' google-cloud-sdk'
