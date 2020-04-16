@@ -398,9 +398,6 @@ def main():
     else:
       command_name = args[0]
 
-    # Now that we have the command name, update the Boto user agent.
-    boto.UserAgent += ' command/%s' % command_name
-
     _CheckAndWarnForProxyDifferences()
 
     # Both 1 and 2 are valid _ARGCOMPLETE values; this var tells argcomplete at
