@@ -21,7 +21,6 @@ from apitools.base.py import base_api
 import gslib
 from gslib.metrics import MetricsCollector
 from gslib.third_party.storage_apitools import storage_v1_messages as messages
-from gslib.utils.user_agent_helper import GetUserAgent
 
 
 class StorageV1(base_api.BaseApiClient):
@@ -36,7 +35,7 @@ class StorageV1(base_api.BaseApiClient):
   _CLIENT_ID = 'nomatter'
   _CLIENT_SECRET = 'nomatter'
   _USER_AGENT = 'apitools Python/%s' % platform.python_version()
-  _USER_AGENT += GetUserAgent(MetricsCollector.IsDisabled())
+  _USER_AGENT += gslib.USER_AGENT
 
   _CLIENT_CLASS_NAME = u'StorageV1'
   _URL_VERSION = u'v1'

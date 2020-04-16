@@ -14,31 +14,30 @@
 # limitations under the License.
 """Contains helper for appending user agent information."""
 
+import re
 import sys
 import gslib
 from gslib.utils import system_util
-from gslib.utils.arg_helper import GetArgumentsAndOptions
 
 
-def GetUserAgent(metrics_off=True):
+def GetUserAgent(args, metrics_off=True):
   """Using the command arguments return a suffix for the UserAgent string.
 
   Args:
+    args: str[], parsed set of arguments entered in the CLI.
     metrics_off: boolean, whether the MetricsCollector is disabled.
 
   Returns:
     str, A string value that can be appended to an existing UserAgent.
   """
-  _, opts = GetArgumentsAndOptions()
-
   user_agent = ' gsutil/%s' % gslib.VERSION
   user_agent += ' (%s)' % sys.platform
   user_agent += ' analytics/%s ' % ('disabled' if metrics_off else 'enabled')
   user_agent += ' interactive/%s' % sys.stdin.isatty()
 
-  if len(opts) > 0:
-    user_agent += ' command/%s' % opts[0]
-    if len([segment for segment in opts if '://' in segment]) > 1:
+  if len(args) > 0:
+    user_agent += ' command/%s' % args[0]
+    if len([arg for arg in args if re.search('^(gs|s3)\://', arg)]) > 1:
       user_agent += '-CloudToCloud'
 
   if system_util.InvokedViaCloudSdk():

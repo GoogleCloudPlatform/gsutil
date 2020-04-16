@@ -54,7 +54,17 @@ from gslib.utils import system_util
 # This module also imports boto, and will override the UserAgent global variable
 # if imported above.
 from gslib import metrics
-boto.UserAgent += GetUserAgent(metrics.MetricsCollector.IsDisabled())
+
+# We parse the options and arguments here so we can pass the results to the user
+# agent helper.
+try:
+  opts, args = GetArgumentsAndOptions()
+except CommandException as e:
+  _HandleCommandException(e)
+
+# This calculated user agent can be stored for use in StorageV1.
+gslib.USER_AGENT = GetUserAgent(args, metrics.MetricsCollector.IsDisabled())
+boto.UserAgent += gslib.USER_AGENT
 
 # pylint: disable=g-bad-import-order
 import httplib2
@@ -284,10 +294,6 @@ def main():
     RegisterSignalHandler(signal_num, _CleanupSignalHandler)
 
   try:
-    try:
-      opts, args = GetArgumentsAndOptions()
-    except CommandException as e:
-      _HandleCommandException(e)
     for o, a in opts:
       if o in ('-d', '--debug'):
         # Also causes boto to include httplib header output.
