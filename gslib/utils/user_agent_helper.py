@@ -46,7 +46,7 @@ def GetUserAgent(args, metrics_off=True):
       cloud_uris = [arg for arg in args if re.search(cloud_uri_pattern, arg)]
       cloud_uri_dst = re.search(cloud_uri_pattern, args[-1])
 
-      if len(cloud_uris) > 1 & cloud_uri_dst:
+      if len(cloud_uris) > 1 and cloud_uri_dst:
         user_agent += '-CloudToCloud'
 
   if system_util.InvokedViaCloudSdk():
