@@ -309,7 +309,7 @@ _DETAILED_HELP_TEXT = ("""
               'notification' and 'kms' commands).
 
   -n          Write the configuration file without authentication configured.
-              This flag is mutually exlusive with all flags other than ``-o``.
+              This flag is mutually exclusive with all flags other than ``-o``.
 
   -o <file>   Write the configuration to <file> instead of ~/.boto.
               Use ``-`` for stdout.
