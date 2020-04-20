@@ -605,15 +605,13 @@ _OPTIONS_TEXT = """
                  original files.
 
                  Note that if you want to use the top-level -m option to
-                 parallelize copies along with the -j/-J options, you should
-                 prefer using multiple processes instead of multiple threads;
-                 when using -j/-J, multiple threads in the same process are
-                 bottlenecked by Python's GIL. Thread and process count can be
-                 set using the "parallel_thread_count" and
-                 "parallel_process_count" boto config options, e.g.:
+                 parallelize copies along with the -j/-J options, your
+                 performance may be bottlenecked by the
+                 "max_upload_compression_buffer_size" boto config option,
+                 which is set to 2 GiB by default. This compression buffer
+                 size can be changed to a higher limit, e.g.:
 
-                   gsutil -o "GSUtil:parallel_process_count=8" \\
-                     -o "GSUtil:parallel_thread_count=1" \\
+                   gsutil -o "GSUtil:max_upload_compression_buffer_size=8G" \\
                      -m cp -j html -r /local/source/dir gs://bucket/path
 
   -J             Applies gzip transport encoding to file uploads. This option
@@ -759,9 +757,12 @@ _OPTIONS_TEXT = """
                    Content-Encoding header and to render it as HTML based on
                    the Content-Type header.
 
+                 Because the -z/-Z options compress data prior to upload, they
+                 are not subject to the same compression buffer bottleneck that
+                 can affect the -j/-J options.
+
                  Note that if you download an object with Content-Encoding:gzip
-                 gsutil will decompress the content before writing the local
-                 file.
+                 gsutil decompresses the content before writing the local file.
 
   -Z             Applies gzip content-encoding to file uploads. This option
                  works like the -z option described above, but it applies to
