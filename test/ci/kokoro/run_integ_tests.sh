@@ -101,5 +101,5 @@ update_submodules
 # Check that we're using the correct config
 python "$GSUTIL_ENTRYPOINT" version -l
 # Run integration tests
-python "$GSUTIL_ENTRYPOINT" test -p "$PROCS"
+python "$GSUTIL_ENTRYPOINT" -D test -p "$PROCS" acl
 
