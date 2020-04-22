@@ -144,7 +144,7 @@ older object versions (see "gsutil help lifecycle").
               URL (like gs://bucket), after deleting objects and subdirectories
               gsutil deletes the bucket. This option implies the -a option and
               deletes all object versions. If you only want to delete live
-              object versions, use the ** wildcard instead of -r.
+              object versions, use the '**' wildcard instead of -r.
 
   -a          Delete all versions of an object.
 """)
