@@ -142,8 +142,9 @@ older object versions (see "gsutil help lifecycle").
               subdirectory contents (all objects and subdirectories that it
               contains) to be removed recursively. If used with a bucket-only
               URL (like gs://bucket), after deleting objects and subdirectories
-              gsutil will delete the bucket. This option implies the -a option
-              and will delete all object versions.
+              gsutil deletes the bucket. This option implies the -a option and
+              deletes all object versions. If you only want to delete live
+              object versions, use the '**' wildcard instead of -r.
 
   -a          Delete all versions of an object.
 """)
