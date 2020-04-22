@@ -60,6 +60,10 @@ function install_pyenv {
 
 function install_python {
   pyenv update
+  # Python 3.7 fails to install because of openssl, so installing it first.
+  if [[ $KOKORO_JOB_NAME =~ "linux" ]] && [[ $PYVERSION == "3.7" ]]; then
+    sudo apt-get install python-openssl
+  fi
   pyenv install -s "$PYVERSIONTRIPLET"
 }
 
