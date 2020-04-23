@@ -42,8 +42,20 @@ function latest_python_release {
   pyenv install --list \
     | grep -vE "(^Available versions:|-src|dev|rc|alpha|beta|(a|b)[0-9]+)" \
     | grep -E "^\s*$PYVERSION" \
-    | sed 's/^\s\+//' \
+    | sed -E 's/^[[:space:]]+//' \
     | tail -1
+}
+
+function install_pyenv {
+  # Install pyenv if missing.
+  if ! [ "$(pyenv --version)" ]; then
+    # For now, only doing this on mac,
+    # beacuse that was the only place where it appeared to be missing.
+    if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
+      brew install pyenv
+      eval "$(pyenv init -)"
+    fi
+  fi
 }
 
 function install_python {
@@ -61,6 +73,7 @@ function init_configs {
 function init_python {
   # Ensure latest release of desired Python version is installed, and that
   # dependencies from pip, e.g. crcmod, are installed.
+  install_pyenv
   PYVERSIONTRIPLET=$(latest_python_release)
   install_python
   pyenv global "$PYVERSIONTRIPLET"
