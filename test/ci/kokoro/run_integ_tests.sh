@@ -62,9 +62,20 @@ function install_python {
   pyenv update
   # Python 3.7 fails to install because of openssl, so installing it first.
   if [[ $KOKORO_JOB_NAME =~ "linux" ]] && [[ $PYVERSION == "3.7" ]]; then
-    sudo apt-get install -y make build-essential libssl1.0-dev zlib1g-dev libbz2-dev \
-libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \
-xz-utils tk-dev libffi-dev liblzma-dev
+    wget https://www.openssl.org/source/openssl-1.1.1b.tar.gz
+    wget https://www.openssl.org/source/openssl-1.1.1b.tar.gz
+    tar zxvf openssl-1.1.1b.tar.gz
+    cd openssl-1.1.1b
+    ./config --prefix=/home/openssl --openssldir=/home/openssl no-ssl2
+    make
+    make test
+    make install
+    cd ~
+    export PATH=/home/openssl/bin:$PATH
+    export LD_LIBRARY_PATH=$HOME/openssl/lib
+    export LC_ALL="en_US.UTF-8"
+    export LDFLAGS="-L/home/openssl/lib -Wl,-rpath,/home/openssl/lib"
+    which openssl
     openssl version
   fi
   pyenv install -s "$PYVERSIONTRIPLET"
@@ -109,5 +120,5 @@ update_submodules
 python "$GSUTIL_ENTRYPOINT" version -l
 # Run integration tests
 #python "$GSUTIL_ENTRYPOINT" -D test -p "$PROCS" acl
-python "$GSUTIL_ENTRYPOINT" -D test -l
+python "$GSUTIL_ENTRYPOINT" -D test gslib.tests.test_cp.TestCp.test_cp_manifest_upload_unicode
 
