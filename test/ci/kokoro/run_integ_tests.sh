@@ -77,6 +77,12 @@ function init_python {
   PYVERSIONTRIPLET=$(latest_python_release)
   install_python
   pyenv global "$PYVERSIONTRIPLET"
+  # Check if Python version is same as set by the config
+  py_ver=$(python -V 2>&1 | grep -Po '(?<=Python )([0-9]+)\.[0-9]+')
+  if ! [[ $py_ver == "PYVERSION" ]]; then
+    echo "Python version $py_ver does not match the required version"
+    exit 1
+  fi
   python -m pip install -U crcmod
 }
 
