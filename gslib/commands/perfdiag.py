@@ -1037,7 +1037,8 @@ class PerfDiagCommand(Command):
         'file_size': self.thru_filesize,
         'processes': self.processes,
         'threads': self.threads,
-        'parallelism': self.parallel_strategy
+        'parallelism': self.parallel_strategy,
+        'num_objects': self.num_objects
     }
 
     # Copy the file(s) to the test bucket, and also get the serialization data
@@ -1127,7 +1128,8 @@ class PerfDiagCommand(Command):
         'threads': self.threads,
         'parallelism': self.parallel_strategy,
         'gzip_encoded_writes': self.gzip_encoded_writes,
-        'gzip_compression_ratio': self.gzip_compression_ratio
+        'gzip_compression_ratio': self.gzip_compression_ratio,
+        'num_objects': self.num_objects
     }
 
     # Warmup the TCP connection.
@@ -1819,7 +1821,8 @@ class PerfDiagCommand(Command):
       write_thru = self.results['write_throughput']
       text_util.print_to_fd(
           'Copied %s %s file(s) for a total transfer size of %s.' %
-          (self.num_objects, MakeHumanReadable(write_thru['file_size']),
+          (write_thru.get('num_objects', self.num_objects),
+           MakeHumanReadable(write_thru['file_size']),
            MakeHumanReadable(write_thru['total_bytes_copied'])))
       text_util.print_to_fd(
           'Write throughput: %s/s.' %
@@ -1836,7 +1839,8 @@ class PerfDiagCommand(Command):
       write_thru_file = self.results['write_throughput_file']
       text_util.print_to_fd(
           'Copied %s %s file(s) for a total transfer size of %s.' %
-          (self.num_objects, MakeHumanReadable(write_thru_file['file_size']),
+          (write_thru_file.get('num_objects', self.num_objects),
+           MakeHumanReadable(write_thru_file['file_size']),
            MakeHumanReadable(write_thru_file['total_bytes_copied'])))
       text_util.print_to_fd(
           'Write throughput: %s/s.' %
@@ -1853,7 +1857,8 @@ class PerfDiagCommand(Command):
       read_thru = self.results['read_throughput']
       text_util.print_to_fd(
           'Copied %s %s file(s) for a total transfer size of %s.' %
-          (self.num_objects, MakeHumanReadable(read_thru['file_size']),
+          (read_thru.get('num_objects', self.num_objects),
+           MakeHumanReadable(read_thru['file_size']),
            MakeHumanReadable(read_thru['total_bytes_copied'])))
       text_util.print_to_fd(
           'Read throughput: %s/s.' %
@@ -1870,7 +1875,8 @@ class PerfDiagCommand(Command):
       read_thru_file = self.results['read_throughput_file']
       text_util.print_to_fd(
           'Copied %s %s file(s) for a total transfer size of %s.' %
-          (self.num_objects, MakeHumanReadable(read_thru_file['file_size']),
+          (read_thru_file.get('num_objects', self.num_objects),
+           MakeHumanReadable(read_thru_file['file_size']),
            MakeHumanReadable(read_thru_file['total_bytes_copied'])))
       text_util.print_to_fd(
           'Read throughput: %s/s.' %
