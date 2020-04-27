@@ -120,5 +120,6 @@ update_submodules
 python "$GSUTIL_ENTRYPOINT" version -l
 # Run integration tests
 #python "$GSUTIL_ENTRYPOINT" -D test -p "$PROCS" acl
+echo "test change"
 python "$GSUTIL_ENTRYPOINT" test gslib.tests.test_cp.TestCp.test_cp_manifest_upload_unicode
 
