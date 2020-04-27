@@ -31,6 +31,7 @@ GSUTIL_SRC="/tmpfs/src/github/src/gsutil"
 GSUTIL_ENTRYPOINT="$GSUTIL_SRC/gsutil.py"
 CFG_GENERATOR="$GSUTIL_SRC/test/ci/kokoro/config_generator.sh"
 BOTO_CONFIG="/tmpfs/src/.boto_$API"
+ls -ltr GSUTIL_KEY
 
 # gsutil looks for this environment variable to find .boto config
 # https://cloud.google.com/storage/docs/boto-gsutil
@@ -120,6 +121,5 @@ update_submodules
 python "$GSUTIL_ENTRYPOINT" version -l
 # Run integration tests
 #python "$GSUTIL_ENTRYPOINT" -D test -p "$PROCS" acl
-echo "test change"
 python "$GSUTIL_ENTRYPOINT" test gslib.tests.test_cp.TestCp.test_cp_manifest_upload_unicode
 
