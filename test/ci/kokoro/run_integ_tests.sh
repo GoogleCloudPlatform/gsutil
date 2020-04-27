@@ -31,7 +31,7 @@ GSUTIL_SRC="/tmpfs/src/github/src/gsutil"
 GSUTIL_ENTRYPOINT="$GSUTIL_SRC/gsutil.py"
 CFG_GENERATOR="$GSUTIL_SRC/test/ci/kokoro/config_generator.sh"
 BOTO_CONFIG="/tmpfs/src/.boto_$API"
-ls -ltr GSUTIL_KEY
+ls -ltr $GSUTIL_KEY
 
 # gsutil looks for this environment variable to find .boto config
 # https://cloud.google.com/storage/docs/boto-gsutil
