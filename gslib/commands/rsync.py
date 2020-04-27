@@ -151,7 +151,7 @@ _DETAILED_HELP_TEXT = ("""
   workstation.
 
 
-<B>Using ``-d`` Option (with caution!) to mirror source and destination.</B>
+<B>Using -d Option (with caution!) to mirror source and destination.</B>
   The rsync -d option is very useful and commonly used, because it provides a
   means of making the contents of a destination bucket or directory match those
   of a source bucket or directory. This is done by copying all data from the
