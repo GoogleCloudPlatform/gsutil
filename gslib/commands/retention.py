@@ -82,10 +82,10 @@ _SET_DESCRIPTION = """
   removed. For more information, see `Retention policies and Bucket Lock
   <https://cloud.google.com/storage/docs/bucket-lock>`_.
   
-  The``gsutil retention set`` command allows you to set or update the
+  The ``gsutil retention set`` command allows you to set or update the
   retention policy on one or more buckets.
 
-  If you would like to remove an unlocked retention policy from one or more
+  To remove an unlocked retention policy from one or more
   buckets, use the ``gsutil retention clear`` command.
 
   The ``set`` sub-command can set a retention policy with the following formats:
@@ -105,18 +105,18 @@ _SET_DESCRIPTION = """
   <number>y
       Specifies retention period of <number> years for objects in this bucket.
 
-  GCS JSON API accepts retention period as number of seconds. Durations provided
+  GCS JSON API accepts retention periods as number of seconds. Durations provided
   in terms of days, months or years are converted to their rough equivalent
   values in seconds, using the following conversions:
 
   - A month is considered to be 31 days or 2,678,400 seconds.
   - A year is considered to be 365.25 days or 31,557,600 seconds.
 
-  Provided retention period must be greater than 0 and less than 100 years.
-  Clients may define retention duration only in one form (seconds, days, months,
-  or years) and not a combination of them.
+  Retention periods must be greater than 0 and less than 100 years.
+  Retention durations must be in only one form (seconds, days, months,
+  or years), and not a combination of them.
 
-  It is important to note that, while it is possible to specify durations
+  Note that while it is possible to specify retention durations
   shorter than a day (using seconds), enforcement of such retention periods is not
   guaranteed. Such durations may only be used for testing purposes.
 
@@ -187,7 +187,7 @@ _EVENT_DEFAULT_DESCRIPTION = """
   You can also provide a precondition on a bucket's metageneration in order to
   avoid potential race conditions. You can use gsutil's '-h' option to specify
   preconditions. For example, the following specifies a precondition that checks
-  a bucket's metageneration before setting the retention policy on the bucket:
+  a bucket's metageneration before setting the default event-based hold on the bucket:
 
     gsutil -h "x-goog-if-metageneration-match: 1" \\
       retention event-default set gs://my-bucket
