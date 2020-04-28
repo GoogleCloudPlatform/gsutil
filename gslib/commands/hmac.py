@@ -65,7 +65,7 @@ _CREATE_DESCRIPTION = """
   the returned secret along with the access_id.
 
 <B>CREATE OPTIONS</B>
-  The "create" sub-command has the following option
+  The ``create`` sub-command has the following option
 
   -p <project_id>             Specify a project in which to create a key.
 """
@@ -76,7 +76,7 @@ _DELETE_DESCRIPTION = """
 
     gsutil hmac delete GOOG56JBMFZX6PMPTQ62VD2
 
-  Note that keys must be updated to be in the INACTIVE state before they can be
+  Note that keys must be updated to be in the ``INACTIVE`` state before they can be
   deleted.
 
 <B>DELETE OPTIONS</B>
@@ -95,7 +95,7 @@ _GET_DESCRIPTION = """
   been created.
 
 <B>GET OPTIONS</B>
-  The "get" sub-command has the following option
+  The ``get`` sub-command has the following option
 
   -p <project_id>             Specify a project from which to get a key.
 """
@@ -107,7 +107,7 @@ _LIST_DESCRIPTION = """
   project is used.
 
 <B>LIST OPTIONS</B>
-  The "list" sub-command has the following options
+  The ``list`` sub-command has the following options
 
   -a                          Show all keys, including recently deleted
                               keys.
@@ -125,16 +125,16 @@ _UPDATE_DESCRIPTION = """
 
     gsutil hmac update -s INACTIVE -e M42da= GOOG56JBMFZX6PMPTQ62VD2
 
-  Valid state arguments are ACTIVE and INACTIVE. To set a key to state DELETED
-  use the "hmac delete" command on an INACTIVE key. If an etag is set in the
-  command, it will only succeed if the provided etag matches the etag of the
-  stored key.
+  Valid state arguments are ``ACTIVE`` and ``INACTIVE``. To set a key to state 
+  ``DELETED``, use the ``hmac delete`` command on an ``INACTIVE`` key. If an etag
+  is set in the command, it will only succeed if the provided etag matches the etag
+  of the stored key.
 
 <B>UPDATE OPTIONS</B>
-  The "update" sub-command has the following options
+  The ``update`` sub-command has the following options
 
   -s <ACTIVE|INACTIVE>        Sets the state of the specified key to either
-                              ACTIVE or INACTIVE.
+                              ``ACTIVE`` or ``INACTIVE``.
 
   -e <etag>                   If provided, the update will only be performed
                               if the specified etag matches the etag of the
@@ -148,10 +148,10 @@ _SYNOPSIS = (_CREATE_SYNOPSIS + _DELETE_SYNOPSIS.lstrip('\n') +
              _UPDATE_SYNOPSIS.lstrip('\n') + '\n\n')
 
 _DESCRIPTION = """
-  The hmac command is used to interact with service account `HMAC keys
+  You can use the ``hmac`` command to interact with service account `HMAC keys
   <https://cloud.google.com/storage/docs/authentication/hmackeys>`_.
 
-  The hmac command has five sub-commands:
+  The ``hmac`` command has five sub-commands:
 """ + '\n'.join([
     _CREATE_DESCRIPTION,
     _DELETE_DESCRIPTION,
