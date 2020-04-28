@@ -301,21 +301,26 @@ _STOPCHANNEL_DESCRIPTION = """
 """
 
 _DESCRIPTION = """
-  The notification command is used to configure Google Cloud Storage support for
-  sending notifications to Cloud Pub/Sub as well as to configure the object
-  change notification feature.
+  You can use the ``notification`` command to configure `Pub/Sub notifications
+  for Cloud Storage<https://cloud.google.com/storage/docs/pubsub-notifications>`_
+  and `Object change notification
+  <https://cloud.google.com/storage/docs/object-change-notification>`_ channels.
 
 <B>CLOUD PUB/SUB</B>
   The "create", "list", and "delete" sub-commands deal with configuring Cloud
   Storage integration with Google Cloud Pub/Sub.
 """ + _CREATE_DESCRIPTION + _LIST_DESCRIPTION + _DELETE_DESCRIPTION + """
 <B>OBJECT CHANGE NOTIFICATIONS</B>
-  For more information on the Object Change Notification feature, please see
-  `the Object Change Notification docs
+  Object change notification is a separate, older feature within Cloud Storage
+  for generating notifications. This feature sends HTTPS messages to a client
+  application that you've set up separately. This feature is generally not
+  recommended, because Pub/Sub notifications are cheaper, easier to use, and
+  more flexible. For more information, see
+  `Object change notification
   <https://cloud.google.com/storage/docs/object-change-notification>`_.
 
   The "watchbucket" and "stopchannel" sub-commands enable and disable Object
-  Change Notifications.
+  change notifications.
 """ + _WATCHBUCKET_DESCRIPTION + _STOPCHANNEL_DESCRIPTION + """
 <B>NOTIFICATIONS AND PARALLEL COMPOSITE UPLOADS</B>
   By default, gsutil enables parallel composite uploads for large files (see
