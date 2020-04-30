@@ -1,3 +1,20 @@
+Release 4.50 (release date: 2020-04-30)
+======================================
+New Features
+------------------
+- Switched to Using V4 signature as default for S3 (#981)
+
+Bug Fixes
+------------------
+- Updated rsa library to release-4.0 (#992)
+- Updated test script to install pyenv if missing for kokoro (#990)
+- Fixed print ordering in kms set by using print instead of
+  text_util.print_to_fd (#974)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications (#969) (#987)
+
 Release 4.49 (release date: 2020-03-26)
 ======================================
 New Features
