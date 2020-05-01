@@ -38,7 +38,7 @@ def GetUserAgent(args, metrics_off=True):
   if len(args) > 0:
     user_agent += ' command/%s' % args[0]
 
-    if args[0] in ['cp', 'rsync']:
+    if args[0] in ['cp', 'mv', 'rsync']:
       # Any cp or rsync commands that have both a source and destination in the
       # cloud should be noted as that represents a unique use case that may be
       # better served by the transfer service.
