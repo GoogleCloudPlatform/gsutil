@@ -42,21 +42,22 @@ _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 _SET_DESCRIPTION = """
 <B>SET</B>
   The "set" sub-command requires an additional sub-command, either "on" or
-  "off", which, respectively, will enable or disable requester pays for the
-  specified bucket(s).
+  "off", which, respectively, will enable or disable Requester Pays for the
+  specified bucket.
 
 """
 
 _GET_DESCRIPTION = """
 <B>GET</B>
-  The "get" sub-command gets the requester pays configuration for a
+  The "get" sub-command gets the Requester Pays configuration for a
   bucket and displays whether or not it is enabled.
 """
 
 _DESCRIPTION = """
-  The Requester Pays Configuration feature enables you to configure a Google
-  Cloud Storage bucket to indicate that the requester will pay all costs
-  related to accessing the bucket and its objects.
+  The `Requester Pays
+  <https://cloud.google.com/storage/docs/requester-pays>`_ feature enables you
+  to configure a Google Cloud Storage bucket so that the requester
+  pays all costs related to accessing the bucket and its objects.
 
   The gsutil requesterpays command has two sub-commands:
 """ + _SET_DESCRIPTION + _GET_DESCRIPTION
