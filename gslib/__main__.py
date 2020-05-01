@@ -36,6 +36,10 @@ import six
 from six.moves import configparser
 from six.moves import range
 
+import gslib.exception
+from gslib.exception import CommandException
+from gslib.exception import ControlCException
+
 from gslib.utils.version_check import check_python_version_support
 from gslib.utils.arg_helper import GetArgumentsAndOptions
 from gslib.utils.user_agent_helper import GetUserAgent
@@ -77,9 +81,6 @@ from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import ProjectIdException
 from gslib.cloud_api import ServiceException
 from gslib.command_runner import CommandRunner
-import gslib.exception
-from gslib.exception import CommandException
-from gslib.exception import ControlCException
 import apitools.base.py.exceptions as apitools_exceptions
 from gslib.utils import boto_util
 from gslib.utils import constants
