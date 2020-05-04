@@ -53,6 +53,7 @@ from gslib.utils.user_agent_helper import GetUserAgent
 import boto
 import gslib
 from gslib.utils import system_util
+from gslib.utils import text_util
 
 # pylint: disable=g-import-not-at-top
 # This module also imports boto, and will override the UserAgent global variable
@@ -64,7 +65,16 @@ from gslib import metrics
 try:
   opts, args = GetArgumentsAndOptions()
 except CommandException as e:
-  _HandleCommandException(e)
+  reason = e.reason if e.information else 'CommandException: %s' % e.reason
+  err = '%s\n' % reason
+  try:
+    text_util.print_to_fd(err, end='', file=sys.stderr)
+  except UnicodeDecodeError:
+    # Can happen when outputting invalid Unicode filenames.
+    sys.stderr.write(err)
+  if e:
+    metrics.LogFatalError(e)
+  sys.exit(1)
 
 # This calculated user agent can be stored for use in StorageV1.
 gslib.USER_AGENT = GetUserAgent(args, metrics.MetricsCollector.IsDisabled())
@@ -85,7 +95,6 @@ import apitools.base.py.exceptions as apitools_exceptions
 from gslib.utils import boto_util
 from gslib.utils import constants
 from gslib.utils import system_util
-from gslib.utils import text_util
 from gslib.sig_handling import GetCaughtSignals
 from gslib.sig_handling import InitializeSignalHandling
 from gslib.sig_handling import RegisterSignalHandler
