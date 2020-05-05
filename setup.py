@@ -46,7 +46,6 @@ requires = [
     # TODO: Sync submodule with tag referenced here once #339 is fixed in mock.
     'mock==2.0.0',
     'monotonic>=1.4',
-    'oauth2client==4.1.3',
     'pyOpenSSL>=0.13',
     'retry_decorator>=1.0.0',
     'six>=1.12.0',
