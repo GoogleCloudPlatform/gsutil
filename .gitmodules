@@ -58,3 +58,6 @@
 [submodule "gslib/vendored/boto"]
 	path = gslib/vendored/boto
 	url = git://github.com/gsutil-mirrors/boto.git
+[submodule "gslib/vendored/oauth2client"]
+	path = gslib/vendored/oauth2client
+	url = https://github.com/gsutil-mirrors/oauth2client.git
