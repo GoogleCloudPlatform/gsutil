@@ -52,8 +52,7 @@ from gslib.utils.user_agent_helper import GetUserAgent
 # so boto requests would not include gsutil/version# in the UserAgent string.
 import boto
 import gslib
-from gslib.utils import system_util
-from gslib.utils import text_util
+from gslib.utils import system_util, text_util
 
 # pylint: disable=g-import-not-at-top
 # This module also imports boto, and will override the UserAgent global variable
