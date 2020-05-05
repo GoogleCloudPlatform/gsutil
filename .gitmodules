@@ -16,9 +16,6 @@
 [submodule "third_party/gcs-oauth2-boto-plugin"]
 	path = third_party/gcs-oauth2-boto-plugin
 	url = https://github.com/GoogleCloudPlatform/gcs-oauth2-boto-plugin.git
-[submodule "third_party/oauth2client"]
-	path = third_party/oauth2client
-	url = https://github.com/google/oauth2client.git
 [submodule "third_party/six"]
 	path = third_party/six
 	url = https://github.com/gsutil-mirrors/six.git
