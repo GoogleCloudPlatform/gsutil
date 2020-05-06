@@ -326,7 +326,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
-      stdout = self.RunGsUtil(['-o', option, 'ls', suri(bucket_uri)], return_stdout=True)
+      stdout = self.RunGsUtil(
+          ['-o', option, 'ls', suri(bucket_uri)], return_stdout=True)
       self.assertEqual('%s\n' % obj_uri, stdout)
       if os.name == 'posix':
         self.assertTrue(os.path.exists(filepath))
