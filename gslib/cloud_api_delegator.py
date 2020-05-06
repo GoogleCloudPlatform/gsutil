@@ -159,8 +159,8 @@ class CloudApiDelegator(CloudApi):
       raise ArgumentException('No provider selected for CloudApi')
 
     if (selected_provider not in self.api_map[ApiMapConstants.DEFAULT_MAP] or
-        self.api_map[ApiMapConstants.DEFAULT_MAP][selected_provider]
-        not in self.api_map[ApiMapConstants.API_MAP][selected_provider]):
+        self.api_map[ApiMapConstants.DEFAULT_MAP][selected_provider] not in
+        self.api_map[ApiMapConstants.API_MAP][selected_provider]):
       raise ArgumentException('No default api available for provider %s' %
                               selected_provider)
 
