@@ -16,9 +16,6 @@
 [submodule "third_party/gcs-oauth2-boto-plugin"]
 	path = third_party/gcs-oauth2-boto-plugin
 	url = https://github.com/GoogleCloudPlatform/gcs-oauth2-boto-plugin.git
-[submodule "third_party/oauth2client"]
-	path = third_party/oauth2client
-	url = https://github.com/google/oauth2client.git
 [submodule "third_party/six"]
 	path = third_party/six
 	url = https://github.com/gsutil-mirrors/six.git
@@ -61,3 +58,6 @@
 [submodule "gslib/vendored/boto"]
 	path = gslib/vendored/boto
 	url = git://github.com/gsutil-mirrors/boto.git
+[submodule "gslib/vendored/oauth2client"]
+	path = gslib/vendored/oauth2client
+	url = https://github.com/gsutil-mirrors/oauth2client.git

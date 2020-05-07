@@ -97,6 +97,7 @@ def _AddVendoredDepsToPythonPath():
   # Similar structure to the THIRD_PARTY_LIBS list in gsutil.py:
   vendored_lib_dirs = [
       ('boto', ''),
+      ('oauth2client', ''),
   ]
 
   # Prepend our vendored libraries to be in the front of the Python path so that

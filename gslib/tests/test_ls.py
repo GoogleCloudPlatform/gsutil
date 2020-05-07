@@ -20,8 +20,10 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from datetime import datetime
+import os
 import posixpath
 import re
+import stat
 import subprocess
 import sys
 import time
@@ -311,6 +313,27 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     def _Check1():
       stdout = self.RunGsUtil(['ls', suri(bucket_uri)], return_stdout=True)
       self.assertEqual('%s\n' % obj_uri, stdout)
+
+    _Check1()
+
+  @SkipForXML('Credstore file gets created only for json API')
+  def test_credfile_lock_permissions(self):
+    tmpdir = self.CreateTempDir()
+    filepath = os.path.join(tmpdir, 'credstore2')
+    option = 'GSUtil:state_dir={}'.format(tmpdir)
+    bucket_uri = self.CreateBucket()
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check1():
+      stdout = self.RunGsUtil(
+          ['-o', option, 'ls', suri(bucket_uri)], return_stdout=True)
+      self.assertEqual('%s\n' % obj_uri, stdout)
+      if os.name == 'posix':
+        self.assertTrue(os.path.exists(filepath))
+        mode = oct(stat.S_IMODE(os.stat(filepath).st_mode))
+        # Assert that only user has read/write permission
+        self.assertEqual(oct(0o600), mode)
 
     _Check1()
 
