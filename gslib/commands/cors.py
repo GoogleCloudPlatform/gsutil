@@ -36,11 +36,11 @@ from gslib.utils.translation_helper import CorsTranslation
 from gslib.utils.translation_helper import REMOVE_CORS_CONFIG
 
 _GET_SYNOPSIS = """
-  gsutil cors get url
+  gsutil cors get gs://<bucket_name>
 """
 
 _SET_SYNOPSIS = """
-  gsutil cors set cors-json-file url...
+  gsutil cors set cors-json-file gs://<bucket_name>...
 """
 
 _GET_DESCRIPTION = """
