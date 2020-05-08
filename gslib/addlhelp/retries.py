@@ -26,10 +26,12 @@ _DETAILED_HELP_TEXT = ("""
   There are a number of reasons that gsutil operations can fail; some are not
   retryable, and require that the user take some action, for example:
 
-  - Invalid credentials
-  - Network unreachable because of a proxy configuration problem
+  - Invalid credentials.
+  - Network unreachable because of a proxy configuration problem.
   - Access denied, because the bucket or object you are trying to use has an
     ACL that doesn't permit the action you're trying to perform.
+  - Individual operations that fail within a command that is running operations
+    in parallel (that is, commands using the -m top-level flag).
 
   In other cases errors are retryable - transient network failures and HTTP 429
   and 5xx error codes. For these cases, gsutil will retry using a truncated
