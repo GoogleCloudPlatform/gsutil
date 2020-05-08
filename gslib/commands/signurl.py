@@ -69,7 +69,8 @@ _MAX_EXPIRATION_TIME = timedelta(days=7)
 
 _SYNOPSIS = """
   gsutil signurl [-c <content_type>] [-d <duration>] [-m <http_method>] \\
-      [-p <password>] [-r <region>] (-u | private-key-file) url...
+      [-p <password>] [-r <region>] (-u | <private-key-file>) \\
+      (gs://<bucket_name> | gs://<bucket_name>/<object_name>)...
 """
 
 _DETAILED_HELP_TEXT = ("""
