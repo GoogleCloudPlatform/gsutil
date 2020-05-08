@@ -31,6 +31,7 @@ import pickle
 import pkgutil
 import random
 import re
+import stat
 import string
 import sys
 import threading
@@ -2735,6 +2736,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         self.assertIn('Artifically halting upload', stderr)
         self.assertTrue(os.path.exists(tracker_filename),
                         'Tracker file %s not present.' % tracker_filename)
+        # Test the permissions
+        if os.name == 'posix':
+          mode = oct(stat.S_IMODE(os.stat(tracker_filename).st_mode))
+          # Assert that only user has read/write permission
+          self.assertEqual(oct(0o600), mode)
       finally:
         DeleteTrackerFile(tracker_filename)
 
