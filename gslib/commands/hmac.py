@@ -35,23 +35,23 @@ from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.text_util import InsistAscii
 
 _CREATE_SYNOPSIS = """
-  gsutil hmac create [-p project] service_account_email
+  gsutil hmac create [-p <project>] <service_account_email>
 """
 
 _DELETE_SYNOPSIS = """
-  gsutil hmac delete [-p project] access_id
+  gsutil hmac delete [-p <project>] <access_id>
 """
 
 _GET_SYNOPSIS = """
-  gsutil hmac get [-p project] access_id
+  gsutil hmac get [-p <project>] <access_id>
 """
 
 _LIST_SYNOPSIS = """
-  gsutil hmac list [-a] [-l] [-p project] [-u service_account_email]
+  gsutil hmac list [-a] [-l] [-p <project>] [-u <service_account_email>]
 """
 
 _UPDATE_SYNOPSIS = """
-  gsutil hmac update -s <ACTIVE|INACTIVE> [-e etag] [-p project] access_id
+  gsutil hmac update -s (ACTIVE|INACTIVE) [-e <etag>] [-p <project>] <access_id>
 """
 
 _CREATE_DESCRIPTION = """
