@@ -41,7 +41,7 @@ from gslib.utils.constants import NO_MAX
 from gslib.utils.retry_util import Retry
 
 _SET_SYNOPSIS = """
-  gsutil acl set [-f] [-r] [-a] file-or-canned_acl_name url...
+  gsutil acl set [-f] [-r] [-a] <file-or-canned_acl_name> url...
 """
 
 _GET_SYNOPSIS = """
@@ -56,7 +56,7 @@ _CH_SYNOPSIS = """
     -u <id|email>:<perm>
     -g <id|email|domain|All|AllAuth>:<perm>
     -p <viewers|editors|owners>-<project number>:<perm>
-    -d <id|email|domain|All|AllAuth|<viewers|editors|owners>-<project number>>:<perm>
+    -d <id|email|domain|All|AllAuth|<viewers|editors|owners>-<project number>:<perm>
 """
 
 _GET_DESCRIPTION = """
@@ -68,8 +68,9 @@ _GET_DESCRIPTION = """
 _SET_DESCRIPTION = """
 <B>SET</B>
   The "acl set" command allows you to set an Access Control List on one or
-  more buckets and objects. The simplest way to use it is to specify one of
-  the canned ACLs, e.g.,:
+  more buckets and objects. The file-or-canned_acl_name parameter names either
+  a canned ACL or the path to a file that contains ACL text. The simplest way
+  to use the "acl set" command is to specify one of the canned ACLs, e.g.,:
 
     gsutil acl set private gs://bucket
 
