@@ -32,11 +32,11 @@ from gslib.utils.constants import NO_MAX
 from gslib.utils.text_util import InsistOnOrOff
 
 _SET_SYNOPSIS = """
-  gsutil bucketpolicyonly set <on|off> bucket_url...
+  gsutil bucketpolicyonly set (on|off) gs://<bucket_name>...
 """
 
 _GET_SYNOPSIS = """
-  gsutil bucketpolicyonly get bucket_url...
+  gsutil bucketpolicyonly get gs://<bucket_name>...
 """
 
 _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
