@@ -554,8 +554,7 @@ def WriteDownloadComponentTrackerFile(tracker_file_name, src_obj_metadata,
 def _WriteTrackerFile(tracker_file_name, data):
   """Creates a tracker file, storing the input data."""
   try:
-    fd = os.open(tracker_file_name,
-                 os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+    fd = os.open(tracker_file_name, os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
                  0o600)
     with os.fdopen(fd, 'w') as tf:
       tf.write(data)

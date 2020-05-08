@@ -28,8 +28,8 @@ import six
 
 import gslib
 from gslib.exception import CommandException
-from gslib.tracker_file import (
-  WriteJsonDataToTrackerFile, RaiseUnwritableTrackerFileException)
+from gslib.tracker_file import (WriteJsonDataToTrackerFile,
+                                RaiseUnwritableTrackerFileException)
 from gslib.utils.constants import UTF8
 
 ObjectFromTracker = namedtuple('ObjectFromTracker', 'object_name generation')
