@@ -116,7 +116,7 @@ _DESCRIPTION_TEXT = """
   where the output of ``cat filelist`` is a list of files, cloud URLs, and
   wildcards of files and cloud URLs.
 
-  NOTE: Shells, such as ``bash`` and ``zsh``, sometimes attempt to expand
+  NOTE: Shells like ``bash`` and ``zsh`` sometimes attempt to expand
   wildcards in ways that can be surprising. You may also encounter issues when
   attempting to copy files whose names contain wildcard characters. For more
   details about these issues, see "Potentially Surprising Behavior When Using Wildcards"
@@ -219,7 +219,7 @@ _COPY_IN_CLOUD_TEXT = """
   provider, gsutil copies data "in the cloud" (without downloading
   to and uploading from the machine where you run gsutil). In addition to
   the performance and cost advantages of doing this, copying in the cloud
-  preserves metadata such as Content-Type and Cache-Control. In contrast,
+  preserves metadata such as ``Content-Type`` and ``Cache-Control``. In contrast,
   when you download data from the cloud, it ends up in a file with
   no associated metadata, unless you have some way to keep
   or re-create that metadata.
@@ -233,7 +233,7 @@ _COPY_IN_CLOUD_TEXT = """
   Note that by default, the gsutil ``cp`` command does not copy the object
   ACL to the new object, and instead uses the default bucket ACL (see
   "gsutil help defacl"). You can override this behavior with the ``-p``
-  option. See Options below.
+  option.
 
   When copying in the cloud, if the destination bucket has Object Versioning
   enabled, by default ``gsutil cp`` copies only live versions of the
@@ -262,7 +262,7 @@ _CHECKSUM_VALIDATION_TEXT = """
   ``gs-team@google.com``.
 
   If you know the MD5 of a file before uploading, you can specify it in the
-  Content-MD5 header, which causes the cloud storage service to reject the
+  Content-MD5 header, which enables the cloud storage service to reject the
   upload if the MD5 doesn't match the value computed by the service. For
   example:
 
@@ -276,7 +276,7 @@ _CHECKSUM_VALIDATION_TEXT = """
     Copying file://obj [Content-Type=text/plain]...
     Uploading   gs://your-bucket/obj:                                182 b/182 B
 
-    If the checksum doesn't match, the service rejects the upload and
+    If the checksums don't match, the service rejects the upload and
     gsutil prints the following message:
 
     BadRequestException: 400 Provided MD5 hash "VgyllJgiiaRAbyUUIqDMmw=="
@@ -314,14 +314,14 @@ _RETRY_HANDLING_TEXT = """
   The ``cp`` command retries when failures occur, but if enough failures happen
   during a particular copy or delete operation, the ``cp`` command skips that
   object and moves on. If any failures were not successfully retried by the end
-  of the copy run, the ``cp`` command reports the count of failures, and
+  of the copy run, the ``cp`` command reports the number of failures, and
   exits with a non-zero status.
 
   Note that there are cases where retrying never succeeds, such as if you have
   insufficient write permissions to the destination bucket, or if the destination
   path for an object is longer than the maximum allowed length.
 
-  For more details about gsutil's retry handling, please see
+  For more details about gsutil's retry handling, see
   "gsutil help retries".
 """
 
@@ -330,7 +330,7 @@ _RESUMABLE_TRANSFERS_TEXT = """
   gsutil automatically performs a resumable upload whenever you use the ``cp``
   command to upload an object that is larger than 8 MiB. You do not need to
   specify any special command line options to make this happen. If your upload
-  is interrupted, you can restart the upload by running the same cp command that
+  is interrupted, you can restart the upload by running the same ``cp`` command that
   you used to start the upload. Until the upload has completed successfully, it
   is not visible at the destination object and does not replace any
   existing object the upload is intended to overwrite. However, parallel composite
@@ -398,7 +398,7 @@ _SLICED_OBJECT_DOWNLOADS_TEXT = """
   seek times, especially for large numbers of slices. While the default number
   of slices is set small to avoid this problem, you can disable sliced object
   download if necessary by setting the "sliced_object_download_threshold"
-  variable in the .boto config file to 0.
+  variable in the ``.boto`` config file to 0.
 
 
 """
@@ -453,7 +453,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   progress indicator continuously updates for the file, until all parts of the
   upload complete. If you want to enable parallel composite
   uploads for all of your future uploads, you can uncomment and set the
-  "parallel_composite_upload_threshold" config value in your .boto configuration
+  "parallel_composite_upload_threshold" config value in your ``.boto`` configuration
   file to 150M.
 
   If a parallel composite upload fails prior to composition, run the
@@ -493,9 +493,9 @@ _CHANGING_TEMP_DIRECTORIES_TEXT = """
   gsutil writes data to a temporary directory in several cases:
 
   - when compressing data to be uploaded (see the ``-z`` and ``-Z`` options)
-  - when decompressing data being downloaded (when the data has
-    Content-Encoding:gzip, e.g., as happens when uploaded using gsutil cp -z
-    or gsutil cp -Z)
+  - when decompressing data being downloaded (for example, when the data has
+    ``Content-Encoding:gzip`` as a result of being uploaded
+    using gsutil cp -z or gsutil cp -Z)
   - when running integration tests using the gsutil test command
 
   In these cases, it's possible the temporary file location on your system that
@@ -529,7 +529,7 @@ _COPYING_SPECIAL_FILES_TEXT = """
 
 _OPTIONS_TEXT = """
 <B>OPTIONS</B>
-  -a canned_acl  Sets the specific canned_acl when the uploaded objects are
+  -a canned_acl  Sets the specific ``canned_acl`` when the uploaded objects are
                  created. See "gsutil help acls" for further details.
 
   -A             Copy all source versions from a source buckets or folder.
@@ -537,7 +537,7 @@ _OPTIONS_TEXT = """
                  copied.
                  
                  NOTE: This option is only useful when the destination
-                 bucket has versioning enabled.
+                 bucket has Object Versioning enabled.
 
   -c             If an error occurs, continue attempting to copy the remaining
                  files. If any copies are unsuccessful, gsutil's exit status
@@ -562,7 +562,7 @@ _OPTIONS_TEXT = """
                      gsutil cp -D -p gs://bucket/obj gs://bucket/obj_tmp
                      gsutil mv -p gs://bucket/obj_tmp gs://bucket/obj
 
-                 NOTE: Daisy chain mode is automatically used when copying
+                 NOTE: "Daisy chain" mode is automatically used when copying
                  between providers: for example, when copying data from Google Cloud Storage
                  to another provider.
 
@@ -581,12 +581,12 @@ _OPTIONS_TEXT = """
                  extension matches the ``-j`` extension list. This is useful when
                  uploading files with compressible content such as .js, .css,
                  or .html files. This also saves network bandwidth while
-                 leaving the data uncompressed in Google Cloud Storage.
+                 leaving the data uncompressed in Cloud Storage.
 
                  When you specify the ``-j`` option, files being uploaded are
                  compressed in-memory and on-the-wire only. Both the local
                  files and Cloud Storage objects remain uncompressed. The
-                 uploaded objects retain the Content-Type and name of the
+                 uploaded objects retain the ``Content-Type`` and name of the
                  original files.
 
                  Note that if you want to use the top-level ``-m`` option to
@@ -677,7 +677,7 @@ _OPTIONS_TEXT = """
                  with this flag enabled.
 
                  On Windows, this flag only sets and restores access time and
-                 modification time. This is because Windows doesn't have
+                 modification time. This is because Windows doesn't support
                  POSIX uid/gid/mode.
 
   -R, -r         The ``-R`` and ``-r`` options are synonymous. They enable directories,
@@ -711,7 +711,7 @@ _OPTIONS_TEXT = """
                  compressed before it is uploaded, but your actual files are
                  left uncompressed on the local disk. The uploaded objects
                  retain the ``Content-Type`` and name of the original files, but are
-                 given a Content-Encoding header with the value "gzip" to
+                 given a ``Content-Encoding`` header with the value ``gzip`` to
                  indicate that the object data stored are compressed on the
                  Cloud Storage servers.
 
