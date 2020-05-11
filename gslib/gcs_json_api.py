@@ -329,8 +329,8 @@ class GcsJsonApi(CloudApi):
       service_account_id = self.credentials.service_account_id
       response = iam_cred_api.SignBlob(service_account_id, string_to_sign)
       self.logger.debug(
-        'Key ID used to sign blob for service account "%s": "%s"' % (
-          service_account_id, response.keyId))
+          'Key ID used to sign blob for service account "%s": "%s"' %
+          (service_account_id, response.keyId))
       return response.signedBlob
     elif isinstance(self.credentials, ServiceAccountCredentials):
       return self.credentials.sign_blob(string_to_sign)[1]
