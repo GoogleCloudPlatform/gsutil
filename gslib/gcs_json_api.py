@@ -328,12 +328,9 @@ class GcsJsonApi(CloudApi):
       iam_cred_api = self.credentials.api
       service_account_id = self.credentials.service_account_id
       response = iam_cred_api.SignBlob(service_account_id, string_to_sign)
-      self.logger.debug(
-          'Key ID used to sign blob for service account "%s": "%s"' %
-          (service_account_id, response.keyId))
-      return response.signedBlob
+      return response.keyId, response.signedBlob
     elif isinstance(self.credentials, ServiceAccountCredentials):
-      return self.credentials.sign_blob(string_to_sign)[1]
+      return self.credentials.sign_blob(string_to_sign)
     else:
       raise CommandException(
           'Authentication using a service account is required for signing '
@@ -453,7 +450,10 @@ class GcsJsonApi(CloudApi):
     if six.PY3:
       string_to_sign = string_to_sign.encode(UTF8)
 
-    raw_signature = self._GetSignedContent(string_to_sign)
+    key_id, raw_signature = self._GetSignedContent(string_to_sign)
+    logger.debug(
+        'Key ID used to sign blob for service account "%s": "%s"' %
+        (service_account_id, key_id))
     return GetFinalUrl(raw_signature, signed_headers['host'], path,
                        canonical_query_string)
 
