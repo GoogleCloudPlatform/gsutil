@@ -451,9 +451,8 @@ class GcsJsonApi(CloudApi):
       string_to_sign = string_to_sign.encode(UTF8)
 
     key_id, raw_signature = self._GetSignedContent(string_to_sign)
-    logger.debug(
-        'Key ID used to sign blob for service account "%s": "%s"' %
-        (service_account_id, key_id))
+    logger.debug('Key ID used to sign blob for service account "%s": "%s"' %
+                 (service_account_id, key_id))
     return GetFinalUrl(raw_signature, signed_headers['host'], path,
                        canonical_query_string)
 
