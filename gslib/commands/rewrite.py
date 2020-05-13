@@ -174,7 +174,8 @@ _DETAILED_HELP_TEXT = ("""
 
   -O            Rewrite objects with the bucket's default object ACL instead of
                 the existing object ACL. This is needed if you do not have
-                OWNER permission on the object.
+                OWNER permission on the object or if your bucket has uniform
+                bucket-level access (UBLA) enabled.
 
   -R, -r        The -R and -r options are synonymous. Causes bucket or bucket
                 subdirectory contents to be rewritten recursively.
@@ -391,7 +392,8 @@ class RewriteCommand(Command):
       raise CommandException(
           'No OWNER permission found for object %s. OWNER permission is '
           'required for rewriting objects, (otherwise their ACLs would be '
-          'reset).' % transform_url)
+          'reset). If this bucket has uniform bucket-level access (UBLA) '
+          'enabled you should use the `-O` option. ' % transform_url)
 
     # Note: If other transform types are added, they must ensure that the
     # encryption key configuration matches the boto configuration, because
