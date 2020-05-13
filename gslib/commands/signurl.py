@@ -66,6 +66,7 @@ except ImportError:
 
 _AUTO_DETECT_REGION = 'auto'
 _MAX_EXPIRATION_TIME = timedelta(days=7)
+_MAX_EXPIRATION_TIME_WITH_MINUS_U = timedelta(hours=12)
 
 _SYNOPSIS = """
   gsutil signurl [-c <content_type>] [-d <duration>] [-m <http_method>] \\
@@ -128,7 +129,12 @@ _DETAILED_HELP_TEXT = ("""
                the duration the link remains valid is the sum of all the
                duration options.
 
-               The max duration allowed is 7d.
+               The max duration allowed is 7d when private-key-file is used.
+
+               The max duration allowed is 12 hours when -u option is used.
+               This limitation exists because the system managed key used for
+               signing the url is guaranteed to remain valid for
+               at least 12 hours.
 
   -c           Specifies the content type for which the signed url is
                valid for.
@@ -151,7 +157,9 @@ _DETAILED_HELP_TEXT = ("""
   -u           Use service account credentials instead of a private key file
                to sign the url.
 
-               You can equivalently use --use-service-account instead of -u
+               You can equivalently use --use-service-account instead of -u.
+               Note that the max alloweod duration is 12 hours if this option
+               is used.
 
 <B>USAGE</B>
   Create a signed url for downloading an object valid for 10 minutes:
@@ -414,7 +422,15 @@ class UrlSignCommand(Command):
     if delta is None:
       delta = timedelta(hours=1)
     else:
-      if delta > _MAX_EXPIRATION_TIME:
+      if use_service_account and delta > _MAX_EXPIRATION_TIME_WITH_MINUS_U:
+        # This restriction comes from the IAM SignBlob API. The SignBlob
+        # API uses a system-managed key which can guarantee validation only
+        # up to 12 hours. b/156160482#comment4
+        raise CommandException(
+            'Max valid duration allowed is %s when -u flag is used. For longer'
+            ' duration, consider using the private-key-file instead of the -u'
+            ' option.' % _MAX_EXPIRATION_TIME_WITH_MINUS_U)
+      elif delta > _MAX_EXPIRATION_TIME:
         raise CommandException('Max valid duration allowed is '
                                '%s' % _MAX_EXPIRATION_TIME)
 
