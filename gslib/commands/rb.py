@@ -29,7 +29,7 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.utils.constants import NO_MAX
 
 _SYNOPSIS = """
-  gsutil rb [-f] url...
+  gsutil rb [-f] gs://<bucket_name>...
 """
 
 _DETAILED_HELP_TEXT = ("""

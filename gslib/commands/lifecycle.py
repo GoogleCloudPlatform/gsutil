@@ -34,11 +34,11 @@ from gslib.utils.constants import NO_MAX
 from gslib.utils.translation_helper import LifecycleTranslation
 
 _GET_SYNOPSIS = """
-  gsutil lifecycle get url
+  gsutil lifecycle get gs://<bucket_name>
 """
 
 _SET_SYNOPSIS = """
-  gsutil lifecycle set config-json-file url...
+  gsutil lifecycle set <config-json-file> gs://<bucket_name>...
 """
 
 _SYNOPSIS = _GET_SYNOPSIS + _SET_SYNOPSIS.lstrip('\n') + '\n'

@@ -45,26 +45,26 @@ from gslib.utils import copy_helper
 # Cloud Pub/Sub commands
 
 _LIST_SYNOPSIS = """
-  gsutil notification list bucket_url...
+  gsutil notification list gs://<bucket_name>...
 """
 
 _DELETE_SYNOPSIS = """
-  gsutil notification delete (notificationConfigName|bucket_url)...
+  gsutil notification delete (<notificationConfigName>|gs://<bucket_name>)...
 """
 
 _CREATE_SYNOPSIS = """
-  gsutil notification create -f (json|none) [-p prefix] [-t topic] \\
-      [-m key:value]... [-e eventType]... bucket_url
+  gsutil notification create -f (json|none) [-p <prefix>] [-t <topic>] \\
+      [-m <key>:<value>]... [-e <eventType>]... gs://<bucket_name>
 """
 
 # Object Change Notification commands
 
 _WATCHBUCKET_SYNOPSIS = """
-  gsutil notification watchbucket [-i id] [-t token] app_url bucket_url
+  gsutil notification watchbucket [-i <id>] [-t <token>] <app_url> gs://<bucket_name>
 """
 
 _STOPCHANNEL_SYNOPSIS = """
-  gsutil notification stopchannel channel_id resource_id
+  gsutil notification stopchannel <channel_id> <resource_id>
 """
 
 _SYNOPSIS = (

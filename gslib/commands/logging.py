@@ -37,12 +37,12 @@ from gslib.utils.constants import NO_MAX
 from gslib.utils import text_util
 
 _SET_SYNOPSIS = """
-  gsutil logging set on -b logging_bucket [-o log_object_prefix] url...
-  gsutil logging set off url...
+  gsutil logging set on -b <logging_bucket_name> [-o <log_object_prefix>] gs://<bucket_name>...
+  gsutil logging set off gs://<bucket_name>...
 """
 
 _GET_SYNOPSIS = """
-  gsutil logging get url
+  gsutil logging get gs://<bucket_name>
 """
 
 _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n') + '\n'

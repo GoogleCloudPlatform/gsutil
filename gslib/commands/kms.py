@@ -39,15 +39,15 @@ from gslib.utils.constants import NO_MAX
 from gslib.utils.encryption_helper import ValidateCMEK
 
 _AUTHORIZE_SYNOPSIS = """
-  gsutil kms authorize [-p proj_id] -k kms_key
+  gsutil kms authorize [-p <proj_id>] -k <kms_key>
 """
 
 _ENCRYPTION_SYNOPSIS = """
-  gsutil kms encryption [(-d|[-k kms_key])] [-w] bucket_url...
+  gsutil kms encryption [(-d|[-k <kms_key>])] [-w] gs://<bucket_name>...
 """
 
 _SERVICEACCOUNT_SYNOPSIS = """
-  gsutil kms serviceaccount [-p proj_id]
+  gsutil kms serviceaccount [-p <proj_id]>
 """
 
 _SYNOPSIS = (_AUTHORIZE_SYNOPSIS + _ENCRYPTION_SYNOPSIS.lstrip('\n') +

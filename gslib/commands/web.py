@@ -34,11 +34,11 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.constants import NO_MAX
 
 _SET_SYNOPSIS = """
-  gsutil web set [-m main_page_suffix] [-e error_page] bucket_url...
+  gsutil web set [-m <main_page_suffix>] [-e <error_page>] gs://<bucket_name>...
 """
 
 _GET_SYNOPSIS = """
-  gsutil web get bucket_url
+  gsutil web get gs://<bucket_name>
 """
 
 _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')

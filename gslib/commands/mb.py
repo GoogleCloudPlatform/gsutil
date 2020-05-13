@@ -37,8 +37,8 @@ from gslib.utils.text_util import InsistOnOrOff
 from gslib.utils.text_util import NormalizeStorageClass
 
 _SYNOPSIS = """
-  gsutil mb [-b <on|off>] [-c class] [-l location] [-p proj_id]
-            [--retention time] url...
+  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
+            [--<retention time>] gs://<bucket_name>...
 """
 
 _DETAILED_HELP_TEXT = ("""
