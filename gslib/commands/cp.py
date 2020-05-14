@@ -97,9 +97,9 @@ _DESCRIPTION_TEXT = """
 
     gsutil cp -r dir gs://my-bucket
 
-  If you have a large number of files to transfer, you can use the
-  top-level gsutil ``-m`` option to perform a
-  parallel multi-threaded/multi-processing copy:
+  If you have a large number of files to transfer, you can perform a parallel
+  multi-threaded/multi-processing copy using the
+  top-level gsutil ``-m`` option (see "gsutil help options"):
 
     gsutil -m cp -r dir gs://my-bucket
 
@@ -120,12 +120,12 @@ _DESCRIPTION_TEXT = """
   wildcards in ways that can be surprising. You may also encounter issues when
   attempting to copy files whose names contain wildcard characters. For more
   details about these issues, see "Potentially Surprising Behavior When Using Wildcards"
-  under ``gsutil help wildcards``.
+  under "gsutil help wildcards".
 """
 
 _NAME_CONSTRUCTION_TEXT = """
 <B>HOW NAMES ARE CONSTRUCTED</B>
-  The ``gsutil cp`` command names objects in ways that are consistent with the
+  The ``gsutil cp`` command attempts to name objects in ways that are consistent with the
   Linux ``cp`` command. This means that names are constructed depending
   on whether you're performing a recursive directory copy or copying
   individually-named objects, or whether you're copying to an existing or
@@ -147,7 +147,7 @@ _NAME_CONSTRUCTION_TEXT = """
 
   Note that in the above example, the '**' wildcard matches all names
   anywhere under ``dir``. The wildcard '*' matches names just one level deep. For
-  more details, see ``gsutil help wildcards``.
+  more details, see "gsutil help wildcards".
   
   The same rules apply for uploads and downloads: recursive copies of buckets and
   bucket subdirectories produce a mirrored filename structure, while copying
@@ -192,8 +192,8 @@ _SUBDIRECTORIES_TEXT = """
   Copying subdirectories is useful if you want to add data to an existing
   bucket directory structure over time. It's also useful if you want
   to parallelize uploads and downloads across multiple machines (potentially
-  reducing overall transfer time compared with running ``gsutil -m``
-  cp on one machine). For example, if your bucket contains this structure:
+  reducing overall transfer time compared with running ``gsutil -m
+  cp`` on one machine). For example, if your bucket contains this structure:
 
     gs://my-bucket/data/result_set_01/
     gs://my-bucket/data/result_set_02/
@@ -259,7 +259,7 @@ _CHECKSUM_VALIDATION_TEXT = """
   the checksum it computes for the source file matches the checksum that
   the service computes. If the checksums do not match, gsutil deletes the
   corrupted object and prints a warning message. If this happens, contact
-  ``gs-team@google.com``.
+  gs-team@google.com.
 
   If you know the MD5 of a file before uploading, you can specify it in the
   Content-MD5 header, which enables the cloud storage service to reject the
@@ -277,7 +277,7 @@ _CHECKSUM_VALIDATION_TEXT = """
     Uploading   gs://your-bucket/obj:                                182 b/182 B
 
     If the checksums don't match, the service rejects the upload and
-    gsutil prints the following message:
+    gsutil prints a message like:
 
     BadRequestException: 400 Provided MD5 hash "VgyllJgiiaRAbyUUIqDMmw=="
     doesn't match calculated MD5 hash "7gyllJgiiaRAbyUUIqDMmw==".
