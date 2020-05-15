@@ -172,10 +172,12 @@ _DETAILED_HELP_TEXT = ("""
                 or CMEK). See 'gsutil help encryption' for details on encryption
                 configuration.
 
-  -O            Rewrite objects with the bucket's default object ACL instead of
-                the existing object ACL. This is needed if you do not have
-                OWNER permission on the object or if your bucket has uniform
-                bucket-level access (UBLA) enabled.
+  -O            When a bucket has uniform bucket-level access (UBLA) enabled,
+                the -O flag is required and will skip all ACL checks. When a
+                bucket has UBLA disabled, the -O flag rewrites objects with the
+                bucket's default object ACL instead of the existing object ACL.
+                This is needed if you do not have OWNER permission on the
+                object.
 
   -R, -r        The -R and -r options are synonymous. Causes bucket or bucket
                 subdirectory contents to be rewritten recursively.
@@ -390,10 +392,11 @@ class RewriteCommand(Command):
       src_metadata.acl = []
     elif not src_metadata.acl:
       raise CommandException(
-          'No OWNER permission found for object %s. OWNER permission is '
-          'required for rewriting objects, (otherwise their ACLs would be '
-          'reset). If this bucket has uniform bucket-level access (UBLA) '
-          'enabled you should use the `-O` option. ' % transform_url)
+          'No OWNER permission found for object %s. If your bucket has uniform '
+          'bucket-level access (UBLA) enabled, include the -O option in your '
+          'command to avoid this error. If your bucket does not use UBLA, you '
+          'can use the -O option to apply the bucket\'s default object ACL '
+          'when rewriting.' % transform_url)
 
     # Note: If other transform types are added, they must ensure that the
     # encryption key configuration matches the boto configuration, because
