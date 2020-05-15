@@ -105,6 +105,7 @@ from gslib.tracker_file import ReadOrCreateDownloadTrackerFile
 from gslib.tracker_file import SERIALIZATION_UPLOAD_TRACKER_ENTRY
 from gslib.tracker_file import TrackerFileType
 from gslib.tracker_file import WriteDownloadComponentTrackerFile
+from gslib.tracker_file import WriteJsonDataToTrackerFile
 from gslib.utils import parallelism_framework_util
 from gslib.utils import text_util
 from gslib.utils.boto_util import GetJsonResumableChunkSize
@@ -1783,19 +1784,11 @@ def _UploadFileToObjectResumable(src_url,
     Args:
       serialization_data: Serialization data used in resuming the upload.
     """
-    tracker_file = None
-    try:
-      tracker_file = open(tracker_file_name, 'w')
-      tracker_data = {
-          ENCRYPTION_UPLOAD_TRACKER_ENTRY: encryption_key_sha256,
-          SERIALIZATION_UPLOAD_TRACKER_ENTRY: str(serialization_data)
-      }
-      tracker_file.write(json.dumps(tracker_data))
-    except IOError as e:
-      RaiseUnwritableTrackerFileException(tracker_file_name, e.strerror)
-    finally:
-      if tracker_file:
-        tracker_file.close()
+    data = {
+        ENCRYPTION_UPLOAD_TRACKER_ENTRY: encryption_key_sha256,
+        SERIALIZATION_UPLOAD_TRACKER_ENTRY: str(serialization_data)
+    }
+    WriteJsonDataToTrackerFile(tracker_file_name, data)
 
   # This contains the upload URL, which will uniquely identify the
   # destination object.
