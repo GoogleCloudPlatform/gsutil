@@ -129,12 +129,12 @@ _DETAILED_HELP_TEXT = ("""
                the duration the link remains valid is the sum of all the
                duration options.
 
-               The max duration allowed is 7d when private-key-file is used.
+               The max duration allowed is 7 days when ``private-key-file``
+               is used.
 
                The max duration allowed is 12 hours when -u option is used.
-               This limitation exists because the system managed key used for
-               signing the url is guaranteed to remain valid for
-               at least 12 hours.
+               This limitation exists because the system managed key used to
+               sign the url is guaranteed to remain valid for at least 12 hours.
 
   -c           Specifies the content type for which the signed url is
                valid for.
@@ -158,8 +158,8 @@ _DETAILED_HELP_TEXT = ("""
                to sign the url.
 
                You can equivalently use --use-service-account instead of -u.
-               Note that the max alloweod duration is 12 hours if this option
-               is used.
+               The max alloweod duration for the valid link is 12 hours
+               if you use --use-service-account or -u option.
 
 <B>USAGE</B>
   Create a signed url for downloading an object valid for 10 minutes:
