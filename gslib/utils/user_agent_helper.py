@@ -33,10 +33,10 @@ def GetUserAgent(args, metrics_off=True):
   user_agent = ' gsutil/%s' % gslib.VERSION
   user_agent += ' (%s)' % sys.platform
   user_agent += ' analytics/%s ' % ('disabled' if metrics_off else 'enabled')
-  user_agent += ' interactive/%s' % system_util.IsRunningInteractively()
+  # user_agent += ' interactive/%s' % system_util.IsRunningInteractively()
 
   if len(args) > 0:
-    user_agent += ' command/%s' % args[0]
+    """user_agent += ' command/%s' % args[0]
 
     if args[0] in ['cp', 'mv', 'rsync']:
       # Any cp, mv or rsync commands that have both a source and destination in
@@ -48,6 +48,7 @@ def GetUserAgent(args, metrics_off=True):
 
       if len(cloud_uris) > 1 and cloud_uri_dst:
         user_agent += '-CloudToCloud'
+    """
 
   if system_util.InvokedViaCloudSdk():
     user_agent += ' google-cloud-sdk'
