@@ -157,9 +157,10 @@ _DETAILED_HELP_TEXT = ("""
   -u           Use service account credentials instead of a private key file
                to sign the url.
 
-               You can equivalently use --use-service-account instead of -u.
-               The max alloweod duration for the valid link is 12 hours
-               if you use --use-service-account or -u option.
+               You can also use the --use-service-account option,
+               which is equivalent to -u.
+               Note that both options have a maximum allowed duration of
+               12 hours for a valid link.
 
 <B>USAGE</B>
   Create a signed url for downloading an object valid for 10 minutes:
