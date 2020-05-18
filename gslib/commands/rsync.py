@@ -39,6 +39,7 @@ from boto import config
 import crcmod
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.cloud_api import NotFoundException
+from gslib.cloud_api import ServiceException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
@@ -1471,7 +1472,8 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
                                          obj_metadata,
                                          provider=dst_url.scheme,
                                          generation=dst_url.generation)
-        except:
+        except ServiceException as err:
+          cls.logger.debug('Error while trying to patch: %s', err)
           # We don't have permission to patch apparently, so it must be copied.
           cls.logger.info(
               'Copying whole file/object for %s instead of patching'
@@ -1517,7 +1519,8 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
                                          obj_metadata,
                                          provider=dst_url.scheme,
                                          generation=dst_url.generation)
-        except:
+        except ServiceException as err:
+          cls.logger.debug('Error while trying to patch: %s', err)
           # Apparently we don't have object ownership, so it must be copied.
           cls.logger.info(
               'Copying whole file/object for %s instead of patching'
@@ -1733,8 +1736,6 @@ class RsyncCommand(Command):
           gzip_arg_all = GZIP_ALL_FILES
         elif o == '-n':
           self.dryrun = True
-        elif o == '-O':
-          self.assert_ownership = True
         elif o == '-p':
           self.preserve_acl = True
         elif o == '-P':
