@@ -157,8 +157,8 @@ _DETAILED_HELP_TEXT = ("""
   -u           Use service account credentials instead of a private key file
                to sign the url.
 
-               You can also use the --use-service-account option,
-               which is equivalent to -u.
+               You can also use the ``--use-service-account`` option,
+               which is equivalent to ``-u``.
                Note that both options have a maximum allowed duration of
                12 hours for a valid link.
 
