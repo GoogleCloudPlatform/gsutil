@@ -133,7 +133,7 @@ _DETAILED_HELP_TEXT = ("""
                is used.
 
                The max duration allowed is 12 hours when -u option is used.
-               This limitation exists because the system managed key used to
+               This limitation exists because the system-managed key used to
                sign the url is guaranteed to remain valid for at least 12 hours.
 
   -c           Specifies the content type for which the signed url is
