@@ -31,9 +31,10 @@ _DETAILED_HELP_TEXT = ("""
   - Access denied, because the bucket or object you are trying to use has an
     ACL that doesn't permit the action you're trying to perform.
 
-  In other cases errors are retryable - transient network failures and HTTP 429
-  and 5xx error codes. For these cases, gsutil will retry using a truncated
-  binary exponential backoff strategy:
+  In other cases errors are retryable - transient network failures; HTTP 429
+  and 5xx error codes; and HTTP 408 error codes when performing a resumable
+  upload. For these cases, gsutil will retry using a truncated binary
+  exponential backoff strategy:
 
   - Wait a random period between [0..1] seconds and retry;
   - If that fails, wait a random period between [0..2] seconds and retry;
