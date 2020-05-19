@@ -90,6 +90,14 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.assertIn('CommandException: Max valid duration allowed is 7 days',
                   stderr)
 
+  def testSignUrlInvalidDurationWithUseServiceAccount(self):
+    """Tests signurl with -u flag fails duration > 12 hours."""
+    stderr = self.RunGsUtil(['signurl', '-d', '13h', '-u', 'gs://uri'],
+                            return_stderr=True,
+                            expected_status=1)
+    self.assertIn('CommandException: Max valid duration allowed is 12:00:00',
+                  stderr)
+
   def testSignUrlOutputP12(self):
     """Tests signurl output of a sample object with pkcs12 keystore."""
     self._DoTestSignUrlOutput(self._GetKsFile())
