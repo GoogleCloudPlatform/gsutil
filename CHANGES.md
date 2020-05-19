@@ -1,3 +1,17 @@
+Release 4.51 (release date: 2020-03-26)
+======================================
+Bug Fixes
+------------------
+- Fixed file permissions for credstor2 and tracker files (#1002 and # 1005)
+- Added a check to restrict the duration (-d option) for signurl command
+  to 12 hours if -u flag is used. (#1014)
+- Updated rsync command to try patching before overwriting,
+  rather than checking ACL (#1016)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 4.50 (release date: 2020-04-30)
 ======================================
 New Features
