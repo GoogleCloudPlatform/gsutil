@@ -1691,7 +1691,6 @@ class RsyncCommand(Command):
     # state rather than CopyHelperOpts.
     self.continue_on_error = False
     self.delete_extras = False
-    self.assert_ownership = False
     self.preserve_acl = False
     self.preserve_posix_attrs = False
     self.compute_file_checksums = False
