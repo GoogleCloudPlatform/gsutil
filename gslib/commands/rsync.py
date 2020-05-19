@@ -39,6 +39,7 @@ from boto import config
 import crcmod
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.cloud_api import NotFoundException
+from gslib.cloud_api import ServiceException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
@@ -1460,24 +1461,19 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
       if dst_url.IsCloudUrl():
         dst_url = StorageUrlFromString(diff_to_apply.dst_url_str)
         dst_generation = GenerationFromUrlAndString(dst_url, dst_url.generation)
-        dst_obj_metadata = gsutil_api.GetObjectMetadata(
-            dst_url.bucket_name,
-            dst_url.object_name,
-            generation=dst_generation,
-            provider=dst_url.scheme,
-            fields=['acl'])
-        if dst_obj_metadata.acl:
-          # We have ownership, and can patch the object.
+        try:
+          # Assume we have permission, and can patch the object.
           gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
                                          dst_url.object_name,
                                          obj_metadata,
                                          provider=dst_url.scheme,
                                          generation=dst_url.generation)
-        else:
-          # We don't have object ownership, so it must be copied.
+        except ServiceException as err:
+          cls.logger.debug('Error while trying to patch: %s', err)
+          # We don't have permission to patch apparently, so it must be copied.
           cls.logger.info(
               'Copying whole file/object for %s instead of patching'
-              ' because you don\'t have owner permission on the '
+              ' because you don\'t have patch permission on the '
               'object.', dst_url.url_string)
           _RsyncFunc(cls,
                      RsyncDiffToApply(diff_to_apply.src_url_str,
@@ -1512,18 +1508,19 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
             generation=dst_generation,
             provider=dst_url.scheme,
             fields=['acl'])
-        if dst_obj_metadata.acl:
-          # We have ownership, and can patch the object.
+        try:
+          # Assume we have ownership, and can patch the object.
           gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
                                          dst_url.object_name,
                                          obj_metadata,
                                          provider=dst_url.scheme,
                                          generation=dst_url.generation)
-        else:
-          # We don't have object ownership, so it must be copied.
+        except ServiceException as err:
+          cls.logger.debug('Error while trying to patch: %s', err)
+          # Apparently we don't have object ownership, so it must be copied.
           cls.logger.info(
               'Copying whole file/object for %s instead of patching'
-              ' because you don\'t have owner permission on the '
+              ' because you don\'t have patch permission on the '
               'object.', dst_url.url_string)
           _RsyncFunc(cls,
                      RsyncDiffToApply(diff_to_apply.src_url_str,
