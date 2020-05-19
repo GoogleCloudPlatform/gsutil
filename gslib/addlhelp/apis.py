@@ -30,6 +30,11 @@ _DETAILED_HELP_TEXT = ("""
   the XML API), gsutil will silently fall back to using the other API. Also,
   gsutil will automatically fall back to using the XML API when interacting
   with cloud storage providers that only support that API.
+  
+  See documentation about the `JSON API
+  <https://cloud.google.com/storage/docs/json_api>`_ or `XML API
+  <https://cloud.google.com/storage/docs/xml-api/overview>`_ for more
+  information.
 
 <B>CONFIGURING WHICH API IS USED</B>
   To use a certain API for interacting with Google Cloud Storage, you can set
@@ -41,6 +46,9 @@ _DETAILED_HELP_TEXT = ("""
   This will cause gsutil to use that API where possible (falling back to the
   other API in cases as noted above). This applies to the gsutil test command
   as well; it will run integration tests against the preferred API.
+  
+  See documentation about the `Boto configuration file
+  <https://cloud.google.com/storage/docs/boto-gsutil>`_ for more information.
 
 <B>PERFORMANCE AND COST DIFFERENCES BETWEEN APIS</B>
   The XML API uses the boto framework.  This framework re-reads downloaded files
