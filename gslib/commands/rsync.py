@@ -447,10 +447,6 @@ _DETAILED_HELP_TEXT = ("""
                  what would be copied or deleted without actually doing any
                  copying/deleting.
 
-  -O             Assert ownership of objects. This is useful if uniform bucket-
-                 level access (UBLA) is enabled for a destination bucket that
-                 you control.
-
   -p             Causes ACLs to be preserved when objects are copied. Note that
                  rsync will decide whether or not to perform a copy based only
                  on object size and modification time, not current ACL state.
