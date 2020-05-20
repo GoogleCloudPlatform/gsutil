@@ -47,7 +47,7 @@ _ENCRYPTION_SYNOPSIS = """
 """
 
 _SERVICEACCOUNT_SYNOPSIS = """
-  gsutil kms serviceaccount [-p <proj_id]>
+  gsutil kms serviceaccount [-p <proj_id>]
 """
 
 _SYNOPSIS = (_AUTHORIZE_SYNOPSIS + _ENCRYPTION_SYNOPSIS.lstrip('\n') +
