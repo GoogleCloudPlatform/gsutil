@@ -284,17 +284,18 @@ _CHECKSUM_VALIDATION_TEXT = """
 
   Specifying the Content-MD5 header has several advantages:
 
-  1. It prevents the corrupted object from becoming visible. Otherwise, the
-     object is visible for 1-3 seconds before gsutil deletes it.
+  1. It prevents the corrupted object from becoming visible. If you don't
+     specify the header, the object is visible for 1-3 seconds before gsutil deletes
+     it.
 
   2. If an object already exists with the given name, specifying the
      Content-MD5 header prevents the existing object from being replaced.
      Otherwise, the existing object is replaced by the corrupted object and
      deleted a few seconds later.
 
-  3. If the gsutil process is interrupted or fails before it can delete the
-     corrupted object after uploading it, specifying the Content-MD5 header
-     prevents the corrupted object from being left in the cloud.
+  3. If you don't specify the Content-MD5 header, it's possible for the gsutil
+     process to complete the upload but then be interrupted or fail before it can
+     delete the corrupted object, leaving the corrupted object in the cloud.
 
   4. It supports a customer-to-service integrity check handoff. For example,
      if you have a content production pipeline that generates data to be
@@ -365,7 +366,7 @@ _STREAMING_TRANSFERS_TEXT = """
 
   Streaming transfers using the XML API do not support resumable
   uploads or downloads. If you have a large amount of data to upload or download,
-  over 100 MiB for example, we recommend that you write the data to a file and
+  over 100 MiB for example, we recommend that you write the data to a local file and
   copy that file rather than streaming it.
 
   CAUTION: When performing a streaming transfer to or from Cloud Storage,
@@ -454,7 +455,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   upload complete. If you want to enable parallel composite
   uploads for all of your future uploads, you can uncomment and set the
   "parallel_composite_upload_threshold" config value in your ``.boto`` configuration
-  file to 150M.
+  file to 150M or your desired value.
 
   If a parallel composite upload fails prior to composition, run the
   gsutil command again to take advantage of resumable uploads for the components
@@ -529,10 +530,10 @@ _COPYING_SPECIAL_FILES_TEXT = """
 
 _OPTIONS_TEXT = """
 <B>OPTIONS</B>
-  -a canned_acl  Sets the specific ``canned_acl`` when the uploaded objects are
-                 created. See "gsutil help acls" for further details.
+  -a canned_acl  Applies the specific ``canned_acl`` to uploaded objects. See
+                 "gsutil help acls" for further details.
 
-  -A             Copy all source versions from a source buckets or folder.
+  -A             Copy all source versions from a source bucket or folder.
                  If not set, only the live version of each source object is
                  copied.
                  
@@ -671,7 +672,7 @@ _OPTIONS_TEXT = """
   -P             Enables POSIX attributes to be preserved when objects are
                  copied. ``gsutil cp`` copies fields provided by ``stat``. These fields
                  are the user ID of the owner, the group
-                 ID of the owning group, the permissions of the file, and
+                 ID of the owning group, the mode or permissions of the file, and
                  the access and modification time of the file. For downloads, these
                  attributes are only set if the source objects were uploaded
                  with this flag enabled.
@@ -705,7 +706,7 @@ _OPTIONS_TEXT = """
                  extension matches the ``-z`` extension list. This is useful when
                  uploading files with compressible content such as .js, .css,
                  or .html files, because it reduces network bandwidth and storage
-                 costs.
+                 sizes. This can both improve performance and reduce costs.
 
                  When you specify the ``-z`` option, the data from your files is
                  compressed before it is uploaded, but your actual files are
