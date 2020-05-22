@@ -564,7 +564,7 @@ _OPTIONS_TEXT = """
                      gsutil mv -p gs://bucket/obj_tmp gs://bucket/obj
 
                  NOTE: "Daisy chain" mode is automatically used when copying
-                 between providers: for example, when copying data from Google Cloud Storage
+                 between providers: for example, when copying data from Cloud Storage
                  to another provider.
 
   -e             Exclude symlinks. When specified, symbolic links are not copied.
@@ -616,8 +616,8 @@ _OPTIONS_TEXT = """
                  - Source size.
                  - Bytes transferred.
                  - MD5 hash.
-                 - UTC date and transfer start time in ISO 8601 format.
-                 - UTC date and transfer completion time in ISO 8601 format.
+                 - Transfer start time and date in UTC and ISO 8601 format.
+                 - Transfer completion time and date in UTC and ISO 8601 format.
                  - Upload id, if a resumable upload was performed.
                  - Final result of the attempted transfer, either success or failure.
                  - Failure details, if any.
@@ -639,8 +639,8 @@ _OPTIONS_TEXT = """
                  The -c option enables copying to continue after failures
                  occur, and the -L option allows gsutil to pick up where it
                  left off without duplicating work. The loop continues
-                 running as long as gsutil exits with a non-zero status, which
-                 indicates there was at least one failure during the copy
+                 running as long as gsutil exits with a non-zero status. A non-zero
+                 status indicates there was at least one failure during the copy
                  operation.
 
                  NOTE: If you are synchronizing the contents of a
@@ -655,9 +655,9 @@ _OPTIONS_TEXT = """
                  from retransmitting data, but the additional HTTP requests may make
                  small object transfers slower and more expensive.
 
-  -p             Enables ACLs to be preserved when copying in the cloud. Note
+  -p             Preserves ACLs when copying in the cloud. Note
                  that this option has performance and cost implications only when
-                 using the XML API, as it requires separate HTTP calls for
+                 using the XML API, as the XML API requires separate HTTP calls for
                  interacting with ACLs. You can mitigate this 
                  performance issue using ``gsutil -m cp`` to perform parallel
                  copying. Note that this option only works if you have OWNER access
