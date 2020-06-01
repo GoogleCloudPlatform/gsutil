@@ -79,7 +79,7 @@ _SYNOPSIS = """
   gsutil perfdiag [-i in.json]
   gsutil perfdiag [-o out.json] [-n objects] [-c processes]
       [-k threads] [-p parallelism type] [-y slices] [-s size] [-d directory]
-      [-t tests] [-j ratio] url...
+      [-t tests] [-j ratio] gs://<bucket_name>...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -91,10 +91,10 @@ _DETAILED_HELP_TEXT = ("""
   The perfdiag command runs a suite of diagnostic tests for a given Google
   Storage bucket.
 
-  The 'url' parameter must name an existing bucket (e.g. gs://foo) to which
-  the user has write permission. Several test files will be uploaded to and
-  downloaded from this bucket. All test files will be deleted at the completion
-  of the diagnostic if it finishes successfully.
+  The 'bucket_name' parameter must name an existing bucket to which the user
+  has write permission. Several test files will be uploaded to and downloaded
+  from this bucket. All test files will be deleted at the completion of the
+  diagnostic if it finishes successfully.
 
   gsutil performance can be impacted by many factors at the client, server,
   and in-between, such as: CPU speed; available memory; the access path to the

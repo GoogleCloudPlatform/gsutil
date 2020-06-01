@@ -301,8 +301,9 @@ _STOPCHANNEL_DESCRIPTION = """
 """
 
 _DESCRIPTION = """
-  You can use the ``notification`` command to configure `Pub/Sub notifications
-  for Cloud Storage<https://cloud.google.com/storage/docs/pubsub-notifications>`_
+  You can use the ``notification`` command to configure
+  `Pub/Sub notifications for Cloud Storage
+  <https://cloud.google.com/storage/docs/pubsub-notifications>`_
   and `Object change notification
   <https://cloud.google.com/storage/docs/object-change-notification>`_ channels.
 
