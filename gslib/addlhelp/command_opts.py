@@ -35,8 +35,13 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>OPTIONS</B>
-  -D          Shows HTTP requests/headers and additional debug info needed when
-              posting support requests, including exception stack traces.
+  -D          Shows HTTP requests/headers and additional debug info needed
+              when posting support requests, including exception stack traces.
+
+              CAUTION: The output from using this flag includes authentication
+              credentials. Before including this flag in your command, be sure
+              you understand how the command's output is used, and, if
+              necessary, remove or redact sensitive information.
 
   -DD         Shows HTTP requests/headers, additional debug info,
               exception stack traces, plus HTTP upstream payload.
