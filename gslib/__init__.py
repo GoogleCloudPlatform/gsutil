@@ -89,6 +89,9 @@ if not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, 'VERSION')):
   PROGRAM_FILES_DIR = os.path.normpath(os.path.join(GSLIB_DIR, '..'))
   IS_EDITABLE_INSTALL = True
 
+# Give USER_AGENT a default value for web doc generation.
+USER_AGENT = ''
+
 def _AddVendoredDepsToPythonPath():
   """Fix our Python path so that it correctly finds our vendored libraries."""
   vendored_path = os.path.join(GSLIB_DIR, 'vendored')
