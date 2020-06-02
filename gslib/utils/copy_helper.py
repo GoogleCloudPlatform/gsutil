@@ -3307,8 +3307,13 @@ def _CopyFileToFile(src_url, dst_url, status_queue=None, src_obj_metadata=None):
   """
   src_fp = GetStreamFromFileUrl(src_url)
   dir_name = os.path.dirname(dst_url.object_name)
-  if dir_name and not os.path.exists(dir_name):
+
+  try:
     os.makedirs(dir_name)
+  except OSError as e:
+    if e.errno != errno.EEXIST:
+      raise
+
   with open(dst_url.object_name, 'wb') as dst_fp:
     start_time = time.time()
     shutil.copyfileobj(src_fp, dst_fp)
