@@ -22,8 +22,8 @@
 """Package marker file."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
@@ -89,7 +89,6 @@ if (not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, 'VERSION')) and
 if not os.path.isfile(os.path.join(PROGRAM_FILES_DIR, 'VERSION')):
   PROGRAM_FILES_DIR = os.path.normpath(os.path.join(GSLIB_DIR, '..'))
   IS_EDITABLE_INSTALL = True
-
 
 def _AddVendoredDepsToPythonPath():
   """Fix our Python path so that it correctly finds our vendored libraries."""
