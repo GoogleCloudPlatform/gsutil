@@ -105,6 +105,21 @@ _ENCRYPTION_DESCRIPTION = """
   Clear the default KMS key so newly-written objects will not be encrypted:
 
     gsutil kms encryption -d gs://my-bucket
+
+<B>OPTIONS</B>
+  -k <key>      Set the default KMS key for my-bucket using the
+                full path to the key <code>projects/[project-id]/locations/[location]/keyRings/[key-
+                ring]/cryptoKeys/[my-key]</code>
+  -w            (used with -k key) Display a warning rather than 
+                failing if gsutil is unable to verify that
+                the specified key contains the correct IAM bindings 
+                for encryption/decryption. This is useful for
+                users that do not have getIamPolicy permission 
+                but know that the key has the correct IAM policy
+                for encryption in the user's project.
+     
+  -d            Clear the default KMS key so newly-written objects will not be encrypted.
+  
 """
 # pylint: enable=line-too-long
 
