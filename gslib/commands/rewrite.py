@@ -101,7 +101,7 @@ _DETAILED_HELP_TEXT = ("""
 
   If you specify the -k option and you have an encryption key set in your boto
   configuration file, the rewrite command will skip objects that are already
-  encrypted with the specifed key.  For example, if you run:
+  encrypted with the specified key.  For example, if you run:
 
     gsutil rewrite -k gs://bucket/**
 
