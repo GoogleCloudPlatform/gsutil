@@ -129,10 +129,11 @@ _SET_DESCRIPTION = """
   -R, -r      Performs ``iam set`` recursively on all objects under the
               specified bucket.
               
-              The policy can only be set on objects if it contains predefined legacy roles
-              (e.g. ``roles/storage.legacy*``) only, and if the bucket is not configured 
+              This flag can only be set if the policy exclusively uses 
+              ``roles/storage.legacyObjectReader`` or ``roles/storage.legacyObjectOwner``.
+              This flag cannot be used if the bucket is configured
               for uniform bucket-level access.
-
+              
   -a          Performs ``iam set`` on all object versions.
 
   -e <etag>   Performs the precondition check on each object with the
@@ -203,9 +204,10 @@ _CH_DESCRIPTION = """
   -R, -r      Performs ``iam ch`` recursively to all objects under the
               specified bucket.
               
-              The role can only be set on objects if it is one of the 
-              predefined legacy roles (e.g. ``roles/storage.legacy*``) only, 
-              and if the bucket is not configured for uniform bucket-level access
+              This flag can only be set if the policy exclusively uses 
+              ``roles/storage.legacyObjectReader`` or ``roles/storage.legacyObjectOwner``.
+              This flag cannot be used if the bucket is configured
+              for uniform bucket-level access.
 
   -f          The default gsutil error-handling mode is fail-fast. This flag
               changes the request to fail-silent mode. This is implicitly
