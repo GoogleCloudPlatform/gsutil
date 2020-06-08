@@ -238,8 +238,8 @@ class CloudWildcardIterator(WildcardIterator):
             if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT:
               gcs_object = obj_or_prefix.data
               if prog.match(gcs_object.name):
-                if not suffix_wildcard or (StripOneSlash(gcs_object.name)
-                                           == suffix_wildcard):
+                if not suffix_wildcard or (StripOneSlash(
+                    gcs_object.name) == suffix_wildcard):
                   if not single_version_request or (self._SingleVersionMatches(
                       gcs_object.generation)):
                     yield self._GetObjectRef(
