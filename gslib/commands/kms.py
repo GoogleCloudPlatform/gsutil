@@ -119,7 +119,7 @@ _ENCRYPTION_DESCRIPTION = """
                 but know that the key has the correct IAM policy
                 for encryption in the user's project.
      
-  -d            Clear the default KMS key so newly-written objects will not be encrypted.
+  -d            Clear the default KMS key.
   
 """
 # pylint: enable=line-too-long
