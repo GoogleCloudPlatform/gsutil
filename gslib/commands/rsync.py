@@ -1594,8 +1594,8 @@ class RsyncCommand(Command):
         logger=self.logger)
     if not have_existing_container:
       raise CommandException(
-          'arg (%s) does not name a directory, bucket, or bucket subdir.' %
-          url_str)
+          'arg (%s) does not name a directory, bucket, or bucket subdir.\n'
+          'Did you forget a trailing "/"?' % url_str)
     return url
 
   def RunCommand(self):
