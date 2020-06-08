@@ -108,8 +108,9 @@ _ENCRYPTION_DESCRIPTION = """
 
 <B>OPTIONS</B>
   -k <key>      Set the default KMS key for my-bucket using the
-                full path to the key <code>projects/[project-id]/locations/[location]/keyRings/[key-
-                ring]/cryptoKeys/[my-key]</code>
+                full path to the key `projects/[project-id]/locations/[location]/keyRings/[key-
+                ring]/cryptoKeys/[my-key]`
+                
   -w            (used with -k key) Display a warning rather than 
                 failing if gsutil is unable to verify that
                 the specified key contains the correct IAM bindings 
