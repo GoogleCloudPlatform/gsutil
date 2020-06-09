@@ -391,10 +391,15 @@ class RmCommand(Command):
 
     exp_src_url = name_expansion_result.expanded_storage_url
     self.logger.info('Removing %s...', exp_src_url)
-    gsutil_api.DeleteObject(exp_src_url.bucket_name,
-                            exp_src_url.object_name,
-                            preconditions=self.preconditions,
-                            generation=exp_src_url.generation,
-                            provider=exp_src_url.scheme)
+    try:
+      gsutil_api.DeleteObject(exp_src_url.bucket_name,
+                              exp_src_url.object_name,
+                              preconditions=self.preconditions,
+                              generation=exp_src_url.generation,
+                              provider=exp_src_url.scheme)
+    except NotFoundException as e:
+      # Retries during recursive object deletes can cause harmless 404s.
+      self.logger.info('Cannot find %s', exp_src_url)
+      DecrementFailureCount()
     _PutToQueueWithTimeout(gsutil_api.status_queue,
                            MetadataMessage(message_time=time.time()))
