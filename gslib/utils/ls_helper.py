@@ -211,7 +211,7 @@ def PrintFullInfoAboutObject(bucket_listing_ref, incl_acl=True):
         MakeMetadataLine('Component-Count', obj.componentCount))
   if obj.timeDeleted:
     text_util.print_to_fd(
-        MakeMetadataLine('Archived time',
+        MakeMetadataLine('Noncurrent time',
                          obj.timeDeleted.strftime('%a, %d %b %Y %H:%M:%S GMT')))
   marker_props = {}
   if obj.metadata and obj.metadata.additionalProperties:
