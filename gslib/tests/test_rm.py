@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 import re
 
-from gslib.exception import NO_URLS_MATCHED_GENERIC
+from gslib.exception import NO_URLS_MATCHED_PREFIX
 from gslib.exception import NO_URLS_MATCHED_TARGET
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import MAX_BUCKET_LENGTH
@@ -121,7 +121,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         update_lines = True
         # Retry 404's and 409's due to eventual listing consistency, but don't
         # add the output to the set.
-        if (NO_URLS_MATCHED_GENERIC in stderr or
+        if (NO_URLS_MATCHED_PREFIX in stderr or
             '409 BucketNotEmpty' in stderr or
             '409 VersionedBucketNotEmpty' in stderr):
           update_lines = False

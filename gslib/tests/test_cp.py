@@ -47,6 +47,7 @@ from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import _DEFAULT_DOWNLOAD_CHUNK_SIZE
 from gslib.discard_messages_queue import DiscardMessagesQueue
+from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.parallel_tracker_file import ObjectFromTracker
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
@@ -2344,7 +2345,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         expected_status=1)
     self.assertIn('Copying file', stderr)
     self.assertIn('Skipping symbolic link', stderr)
-    self.assertIn('CommandException: No URLs matched: %s' % fpath2, stderr)
+    self.assertIn(NO_URLS_MATCHED_TARGET % fpath2, stderr)
 
   def test_cp_multithreaded_wildcard(self):
     """Tests that cp -m works with a wildcard."""
