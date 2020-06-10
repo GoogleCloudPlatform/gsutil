@@ -40,5 +40,3 @@ script:
     test/run_pylint.sh;
     yapf -dr . ;
   fi
-- test/run_pylint.sh
-
