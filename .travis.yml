@@ -1,7 +1,7 @@
 language: python
 
 matrix:
-  include:
+    include:
     # Xenial Tests
     - os: linux
       dist: xenial
@@ -21,21 +21,24 @@ matrix:
     - os: linux
       dist: xenial
       python: "pypy3.5"
-  fast_finish: true
+    fast_finish: true
 
 before_install:
-  - sudo rm -f /etc/boto.cfg
+- sudo rm -f /etc/boto.cfg
 
 # command to install dependencies
 install:
-  - pip install .
-  - pip install pylint
-  - pip install yapf
+- pip install .
+- pip install pylint
+- pip install yapf
 
 # command to run tests
 script:
-  - gsutil version -l
-  - gsutil test -u
-  - if [[ "$TRAVIS_PYTHON_VERSION" =~ 3.6 ]]; then yapf -dr . ; fi
-  - test/run_pylint.sh
+- gsutil version -l
+- gsutil test -u
+- if [[ "$TRAVIS_PYTHON_VERSION" =~ 3.6 ]]; then
+    test/run_pylint.sh;
+    yapf -dr . ;
+  fi
+- test/run_pylint.sh
 
