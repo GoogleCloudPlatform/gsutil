@@ -212,7 +212,7 @@ _DESCRIPTION = """
   access to the resources in your Google Cloud project. For more information,
   see `Cloud Identity and Access Management
   <https://cloud.google.com/storage/docs/access-control/iam>`_.
-  
+
   The iam command has three sub-commands:
 """ + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION])
 
@@ -260,6 +260,7 @@ class IamCommand(Command):
   """Implementation of gsutil iam command."""
   command_spec = Command.CreateCommandSpec(
       'iam',
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='afRrd:e:',
