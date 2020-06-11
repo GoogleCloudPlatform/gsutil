@@ -53,9 +53,9 @@ _DETAILED_HELP_TEXT = ("""
   space corresponding to your company's domain name (see "gsutil help naming").
 
   If you don't specify a project ID using the -p option, the bucket is created
-  using the default project ID specified in your gsutil configuration file
-  (see "gsutil help config"). For more details about projects see "gsutil help
-  projects".
+  using the default project ID specified in your `gsutil configuration file
+  <https://cloud.google.com/storage/docs/boto-gsutil>`_. For more details
+  about projects see "gsutil help projects".
 
   The -c and -l options specify the storage class and location, respectively,
   for the bucket. Once a bucket is created in a given location and with a
