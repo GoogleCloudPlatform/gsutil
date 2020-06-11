@@ -43,8 +43,7 @@ _DETAILED_HELP_TEXT = ("""
               you understand how the command's output is used, and, if
               necessary, remove or redact sensitive information.
 
-  -DD         Shows HTTP requests/headers, additional debug info,
-              exception stack traces, plus HTTP upstream payload.
+  -DD         Same as -D, plus HTTP upstream payload.
 
   -h          Allows you to specify certain HTTP headers, for example:
 
