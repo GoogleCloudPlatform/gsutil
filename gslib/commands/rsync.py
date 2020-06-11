@@ -394,7 +394,7 @@ _DETAILED_HELP_TEXT = ("""
                  files. If errors occurred, gsutil's exit status will be
                  non-zero even if this flag is set. This option is implicitly
                  set when running "gsutil -m rsync...".
-                 
+
                  NOTE: -C only applies to the actual copying operation. If an
                  error occurs while iterating over the files in the local
                  directory (e.g., invalid Unicode file name) gsutil will print
@@ -402,7 +402,7 @@ _DETAILED_HELP_TEXT = ("""
 
   -d             Delete extra files under dst_url not found under src_url. By
                  default extra files are not deleted.
-                 
+
                  NOTE: this option can delete data quickly if you specify the
                  wrong source/destination combination. See the help section
                  above, "BE CAREFUL WHEN USING -d OPTION!".
@@ -1594,8 +1594,9 @@ class RsyncCommand(Command):
         logger=self.logger)
     if not have_existing_container:
       raise CommandException(
-          'arg (%s) does not name a directory, bucket, or bucket subdir.' %
-          url_str)
+          'arg (%s) does not name a directory, bucket, or bucket subdir.\n'
+          'If there is an object with the same path, please add a trailing\n'
+          'slash to specify the directory.' % url_str)
     return url
 
   def RunCommand(self):
