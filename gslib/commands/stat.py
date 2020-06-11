@@ -160,14 +160,14 @@ class StatCommand(Command):
       except AccessDeniedException:
         if logging.getLogger().isEnabledFor(logging.INFO):
           sys.stderr.write('You aren\'t authorized to read %s - skipping' %
-                           url_str)
+                           url_str + '\n')
       except InvalidUrlError:
         raise
       except NotFoundException:
         pass
       if not arg_matches:
         if logging.getLogger().isEnabledFor(logging.INFO):
-          sys.stderr.write(NO_URLS_MATCHED_TARGET % url_str)
+          sys.stderr.write(NO_URLS_MATCHED_TARGET % url_str + '\n')
         found_nonmatching_arg = True
     if found_nonmatching_arg:
       return 1
