@@ -598,7 +598,7 @@ _OPTIONS_TEXT = """
                  compression buffer size to a higher limit. For example:
 
                    gsutil -o "GSUtil:max_upload_compression_buffer_size=8G" \\
-                     -m cp -j html -r /local/source/dir gs://bucket/path
+                     -m cp -j html,txt -r /local/source/dir gs://bucket/path
 
   -J             Applies gzip transport encoding to file uploads. This option
                  works like the ``-j`` option described above, but it applies to
