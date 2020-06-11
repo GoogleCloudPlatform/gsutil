@@ -35,7 +35,8 @@ _DETAILED_HELP_TEXT = ("""
   - At upload time you can specify one or more metadata properties to
     associate with objects, using the gsutil -h option.  For example, the
     following command would cause gsutil to set the Content-Type and
-    Cache-Control for each of the files being uploaded:
+    Cache-Control for each of the files being uploaded from a local
+    directory named ``images``:
 
       gsutil -h "Content-Type:text/html" \\
              -h "Cache-Control:public, max-age=3600" cp -r images \\
@@ -73,14 +74,15 @@ _DETAILED_HELP_TEXT = ("""
   allowed to cache your objects. Cache-Control only applies to objects with
   a public-read ACL. Non-public data are not cacheable.
 
-  Here's an example of uploading a set of objects to allow caching:
+  Here's an example of uploading a set of objects from a local directory
+  named ``photos`` to allow caching:
 
     gsutil -h "Cache-Control:public,max-age=3600" cp -a public-read \\
-           -r html gs://bucket/html
+           -r photos gs://bucket/photos
 
-  This command would upload all files in the html directory (and subdirectories)
-  and make them publicly readable and cacheable, with cache expiration of
-  one hour.
+  This command would upload all files in the ``photos`` directory (and
+  subdirectories) and make them publicly readable and cacheable, with cache
+  expiration of one hour.
 
   Note that if you allow caching, at download time you may see older versions
   of objects after uploading a newer replacement object. Note also that because
@@ -135,7 +137,8 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>CONTENT-DISPOSITION</B>
   You can set Content-Disposition on your objects, to specify presentation
-  information about the data being transmitted. Here's an example:
+  information about the data being transmitted. Here's an example uploading
+  files from a local directory named ``attachments``:
 
     gsutil -h 'Content-Disposition:attachment; filename=filename.ext' \\
            cp -r attachments gs://bucket/attachments

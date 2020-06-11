@@ -424,16 +424,14 @@ _DETAILED_HELP_TEXT = ("""
                  original files.
 
                  Note that if you want to use the top-level -m option to
-                 parallelize copies along with the -j/-J options, you should
-                 prefer using multiple processes instead of multiple threads;
-                 when using -j/-J, multiple threads in the same process are
-                 bottlenecked by Python's GIL. Thread and process count can be
-                 set using the "parallel_thread_count" and
-                 "parallel_process_count" boto config options, e.g.:
+                 parallelize copies along with the -j/-J options, your
+                 performance may be bottlenecked by the
+                 "max_upload_compression_buffer_size" boto config option,
+                 which is set to 2 GiB by default. This compression buffer
+                 size can be changed to a higher limit, e.g.:
 
-                   gsutil -o "GSUtil:parallel_process_count=8" \\
-                     -o "GSUtil:parallel_thread_count=1" \\
-                     -m rsync -j /local/source/dir gs://bucket/path
+                   gsutil -o "GSUtil:max_upload_compression_buffer_size=8G" \
+                     -m rsync -j html,txt /local/source/dir gs://bucket/path
 
   -J             Applies gzip transport encoding to file uploads. This option
                  works like the -j option described above, but it applies to
