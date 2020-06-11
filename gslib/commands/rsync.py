@@ -431,7 +431,7 @@ _DETAILED_HELP_TEXT = ("""
                  size can be changed to a higher limit, e.g.:
 
                    gsutil -o "GSUtil:max_upload_compression_buffer_size=8G" \
-                     -m rsync -j html, txt /local/source/dir gs://bucket/path
+                     -m rsync -j html,txt /local/source/dir gs://bucket/path
 
   -J             Applies gzip transport encoding to file uploads. This option
                  works like the -j option described above, but it applies to
