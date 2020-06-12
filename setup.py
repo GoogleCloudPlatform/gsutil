@@ -38,7 +38,7 @@ management tasks, including:
 requires = [
     # TODO(b/158863251): Quick fix as rsa dropped support for python 2 in version >4.
     # This should be dropped later when gcs-oauth2-boto-plugin is updated.
-    'rsa<=4.0 : python_version < "2.7"',
+    'rsa<=4.0; python_version < "2.7"',
     'argcomplete>=1.9.4',
     'crcmod>=1.7',
     'fasteners>=0.14.1',
