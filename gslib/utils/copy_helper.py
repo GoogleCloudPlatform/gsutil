@@ -387,6 +387,7 @@ CopyHelperOpts = namedtuple('CopyHelperOpts', [
     'skip_unsupported_objects',
     'test_callback_file',
     'dest_storage_class',
+    'force',
 ])
 
 
@@ -401,7 +402,8 @@ def CreateCopyHelperOpts(perform_mv=False,
                          canned_acl=None,
                          skip_unsupported_objects=False,
                          test_callback_file=None,
-                         dest_storage_class=None):
+                         dest_storage_class=None,
+                         force=False):
   """Creates CopyHelperOpts for passing options to CopyHelper."""
   # We create a tuple with union of options needed by CopyHelper and any
   # copy-related functionality in CpCommand, RsyncCommand, or Command class.
@@ -417,7 +419,8 @@ def CreateCopyHelperOpts(perform_mv=False,
       canned_acl=canned_acl,
       skip_unsupported_objects=skip_unsupported_objects,
       test_callback_file=test_callback_file,
-      dest_storage_class=dest_storage_class)
+      dest_storage_class=dest_storage_class,
+      force=force)
   return global_copy_helper_opts
 
 
@@ -3579,7 +3582,7 @@ EARLY_DELETION_MINIMUM_LIFETIME = {
 }
 
 
-def WarnIfMvEarlyDeletionChargeApplies(src_url, src_obj_metadata, logger):
+def DoesMvEarlyDeletionChargeApply(src_url, src_obj_metadata, logger):
   """Warns when deleting a gs:// object could incur an early deletion charge.
 
   This function inspects metadata for Google Cloud Storage objects that are
@@ -3608,6 +3611,8 @@ def WarnIfMvEarlyDeletionChargeApplies(src_url, src_obj_metadata, logger):
             'days old according to the local system time.',
             object_storage_class, src_url.url_string,
             early_deletion_cutoff_seconds // SECONDS_PER_DAY)
+        return True
+    return False
 
 
 def MaybeSkipUnsupportedObject(src_url, src_obj_metadata):
@@ -3668,7 +3673,8 @@ def PerformCopy(logger,
                 gzip_exts=None,
                 is_rsync=False,
                 preserve_posix=False,
-                gzip_encoded=False):
+                gzip_encoded=False,
+                force=False):
   """Performs copy from src_url to dst_url, handling various special cases.
 
   Args:
@@ -3730,8 +3736,12 @@ def PerformCopy(logger,
         not global_copy_helper_opts.daisy_chain):
       copy_in_the_cloud = True
 
-    if global_copy_helper_opts.perform_mv:
-      WarnIfMvEarlyDeletionChargeApplies(src_url, src_obj_metadata, logger)
+    if not global_copy_helper_opts.force and (
+        global_copy_helper_opts.perform_mv and
+        DoesMvEarlyDeletionChargeApply(src_url, src_obj_metadata, logger)):
+      raise CommandException('Financially-expensive mv requires force flag'
+                             ' -f.')
+
     MaybeSkipUnsupportedObject(src_url, src_obj_metadata)
     decryption_key = GetDecryptionCSEK(src_url, src_obj_metadata)
 

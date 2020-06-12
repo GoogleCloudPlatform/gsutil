@@ -55,7 +55,7 @@ from gslib.utils.copy_helper import ExpandUrlToSingleBlr
 from gslib.utils.copy_helper import FilterExistingComponents
 from gslib.utils.copy_helper import GZIP_ALL_FILES
 from gslib.utils.copy_helper import PerformParallelUploadFileToObjectArgs
-from gslib.utils.copy_helper import WarnIfMvEarlyDeletionChargeApplies
+from gslib.utils.copy_helper import DoesMvEarlyDeletionChargeApply
 
 from six import add_move, MovedModule
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
@@ -402,7 +402,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
   @mock.patch('time.time',
               new=mock.MagicMock(
                   return_value=posix_util.ConvertDatetimeToPOSIX(_PI_DAY)))
-  def testWarnIfMvEarlyDeletionChargeApplies(self):
+  def testDoesMvEarlyDeletionChargeApply(self):
     """Tests that WarnIfEarlyDeletionChargeApplies warns when appropriate."""
     test_logger = logging.Logger('test')
     src_url = StorageUrlFromString('gs://bucket/object')
@@ -414,8 +414,8 @@ class TestCpFuncs(GsUtilUnitTestCase):
           storageClass='NEARLINE', timeCreated=object_time_created)
 
       with mock.patch.object(test_logger, 'warn') as mocked_warn:
-        WarnIfMvEarlyDeletionChargeApplies(src_url, recent_nearline_obj,
-                                           test_logger)
+        DoesMvEarlyDeletionChargeApply(src_url, recent_nearline_obj,
+                                       test_logger)
         mocked_warn.assert_called_with(
             'Warning: moving %s object %s may incur an early deletion '
             'charge, because the original object is less than %s days old '
@@ -429,8 +429,8 @@ class TestCpFuncs(GsUtilUnitTestCase):
           storageClass='COLDLINE', timeCreated=object_time_created)
 
       with mock.patch.object(test_logger, 'warn') as mocked_warn:
-        WarnIfMvEarlyDeletionChargeApplies(src_url, recent_nearline_obj,
-                                           test_logger)
+        DoesMvEarlyDeletionChargeApply(src_url, recent_nearline_obj,
+                                       test_logger)
         mocked_warn.assert_called_with(
             'Warning: moving %s object %s may incur an early deletion '
             'charge, because the original object is less than %s days old '
@@ -444,8 +444,7 @@ class TestCpFuncs(GsUtilUnitTestCase):
           storageClass='ARCHIVE', timeCreated=object_time_created)
 
       with mock.patch.object(test_logger, 'warn') as mocked_warn:
-        WarnIfMvEarlyDeletionChargeApplies(src_url, recent_archive_obj,
-                                           test_logger)
+        DoesMvEarlyDeletionChargeApply(src_url, recent_archive_obj, test_logger)
         mocked_warn.assert_called_with(
             'Warning: moving %s object %s may incur an early deletion '
             'charge, because the original object is less than %s days old '
@@ -457,27 +456,27 @@ class TestCpFuncs(GsUtilUnitTestCase):
       old_nearline_obj = apitools_messages.Object(
           storageClass='NEARLINE',
           timeCreated=self._PI_DAY - datetime.timedelta(days=30, seconds=1))
-      WarnIfMvEarlyDeletionChargeApplies(src_url, old_nearline_obj, test_logger)
+      DoesMvEarlyDeletionChargeApply(src_url, old_nearline_obj, test_logger)
       mocked_warn.assert_not_called()
     with mock.patch.object(test_logger, 'warn') as mocked_warn:
       old_coldline_obj = apitools_messages.Object(
           storageClass='COLDLINE',
           timeCreated=self._PI_DAY - datetime.timedelta(days=90, seconds=1))
-      WarnIfMvEarlyDeletionChargeApplies(src_url, old_coldline_obj, test_logger)
+      DoesMvEarlyDeletionChargeApply(src_url, old_coldline_obj, test_logger)
       mocked_warn.assert_not_called()
     with mock.patch.object(test_logger, 'warn') as mocked_warn:
       old_archive_obj = apitools_messages.Object(
           storageClass='ARCHIVE',
           timeCreated=self._PI_DAY - datetime.timedelta(days=365, seconds=1))
-      WarnIfMvEarlyDeletionChargeApplies(src_url, old_archive_obj, test_logger)
+      DoesMvEarlyDeletionChargeApply(src_url, old_archive_obj, test_logger)
       mocked_warn.assert_not_called()
 
     # Recent standard storage class object should not generate a warning.
     with mock.patch.object(test_logger, 'warn') as mocked_warn:
       not_old_enough_nearline_obj = apitools_messages.Object(
           storageClass='STANDARD', timeCreated=self._PI_DAY)
-      WarnIfMvEarlyDeletionChargeApplies(src_url, not_old_enough_nearline_obj,
-                                         test_logger)
+      DoesMvEarlyDeletionChargeApply(src_url, not_old_enough_nearline_obj,
+                                     test_logger)
       mocked_warn.assert_not_called()
 
   def testSelectUploadCompressionStrategyAll(self):

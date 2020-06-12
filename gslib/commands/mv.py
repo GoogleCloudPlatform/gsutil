@@ -87,6 +87,8 @@ _DETAILED_HELP_TEXT = ("""
   charges, if you move a Nearline Storage, Coldline Storage, or Archive Storage
   object, deletion and data retrieval charges apply. See the `documentation
   <https://cloud.google.com/storage/pricing>`_ for pricing details.
+  If one of the objects that you're moving is subject to an early deletion
+  charge, you must include the -f flag in the move command.
 
 
 <B>OPTIONS</B>
@@ -94,6 +96,10 @@ _DETAILED_HELP_TEXT = ("""
   for the gsutil mv command (except for the -R flag, which is implied by the
   gsutil mv command). Please see the OPTIONS sections of "gsutil help cp"
   for more information.
+
+  Additionally, you must use the -f flag to move any object that has not met
+  its minimum storage duration requirement, since such objects incur early
+  deletion charges as part of the move command (see Non-Atomic Operations).
 
 """)
 

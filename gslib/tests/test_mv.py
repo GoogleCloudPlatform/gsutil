@@ -194,10 +194,10 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
     bucket_uri = self.CreateBucket(storage_class='NEARLINE')
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'obj')
+
     stderr = self.RunGsUtil(
         ['mv', suri(object_uri),
-         suri(bucket_uri, 'foo')], return_stderr=True)
-    self.assertIn(
-        'Warning: moving nearline object %s may incur an early deletion '
-        'charge, because the original object is less than 30 days old '
-        'according to the local system time.' % suri(object_uri), stderr)
+         suri(bucket_uri, 'foo')],
+        expected_status=1,
+        return_stderr=True)
+    self.assertIn('CommandException', stderr)
