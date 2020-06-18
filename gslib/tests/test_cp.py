@@ -57,6 +57,7 @@ from gslib.tests.rewrite_helper import HaltingRewriteCallbackHandler
 from gslib.tests.rewrite_helper import RewriteHaltException
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import NotParallelizable
+from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import BuildErrorRegex
@@ -1643,6 +1644,42 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           '%s%s/obj1\n' % (dst_bucket_uri, src_bucket_uri.bucket_name), stdout)
 
     _CopyAndCheck()
+
+  @SkipForGS('Only s3 V4 signatures error on location mismatches.')
+  def test_copy_bucket_to_bucket_with_location_redirect(self):
+    src_bucket_region = 'ap-east-1'
+    dest_bucket_region = 'us-east-2'
+    src_bucket_host = 's3.%s.amazonaws.com' % src_bucket_region
+    dest_bucket_host = 's3.%s.amazonaws.com' % dest_bucket_region
+    client_host = 's3.eu-west-1.amazonaws.com'
+
+    with SetBotoConfigForTest([('s3', 'host', src_bucket_host)]):
+      src_bucket_uri = self.CreateBucket(location=src_bucket_region)
+      self.CreateObject(bucket_uri=src_bucket_uri,
+                        object_name='obj0',
+                        contents=b'abc')
+      self.CreateObject(bucket_uri=src_bucket_uri,
+                        object_name='obj1',
+                        contents=b'def')
+
+    with SetBotoConfigForTest([('s3', 'host', dest_bucket_host)]):
+      dst_bucket_uri = self.CreateBucket(location=dest_bucket_region)
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _CopyAndCheck():
+      self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), suri(dst_bucket_uri)])
+      stdout = self.RunGsUtil(['ls', '-R', dst_bucket_uri.uri],
+                              return_stdout=True)
+      self.assertIn(
+          '%s%s/obj0\n' % (dst_bucket_uri, src_bucket_uri.bucket_name), stdout)
+      self.assertIn(
+          '%s%s/obj1\n' % (dst_bucket_uri, src_bucket_uri.bucket_name), stdout)
+
+    with SetBotoConfigForTest([('s3', 'host', client_host)]):
+      _CopyAndCheck()
+
+    self.location_redirect_test_helper('ap-east-1', 'us-east-2', 'eu-west-1')
 
   def test_copy_bucket_to_dir(self):
     """Tests recursively copying from bucket to a directory.
