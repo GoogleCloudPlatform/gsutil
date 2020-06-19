@@ -1359,7 +1359,13 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
     else:
       cls.logger.info('Removing %s', dst_url)
       if dst_url.IsFileUrl():
-        os.unlink(dst_url.object_name)
+        try:
+          os.unlink(dst_url.object_name)
+        except FileNotFoundError:
+          # Missing file errors occur occasionally with .gstmp files
+          # and can be ignored for deletes.
+          cls.logger.debug('%s was already removed', dst_url)
+          pass
       else:
         try:
           gsutil_api.DeleteObject(dst_url.bucket_name,
