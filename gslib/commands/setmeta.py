@@ -124,6 +124,7 @@ SETTABLE_FIELDS = [
     'content-encoding',
     'content-language',
     'content-type',
+    'custom-time'
 ]
 
 
