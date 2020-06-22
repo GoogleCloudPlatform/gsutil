@@ -1679,8 +1679,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([('s3', 'host', client_host)]):
       _CopyAndCheck()
 
-    self.location_redirect_test_helper('ap-east-1', 'us-east-2', 'eu-west-1')
-
   def test_copy_bucket_to_dir(self):
     """Tests recursively copying from bucket to a directory.
 
