@@ -57,9 +57,10 @@ _DETAILED_HELP_TEXT = ("""
   For example, uploading files with names ending in .txt will set Content-Type
   to text/plain. If you're running gsutil on Linux or macOS and would prefer to
   have content type set based on naming plus content examination, see the
-  use_magicfile configuration variable in the .boto configuration file (See
-  also "gsutil help config"). In general, using use_magicfile is more robust
-  and configurable, but is not available on Windows.
+  use_magicfile configuration variable in the `.boto configuration file
+  <https://cloud.google.com/storage/docs/boto-gsutil>`_. In general, using
+  use_magicfile is more robust and configurable, but is not available on
+  Windows.
 
   If you specify Content-Type with -h when uploading content (like the
   example gsutil command given in the previous section), it overrides the
