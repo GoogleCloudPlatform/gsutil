@@ -20,6 +20,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import errno
 import itertools
 import logging
 import os
@@ -906,7 +907,12 @@ class CpCommand(Command):
     if (copy_object_info.exp_dst_url.IsFileUrl() and
         not os.path.exists(copy_object_info.exp_dst_url.object_name) and
         have_multiple_srcs):
-      os.makedirs(copy_object_info.exp_dst_url.object_name)
+
+      try:
+        os.makedirs(copy_object_info.exp_dst_url.object_name)
+      except OSError as e:
+        if e.errno != errno.EEXIST:
+          raise
 
     dst_url = copy_helper.ConstructDstUrl(
         src_url,
