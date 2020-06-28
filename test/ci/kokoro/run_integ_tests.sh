@@ -37,6 +37,9 @@ ls -ltr $GSUTIL_KEY
 # https://cloud.google.com/storage/docs/boto-gsutil
 export BOTO_PATH="$BOTO_CONFIG"
 
+# make sure that locale is set to utf-8
+export LANG=en_US.UTF-8
+
 function latest_python_release {
   # Return string with latest Python version triplet for a given version tuple.
   # Example: PYVERSION="2.7"; latest_python_release -> "2.7.15"
