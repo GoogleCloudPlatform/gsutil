@@ -14,10 +14,11 @@
 # limitations under the License.
 """Contains helper for appending user agent information."""
 
-import re
 import sys
 import gslib
 from gslib.utils import system_util
+from gslib.storage_url import StorageUrlFromString
+from gslib.exception import InvalidUrlError
 
 
 def GetUserAgent(args, metrics_off=True):
@@ -39,19 +40,27 @@ def GetUserAgent(args, metrics_off=True):
     user_agent += ' command/%s' % args[0]
 
     if args[0] in ['cp', 'mv', 'rsync']:
-      # Any cp, mv or rsync commands that have both a source and destination in
-      # the cloud should be noted as that represents a unique use case that may
-      # be better served by the transfer service.
-      cloud_uri_pattern = re.compile(r'^(gs|s3)\://')
-      cloud_uris = [arg for arg in args if cloud_uri_pattern.search(arg)]
-      cloud_uri_dst = cloud_uri_pattern.search(args[-1])
+      # Any cp, mv or rsync commands that use daisy chain mode should be noted
+      # as that represents a unique use case that may be better served by the
+      # storage transfer service.
+      storage_urls = []
+      for arg in args:
+        try:
+          storage_urls.append(StorageUrlFromString(arg))
+        except InvalidUrlError:
+          pass
 
-      if len(cloud_uris) > 1 and cloud_uri_dst:
-        user_agent += '-CloudToCloud'
+      if len(storage_urls) > 1:
+        src = storage_urls[1]
+        dst = storage_urls[-1]
+        # Same logic used it calculate is_daisy_chain in rsync.py RunCommand(). 
+        if src.IsCloudUrl() and dst.IsCloudUrl() and src.scheme != dst.scheme:
+          user_agent += '-DaisyChain'
 
   if system_util.InvokedViaCloudSdk():
     user_agent += ' google-cloud-sdk'
     if system_util.CloudSdkVersion():
       user_agent += '/%s' % system_util.CloudSdkVersion()
 
+  print(user_agent)
   return user_agent
