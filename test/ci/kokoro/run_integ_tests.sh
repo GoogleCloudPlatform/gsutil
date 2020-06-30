@@ -36,6 +36,11 @@ BOTO_CONFIG="/tmpfs/src/.boto_$API"
 # https://cloud.google.com/storage/docs/boto-gsutil
 export BOTO_PATH="$BOTO_CONFIG"
 
+# Set the locale to utf-8 for macos b/154863917
+if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
+  export LANG=en_US.UTF-8
+fi
+
 function latest_python_release {
   # Return string with latest Python version triplet for a given version tuple.
   # Example: PYVERSION="2.7"; latest_python_release -> "2.7.15"
