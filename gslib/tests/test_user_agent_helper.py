@@ -28,8 +28,7 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
   """Unit tests for the GetUserAgent helper function."""
 
   def testNoArgs(self):
-    self.assertRegexpMatches(GetUserAgent([]),
-                             r" gsutil/[0-9\.]+ \([^\)]+\) analytics/disabled")
+    self.assertRegexpMatches(GetUserAgent([]), r"^ gsutil/[0-9\.]+ \([^\)]+\)")
 
   def testAnalyticsFlag(self):
     self.assertRegexpMatches(GetUserAgent([], False), r"analytics/enabled")
