@@ -56,5 +56,4 @@ def GetUserAgent(args, metrics_off=True):
     if system_util.CloudSdkVersion():
       user_agent += '/%s' % system_util.CloudSdkVersion()
 
-  print(user_agent)
   return user_agent
