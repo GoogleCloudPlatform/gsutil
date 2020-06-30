@@ -33,7 +33,7 @@ def GetUserAgent(args, metrics_off=True):
   """
   user_agent = ' gsutil/%s' % gslib.VERSION
   user_agent += ' (%s)' % sys.platform
-  user_agent += ' analytics/%s ' % ('disabled' if metrics_off else 'enabled')
+  user_agent += ' analytics/%s' % ('disabled' if metrics_off else 'enabled')
   user_agent += ' interactive/%s' % system_util.IsRunningInteractively()
 
   if len(args) > 0:
@@ -43,19 +43,13 @@ def GetUserAgent(args, metrics_off=True):
       # Any cp, mv or rsync commands that use daisy chain mode should be noted
       # as that represents a unique use case that may be better served by the
       # storage transfer service.
-      storage_urls = []
-      for arg in args:
-        try:
-          storage_urls.append(StorageUrlFromString(arg))
-        except InvalidUrlError:
-          pass
-
-      if len(storage_urls) > 1:
-        src = storage_urls[1]
-        dst = storage_urls[-1]
-        # Same logic used it calculate is_daisy_chain in rsync.py RunCommand(). 
+      try:
+        src = StorageUrlFromString(args[-2])
+        dst = StorageUrlFromString(args[-1])
         if src.IsCloudUrl() and dst.IsCloudUrl() and src.scheme != dst.scheme:
           user_agent += '-DaisyChain'
+      except InvalidUrlError:
+        pass
 
   if system_util.InvokedViaCloudSdk():
     user_agent += ' google-cloud-sdk'
