@@ -14,63 +14,88 @@
 # limitations under the License.
 """Unit tests for hashing helper functions and classes."""
 
+from gslib.utils import system_util
 from gslib.utils.user_agent_helper import GetUserAgent
 import gslib.tests.testcase as testcase
+
+import six
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 
 class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
   """Unit tests for the GetUserAgent helper function."""
 
   def testNoArgs(self):
-    actual = GetUserAgent([])
     self.assertRegexpMatches(
-        actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/disabled interactive/")
+        GetUserAgent([]),
+        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/disabled")
 
   def testAnalyticsFlag(self):
-    actual = GetUserAgent([], False)
     self.assertRegexpMatches(
-        actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/enabled interactive/")
+        GetUserAgent([], False),
+        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/enabled")
+  
+  @mock.patch.object(system_util, 'IsRunningInteractively')
+  def testInteractiveFlag(self, mock_interactive):
+    mock_interactive.return_value = True
+    self.assertRegexpMatches(
+        GetUserAgent([]),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ interactive/True$")
+    mock_interactive.return_value = False
+    self.assertRegexpMatches(
+        GetUserAgent([]),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ interactive/False$")
 
   def testHelp(self):
-    actual = GetUserAgent(['help'])
     self.assertRegexpMatches(
-        actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/help"
+        GetUserAgent(['help']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/help$"
     )
 
   def testCp(self):
-    actual = GetUserAgent(['cp', '-r', '-Z', 'test.txt', 'gs://my-bucket'])
     self.assertRegexpMatches(
-        actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp"
+        GetUserAgent(['cp', '-r', '-Z', 'test.txt', 'gs://my-bucket']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
     )
 
   def testRsync(self):
-    actual = GetUserAgent(['rsync', '-r', '-U', 'src', 'gs://dst'])
     self.assertRegexpMatches(
-        actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/rsync"
+        GetUserAgent(['rsync', '-r', '-U', 'src', 'gs://dst']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/rsync$"
     )
 
   def testCpCloudToCloud(self):
-    actual = GetUserAgent(['cp', '-r', '-D', 'gs://src', 'gs://dst'])
     self.assertRegexpMatches(
-        actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp"
+        GetUserAgent(['cp', '-r', '-D', 'gs://src', 'gs://dst']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
     )
 
   def testCpDaisyChain(self):
-    actual = GetUserAgent(['cp', '-r', '-Z', 'gs://src', 's3://dst'])
     self.assertRegexpMatches(
-        actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp-DaisyChain"
+        GetUserAgent(['cp', '-r', '-Z', 'gs://src', 's3://dst']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp-DaisyChain$"
     )
 
   def testPassOnInvalidUrlError(self):
-    actual = GetUserAgent(['cp', '-r', '-Z', 'invalid://src', 's3://dst'])
     self.assertRegexpMatches(
-        actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp"
+        GetUserAgent(['cp', '-r', '-Z', 'invalid://src', 's3://dst']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
+    )
+
+  @mock.patch.object(system_util, 'CloudSdkVersion')
+  @mock.patch.object(system_util, 'InvokedViaCloudSdk')
+  def testCloudSdk(self, mock_invoked, mock_version):
+    mock_invoked.return_value = True
+    mock_version.return_value = '500.1'
+    self.assertRegexpMatches(
+        GetUserAgent(['help']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ google-cloud-sdk/500.1$"
+    )
+    mock_invoked.return_value = False
+    mock_version.return_value = '500.1'
+    self.assertRegexpMatches(
+        GetUserAgent(['help']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/help$"
     )
