@@ -25,13 +25,13 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
     actual = GetUserAgent([])
     self.assertRegexpMatches(
         actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/disabled interactive/False")
+        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/disabled interactive/")
 
   def testAnalyticsFlag(self):
     actual = GetUserAgent([], False)
     self.assertRegexpMatches(
         actual,
-        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/enabled interactive/False")
+        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/enabled interactive/")
 
   def testHelp(self):
     actual = GetUserAgent(['help'])
