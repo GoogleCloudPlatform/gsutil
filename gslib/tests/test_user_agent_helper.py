@@ -28,71 +28,56 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
   """Unit tests for the GetUserAgent helper function."""
 
   def testNoArgs(self):
-    self.assertRegexpMatches(
-        GetUserAgent([]),
-        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/disabled")
+    self.assertRegexpMatches(GetUserAgent([]),
+                             r" gsutil/[0-9\.]+ \([^\)]+\) analytics/disabled")
 
   def testAnalyticsFlag(self):
-    self.assertRegexpMatches(
-        GetUserAgent([], False),
-        r" gsutil/[0-9\.]+ \([^\)]+\) analytics/enabled")
-  
+    self.assertRegexpMatches(GetUserAgent([], False),
+                             r" gsutil/[0-9\.]+ \([^\)]+\) analytics/enabled")
+
   @mock.patch.object(system_util, 'IsRunningInteractively')
   def testInteractiveFlag(self, mock_interactive):
     mock_interactive.return_value = True
     self.assertRegexpMatches(
-        GetUserAgent([]),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ interactive/True$")
+        GetUserAgent([]), r" gsutil/[0-9\.]+ \([^\)]+\) .+ interactive/True$")
     mock_interactive.return_value = False
     self.assertRegexpMatches(
-        GetUserAgent([]),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ interactive/False$")
+        GetUserAgent([]), r" gsutil/[0-9\.]+ \([^\)]+\) .+ interactive/False$")
 
   def testHelp(self):
-    self.assertRegexpMatches(
-        GetUserAgent(['help']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/help$"
-    )
+    self.assertRegexpMatches(GetUserAgent(['help']),
+                             r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/help$")
 
   def testCp(self):
     self.assertRegexpMatches(
         GetUserAgent(['cp', '-r', '-Z', 'test.txt', 'gs://my-bucket']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
-    )
-  
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$")
+
   def testCpNotEnoughArgs(self):
-    self.assertRegexpMatches(
-        GetUserAgent(['cp']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
-    )
-    self.assertRegexpMatches(
-        GetUserAgent(['cp', 'test.txt']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
-    )
+    self.assertRegexpMatches(GetUserAgent(['cp']),
+                             r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$")
+    self.assertRegexpMatches(GetUserAgent(['cp', 'test.txt']),
+                             r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$")
 
   def testRsync(self):
     self.assertRegexpMatches(
         GetUserAgent(['rsync', '-r', '-U', 'src', 'gs://dst']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/rsync$"
-    )
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/rsync$")
 
   def testCpCloudToCloud(self):
     self.assertRegexpMatches(
         GetUserAgent(['cp', '-r', '-D', 'gs://src', 'gs://dst']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
-    )
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$")
 
   def testCpDaisyChain(self):
     self.assertRegexpMatches(
         GetUserAgent(['cp', '-r', '-Z', 'gs://src', 's3://dst']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp-DaisyChain$"
-    )
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp-DaisyChain$")
 
   def testPassOnInvalidUrlError(self):
     self.assertRegexpMatches(
         GetUserAgent(['cp', '-r', '-Z', 'invalid://src', 's3://dst']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
-    )
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$")
 
   @mock.patch.object(system_util, 'CloudSdkVersion')
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
@@ -101,11 +86,8 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
     mock_version.return_value = '500.1'
     self.assertRegexpMatches(
         GetUserAgent(['help']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ google-cloud-sdk/500.1$"
-    )
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ google-cloud-sdk/500.1$")
     mock_invoked.return_value = False
     mock_version.return_value = '500.1'
-    self.assertRegexpMatches(
-        GetUserAgent(['help']),
-        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/help$"
-    )
+    self.assertRegexpMatches(GetUserAgent(['help']),
+                             r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/help$")
