@@ -39,7 +39,7 @@ def GetUserAgent(args, metrics_off=True):
   if len(args) > 0:
     user_agent += ' command/%s' % args[0]
 
-    if args[0] in ['cp', 'mv', 'rsync']:
+    if args[0] in ['cp', 'mv', 'rsync'] and len(args) > 2:
       # Any cp, mv or rsync commands that use daisy chain mode should be noted
       # as that represents a unique use case that may be better served by the
       # storage transfer service.

@@ -59,6 +59,16 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
         GetUserAgent(['cp', '-r', '-Z', 'test.txt', 'gs://my-bucket']),
         r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
     )
+  
+  def testCpNotEnoughArgs(self):
+    self.assertRegexpMatches(
+        GetUserAgent(['cp']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
+    )
+    self.assertRegexpMatches(
+        GetUserAgent(['cp', 'test.txt']),
+        r" gsutil/[0-9\.]+ \([^\)]+\) .+ command/cp$"
+    )
 
   def testRsync(self):
     self.assertRegexpMatches(
