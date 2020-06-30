@@ -14,10 +14,11 @@
 # limitations under the License.
 """Contains helper for appending user agent information."""
 
-import re
 import sys
 import gslib
 from gslib.utils import system_util
+from gslib.storage_url import StorageUrlFromString
+from gslib.exception import InvalidUrlError
 
 
 def GetUserAgent(args, metrics_off=True):
@@ -32,7 +33,23 @@ def GetUserAgent(args, metrics_off=True):
   """
   user_agent = ' gsutil/%s' % gslib.VERSION
   user_agent += ' (%s)' % sys.platform
-  user_agent += ' analytics/%s ' % ('disabled' if metrics_off else 'enabled')
+  user_agent += ' analytics/%s' % ('disabled' if metrics_off else 'enabled')
+  user_agent += ' interactive/%s' % system_util.IsRunningInteractively()
+
+  if len(args) > 0:
+    user_agent += ' command/%s' % args[0]
+
+    if args[0] in ['cp', 'mv', 'rsync'] and len(args) > 2:
+      # Any cp, mv or rsync commands that use daisy chain mode should be noted
+      # as that represents a unique use case that may be better served by the
+      # storage transfer service.
+      try:
+        src = StorageUrlFromString(args[-2])
+        dst = StorageUrlFromString(args[-1])
+        if src.IsCloudUrl() and dst.IsCloudUrl() and src.scheme != dst.scheme:
+          user_agent += '-DaisyChain'
+      except InvalidUrlError:
+        pass
 
   if system_util.InvokedViaCloudSdk():
     user_agent += ' google-cloud-sdk'
