@@ -32,10 +32,8 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
                              r" gsutil/[0-9\.]+ \([^\)]+\) analytics/disabled")
 
   def testAnalyticsFlag(self):
-    self.assertRegexpMatches(GetUserAgent([], False),
-                             r" gsutil/[0-9\.]+ \([^\)]+\) analytics/enabled")
-    self.assertRegexpMatches(GetUserAgent([], True),
-                             r" gsutil/[0-9\.]+ \([^\)]+\) analytics/disabled")
+    self.assertRegexpMatches(GetUserAgent([], False), r"analytics/enabled")
+    self.assertRegexpMatches(GetUserAgent([], True), r"analytics/disabled")
 
   @mock.patch.object(system_util, 'IsRunningInteractively')
   def testInteractiveFlag(self, mock_interactive):
