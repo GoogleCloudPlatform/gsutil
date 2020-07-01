@@ -14,6 +14,7 @@
 # limitations under the License.
 """Contains helper for appending user agent information."""
 
+import six
 import sys
 import gslib
 from gslib.utils import system_util
@@ -44,8 +45,8 @@ def GetUserAgent(args, metrics_off=True):
       # as that represents a unique use case that may be better served by the
       # storage transfer service.
       try:
-        src = StorageUrlFromString(args[-2])
-        dst = StorageUrlFromString(args[-1])
+        src = StorageUrlFromString(six.ensure_text(args[-2]))
+        dst = StorageUrlFromString(six.ensure_text(args[-1]))
         if src.IsCloudUrl() and dst.IsCloudUrl() and src.scheme != dst.scheme:
           user_agent += '-DaisyChain'
       except InvalidUrlError:
