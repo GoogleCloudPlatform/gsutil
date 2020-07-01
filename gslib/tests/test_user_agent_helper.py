@@ -53,6 +53,9 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
     self.assertRegexpMatches(GetUserAgent(['cp', '1.txt']), r"command/cp$")
     self.assertRegexpMatches(GetUserAgent(['cp', '-r', '1.ts']), r"command/cp$")
 
+  def testCpEncoding(self):
+    self.assertRegexpMatches(GetUserAgent(['cp', 'öne', 'twö']), r"command/cp$")
+
   def testRsync(self):
     self.assertRegexpMatches(GetUserAgent(['rsync', '1.txt', 'gs://dst']),
                              r"command/rsync$")
