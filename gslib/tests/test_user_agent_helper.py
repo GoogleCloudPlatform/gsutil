@@ -46,43 +46,43 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCp(self, mock_invoked):
-    mock_invoked = False
+    mock_invoked.return_value = False
     self.assertRegexpMatches(
         GetUserAgent(['cp', '-r', '-Z', '1.txt', 'gs://dst']), r"command/cp$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpNotEnoughArgs(self, mock_invoked):
-    mock_invoked = False
+    mock_invoked.return_value = False
     self.assertRegexpMatches(GetUserAgent(['cp']), r"command/cp$")
     self.assertRegexpMatches(GetUserAgent(['cp', '1.txt']), r"command/cp$")
     self.assertRegexpMatches(GetUserAgent(['cp', '-r', '1.ts']), r"command/cp$")
  
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpEncoding(self, mock_invoked):
-    mock_invoked = False
+    mock_invoked.return_value = False
     self.assertRegexpMatches(GetUserAgent(['cp', 'öne', 'twö']), r"command/cp$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testRsync(self, mock_invoked):
-    mock_invoked = False
+    mock_invoked.return_value = False
     self.assertRegexpMatches(GetUserAgent(['rsync', '1.txt', 'gs://dst']),
                              r"command/rsync$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testMv(self, mock_invoked):
-    mock_invoked = False
+    mock_invoked.return_value = False
     self.assertRegexpMatches(
         GetUserAgent(['mv', 'gs://src/1.txt', 'gs://dst/1.txt']),
         r"command/mv$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpCloudToCloud(self, mock_invoked):
-    mock_invoked = False
+    mock_invoked.return_value = False
     self.assertRegexpMatches(GetUserAgent(['cp', '-r', 'gs://src', 'gs://dst']),
                              r"command/cp$")
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpForcedDaisyChain(self, mock_invoked):
-    mock_invoked = False
+    mock_invoked.return_value = False
     self.assertRegexpMatches(GetUserAgent(['cp', '-D', 'gs://src', 'gs://dst']),
                              r"command/cp$")
 
@@ -99,7 +99,7 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testPassOnInvalidUrlError(self, mock_invoked):
-    mock_invoked = False
+    mock_invoked.return_value = False
     self.assertRegexpMatches(
         GetUserAgent(['cp', '-r', '-Z', 'bad://src', 's3://dst']),
         r"command/cp$")
