@@ -1137,8 +1137,13 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     with SetBotoConfigForTest(boto_config_for_test, use_existing_config=False):
       # Make sure to reset Developer Shell credential port so that the child
-      # gsutil process is really anonymous.
-      with SetEnvironmentForTest({'DEVSHELL_CLIENT_PORT': None}):
+      # gsutil process is really anonymous. Also, revent Boto from falling back
+      # on credentials from other files like ~/.aws/credentials or environment
+      # variables.
+      with SetEnvironmentForTest({
+          'DEVSHELL_CLIENT_PORT': None,
+          'AWS_SECRET_ACCESS_KEY': '_'
+      }):
         yield
 
   def _VerifyLocalMode(self, path, expected_mode):
