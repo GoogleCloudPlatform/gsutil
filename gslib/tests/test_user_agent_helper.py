@@ -56,7 +56,7 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
     self.assertRegexpMatches(GetUserAgent(['cp']), r"command/cp$")
     self.assertRegexpMatches(GetUserAgent(['cp', '1.txt']), r"command/cp$")
     self.assertRegexpMatches(GetUserAgent(['cp', '-r', '1.ts']), r"command/cp$")
- 
+
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpEncoding(self, mock_invoked):
     mock_invoked.return_value = False
@@ -80,6 +80,7 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
     mock_invoked.return_value = False
     self.assertRegexpMatches(GetUserAgent(['cp', '-r', 'gs://src', 'gs://dst']),
                              r"command/cp$")
+
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpForcedDaisyChain(self, mock_invoked):
     mock_invoked.return_value = False
