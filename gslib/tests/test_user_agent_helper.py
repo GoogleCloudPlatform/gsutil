@@ -27,8 +27,9 @@ from six.moves import mock
 class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
   """Unit tests for the GetUserAgent helper function."""
 
+  @mock.patch('gslib.VERSION', '4_test')
   def testNoArgs(self):
-    self.assertRegexpMatches(GetUserAgent([]), r"^ gsutil/[0-9\.]+ \([^\)]+\)")
+    self.assertRegexpMatches(GetUserAgent([]), r"^ gsutil/4_test \([^\)]+\)")
 
   def testAnalyticsFlag(self):
     self.assertRegexpMatches(GetUserAgent([], False), r"analytics/enabled")
