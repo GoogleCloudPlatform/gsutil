@@ -1,4 +1,19 @@
-Release 4.51 (release date: 2020-03-26)
+Release 4.52 (release date: 2020-07-07)
+======================================
+Bug Fixes
+------------------
+- Fix tests using wrong AWS credentials if AWS CLI is installed. (#1056)
+- Fix `AttributeError: module 'gslib' has no attribute 'USER_AGENT'`. (#1052)`
+- Fix encoding error in `user_agent_helper`. (#1055)
+- Fix stdout ordering issue in hash command. (#1037)
+- Fix multithread race condition for cp/mv command when multiple operations are attempting to create the same directory. (#1027)
+- Fix OSError on interrupted rsync -d. (#1042)
+
+Other Changes
+------------------
+- Many text updates and clarifications.
+
+Release 4.51 (release date: 2020-05-19)
 ======================================
 Bug Fixes
 ------------------
