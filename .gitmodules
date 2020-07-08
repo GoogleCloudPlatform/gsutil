@@ -22,9 +22,6 @@
 [submodule "third_party/apitools"]
 	path = third_party/apitools
 	url = git://github.com/google/apitools.git
-[submodule "third_party/protorpc"]
-	path = third_party/protorpc
-	url = git://github.com/google/protorpc.git
 [submodule "third_party/rsa"]
 	path = third_party/rsa
 	url = https://github.com/gsutil-mirrors/rsa.git
