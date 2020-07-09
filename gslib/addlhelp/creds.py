@@ -38,7 +38,7 @@ _DETAILED_HELP_TEXT = ("""
   for an individual user account and a second for a service account), the
   gcloud auth command manages the credentials for you, and you switch between
   credentials using the gcloud auth command as well (for more details see
-  https://developers.google.com/cloud/sdk/gcloud/#gcloud.auth).
+  https://cloud.google.com/sdk/gcloud/reference/auth).
 
   Once credentials have been configured via gcloud auth, those credentials will
   be used regardless of whether the user has any boto configuration files (which
