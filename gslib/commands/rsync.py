@@ -181,6 +181,9 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil rsync -d -r gs://my-gs-bucket s3://my-s3-bucket
 
+  Change detection works if the other Cloud provider is using md5 or CRC32. AWS
+  multipart upload has an incompatible checksum.
+  
   As mentioned above, using -d can be dangerous because of how quickly data can
   be deleted. For example, if you meant to synchronize a local directory from
   a bucket in the cloud but instead run the command:
