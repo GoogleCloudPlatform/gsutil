@@ -93,16 +93,16 @@ _SET_DESCRIPTION = """
 
     gsutil acl set acl.txt gs://cats/file.txt
 
-  Note that you can set an ACL on multiple buckets or objects at once,
-  for example:
+  Note that you can set an ACL on multiple buckets or objects at once. For
+  example, to set ACLs on all .jpg files found in a bucket::
 
-    gsutil acl set acl.txt gs://bucket/*.jpg
+    gsutil acl set acl.txt gs://bucket/**.jpg
 
   If you have a large number of ACLs to update you might want to use the
   gsutil -m option, to perform a parallel (multi-threaded/multi-processing)
   update:
 
-    gsutil -m acl set acl.txt gs://bucket/*.jpg
+    gsutil -m acl set acl.txt gs://bucket/**.jpg
 
   Note that multi-threading/multi-processing is only done when the named URLs
   refer to objects, which happens either if you name specific objects or
@@ -163,9 +163,9 @@ _CH_DESCRIPTION = """
     gsutil acl ch -u john.doe@example.com:WRITE gs://example-bucket
 
   Grant the group admins@example.com OWNER access to all jpg files in
-  the top level of example-bucket:
+  example-bucket:
 
-    gsutil acl ch -g admins@example.com:O gs://example-bucket/*.jpg
+    gsutil acl ch -g admins@example.com:O gs://example-bucket/**.jpg
 
   Grant the owners of project example-project WRITE access to the bucket
   example-bucket:

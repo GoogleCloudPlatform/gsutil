@@ -494,7 +494,7 @@ _DETAILED_HELP_TEXT = ("""
                  storage class.
 
   -x pattern     Causes files/objects matching pattern to be excluded, i.e., any
-                 matching files/objects will not be copied or deleted. Note that
+                 matching files/objects are not copied or deleted. Note that
                  the pattern is a Python regular expression, not a wildcard (so,
                  matching any string ending in "abc" would be specified using
                  ".*abc$" rather than "*abc"). Note also that the exclude path
@@ -503,17 +503,19 @@ _DETAILED_HELP_TEXT = ("""
 
                    gsutil rsync -x "data./.*\.txt$" dir gs://my-bucket
 
-                 it will skip the file dir/data1/a.txt.
+                 it skips the file dir/data1/a.txt.
 
                  You can use regex alternation to specify multiple exclusions,
                  for example:
 
                    gsutil rsync -x ".*\.txt$|.*\.jpg$" dir gs://my-bucket
 
-                 will skip all .txt and .jpg files in dir.
+                 skips all .txt and .jpg files in dir.
 
-                 NOTE: When using this on the Windows command line, use ^ as an
-                 escape character instead of \ and escape the | character.
+                 NOTE: When using the Windows cmd.exe command line interpreter,
+                 use ^ as an escape character instead of \ and escape the |
+                 character. When using Windows PowerShell, use ' instead of "
+                 and surround the | character with ".
 """)
 # pylint: enable=anomalous-backslash-in-string
 
