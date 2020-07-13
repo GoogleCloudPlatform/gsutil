@@ -42,6 +42,8 @@ from gslib.metrics import LogCommandParams
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+from gslib.storage_url import GetSchemeFromUrlString
+from gslib.storage_url import IsKnownUrlScheme
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
@@ -509,7 +511,8 @@ class IamCommand(Command):
     # expecting to come across the -r, -f flags here.
     it = iter(self.args)
     for token in it:
-      if STORAGE_URI_REGEX.match(token):
+      if (STORAGE_URI_REGEX.match(token) and
+          IsKnownUrlScheme(GetSchemeFromUrlString(token))):
         patterns.append(token)
         break
       if token == '-d':

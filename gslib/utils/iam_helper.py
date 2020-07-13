@@ -28,13 +28,8 @@ from gslib.exception import CommandException
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 
 TYPES = set([
-    'user',
-    'deleted:user',
-    'serviceAccount',
-    'deleted:serviceAccount',
-    'group',
-    'deleted:group',
-    'domain',
+    'user', 'deleted:user', 'serviceAccount', 'deleted:serviceAccount', 'group',
+    'deleted:group', 'domain', 'principal', 'principalSet', 'principalHierarchy'
 ])
 
 DISCOURAGED_TYPES = set([
