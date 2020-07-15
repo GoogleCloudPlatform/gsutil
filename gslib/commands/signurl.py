@@ -70,7 +70,7 @@ _MAX_EXPIRATION_TIME_WITH_MINUS_U = timedelta(hours=12)
 
 _SYNOPSIS = """
   gsutil signurl [-c <content_type>] [-d <duration>] [-m <http_method>] \\
-      [-p <password>] [-r <region>] (-u | <private-key-file>) \\
+      [-p <password>] [-r <region>] [-b <project>]  (-u | <private-key-file>) \\
       (gs://<bucket_name> | gs://<bucket_name>/<object_name>)...
 """
 
@@ -162,6 +162,13 @@ _DETAILED_HELP_TEXT = ("""
                Note that both options have a maximum allowed duration of
                12 hours for a valid link.
 
+  -b <project> Allows you to specify a user project that will be billed for
+               requests on the signed URL. This is useful for generating
+               presigned links for buckets that use requester pays.
+
+               Note that it's not valid to specify both the ``-b`` and ``-u``
+               options together.
+
 <B>USAGE</B>
   Create a signed url for downloading an object valid for 10 minutes:
 
@@ -237,6 +244,7 @@ def _GenSignedUrl(key,
                   logger,
                   region,
                   content_type=None,
+                  billing_project=None,
                   string_to_sign_debug=False):
   """Construct a string to sign with the provided key.
 
@@ -256,6 +264,7 @@ def _GenSignedUrl(key,
     region: Geographic region in which the requested resource resides.
     content_type: Optional Content-Type for the signed URL. HTTP requests using
         the URL must match this Content-Type.
+    billing_project: Specify a user project to be billed for the request.
     string_to_sign_debug: If true AND logger is enabled for debug level,
         print string to sign to debug. Used to differentiate user's
         signed URL from the probing permissions-check signed URL.
@@ -301,6 +310,7 @@ def _GenSignedUrl(key,
         logger=logger,
         region=region,
         signed_headers=signed_headers,
+        billing_project=billing_project,
         string_to_sign_debug=string_to_sign_debug)
     raw_signature = sign(key, string_to_sign, digest)
     final_url = GetFinalUrl(raw_signature, gs_host, gcs_path,
@@ -364,7 +374,7 @@ class UrlSignCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=1,
       max_args=NO_MAX,
-      supported_sub_args='m:d:c:p:r:u',
+      supported_sub_args='m:d:b:c:p:r:u',
       supported_private_args=['use-service-account'],
       file_url_ok=False,
       provider_url_ok=False,
@@ -397,6 +407,7 @@ class UrlSignCommand(Command):
     passwd = None
     region = _AUTO_DETECT_REGION
     use_service_account = False
+    billing_project = None
 
     for o, v in self.sub_opts:
       # TODO(PY3-ONLY): Delete this if block.
@@ -417,6 +428,8 @@ class UrlSignCommand(Command):
         region = v
       elif o == '-u' or o == '--use-service-account':
         use_service_account = True
+      elif o == '-b':
+        billing_project = v
       else:
         self.RaiseInvalidArgumentException()
 
@@ -445,10 +458,15 @@ class UrlSignCommand(Command):
           'url arguments if the --use-service-account flag is missing. '
           'Run `gsutil help signurl` for more info')
 
-    return method, delta, content_type, passwd, region, use_service_account
+    if use_service_account and billing_project:
+      raise CommandException(
+          'Specifying both the -b and -u options together is invalid.')
+
+    return method, delta, content_type, passwd, region, use_service_account, billing_project
 
   def _ProbeObjectAccessWithClient(self, key, use_service_account, provider,
-                                   client_email, gcs_path, logger, region):
+                                   client_email, gcs_path, logger, region,
+                                   billing_project):
     """Performs a head request against a signed url to check for read access."""
 
     # Choose a reasonable time in the future; if the user's system clock is
@@ -463,6 +481,7 @@ class UrlSignCommand(Command):
                                gcs_path=gcs_path,
                                logger=logger,
                                region=region,
+                               billing_project=billing_project,
                                string_to_sign_debug=True)
 
     try:
@@ -506,7 +525,7 @@ class UrlSignCommand(Command):
           'The signurl command requires the pyopenssl library (try pip '
           'install pyopenssl or easy_install pyopenssl)')
 
-    method, delta, content_type, passwd, region, use_service_account = (
+    method, delta, content_type, passwd, region, use_service_account, billing_project = (
         self._ParseAndCheckSubOpts())
     arg_start_index = 0 if use_service_account else 1
     storage_urls = self._EnumerateStorageUrls(self.args[arg_start_index:])
@@ -579,6 +598,7 @@ class UrlSignCommand(Command):
                                 logger=self.logger,
                                 region=bucket_region,
                                 content_type=content_type,
+                                billing_project=billing_project,
                                 string_to_sign_debug=True)
 
       expiration = calendar.timegm((datetime.utcnow() + delta).utctimetuple())
@@ -600,7 +620,7 @@ class UrlSignCommand(Command):
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,
-          self.logger, bucket_region)
+          self.logger, bucket_region, billing_project)
 
       if response_code == 404:
         if url.IsBucket() and method != 'PUT':

@@ -43,6 +43,7 @@ def CreatePayload(client_id,
                   logger,
                   region,
                   signed_headers,
+                  billing_project=None,
                   string_to_sign_debug=False):
   """Create a string that needs to be signed.
 
@@ -56,6 +57,7 @@ def CreatePayload(client_id,
     region: Geographic region in which the requested resource resides.
     signed_headers: Dict containing the header  info like host
           content-type etc.
+    billing_project: Specify a user project to be billed for the request.
     string_to_sign_debug: If true AND logger is enabled for debug level,
         print string to sign to debug. Used to differentiate user's
         signed URL from the probing permissions-check signed URL.
@@ -78,6 +80,9 @@ def CreatePayload(client_id,
       'x-goog-signedheaders': ';'.join(sorted(signed_headers.keys())),
       'x-goog-expires': '%d' % duration.total_seconds()
   }
+
+  if (billing_project is not None):
+    signed_query_params['userProject'] = billing_project
 
   canonical_resource = '/{}'.format(path)
   canonical_query_string = '&'.join([
