@@ -112,12 +112,15 @@ _DETAILED_HELP_TEXT = ("""
   directly. This avoids the need to download the private key file.
 
 <B>OPTIONS</B>
-  -m           Specifies the HTTP method to be authorized for use
-               with the signed url, default is GET. You may also specify
-               RESUMABLE to create a signed resumable upload start URL. When
-               using a signed URL to start a resumable upload session, you will
-               need to specify the 'x-goog-resumable:start' header in the
-               request or else signature validation will fail.
+  -b <project> Allows you to specify a user project that will be billed for
+               requests that use signed URL. This is useful for generating
+               presigned links for buckets that use requester pays.
+
+               Note that it's not valid to specify both the ``-b`` and
+               ``--use-service-account`` options together.
+
+  -c           Specifies the content type for which the signed url is
+               valid for.
 
   -d           Specifies the duration that the signed url should be valid
                for, default duration is 1 hour.
@@ -136,8 +139,12 @@ _DETAILED_HELP_TEXT = ("""
                This limitation exists because the system-managed key used to
                sign the url may not remain valid after 12 hours.
 
-  -c           Specifies the content type for which the signed url is
-               valid for.
+  -m           Specifies the HTTP method to be authorized for use
+               with the signed url, default is GET. You may also specify
+               RESUMABLE to create a signed resumable upload start URL. When
+               using a signed URL to start a resumable upload session, you will
+               need to specify the 'x-goog-resumable:start' header in the
+               request or else signature validation will fail.
 
   -p           Specify the private key password instead of prompting.
 
@@ -162,12 +169,7 @@ _DETAILED_HELP_TEXT = ("""
                Note that both options have a maximum allowed duration of
                12 hours for a valid link.
 
-  -b <project> Allows you to specify a user project that will be billed for
-               requests on the signed URL. This is useful for generating
-               presigned links for buckets that use requester pays.
 
-               Note that it's not valid to specify both the ``-b`` and ``-u``
-               options together.
 
 <B>USAGE</B>
   Create a signed url for downloading an object valid for 10 minutes:
@@ -460,7 +462,8 @@ class UrlSignCommand(Command):
 
     if use_service_account and billing_project:
       raise CommandException(
-          'Specifying both the -b and -u options together is invalid.')
+          'Specifying both the -b and --use-service-account options together is'
+          'invalid.')
 
     return method, delta, content_type, passwd, region, use_service_account, billing_project
 
