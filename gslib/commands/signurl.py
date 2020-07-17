@@ -113,7 +113,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>OPTIONS</B>
   -b <project> Allows you to specify a user project that will be billed for
-               requests that use signed URL. This is useful for generating
+               requests that use the signed URL. This is useful for generating
                presigned links for buckets that use requester pays.
 
                Note that it's not valid to specify both the ``-b`` and
