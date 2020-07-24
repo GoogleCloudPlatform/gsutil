@@ -428,7 +428,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   Python applications. You should only enable parallel composite uploads if:
 
   1. All users who need to download the data using gsutil or
-  other Python applications can install crcmod.
+     other Python applications can install crcmod.
 
   OR
 
