@@ -337,8 +337,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   @SkipForGS('Only s3 V4 signatures error on location mismatches.')
   def test_400_location_redirect(self):
-    # ap-east-1 is used here since only regions launched after March 20, 2019
-    # return 400 errors.
+    # ap-east-1 used here since regions launched before March 20, 2019 do
+    # some temporary redirecting for new buckets which suppresses 400 errors.
     self.location_redirect_test_helper('ap-east-1', 'us-east-2', True)
 
   @SkipForGS('Only s3 V4 signatures error on location mismatches.')
@@ -347,8 +347,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
   @SkipForGS('Only s3 V4 signatures error on location mismatches.')
   def test_400_location_redirect_with_one_object(self):
-    # ap-east-1 is used here since only regions launched after March 20, 2019
-    # return 400 errors.
+    # ap-east-1 used here since regions launched before March 20, 2019 do
+    # some temporary redirecting for new buckets which suppresses 400 errors.
     self.location_redirect_test_helper('ap-east-1', 'us-east-2', False)
 
   @SkipForGS('Only s3 V4 signatures error on location mismatches.')

@@ -1647,6 +1647,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForGS('Only s3 V4 signatures error on location mismatches.')
   def test_copy_bucket_to_bucket_with_location_redirect(self):
+    # cp uses a sender function that raises an exception on location mismatches,
+    # instead of returning a response. This integration test ensures retries
+    # from exceptions work correctly.
+
     src_bucket_region = 'ap-east-1'
     dest_bucket_region = 'us-east-2'
     src_bucket_host = 's3.%s.amazonaws.com' % src_bucket_region
