@@ -317,7 +317,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
     _Check1()
 
-  def location_redirect_test_helper(self, bucket_region, client_region, bucket):
+  def location_redirect_test_helper(self, bucket_region, client_region):
     bucket_host = 's3.%s.amazonaws.com' % bucket_region
     client_host = 's3.%s.amazonaws.com' % client_region
     with SetBotoConfigForTest([('s3', 'host', bucket_host)]):
@@ -339,21 +339,11 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_400_location_redirect(self):
     # ap-east-1 used here since regions launched before March 20, 2019 do
     # some temporary redirecting for new buckets which suppresses 400 errors.
-    self.location_redirect_test_helper('ap-east-1', 'us-east-2', True)
+    self.location_redirect_test_helper('ap-east-1', 'us-east-2')
 
   @SkipForGS('Only s3 V4 signatures error on location mismatches.')
   def test_301_location_redirect(self):
-    self.location_redirect_test_helper('eu-west-1', 'us-east-2', True)
-
-  @SkipForGS('Only s3 V4 signatures error on location mismatches.')
-  def test_400_location_redirect_with_one_object(self):
-    # ap-east-1 used here since regions launched before March 20, 2019 do
-    # some temporary redirecting for new buckets which suppresses 400 errors.
-    self.location_redirect_test_helper('ap-east-1', 'us-east-2', False)
-
-  @SkipForGS('Only s3 V4 signatures error on location mismatches.')
-  def test_301_location_redirect_with_one_object(self):
-    self.location_redirect_test_helper('eu-west-1', 'us-east-2', False)
+    self.location_redirect_test_helper('eu-west-1', 'us-east-2')
 
   @SkipForXML('Credstore file gets created only for json API')
   def test_credfile_lock_permissions(self):
