@@ -55,3 +55,6 @@
 [submodule "gslib/vendored/oauth2client"]
 	path = gslib/vendored/oauth2client
 	url = https://github.com/gsutil-mirrors/oauth2client.git
+[submodule "third_party/pysocks"]
+	path = third_party/pysocks
+	url = https://github.com/Anorov/PySocks.git
