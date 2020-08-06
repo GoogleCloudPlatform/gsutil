@@ -310,7 +310,8 @@ def _GenSignedUrl(key,
 
 def _ReadKeystore(ks_contents, passwd):
   ks = load_pkcs12(ks_contents, passwd)
-  client_email = ks.get_certificate().get_subject().CN
+  client_email = ks.get_certificate().get_subject().CN.replace(
+      '.apps.googleusercontent.com', '@developer.gserviceaccount.com')
 
   return ks.get_privatekey(), client_email
 
