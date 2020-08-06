@@ -85,7 +85,6 @@ THIRD_PARTY_LIBS = [
     ('httplib2', submodule_pyvers),
     ('retry-decorator', ''),
     ('six', ''),  # Python 2 / 3 compatibility dependency
-
 ]
 
 # The wrapper script adds all third_party libraries to the Python path, since
