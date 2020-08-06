@@ -53,9 +53,9 @@ _DETAILED_HELP_TEXT = ("""
   the Linux du -b command (which stands for disk usage). For example, the
   command:
 
-  gsutil du -s gs://your-bucket/dir
+    gsutil du -s gs://your-bucket/dir
 
-  will report the total space used by all objects under gs://your-bucket/dir and
+  reports the total space used by all objects under gs://your-bucket/dir and
   any sub-directories.
 
 
