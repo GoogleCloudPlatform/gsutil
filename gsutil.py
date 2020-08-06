@@ -76,6 +76,7 @@ THIRD_PARTY_LIBS = [
     ('pyu2f', ''),  # google_reauth dependency
     ('pyasn1', ''),  # oauth2client dependency
     ('pyasn1-modules', ''),  # oauth2client dependency
+    ('pysocks', ''),
     ('rsa', ''),  # oauth2client dependency
     ('apitools', ''),
     ('gcs-oauth2-boto-plugin', ''),
@@ -84,7 +85,7 @@ THIRD_PARTY_LIBS = [
     ('httplib2', submodule_pyvers),
     ('retry-decorator', ''),
     ('six', ''),  # Python 2 / 3 compatibility dependency
-    ('socksipy-branch', ''),
+
 ]
 
 # The wrapper script adds all third_party libraries to the Python path, since
