@@ -2,6 +2,19 @@ Release 4.52 (release date: 2020-07-07)
 ======================================
 Bug Fixes
 ------------------
+- Remove socksipy dependency to fix proxy authentication (#1084)
+- Retry on errors relating to region specification for S3 (#1049)
+
+Other Changes
+------------------
+- Prompt Daisy chain users to try STS (#1077)
+- Add new IAM types, and disable URL parsing for  IAM b/c it has subcommands. (#1067)
+- Many text updates and clarifications.
+
+Release 4.52 (release date: 2020-07-07)
+======================================
+Bug Fixes
+------------------
 - Fix tests using wrong AWS credentials if AWS CLI is installed. (#1056)
 - Fix `AttributeError: module 'gslib' has no attribute 'USER_AGENT'`. (#1052)
 - Fix encoding error in `user_agent_helper`. (#1055)
