@@ -2172,8 +2172,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check1()
 
   @unittest.skipUnless(UsingCrcmodExtension(), 'Test requires fast crcmod.')
-  @SkipForS3('The boto lib used for S3 does not handle objects '
-             'starting with slashes if we use V4 signature')
+  @SkipForS3('The boto lib used for S3 does not handle objects'
+             ' starting with slashes if we use V4 signature.')
   def test_bucket_to_dir_minus_d_with_leftover_dir_placeholder(self):
     """Tests that we correctly handle leftover dir placeholders.
 
