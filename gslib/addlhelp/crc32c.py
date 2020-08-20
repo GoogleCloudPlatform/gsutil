@@ -100,7 +100,7 @@ _DETAILED_HELP_TEXT = ("""
 
   To compile and install crcmod:
 
-    sudo apt-get install gcc pytho3n-dev python3-setuptools
+    sudo apt-get install gcc python3-dev python3-setuptools
     sudo pip3 uninstall crcmod
     sudo pip3 install --no-cache-dir -U crcmod
 
