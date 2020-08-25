@@ -48,36 +48,30 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
-  Running:
+  The following command provides a summary of gsutil commands and additional topics on which
+  help is available:
 
     gsutil help
 
-  will provide a summary of all commands and additional topics on which
-  help is available.
-
-  Running:
+  The following command provides help about the specified command or topic:
 
     gsutil help command or topic
 
-  will provide help about the specified command or topic.
-
-  Running:
+  The following command provides help about the specified sub-command:
 
     gsutil help command sub-command
 
-  will provide help about the specified sub-command. For example, running:
+  For example, running the following provides help about the "set" subcommand of the "acl" command:
 
     gsutil help acl set
 
-  will provide help about the "set" subcommand of the "acl" command.
-
   If you set the PAGER environment variable to the path to a pager program
-  (such as /bin/less on Linux), long help sections will be piped through
+  (such as /bin/less on Linux), long help sections are piped through
   the specified pager.
 """)
 
-top_level_usage_string = ('Usage: gsutil [-D] [-DD] [-h header]... '
-                          '[-m] [-o] [-q] [command [opts...] args...]')
+top_level_usage_string = ('Usage: gsutil [-D] [-DD] [-h header]... [-i service_account] '
+                          '[-m] [-o] [-q] [-u user_project] [command [opts...] args...]')
 
 
 class HelpCommand(Command):
