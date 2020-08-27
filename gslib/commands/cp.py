@@ -333,11 +333,15 @@ _RESUMABLE_TRANSFERS_TEXT = """
   command to upload an object that is larger than 8 MiB. You do not need to
   specify any special command line options to make this happen. If your upload
   is interrupted, you can restart the upload by running the same ``cp`` command that
-  you used to start the upload. Until the upload has completed successfully, it
-  is not visible at the destination object and does not replace any
-  existing object the upload is intended to overwrite. However, parallel composite
-  uploads may leave temporary component objects in place during the upload process.
-  See Parallel Composite Uploads for more information.
+  you used to start the upload. You can adjust the minimum size for performing
+  resumable uploads by changing the <code>resumable_threshold</code> parameter in
+  the boto configuration file.
+
+  Until the upload has completed successfully, it is not visible at the destination
+  object and does not replace any existing object the upload is intended to
+  overwrite. However, parallel composite uploads may leave temporary component
+  objects in place during the upload process. See Parallel Composite Uploads for more
+  information.
 
   Similarly, gsutil automatically performs resumable downloads using standard
   HTTP Range GET operations whenever you use the ``cp`` command, unless the
