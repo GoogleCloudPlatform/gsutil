@@ -15,8 +15,8 @@
 """Additional help about CRC32C and installing crcmod."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
 from gslib.help_provider import HelpProvider
@@ -90,7 +90,7 @@ _DETAILED_HELP_TEXT = ("""
   ------------------------
 
   To compile and install crcmod:
-  
+
     yum install gcc python3-devel python3-setuptools redhat-rpm-config
     sudo pip3 uninstall crcmod
     sudo pip3 install --no-cache-dir -U crcmod
@@ -100,7 +100,7 @@ _DETAILED_HELP_TEXT = ("""
 
   To compile and install crcmod:
 
-    sudo apt-get install gcc pytho3n-dev python3-setuptools
+    sudo apt-get install gcc python3-dev python3-setuptools
     sudo pip3 uninstall crcmod
     sudo pip3 install --no-cache-dir -U crcmod
 
