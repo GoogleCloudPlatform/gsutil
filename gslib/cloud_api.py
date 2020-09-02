@@ -61,6 +61,10 @@ class CloudApi(object):
     self.perf_trace_token = perf_trace_token
     self.user_project = user_project
 
+  def GetServiceAccountId(self):
+    """Returns the service account email id."""
+    raise NotImplementedError('GetServiceAccountId must be overridden.')
+
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """Gets Bucket metadata.
 

@@ -211,6 +211,9 @@ class CloudApiDelegator(CloudApi):
       api = self.prefer_api
     return api
 
+  def GetServiceAccountId(self, provider=None):
+    return self._GetApi(provider).GetServiceAccountId()
+
   # For function docstrings, see CloudApi class.
   def GetBucket(self, bucket_name, provider=None, fields=None):
     return self._GetApi(provider).GetBucket(bucket_name, fields=fields)
