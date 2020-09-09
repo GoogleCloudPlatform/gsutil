@@ -300,6 +300,17 @@ class GcsJsonApi(CloudApi):
       self.api_client.AddGlobalParam('key',
                                      'AIzaSyDnacJHrKma0048b13sh8cgxNUwulubmJM')
 
+  def GetServiceAccountId(self):
+    """Returns the service account email id."""
+    if isinstance(self.credentials, ImpersonationCredentials):
+      return self.credentials.service_account_id
+    elif isinstance(self.credentials, ServiceAccountCredentials):
+      return self.credentials.service_account_email
+    else:
+      raise CommandException(
+          'Cannot get service account email id for the given '
+          'credential type.')
+
   def _AddPerfTraceTokenToHeaders(self, headers):
     if self.perf_trace_token:
       headers['cookie'] = self.perf_trace_token
@@ -310,17 +321,6 @@ class GcsJsonApi(CloudApi):
   def _GetNewUploadHttp(self):
     """Returns an upload-safe Http object (by disabling httplib2 retries)."""
     return GetNewHttp(http_class=HttpWithNoRetries)
-
-  def _GetServiceAccountId(self):
-    """Returns the service account email id."""
-    if isinstance(self.credentials, ImpersonationCredentials):
-      return self.credentials.service_account_id
-    elif isinstance(self.credentials, ServiceAccountCredentials):
-      return self.credentials.service_account_email
-    else:
-      raise CommandException(
-          'Cannot get service account email id for the given '
-          'credential type.')
 
   def _GetSignedContent(self, string_to_sign):
     """Returns the Signed Content."""
@@ -436,7 +436,7 @@ class GcsJsonApi(CloudApi):
   def SignUrl(self, method, duration, path, logger, region, signed_headers,
               string_to_sign_debug):
     """See CloudApi class for function doc strings."""
-    service_account_id = self._GetServiceAccountId()
+    service_account_id = self.GetServiceAccountId()
     string_to_sign, canonical_query_string = CreatePayload(
         client_id=service_account_id,
         method=method,
