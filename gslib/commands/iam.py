@@ -42,6 +42,8 @@ from gslib.metrics import LogCommandParams
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
 from gslib.plurality_checkable_iterator import PluralityCheckableIterator
+from gslib.storage_url import GetSchemeFromUrlString
+from gslib.storage_url import IsKnownUrlScheme
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
@@ -128,7 +130,12 @@ _SET_DESCRIPTION = """
 
   -R, -r      Performs ``iam set`` recursively on all objects under the
               specified bucket.
-
+              
+              This flag can only be set if the policy exclusively uses 
+              ``roles/storage.legacyObjectReader`` or ``roles/storage.legacyObjectOwner``.
+              This flag cannot be used if the bucket is configured
+              for uniform bucket-level access.
+              
   -a          Performs ``iam set`` on all object versions.
 
   -e <etag>   Performs the precondition check on each object with the
@@ -198,6 +205,11 @@ _CH_DESCRIPTION = """
 
   -R, -r      Performs ``iam ch`` recursively to all objects under the
               specified bucket.
+              
+              This flag can only be set if the policy exclusively uses 
+              ``roles/storage.legacyObjectReader`` or ``roles/storage.legacyObjectOwner``.
+              This flag cannot be used if the bucket is configured
+              for uniform bucket-level access.
 
   -f          The default gsutil error-handling mode is fail-fast. This flag
               changes the request to fail-silent mode. This is implicitly
@@ -212,7 +224,7 @@ _DESCRIPTION = """
   access to the resources in your Google Cloud project. For more information,
   see `Cloud Identity and Access Management
   <https://cloud.google.com/storage/docs/access-control/iam>`_.
-  
+
   The iam command has three sub-commands:
 """ + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION, _CH_DESCRIPTION])
 
@@ -260,6 +272,7 @@ class IamCommand(Command):
   """Implementation of gsutil iam command."""
   command_spec = Command.CreateCommandSpec(
       'iam',
+      usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=NO_MAX,
       supported_sub_args='afRrd:e:',
@@ -498,7 +511,8 @@ class IamCommand(Command):
     # expecting to come across the -r, -f flags here.
     it = iter(self.args)
     for token in it:
-      if STORAGE_URI_REGEX.match(token):
+      if (STORAGE_URI_REGEX.match(token) and
+          IsKnownUrlScheme(GetSchemeFromUrlString(token))):
         patterns.append(token)
         break
       if token == '-d':

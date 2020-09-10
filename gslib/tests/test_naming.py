@@ -44,6 +44,7 @@ from gslib.cloud_api import ServiceException
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
 from gslib.exception import NO_URLS_MATCHED_GENERIC
+from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
@@ -1429,7 +1430,7 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
       self.RunCommand('rm', [suri(dst_bucket_uri, 'non_existent')])
       self.fail('Did not get expected CommandException')
     except CommandException as e:
-      self.assertIn(NO_URLS_MATCHED_GENERIC, e.reason)
+      self.assertIn(NO_URLS_MATCHED_TARGET % dst_bucket_uri, e.reason)
 
   # Now that gsutil ver computes a checksum it adds 1-3 seconds to test run
   # time (for in memory mocked tests that otherwise take ~ 0.1 seconds). Since

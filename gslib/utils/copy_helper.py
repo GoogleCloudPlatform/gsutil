@@ -105,6 +105,7 @@ from gslib.tracker_file import ReadOrCreateDownloadTrackerFile
 from gslib.tracker_file import SERIALIZATION_UPLOAD_TRACKER_ENTRY
 from gslib.tracker_file import TrackerFileType
 from gslib.tracker_file import WriteDownloadComponentTrackerFile
+from gslib.tracker_file import WriteJsonDataToTrackerFile
 from gslib.utils import parallelism_framework_util
 from gslib.utils import text_util
 from gslib.utils.boto_util import GetJsonResumableChunkSize
@@ -1789,19 +1790,11 @@ def _UploadFileToObjectResumable(src_url,
     Args:
       serialization_data: Serialization data used in resuming the upload.
     """
-    tracker_file = None
-    try:
-      tracker_file = open(tracker_file_name, 'w')
-      tracker_data = {
-          ENCRYPTION_UPLOAD_TRACKER_ENTRY: encryption_key_sha256,
-          SERIALIZATION_UPLOAD_TRACKER_ENTRY: str(serialization_data)
-      }
-      tracker_file.write(json.dumps(tracker_data))
-    except IOError as e:
-      RaiseUnwritableTrackerFileException(tracker_file_name, e.strerror)
-    finally:
-      if tracker_file:
-        tracker_file.close()
+    data = {
+        ENCRYPTION_UPLOAD_TRACKER_ENTRY: encryption_key_sha256,
+        SERIALIZATION_UPLOAD_TRACKER_ENTRY: str(serialization_data)
+    }
+    WriteJsonDataToTrackerFile(tracker_file_name, data)
 
   # This contains the upload URL, which will uniquely identify the
   # destination object.
@@ -3320,8 +3313,14 @@ def _CopyFileToFile(src_url, dst_url, status_queue=None, src_obj_metadata=None):
   """
   src_fp = GetStreamFromFileUrl(src_url)
   dir_name = os.path.dirname(dst_url.object_name)
-  if dir_name and not os.path.exists(dir_name):
-    os.makedirs(dir_name)
+
+  if dir_name:
+    try:
+      os.makedirs(dir_name)
+    except OSError as e:
+      if e.errno != errno.EEXIST:
+        raise
+
   with open(dst_url.object_name, 'wb') as dst_fp:
     start_time = time.time()
     shutil.copyfileobj(src_fp, dst_fp)
@@ -3376,6 +3375,12 @@ def _CopyObjToObjDaisyChainMode(src_url,
   Raises:
     CommandException: if errors encountered.
   """
+  logger.info('\n'.join(
+      textwrap.wrap('==> NOTE: For large cloud-to-cloud transfers, you '
+                    'may find significant performance gains by using the '
+                    'Storage Transfer Service '
+                    'https://console.cloud.google.com/transfer?gsutil')) + '\n')
+
   # We don't attempt to preserve ACLs across providers because
   # GCS and S3 support different ACLs and disjoint principals.
   if (global_copy_helper_opts.preserve_acl and

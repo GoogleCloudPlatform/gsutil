@@ -554,12 +554,26 @@ def WriteDownloadComponentTrackerFile(tracker_file_name, src_obj_metadata,
 def _WriteTrackerFile(tracker_file_name, data):
   """Creates a tracker file, storing the input data."""
   try:
-    with os.fdopen(os.open(tracker_file_name, os.O_WRONLY | os.O_CREAT, 0o600),
-                   'w') as tf:
+    fd = os.open(tracker_file_name, os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+                 0o600)
+    with os.fdopen(fd, 'w') as tf:
       tf.write(data)
     return False
   except (IOError, OSError) as e:
     raise RaiseUnwritableTrackerFileException(tracker_file_name, e.strerror)
+
+
+def WriteJsonDataToTrackerFile(tracker_file_name, data):
+  """Create a tracker file and write json data to it.
+
+  Raises:
+    TypeError: If the data is not JSON serializable
+  """
+  try:
+    json_str = json.dumps(data)
+  except TypeError as err:
+    raise RaiseUnwritableTrackerFileException(tracker_file_name, err.strerror)
+  _WriteTrackerFile(tracker_file_name, json_str)
 
 
 def GetUploadTrackerData(tracker_file_name, logger, encryption_key_sha256=None):

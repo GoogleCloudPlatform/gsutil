@@ -34,18 +34,18 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.constants import NO_MAX
 
 _SET_SYNOPSIS = """
-  gsutil web set [-m main_page_suffix] [-e error_page] bucket_url...
+  gsutil web set [-m <main_page_suffix>] [-e <error_page>] gs://<bucket_name>...
 """
 
 _GET_SYNOPSIS = """
-  gsutil web get bucket_url
+  gsutil web get gs://<bucket_name>
 """
 
 _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 
 _SET_DESCRIPTION = """
 <B>SET</B>
-  The "gsutil web set" command will allow you to configure or disable
+  The "gsutil web set" command allows you to configure or disable
   Website Configuration on your bucket(s). The "set" sub-command has the
   following options (leave both options blank to disable):
 
@@ -62,10 +62,10 @@ _SET_DESCRIPTION = """
 
 _GET_DESCRIPTION = """
 <B>GET</B>
-  The "gsutil web get" command will gets the web semantics configuration for
+  The "gsutil web get" command retrieves the web semantics configuration for
   a bucket and displays a JSON representation of the configuration.
 
-  In Google Cloud Storage, this would look like:
+  In Google Cloud Storage, this would look like the following:
 
     {
       "notFoundPage": "404.html",
@@ -78,15 +78,15 @@ _DESCRIPTION = """
   The Website Configuration feature enables you to configure a Google Cloud
   Storage bucket to behave like a static website. This means requests made via a
   domain-named bucket aliased using a Domain Name System "CNAME" to
-  c.storage.googleapis.com will work like any other website, i.e., a GET to the
-  bucket will serve the configured "main" page instead of the usual bucket
-  listing and a GET for a non-existent object will serve the configured error
+  c.storage.googleapis.com works like any other website. For example, a GET request to the
+  bucket serves the configured "main" page instead of the usual bucket
+  listing and a GET request for a non-existent object serves the configured error
   page.
 
-  For example, suppose your company's Domain name is example.com. You could set
+  For example, suppose your company's domain name is ``example.com``. You could set
   up a website bucket as follows:
 
-  1. Create a bucket called www.example.com (see the "DOMAIN NAMED BUCKETS"
+  1. Create a bucket called ``www.example.com`` (see the "DOMAIN NAMED BUCKETS"
      section of "gsutil help naming" for details about creating such buckets).
 
   2. Create index.html and 404.html files and upload them to the bucket.
@@ -95,11 +95,11 @@ _DESCRIPTION = """
 
        gsutil web set -m index.html -e 404.html gs://www.example.com
 
-  4. Add a DNS CNAME record for www.example.com pointing to
-     c.storage.googleapis.com (ask your DNS administrator for help with this).
+  4. Add a DNS CNAME record for ``www.example.com`` pointing to
+     ``c.storage.googleapis.com`` (ask your DNS administrator for help with this).
 
-  Now if you open a browser and navigate to http://www.example.com, it will
-  display the main page instead of the default bucket listing.
+  Now if you open a browser and navigate to ``http://www.example.com``, it
+  displays the main page instead of the default bucket listing.
   
   NOTE: It can take time for DNS updates to propagate because of caching used
   by the DNS, so it may take up to a day for the domain-named bucket website to
@@ -113,18 +113,20 @@ _DESCRIPTION = """
 
   2. The main_page_suffix applies to each subdirectory of the bucket. For
      example, with the main_page_suffix configured to be index.html, a GET
-     request for http://www.example.com would retrieve
-     http://www.example.com/index.html, and a GET request for
-     http://www.example.com/photos would retrieve
-     http://www.example.com/photos/index.html.
+     request for ``http://www.example.com`` retrieves
+     ``http://www.example.com/index.html`` but shows ``http://www.example.com`` as
+     the URL to the requester, and a GET request for
+     ``http://www.example.com/photos`` retrieves
+     ``http://www.example.com/photos/index.html`` but shows ``http://www.example.com/photos``
+     as the URL to the requester.
 
-  3. There is just one 404.html page: For example, a GET request for
-     http://www.example.com/photos/missing would retrieve
-     http://www.example.com/404.html, not
-     http://www.example.com/photos/404.html.
+  3. There is just one 404.html page. For example, a GET request for
+     ``http://www.example.com/photos/missing`` retrieves
+     ``http://www.example.com/404.html``, not
+     ``http://www.example.com/photos/404.html``.
 
-  4. For additional details see
-     https://cloud.google.com/storage/docs/website-configuration.
+  4. For additional details, see 
+     `Hosting a static website <https://cloud.google.com/storage/docs/website-configuration>`_.
 
   The web command has two sub-commands:
 """ + _SET_DESCRIPTION + _GET_DESCRIPTION

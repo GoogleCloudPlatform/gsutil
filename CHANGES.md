@@ -1,3 +1,45 @@
+Release 4.53 (release date: 2020-08-19)
+======================================
+Bug Fixes
+------------------
+- Remove socksipy dependency to fix proxy authentication (#1084)
+- Retry on errors relating to region specification for S3 (#1049)
+
+Other Changes
+------------------
+- Prompt Daisy chain users to try STS (#1077)
+- Add new IAM types, and disable URL parsing for  IAM b/c it has subcommands. (#1067)
+- Many text updates and clarifications.
+
+Release 4.52 (release date: 2020-07-07)
+======================================
+Bug Fixes
+------------------
+- Fix tests using wrong AWS credentials if AWS CLI is installed. (#1056)
+- Fix `AttributeError: module 'gslib' has no attribute 'USER_AGENT'`. (#1052)
+- Fix encoding error in `user_agent_helper`. (#1055)
+- Fix stdout ordering issue in hash command. (#1037)
+- Fix multithread race condition for cp/mv command when multiple operations are attempting to create the same directory. (#1027)
+- Fix OSError on interrupted rsync -d. (#1042)
+
+Other Changes
+------------------
+- Many text updates and clarifications.
+
+Release 4.51 (release date: 2020-05-19)
+======================================
+Bug Fixes
+------------------
+- Fixed file permissions for credstor2 and tracker files (#1002 and # 1005)
+- Added a check to restrict the duration (-d option) for signurl command
+  to 12 hours if -u flag is used. (#1014)
+- Updated rsync command to try patching before overwriting,
+  rather than checking ACL (#1016)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 4.50 (release date: 2020-04-30)
 ======================================
 New Features

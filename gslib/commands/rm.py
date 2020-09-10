@@ -30,7 +30,7 @@ from gslib.command import DecrementFailureCount
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
-from gslib.exception import NO_URLS_MATCHED_GENERIC
+from gslib.exception import NO_URLS_MATCHED_PREFIX
 from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.name_expansion import NameExpansionIterator
 from gslib.name_expansion import SeekAheadNameExpansionIterator
@@ -170,7 +170,7 @@ def _RemoveExceptionHandler(cls, e):
 # pylint: disable=unused-argument
 def _RemoveFoldersExceptionHandler(cls, e):
   """When removing folders, we don't mind if none exist."""
-  if ((isinstance(e, CommandException) and NO_URLS_MATCHED_GENERIC in e.reason)
+  if ((isinstance(e, CommandException) and NO_URLS_MATCHED_PREFIX in e.reason)
       or isinstance(e, NotFoundException)):
     DecrementFailureCount()
   else:
@@ -368,7 +368,7 @@ class RmCommand(Command):
                      fail_on_error=False)
         except CommandException as e:
           # Ignore exception from name expansion due to an absent folder file.
-          if not e.reason.startswith(NO_URLS_MATCHED_GENERIC):
+          if not e.reason.startswith(NO_URLS_MATCHED_PREFIX):
             raise
 
     # Now that all data has been deleted, delete any bucket URLs.

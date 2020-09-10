@@ -39,6 +39,7 @@ from boto import config
 import crcmod
 from gslib.bucket_listing_ref import BucketListingObject
 from gslib.cloud_api import NotFoundException
+from gslib.cloud_api import ServiceException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
 from gslib.command_argument import CommandArgument
@@ -126,8 +127,8 @@ _DETAILED_HELP_TEXT = ("""
     gsutil rsync -r data gs://mybucket/data
 
   If you have a large number of objects to synchronize you might want to use the
-  gsutil -m option, to perform parallel (multi-threaded/multi-processing)
-  synchronization:
+  gsutil -m option (see "gsutil help options"), to perform parallel
+  (multi-threaded/multi-processing) synchronization:
 
     gsutil -m rsync -r data gs://mybucket/data
 
@@ -180,6 +181,9 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil rsync -d -r gs://my-gs-bucket s3://my-s3-bucket
 
+  Change detection works if the other Cloud provider is using md5 or CRC32. AWS
+  multipart upload has an incompatible checksum.
+  
   As mentioned above, using -d can be dangerous because of how quickly data can
   be deleted. For example, if you meant to synchronize a local directory from
   a bucket in the cloud but instead run the command:
@@ -393,7 +397,7 @@ _DETAILED_HELP_TEXT = ("""
                  files. If errors occurred, gsutil's exit status will be
                  non-zero even if this flag is set. This option is implicitly
                  set when running "gsutil -m rsync...".
-                 
+
                  NOTE: -C only applies to the actual copying operation. If an
                  error occurs while iterating over the files in the local
                  directory (e.g., invalid Unicode file name) gsutil will print
@@ -401,7 +405,7 @@ _DETAILED_HELP_TEXT = ("""
 
   -d             Delete extra files under dst_url not found under src_url. By
                  default extra files are not deleted.
-                 
+
                  NOTE: this option can delete data quickly if you specify the
                  wrong source/destination combination. See the help section
                  above, "BE CAREFUL WHEN USING -d OPTION!".
@@ -423,16 +427,14 @@ _DETAILED_HELP_TEXT = ("""
                  original files.
 
                  Note that if you want to use the top-level -m option to
-                 parallelize copies along with the -j/-J options, you should
-                 prefer using multiple processes instead of multiple threads;
-                 when using -j/-J, multiple threads in the same process are
-                 bottlenecked by Python's GIL. Thread and process count can be
-                 set using the "parallel_thread_count" and
-                 "parallel_process_count" boto config options, e.g.:
+                 parallelize copies along with the -j/-J options, your
+                 performance may be bottlenecked by the
+                 "max_upload_compression_buffer_size" boto config option,
+                 which is set to 2 GiB by default. This compression buffer
+                 size can be changed to a higher limit, e.g.:
 
-                   gsutil -o "GSUtil:parallel_process_count=8" \\
-                     -o "GSUtil:parallel_thread_count=1" \\
-                     -m rsync -j /local/source/dir gs://bucket/path
+                   gsutil -o "GSUtil:max_upload_compression_buffer_size=8G" \
+                     -m rsync -j html,txt /local/source/dir gs://bucket/path
 
   -J             Applies gzip transport encoding to file uploads. This option
                  works like the -j option described above, but it applies to
@@ -495,7 +497,7 @@ _DETAILED_HELP_TEXT = ("""
                  storage class.
 
   -x pattern     Causes files/objects matching pattern to be excluded, i.e., any
-                 matching files/objects will not be copied or deleted. Note that
+                 matching files/objects are not copied or deleted. Note that
                  the pattern is a Python regular expression, not a wildcard (so,
                  matching any string ending in "abc" would be specified using
                  ".*abc$" rather than "*abc"). Note also that the exclude path
@@ -504,17 +506,19 @@ _DETAILED_HELP_TEXT = ("""
 
                    gsutil rsync -x "data./.*\.txt$" dir gs://my-bucket
 
-                 it will skip the file dir/data1/a.txt.
+                 it skips the file dir/data1/a.txt.
 
                  You can use regex alternation to specify multiple exclusions,
                  for example:
 
                    gsutil rsync -x ".*\.txt$|.*\.jpg$" dir gs://my-bucket
 
-                 will skip all .txt and .jpg files in dir.
+                 skips all .txt and .jpg files in dir.
 
-                 NOTE: When using this on the Windows command line, use ^ as an
-                 escape character instead of \ and escape the | character.
+                 NOTE: When using the Windows cmd.exe command line interpreter,
+                 use ^ as an escape character instead of \ and escape the |
+                 character. When using Windows PowerShell, use ' instead of "
+                 and surround the | character with ".
 """)
 # pylint: enable=anomalous-backslash-in-string
 
@@ -1360,7 +1364,13 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
     else:
       cls.logger.info('Removing %s', dst_url)
       if dst_url.IsFileUrl():
-        os.unlink(dst_url.object_name)
+        try:
+          os.unlink(dst_url.object_name)
+        except FileNotFoundError:
+          # Missing file errors occur occasionally with .gstmp files
+          # and can be ignored for deletes.
+          cls.logger.debug('%s was already removed', dst_url)
+          pass
       else:
         try:
           gsutil_api.DeleteObject(dst_url.bucket_name,
@@ -1460,24 +1470,19 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
       if dst_url.IsCloudUrl():
         dst_url = StorageUrlFromString(diff_to_apply.dst_url_str)
         dst_generation = GenerationFromUrlAndString(dst_url, dst_url.generation)
-        dst_obj_metadata = gsutil_api.GetObjectMetadata(
-            dst_url.bucket_name,
-            dst_url.object_name,
-            generation=dst_generation,
-            provider=dst_url.scheme,
-            fields=['acl'])
-        if dst_obj_metadata.acl:
-          # We have ownership, and can patch the object.
+        try:
+          # Assume we have permission, and can patch the object.
           gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
                                          dst_url.object_name,
                                          obj_metadata,
                                          provider=dst_url.scheme,
                                          generation=dst_url.generation)
-        else:
-          # We don't have object ownership, so it must be copied.
+        except ServiceException as err:
+          cls.logger.debug('Error while trying to patch: %s', err)
+          # We don't have permission to patch apparently, so it must be copied.
           cls.logger.info(
               'Copying whole file/object for %s instead of patching'
-              ' because you don\'t have owner permission on the '
+              ' because you don\'t have patch permission on the '
               'object.', dst_url.url_string)
           _RsyncFunc(cls,
                      RsyncDiffToApply(diff_to_apply.src_url_str,
@@ -1512,18 +1517,19 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
             generation=dst_generation,
             provider=dst_url.scheme,
             fields=['acl'])
-        if dst_obj_metadata.acl:
-          # We have ownership, and can patch the object.
+        try:
+          # Assume we have ownership, and can patch the object.
           gsutil_api.PatchObjectMetadata(dst_url.bucket_name,
                                          dst_url.object_name,
                                          obj_metadata,
                                          provider=dst_url.scheme,
                                          generation=dst_url.generation)
-        else:
-          # We don't have object ownership, so it must be copied.
+        except ServiceException as err:
+          cls.logger.debug('Error while trying to patch: %s', err)
+          # Apparently we don't have object ownership, so it must be copied.
           cls.logger.info(
               'Copying whole file/object for %s instead of patching'
-              ' because you don\'t have owner permission on the '
+              ' because you don\'t have patch permission on the '
               'object.', dst_url.url_string)
           _RsyncFunc(cls,
                      RsyncDiffToApply(diff_to_apply.src_url_str,
@@ -1597,8 +1603,9 @@ class RsyncCommand(Command):
         logger=self.logger)
     if not have_existing_container:
       raise CommandException(
-          'arg (%s) does not name a directory, bucket, or bucket subdir.' %
-          url_str)
+          'arg (%s) does not name a directory, bucket, or bucket subdir.\n'
+          'If there is an object with the same path, please add a trailing\n'
+          'slash to specify the directory.' % url_str)
     return url
 
   def RunCommand(self):

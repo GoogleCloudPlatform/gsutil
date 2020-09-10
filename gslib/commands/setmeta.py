@@ -119,11 +119,8 @@ _DETAILED_HELP_TEXT = ("""
 # of doing things. This list comes from functionality that was supported by
 # gsutil3 at the time gsutil4 was released.
 SETTABLE_FIELDS = [
-    'cache-control',
-    'content-disposition',
-    'content-encoding',
-    'content-language',
-    'content-type',
+    'cache-control', 'content-disposition', 'content-encoding',
+    'content-language', 'content-type', 'custom-time'
 ]
 
 

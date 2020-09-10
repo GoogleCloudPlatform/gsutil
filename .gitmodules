@@ -7,9 +7,6 @@
 [submodule "third_party/crcmod_osx"]
 	path = third_party/crcmod_osx
 	url = https://github.com/gsutil-mirrors/crcmod-osx.git
-[submodule "third_party/socksipy-branch"]
-	path = third_party/socksipy-branch
-	url = git://github.com/gsutil-mirrors/socksipy-branch.git
 [submodule "third_party/retry-decorator"]
 	path = third_party/retry-decorator
 	url = https://github.com/pnpnpn/retry-decorator.git
@@ -22,9 +19,6 @@
 [submodule "third_party/apitools"]
 	path = third_party/apitools
 	url = git://github.com/google/apitools.git
-[submodule "third_party/protorpc"]
-	path = third_party/protorpc
-	url = git://github.com/google/protorpc.git
 [submodule "third_party/rsa"]
 	path = third_party/rsa
 	url = https://github.com/gsutil-mirrors/rsa.git
