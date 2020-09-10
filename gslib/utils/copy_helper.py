@@ -1296,11 +1296,6 @@ def _ShouldDoParallelCompositeUpload(logger,
   Returns:
     True iff a parallel upload should be performed on the source file.
   """
-  # TODO(KMS, Compose): Until we ensure service-side that we have efficient
-  # compose functionality over objects with distinct KMS encryption keys (CMEKs)
-  # or distinct CSEKs, don't utilize parallel composite uploads.
-  if kms_keyname:
-    return False
 
   global suggested_sliced_transfers, suggested_sliced_transfers_lock
   parallel_composite_upload_threshold = HumanReadableToBytes(
@@ -1319,7 +1314,7 @@ def _ShouldDoParallelCompositeUpload(logger,
   # TODO: Once compiled crcmod is being distributed by major Linux distributions
   # remove this check.
   if (all_factors_but_size and parallel_composite_upload_threshold == 0 and
-      file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD):
+      file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD) and not kms_keyname:
     with suggested_sliced_transfers_lock:
       if not suggested_sliced_transfers.get('suggested'):
         logger.info('\n'.join(
@@ -1341,6 +1336,14 @@ def _ShouldDoParallelCompositeUpload(logger,
   if not (all_factors_but_size and parallel_composite_upload_threshold > 0 and
           file_size >= parallel_composite_upload_threshold):
     return False
+
+  # TODO(KMS, Compose): Until we ensure service-side that we have efficient
+  # compose functionality over objects with distinct KMS encryption keys (CMEKs)
+  # or distinct CSEKs, don't utilize parallel composite uploads.
+  if kms_keyname:
+      logger.warning('Not using parallel composite upload for KMS-encryption. ' +
+                     'This combination is not currently supported by GCS.')
+      return False
 
   # TODO(KMS, Compose): Once GCS supports compose operations over
   # CMEK-encrypted objects, remove this check and return the boolean result of
@@ -1379,6 +1382,9 @@ def _ShouldDoParallelCompositeUpload(logger,
     except ServiceException:
       # Treat an API call failure as if we checked and there was no key.
       bucket_metadata_pcu_check = True
+    if not bucket_metadata_pcu_check:
+        logger.warning('Not using parallel composite upload for KMS-encryption. ' +
+                       'This combination is not currently supported by GCS.')
     return bucket_metadata_pcu_check
 
 
