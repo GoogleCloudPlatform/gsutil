@@ -421,9 +421,11 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   size of each component piece is determined by the variable
   "parallel_composite_upload_component_size," specified in the [GSUtil] section
   of your ``.boto`` configuration file. For files that are otherwise too big,
-  components are as large as needed to fit into 32 pieces. No additional local
-  disk space is required for this operation. Parallel composite uploads are disabled
-  by default.
+  components are as large as needed to fit into 32 pieces. No additional local disk
+  space is required for this operation. Parallel composite uploads are disabled by
+  default and cannot be used when uploading an object to a bucket that has a
+  default `customer-managed encryption key
+  <https://cloud.google.com/storage/docs/encryption/customer-managed-keys>`_.
 
   Using parallel composite uploads presents a tradeoff between upload
   performance and download configuration. Your uploads run faster if you enable
