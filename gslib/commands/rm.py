@@ -56,6 +56,10 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
+  NOTE: As part of verifying the existence of objects prior to deletion,
+  ``gsutil rm`` makes ``GET`` requests to Cloud Storage for object metadata.
+  These requests incur network and operations charges.
+
   The gsutil rm command removes objects and/or buckets.
   For example, the command:
 
@@ -109,21 +113,14 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil rm *.txt
 
-  WARNING: Object removal cannot be undone. Google Cloud Storage is designed
-  to give developers a high amount of flexibility and control over their data,
-  and Google maintains strict controls over the processing and purging of
-  deleted data. To protect yourself from mistakes, you can configure object
-  versioning on your bucket(s). See 'gsutil help versions' for details.
-
-
-<B>DATA RESTORATION FROM ACCIDENTAL DELETION OR OVERWRITES</B>
-Google Cloud Storage does not provide support for restoring data lost
-or overwritten due to customer errors. If you have concerns that your
-application software (or your users) may at some point erroneously delete or
-overwrite data, you can protect yourself from that risk by enabling Object
-Versioning (see "gsutil help versioning"). Doing so increases storage costs,
-which can be partially mitigated by configuring Lifecycle Management to delete
-older object versions (see "gsutil help lifecycle").
+  WARNING: Object removal cannot be undone. Cloud Storage is designed to give
+  developers a high amount of flexibility and control over their data, and
+  Google maintains strict controls over the processing and purging of deleted
+  data. If you have concerns that your application software or your users may
+  at some point erroneously delete or overwrite data, see
+  `Best practices for deleting data
+  <https://cloud.google.com/storage/docs/best-practices#deleting>`_ for ways to
+  protect your data from accidental data deletion.
 
 
 <B>OPTIONS</B>
