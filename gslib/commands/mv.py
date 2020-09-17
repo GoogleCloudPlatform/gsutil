@@ -39,7 +39,7 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
-  The gsutil mv command allows you to move data between your local file
+  The ``gsutil mv`` command allows you to move data between your local file
   system and the cloud, move data within the cloud, and move data between
   cloud storage providers. For example, to move all objects from a
   bucket to a local directory you could use:
@@ -53,27 +53,22 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>RENAMING GROUPS OF OBJECTS</B>
-  You can use the gsutil mv command to rename all objects with a given prefix
-  to have a new prefix. This is accomplished by copying each object to a new
-  object with the desired name and deleting the old one. For example, the
-  command:
+  You can use the ``gsutil mv`` command to rename all objects with a given
+  prefix to have a new prefix. For example, the following command renames all
+  objects under gs://my_bucket/oldprefix to be under gs://my_bucket/newprefix,
+  otherwise preserving the naming structure:
 
     gsutil mv gs://my_bucket/oldprefix gs://my_bucket/newprefix
 
-  would rename all objects under gs://my_bucket/oldprefix to be under
-  gs://my_bucket/newprefix, otherwise preserving the naming structure.
+  Note that when using ``mv`` to rename groups of objects with a common
+  prefix, you cannot specify the source URL using wildcards; you must spell
+  out the complete name.
 
   If you do a rename as specified above and you want to preserve ACLs, you
-  should use the -p option (see OPTIONS).
-
-  Note that when using mv to rename groups of objects with a common prefix
-  you cannot specify the source URL using wildcards. You need to spell out
-  the complete name:
-
-    gsutil mv gs://my_bucket/oldprefix gs://my_bucket/newprefix
+  should use the ``-p`` option (see OPTIONS).
 
   If you have a large number of files to move you might want to use the
-  gsutil -m option, to perform a multi-threaded/multi-processing move:
+  ``gsutil -m`` option, to perform a multi-threaded/multi-processing move:
 
     gsutil -m mv gs://my_bucket/oldprefix gs://my_bucket/newprefix
 
@@ -92,7 +87,7 @@ _DETAILED_HELP_TEXT = ("""
 <B>OPTIONS</B>
   All options that are available for the gsutil cp command are also available
   for the gsutil mv command (except for the -R flag, which is implied by the
-  gsutil mv command). Please see the OPTIONS sections of "gsutil help cp"
+  ``gsutil mv`` command). Please see the OPTIONS sections of "gsutil help cp"
   for more information.
 
 """)
