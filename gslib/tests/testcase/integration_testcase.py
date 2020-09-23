@@ -68,6 +68,7 @@ from gslib.utils.posix_util import MODE_ATTR
 from gslib.utils.posix_util import MTIME_ATTR
 from gslib.utils.posix_util import UID_ATTR
 from gslib.utils.retry_util import Retry
+from gslib.utils.system_util import IS_OSX
 import six
 from six.moves import range
 
@@ -994,11 +995,16 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     def Kill():
       os.killpg(os.getpgid(p.pid), signal.SIGKILL)
 
+    if IS_OSX:
+      timeout_secs = 240
+    else:
+      timeout_secs = 180
+
     if six.PY3:
       # TODO(b/135936279): Make this number configurable in .boto
-      comm_kwargs['timeout'] = 180
+      comm_kwargs['timeout'] = timeout_secs
     else:
-      timer = threading.Timer(180, Kill)
+      timer = threading.Timer(timeout_secs, Kill)
       timer.start()
 
     c_out = p.communicate(**comm_kwargs)
