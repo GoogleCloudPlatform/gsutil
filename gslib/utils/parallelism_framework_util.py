@@ -23,6 +23,7 @@ import collections
 import errno
 import logging
 import multiprocessing
+import sys
 import threading
 import traceback
 
@@ -341,6 +342,11 @@ single process only.
 Please ensure that you have write access to both /dev/shm and /run/shm.
 """
       raise  # We'll handle this in one place below.
+
+    # Explicitly set start method to 'fork' since this isn't always the default
+    # in later versions of Python.
+    if sys.version_info >= (3, 4):
+      multiprocessing.set_start_method('fork')
 
     global top_level_manager  # pylint: disable=global-variable-undefined
     top_level_manager = multiprocessing.Manager()
