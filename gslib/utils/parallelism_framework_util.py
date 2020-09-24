@@ -71,7 +71,7 @@ MultiprocessingIsAvailableResult = collections.namedtuple(
 # in later versions of Python.
 try:
   multiprocessing_context = multiprocessing.get_context('fork')
-except AttributeError:
+except (AttributeError, ValueError):
   multiprocessing_context = multiprocessing
 
 
