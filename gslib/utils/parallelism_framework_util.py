@@ -68,6 +68,13 @@ _cached_multiprocessing_is_available_message = None
 MultiprocessingIsAvailableResult = collections.namedtuple(
     'MultiprocessingIsAvailableResult', ['is_available', 'stack_trace'])
 
+# Explicitly set start method to 'fork' since this isn't always the default
+# in later versions of Python.
+try:
+  multiprocessing_context = multiprocessing.get_context('fork')
+except AttributeError:
+  multiprocessing_context = multiprocessing
+
 
 class AtomicDict(object):
   """Thread-safe (and optionally process-safe) dictionary protected by a lock.
@@ -150,7 +157,7 @@ class ProcessAndThreadSafeInt(object):
     self.multiprocessing_is_available = multiprocessing_is_available
     if self.multiprocessing_is_available:
       # Lock is implicit in multiprocessing.Value
-      self.value = multiprocessing.Value('i', 0)
+      self.value = multiprocessing_context.Value('i', 0)
     else:
       self.lock = threading.Lock()
       self.value = 0
@@ -336,20 +343,15 @@ single process only.
     # Fails if /dev/shm (or some equivalent thereof) is not available for use
     # (e.g., there's no implementation, or we can't write to it, etc.).
     try:
-      multiprocessing.Value('i', 0)
+      multiprocessing_context.Value('i', 0)
     except:
       message += """
 Please ensure that you have write access to both /dev/shm and /run/shm.
 """
       raise  # We'll handle this in one place below.
 
-    # Explicitly set start method to 'fork' since this isn't always the default
-    # in later versions of Python.
-    if __name__ == '__main___' and sys.version_info >= (3, 4):
-      multiprocessing.set_start_method('fork')
-
     global top_level_manager  # pylint: disable=global-variable-undefined
-    top_level_manager = multiprocessing.Manager()
+    top_level_manager = multiprocessing_context.Manager()
 
     # Check that the max number of open files is reasonable. Always check this
     # after we're sure that the basic multiprocessing functionality is

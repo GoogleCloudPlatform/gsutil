@@ -27,7 +27,6 @@ import datetime
 import json
 import logging
 import math
-import multiprocessing
 import os
 import random
 import re
@@ -64,6 +63,7 @@ from gslib.utils.constants import UTF8
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.cloud_api_helper import GetDownloadSerializationData
 from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
+from gslib.utils.parallelism_framework_util import multiprocessing_context
 from gslib.utils.system_util import CheckFreeSpace
 from gslib.utils.system_util import GetDiskCounters
 from gslib.utils.system_util import GetFileSize
@@ -1679,7 +1679,7 @@ class PerfDiagCommand(Command):
 
     # Try and find the number of CPUs in the system if available.
     try:
-      sysinfo['cpu_count'] = multiprocessing.cpu_count()
+      sysinfo['cpu_count'] = multiprocessing_context.cpu_count()
     except NotImplementedError:
       sysinfo['cpu_count'] = None
 

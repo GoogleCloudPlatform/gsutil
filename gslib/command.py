@@ -32,7 +32,6 @@ import copy
 import getopt
 import json
 import logging
-import multiprocessing
 import os
 import signal
 import sys
@@ -85,6 +84,7 @@ from gslib.utils.constants import UTF8
 import gslib.utils.parallelism_framework_util
 from gslib.utils.parallelism_framework_util import AtomicDict
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
+from gslib.utils.parallelism_framework_util import multiprocessing_context
 from gslib.utils.parallelism_framework_util import ProcessAndThreadSafeInt
 from gslib.utils.parallelism_framework_util import PutToQueueWithTimeout
 from gslib.utils.parallelism_framework_util import SEEK_AHEAD_JOIN_TIMEOUT
@@ -193,7 +193,7 @@ def _CryptoRandomAtFork():
 
 
 def _NewMultiprocessingQueue():
-  new_queue = multiprocessing.Queue(MAX_QUEUE_SIZE)
+  new_queue = multiprocessing_context.Queue(MAX_QUEUE_SIZE)
   queues.append(new_queue)
   return new_queue
 
@@ -332,7 +332,7 @@ def InitializeMultiprocessingVariables():
   global class_map, worker_checking_level_lock, failure_count, glob_status_queue
   global concurrent_compressed_upload_lock
 
-  manager = multiprocessing.Manager()
+  manager = multiprocessing_context.Manager()
 
   # List of ConsumerPools - used during shutdown to clean up child processes.
   consumer_pools = []
@@ -1375,9 +1375,10 @@ class Command(HelpProvider):
       raise CommandException('Recursion depth of Apply calls is too great.')
     for _ in range(num_processes):
       recursive_apply_level = len(consumer_pools)
-      p = multiprocessing.Process(target=self._ApplyThreads,
-                                  args=(num_threads, num_processes,
-                                        recursive_apply_level, status_queue))
+      p = multiprocessing_context.Process(target=self._ApplyThreads,
+                                          args=(num_threads, num_processes,
+                                                recursive_apply_level,
+                                                status_queue))
       p.daemon = True
       processes.append(p)
       _CryptoRandomAtFork()

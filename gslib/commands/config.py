@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 
 import datetime
 import json
-import multiprocessing
 import os
 import signal
 import socket
@@ -50,6 +49,7 @@ from gslib.utils.hashing_helper import CHECK_HASH_ALWAYS
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_SKIP
 from gslib.utils.hashing_helper import CHECK_HASH_NEVER
+from gslib.utils.parallelism_framework_util import multiprocessing_context
 from gslib.utils.parallelism_framework_util import ShouldProhibitMultiprocessing
 from httplib2 import ServerNotFoundError
 from oauth2client.client import HAS_CRYPTO
@@ -228,7 +228,7 @@ if should_prohibit_multiprocessing:
   DEFAULT_PARALLEL_PROCESS_COUNT = 1
   DEFAULT_PARALLEL_THREAD_COUNT = 24
 else:
-  DEFAULT_PARALLEL_PROCESS_COUNT = min(multiprocessing.cpu_count(), 32)
+  DEFAULT_PARALLEL_PROCESS_COUNT = min(multiprocessing_context.cpu_count(), 32)
   DEFAULT_PARALLEL_THREAD_COUNT = 5
 
 # TODO: Once compiled crcmod is being distributed by major Linux distributions
