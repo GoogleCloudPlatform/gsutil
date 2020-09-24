@@ -24,7 +24,6 @@ import binascii
 import datetime
 import errno
 import json
-import multiprocessing
 import os
 import pickle
 import random
