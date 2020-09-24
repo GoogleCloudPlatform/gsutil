@@ -23,7 +23,6 @@ import collections
 import errno
 import logging
 import multiprocessing
-import sys
 import threading
 import traceback
 
