@@ -87,6 +87,7 @@ from gslib.utils.constants import XML_PROGRESS_CALLBACKS
 from gslib.utils.hashing_helper import Base64EncodeHash
 from gslib.utils.hashing_helper import Base64ToHexHash
 from gslib.utils.metadata_util import AddAcceptEncodingGzipIfNeeded
+from gslib.utils.parallelism_framework_util import multiprocessing_context
 from gslib.utils.text_util import EncodeStringAsLong
 from gslib.utils.translation_helper import AclTranslation
 from gslib.utils.translation_helper import AddS3MarkerAclToObjectMetadata
@@ -135,7 +136,7 @@ def InitializeMultiprocessingVariables():  # pylint: disable=invalid-name
   # pylint: disable=global-variable-undefined
   global boto_auth_initialized, boto_auth_initialized_lock
   boto_auth_initialized_lock = parallelism_framework_util.CreateLock()
-  boto_auth_initialized = multiprocessing.Value('i', 0)
+  boto_auth_initialized = multiprocessing_context.Value('i', 0)
 
 
 class DownloadProxyCallbackHandler(object):
