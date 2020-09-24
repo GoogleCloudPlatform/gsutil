@@ -345,7 +345,7 @@ Please ensure that you have write access to both /dev/shm and /run/shm.
 
     # Explicitly set start method to 'fork' since this isn't always the default
     # in later versions of Python.
-    if sys.version_info >= (3, 4):
+    if __name__ == '__main___' and sys.version_info >= (3, 4):
       multiprocessing.set_start_method('fork')
 
     global top_level_manager  # pylint: disable=global-variable-undefined
