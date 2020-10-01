@@ -83,6 +83,7 @@ boto.UserAgent += gslib.USER_AGENT
 import httplib2
 import oauth2client
 from google_reauth import reauth_creds
+from google_reauth import errors as reauth_errors
 from gslib import wildcard_iterator
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -744,6 +745,13 @@ def _RunNamedCommandAndHandleExceptions(command_runner,
             'pasted the ENTIRE authorization code (including any numeric prefix '
             "e.g. '4/')." % e)),
                    exception=e)
+  except reauth_errors.ReauthSamlLoginRequiredError:
+    if system_util.InvokedViaCloudSdk():
+      _OutputAndExit('You must re-authenticate with your SAML IdP. '
+                     'Please run\n$ gcloud auth login')
+    else:
+      _OutputAndExit('You must re-authenticate with your SAML IdP. '
+                     'Please run\n$ gsutil config')
   except Exception as e:  # pylint: disable=broad-except
     config_paths = ', '.join(boto_util.GetFriendlyConfigFilePaths())
     # Check for two types of errors related to service accounts. These errors
