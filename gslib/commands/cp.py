@@ -30,7 +30,6 @@ import traceback
 from apitools.base.py import encoding
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
-from gslib.commands.compose import MAX_COMPONENT_COUNT
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.metrics import LogPerformanceSummaryParams
