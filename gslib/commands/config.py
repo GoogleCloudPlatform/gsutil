@@ -38,7 +38,7 @@ from boto.provider import Provider
 import gslib
 from gslib.command import Command
 from gslib.command import DEFAULT_TASK_ESTIMATION_THRESHOLD
-from gslib.commands.compose import MAX_COMPONENT_COUNT
+from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.cred_types import CredTypes
 from gslib.exception import AbortException
 from gslib.exception import CommandException
@@ -368,8 +368,8 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # into a single object.
 # The number of components will be the smaller of
 # ceil(file_size / parallel_composite_upload_component_size) and
-# MAX_COMPONENT_COUNT. The current value of MAX_COMPONENT_COUNT is
-# %(max_component_count)d.
+# MAX_COMPOSE_ARITY. The current value of MAX_COMPOSE_ARITY is
+# %(max_compose_arity)d.
 # If 'parallel_composite_upload_threshold' is set to 0, then automatic parallel
 # uploads will never occur.
 # Setting an extremely low threshold is unadvisable. The vast majority of
@@ -378,7 +378,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # 'parallel_composite_upload_component_size' specifies the ideal size of a
 # component in bytes, which will act as an upper bound to the size of the
 # components if ceil(file_size / parallel_composite_upload_component_size) is
-# less than MAX_COMPONENT_COUNT.
+# less than MAX_COMPOSE_ARITY.
 # Values can be provided either in bytes or as human-readable values
 # (e.g., "150M" to represent 150 mebibytes)
 #
@@ -405,8 +405,7 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 # 'sliced_object_download_component_size' have analogous functionality to
 # their respective parallel_composite_upload config values.
 # 'sliced_object_download_max_components' specifies the maximum number of
-# slices to be used when performing a sliced object download. It is not
-# restricted by MAX_COMPONENT_COUNT.
+# slices to be used when performing a sliced object download.
 #sliced_object_download_threshold = %(sliced_object_download_threshold)s
 #sliced_object_download_component_size = %(sliced_object_download_component_size)s
 #sliced_object_download_max_components = %(sliced_object_download_max_components)s
@@ -542,7 +541,7 @@ content_language = en
         (DEFAULT_PARALLEL_COMPOSITE_UPLOAD_COMPONENT_SIZE),
     'sliced_object_download_max_components':
         (DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS),
-    'max_component_count': MAX_COMPONENT_COUNT,
+    'max_compose_arity': MAX_COMPOSE_ARITY,
     'task_estimation_threshold': DEFAULT_TASK_ESTIMATION_THRESHOLD,
     'max_upload_compression_buffer_size':
         (DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE),
