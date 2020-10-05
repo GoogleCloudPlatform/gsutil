@@ -338,8 +338,8 @@ _RESUMABLE_TRANSFERS_TEXT = """
   the boto configuration file.
 
   Until the upload has completed successfully, it is not visible at the destination
-  object and does not replace any existing object the upload is intended to
-  overwrite. However, parallel composite uploads may leave temporary component
+  object and does not supersede any existing object the upload is intended to
+  replace. However, parallel composite uploads may leave temporary component
   objects in place during the upload process. See Parallel Composite Uploads for more
   information.
 
@@ -347,7 +347,7 @@ _RESUMABLE_TRANSFERS_TEXT = """
   HTTP Range GET operations whenever you use the ``cp`` command, unless the
   destination is a stream. In this case, a partially downloaded temporary file
   is visible in the destination directory. Upon completion, the original
-  file is deleted and overwritten with the downloaded contents.
+  file is deleted and replaced with the downloaded contents.
 
   Resumable uploads and downloads store state information in files under
   ~/.gsutil, named by the destination object or file. If you attempt to resume a
@@ -655,7 +655,7 @@ _OPTIONS_TEXT = """
                  "gsutil help rsync".
 
   -n             No-clobber. When specified, existing files or objects at the
-                 destination are not overwritten. Any items that are skipped
+                 destination are not replaced. Any items that are skipped
                  by this option are reported as skipped. gsutil
                  performs an additional GET request to check if an item
                  exists before attempting to upload the data. This saves gsutil
