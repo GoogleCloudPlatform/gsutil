@@ -107,7 +107,7 @@ _GET_DESCRIPTION = """
 _SET_DESCRIPTION = """
 <B>SET</B>
   The ``iam set`` command sets a Cloud IAM policy on one or more buckets or objects,
-  overwriting the existing policy on those buckets or objects. For an example of the correct
+  replacing the existing policy on those buckets or objects. For an example of the correct
   formatting for a Cloud IAM policy, see the output of the ``iam get`` command.
 
   You can use the ``iam ch`` command to edit an existing policy, even in the
