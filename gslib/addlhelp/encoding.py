@@ -104,7 +104,7 @@ _DETAILED_HELP_TEXT = ("""
   cloud, it is stored as named. But if you use gsutil rysnc to bring the file to
   a macOS machine and edit the file, then when you use gsutil rsync to bring
   this version back to the cloud, you end up with two different objects, instead
-  of overwriting the original. This is because macOS converted the filename to
+  of replacing the original. This is because macOS converted the filename to
   a decomposed form, and Cloud Storage sees this as a different object name.
 
 
