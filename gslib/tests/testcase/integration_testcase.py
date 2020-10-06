@@ -996,7 +996,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       os.killpg(os.getpgid(p.pid), signal.SIGKILL)
 
     if IS_OSX:
-      timeout_secs = 180
+      timeout_secs = 360
     else:
       timeout_secs = 180
 
