@@ -113,6 +113,9 @@ python "$GSUTIL_ENTRYPOINT" version -l
 #   cp.TestCp.test_gzip_transport_encoded_upload_and_download \
 #   cp.TestCp.test_gzip_upload_and_download
 if [[ $KOKORO_JOB_NAME =~ "macos" && "$PYVERSION" == "3.7" ]]; then
- python "$GSUTIL_ENTRYPOINT" test -p "1" cp.TestCp.test_gzip_transport_encoded_upload_and_download
+  system_profiler SPHardwareDataType | grep "  Memory:"
+  system_profiler SPHardwareDataType | grep "Cores:"
+  system_profiler SPHardwareDataType | grep "Processors:"
+  python "$GSUTIL_ENTRYPOINT" test -p "1" cp.TestCp.test_gzip_transport_encoded_upload_and_download
 fi
 
