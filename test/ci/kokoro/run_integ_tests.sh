@@ -108,7 +108,7 @@ python "$GSUTIL_ENTRYPOINT" version -l
 # Run integration tests
 # python "$GSUTIL_ENTRYPOINT" test -p "$PROCS"
 # cp.TestCp.test_gzip_transport_encoded_all_upload_and_download \
-if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
+if [[ $KOKORO_JOB_NAME =~ "macos" && "$PYVERSION" == "3.7" ]]; then
  python "$GSUTIL_ENTRYPOINT" test -p "1" cp.TestCp.test_gzip_all_upload_and_download \
    cp.TestCp.test_gzip_transport_encoded_parallel_upload_non_resumable \
    cp.TestCp.test_gzip_transport_encoded_parallel_upload_resumable \
