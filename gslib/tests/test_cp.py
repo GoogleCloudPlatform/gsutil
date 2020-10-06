@@ -2196,54 +2196,54 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       with open(fpath4, 'rb') as f:
         self.assertEqual(f.read(), contents)
 
-  @SkipForS3('No compressed transport encoding support for S3.')
-  @SkipForXML('No compressed transport encoding support for the XML API.')
-  @SequentialAndParallelTransfer
-  def test_gzip_transport_encoded_all_upload_and_download(self):
-    """Test gzip encoded files upload correctly.
-
-    This checks that files are not tagged with a gzip content encoding and
-    that the contents of the files are uncompressed in GCS. This test uses the
-    -J flag to target all files.
-    """
-    # Setup the bucket and local data.
-    bucket_uri = self.CreateBucket()
-    contents = b'x' * 10000
-    tmpdir = self.CreateTempDir()
-    local_uri1 = self.CreateTempFile(file_name='test.txt',
-                                     tmpdir=tmpdir,
-                                     contents=contents)
-    local_uri2 = self.CreateTempFile(file_name='test',
-                                     tmpdir=tmpdir,
-                                     contents=contents)
-    # Upload the data.
-    stderr = self.RunGsUtil(
-        ['-D', 'cp', '-J',
-         os.path.join(tmpdir, 'test*'),
-         suri(bucket_uri)],
-        return_stderr=True)
-    self.AssertNObjectsInBucket(bucket_uri, 2)
-    # Ensure the correct files were marked for compression.
-    self.assertIn(
-        'Using compressed transport encoding for file://%s.' % (local_uri1),
-        stderr)
-    self.assertIn(
-        'Using compressed transport encoding for file://%s.' % (local_uri2),
-        stderr)
-    # Ensure the progress logger sees a gzip encoding.
-    self.assertIn('send: Using gzip transport encoding for the request.',
-                  stderr)
-    # Ensure the files do not have a stored encoding of gzip and are stored
-    # uncompressed.
-    remote_uri1 = suri(bucket_uri, 'test.txt')
-    remote_uri2 = suri(bucket_uri, 'test')
-    fpath4 = self.CreateTempFile()
-    for uri in (remote_uri1, remote_uri2):
-      stdout = self.RunGsUtil(['stat', uri], return_stdout=True)
-      self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
-      self.RunGsUtil(['cp', uri, suri(fpath4)])
-      with open(fpath4, 'rb') as f:
-        self.assertEqual(f.read(), contents)
+#  @SkipForS3('No compressed transport encoding support for S3.')
+#  @SkipForXML('No compressed transport encoding support for the XML API.')
+#  @SequentialAndParallelTransfer
+#  def test_gzip_transport_encoded_all_upload_and_download(self):
+#    """Test gzip encoded files upload correctly.
+#
+#    This checks that files are not tagged with a gzip content encoding and
+#    that the contents of the files are uncompressed in GCS. This test uses the
+#    -J flag to target all files.
+#    """
+#    # Setup the bucket and local data.
+#    bucket_uri = self.CreateBucket()
+#    contents = b'x' * 10000
+#    tmpdir = self.CreateTempDir()
+#    local_uri1 = self.CreateTempFile(file_name='test.txt',
+#                                     tmpdir=tmpdir,
+#                                     contents=contents)
+#    local_uri2 = self.CreateTempFile(file_name='test',
+#                                     tmpdir=tmpdir,
+#                                     contents=contents)
+#    # Upload the data.
+#    stderr = self.RunGsUtil(
+#        ['-D', 'cp', '-J',
+#         os.path.join(tmpdir, 'test*'),
+#         suri(bucket_uri)],
+#        return_stderr=True)
+#    self.AssertNObjectsInBucket(bucket_uri, 2)
+#    # Ensure the correct files were marked for compression.
+#    self.assertIn(
+#        'Using compressed transport encoding for file://%s.' % (local_uri1),
+#        stderr)
+#    self.assertIn(
+#        'Using compressed transport encoding for file://%s.' % (local_uri2),
+#        stderr)
+#    # Ensure the progress logger sees a gzip encoding.
+#    self.assertIn('send: Using gzip transport encoding for the request.',
+#                  stderr)
+#    # Ensure the files do not have a stored encoding of gzip and are stored
+#    # uncompressed.
+#    remote_uri1 = suri(bucket_uri, 'test.txt')
+#    remote_uri2 = suri(bucket_uri, 'test')
+#    fpath4 = self.CreateTempFile()
+#    for uri in (remote_uri1, remote_uri2):
+#      stdout = self.RunGsUtil(['stat', uri], return_stdout=True)
+#      self.assertNotRegex(stdout, r'Content-Encoding:\s+gzip')
+#      self.RunGsUtil(['cp', uri, suri(fpath4)])
+#      with open(fpath4, 'rb') as f:
+#        self.assertEqual(f.read(), contents)
 
   def test_both_gzip_options_error(self):
     """Test that mixing compression flags error."""
