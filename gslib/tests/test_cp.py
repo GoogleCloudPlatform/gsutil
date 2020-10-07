@@ -2106,6 +2106,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Get mock data, run tests
     bucket_uri, tmpdir, local_uris = _create_test_data()
     stderr = _upload_test_data(tmpdir, bucket_uri)
+    print(stderr)
     _assert_sent_compressed(local_uris, stderr)
     _assert_stored_uncompressed(bucket_uri)
 
