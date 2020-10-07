@@ -53,7 +53,6 @@ from gslib.utils.copy_helper import GetSourceFieldsNeededForCopy
 from gslib.utils.copy_helper import GZIP_ALL_FILES
 from gslib.utils.copy_helper import ItemExistsError
 from gslib.utils.copy_helper import Manifest
-from gslib.utils.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
 from gslib.utils.copy_helper import SkipUnsupportedObjectError
 from gslib.utils.posix_util import ConvertModeToBase8
 from gslib.utils.posix_util import DeserializeFileAttributesFromObjectMetadata
@@ -416,7 +415,7 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   Cloud Storage. See the `Uploads and downloads documentation
   <https://cloud.google.com/storage/docs/uploads-downloads#parallel-composite-uploads>`_
   for a complete discussion.
-""" % (PARALLEL_UPLOAD_TEMP_NAMESPACE)
+"""
 
 _CHANGING_TEMP_DIRECTORIES_TEXT = """
 <B>CHANGING TEMP DIRECTORIES</B>
