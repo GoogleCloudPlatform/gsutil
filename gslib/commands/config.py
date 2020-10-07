@@ -990,7 +990,28 @@ class ConfigCommand(Command):
             '# To impersonate a service account for "%s://" URIs over\n'
             '# JSON API, edit and uncomment the following line:\n'
             '#%s_impersonate_service_account = <service account email>\n\n')
-      config_file.write('\n')
+
+    # Add device certificate mTLS fields.
+    config_file.write(textwrap.dedent(
+        """\
+        # This configuration setting enables or disables mutual TLS
+        # authentication. The default value for this setting is "false". When
+        # set to "true", gsutil uses the configured client certificate as
+        # transport credential to access the APIs. The use of mTLS ensures that
+        # the access originates from a trusted enterprise device. When enabled,
+        # the client certificate is auto discovered using the endpoint
+        # verification agent. When set to "true" but no client certificate or
+        # key is found, users receive an error.
+        #use_client_certificate = False
+
+        # The command line to execute, which prints the
+        # certificate, private key, or password to use in
+        # conjunction with “use_client_certificate = True”.
+        #cert_provider_command = <Absolute path to command to run for
+        #                         certification. Ex: "/scripts/gen_cert.sh">
+
+        """
+    ))
 
     # Write the config file Boto section.
     config_file.write('%s\n' % CONFIG_BOTO_SECTION_CONTENT)
