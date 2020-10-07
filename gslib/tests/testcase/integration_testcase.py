@@ -1007,7 +1007,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       timer = threading.Timer(timeout_secs, Kill)
       timer.start()
 
-    c_out = p.communicate(**comm_kwargs)
+    try:
+      c_out = p.communicate(**comm_kwargs)
+    except subprocess.TimeoutExpired:
+      print('Process timed out. Kill the process')
+      os.killpg(p.pid, signal.SIGKILL)
+      c_out = p.communicate()
 
     if not six.PY3:
       timer.cancel()
