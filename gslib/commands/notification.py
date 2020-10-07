@@ -325,16 +325,17 @@ _DESCRIPTION = """
   change notifications.
 """ + _WATCHBUCKET_DESCRIPTION + _STOPCHANNEL_DESCRIPTION + """
 <B>NOTIFICATIONS AND PARALLEL COMPOSITE UPLOADS</B>
-  By default, gsutil enables parallel composite uploads for large files (see
-  "gsutil help cp"), which means that an upload of a large object can result
-  in multiple temporary component objects being uploaded before the actual
-  intended object is created. Any subscriber to notifications for this bucket
-  then sees a notification for each of these components being created and
-  deleted. If this is a concern for you, note that parallel composite uploads
-  can be disabled by setting "parallel_composite_upload_threshold = 0" in your
-  boto config file. Alternately, your subscriber code can filter out gsutil's
-  parallel composite uploads by ignoring any notification about objects whose
-  names contain (but do not start with) the following string:
+  gsutil supports `parallel composite uploads
+  <https://cloud.google.com/storage/docs/uploads-downloads#parallel-composite-uploads>`_.
+  If enabled, an upload can result in multiple temporary component objects
+  being uploaded before the actual intended object is created. Any subscriber
+  to notifications for this bucket then sees a notification for each of these
+  components being created and deleted. If this is a concern for you, note
+  that parallel composite uploads can be disabled by setting
+  "parallel_composite_upload_threshold = 0" in your .boto config file.
+  Alternately, your subscriber code can filter out gsutil's parallel
+  composite uploads by ignoring any notification about objects whose names
+  contain (but do not start with) the following string:
     "{composite_namespace}".
 
 """.format(composite_namespace=copy_helper.PARALLEL_UPLOAD_TEMP_NAMESPACE)
