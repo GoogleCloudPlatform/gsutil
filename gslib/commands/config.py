@@ -992,8 +992,8 @@ class ConfigCommand(Command):
             '#%s_impersonate_service_account = <service account email>\n\n')
 
     # Add device certificate mTLS fields.
-    config_file.write(textwrap.dedent(
-        """\
+    config_file.write(
+        textwrap.dedent("""\
         # This configuration setting enables or disables mutual TLS
         # authentication. The default value for this setting is "false". When
         # set to "true", gsutil uses the configured client certificate as
@@ -1010,8 +1010,7 @@ class ConfigCommand(Command):
         #cert_provider_command = <Absolute path to command to run for
         #                         certification. Ex: "/scripts/gen_cert.sh">
 
-        """
-    ))
+        """))
 
     # Write the config file Boto section.
     config_file.write('%s\n' % CONFIG_BOTO_SECTION_CONTENT)
