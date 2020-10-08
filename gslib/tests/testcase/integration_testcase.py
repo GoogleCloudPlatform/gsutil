@@ -374,6 +374,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       command = ['ls', '-a'] if versioned else ['ls']
       b_uri = [suri(bucket_uri) + '/**'] if num_objects else [suri(bucket_uri)]
       listing = self.RunGsUtil(command + b_uri, return_stdout=True).split('\n')
+      print(listing)
       # num_objects + one trailing newline.
       self.assertEquals(len(listing), num_objects + 1)
       return listing
