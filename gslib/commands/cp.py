@@ -53,7 +53,6 @@ from gslib.utils.copy_helper import GetSourceFieldsNeededForCopy
 from gslib.utils.copy_helper import GZIP_ALL_FILES
 from gslib.utils.copy_helper import ItemExistsError
 from gslib.utils.copy_helper import Manifest
-from gslib.utils.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
 from gslib.utils.copy_helper import SkipUnsupportedObjectError
 from gslib.utils.posix_util import ConvertModeToBase8
 from gslib.utils.posix_util import DeserializeFileAttributesFromObjectMetadata
@@ -338,9 +337,9 @@ _RESUMABLE_TRANSFERS_TEXT = """
 
   Until the upload has completed successfully, it is not visible at the destination
   object and does not supersede any existing object the upload is intended to
-  replace. However, parallel composite uploads may leave temporary component
-  objects in place during the upload process. See Parallel Composite Uploads for more
-  information.
+  replace. However, `parallel composite uploads
+  <https://cloud.google.com/storage/docs/uploads-downloads#parallel-composite-uploads>`_
+  may leave temporary component objects in place during the upload process.
 
   Similarly, gsutil automatically performs resumable downloads using standard
   HTTP Range GET operations whenever you use the ``cp`` command, unless the
@@ -413,87 +412,10 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   gsutil can automatically use
   `object composition <https://cloud.google.com/storage/docs/composite-objects>`_
   to perform uploads in parallel for large, local files being uploaded to
-  Cloud Storage. If enabled, a large file is split into
-  component pieces that are uploaded in parallel and composed in the cloud. The
-  temporary components are deleted afterwards. A file can be broken into as
-  many as 32 component pieces. Until this piece limit is reached, the maximum
-  size of each component piece is determined by the variable
-  "parallel_composite_upload_component_size," specified in the [GSUtil] section
-  of your ``.boto`` configuration file. For files that are otherwise too big,
-  components are as large as needed to fit into 32 pieces. No additional local disk
-  space is required for this operation. Parallel composite uploads are disabled by
-  default and cannot be used when uploading an object to a bucket that has a
-  default `customer-managed encryption key
-  <https://cloud.google.com/storage/docs/encryption/customer-managed-keys>`_.
-
-  Using parallel composite uploads presents a tradeoff between upload
-  performance and download configuration. Your uploads run faster if you enable
-  parallel composite uploads, but crcmod is required to download objects that are
-  uploaded through parallel composite uploads if you are using gsutil or other
-  Python applications. You should only enable parallel composite uploads if:
-
-  1. All users who need to download the data using gsutil or
-     other Python applications can install crcmod.
-
-  OR
-
-  2. No gsutil or Python users need to download your objects.
-
-  For example, if you use gsutil to upload video assets that are only served by
-  a Java application, it would make sense to enable parallel composite uploads
-  on your machine, since there are efficient CRC32C implementations available in Java.
-
-  WARNING: Parallel composite uploads should not be used with NEARLINE,
-  COLDLINE, or ARCHIVE storage class buckets, because doing so incurs an early
-  deletion charge for each component object.
-
-  WARNING: Parallel composite uploads should not be used in buckets that have a
-  `retention policy <https://cloud.google.com/storage/docs/bucket-lock>`_,
-  because the component pieces cannot be deleted until each has met the
-  bucket's minimum retention period.
-
-  To try parallel composite uploads, you can run the command:
-
-    gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp bigfile gs://your-bucket
-
-  where ``bigfile`` is larger than 150 MiB. Note that the upload
-  progress indicator continuously updates for the file, until all parts of the
-  upload complete. If you want to enable parallel composite
-  uploads for all of your future uploads, you can uncomment and set the
-  "parallel_composite_upload_threshold" config value in your ``.boto`` configuration
-  file to 150M or your desired value.
-
-  If a parallel composite upload fails prior to composition, run the
-  gsutil command again to take advantage of resumable uploads for the components
-  that failed. The component objects are deleted after the first
-  successful attempt. Any temporary objects that were uploaded successfully
-  before the failure remain until the upload is completed
-  successfully. The temporary objects are named in the following fashion:
-
-    <random ID>%s<hash>
-
-  where <random ID> is a numerical value, and <hash> is an MD5 hash (not related
-  to the hash of the contents of the file or object).
-
-  To avoid leaving temporary objects around, you should check the
-  exit status from the gsutil command. You can do this in a bash script by running:
-
-    if ! gsutil cp ./local-file gs://your-bucket/your-object; then
-      << Code that handles failures >>
-    fi
-
-  Or, for copying a directory, run this script:
-
-    if ! gsutil cp -c -L cp.log -r ./dir gs://bucket; then
-      << Code that handles failures >>
-    fi
-
-  Note that an object uploaded using parallel composite uploads has a
-  CRC32C hash, but no MD5 hash. For details, see "gsutil help crc32c".
-
-  Disable parallel composite uploads by setting the
-  "parallel_composite_upload_threshold" variable in the ``.boto`` config file to 0.
-""" % (PARALLEL_UPLOAD_TEMP_NAMESPACE)
+  Cloud Storage. See the `Uploads and downloads documentation
+  <https://cloud.google.com/storage/docs/uploads-downloads#parallel-composite-uploads>`_
+  for a complete discussion.
+"""
 
 _CHANGING_TEMP_DIRECTORIES_TEXT = """
 <B>CHANGING TEMP DIRECTORIES</B>

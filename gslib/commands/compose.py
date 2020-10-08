@@ -50,13 +50,12 @@ _DETAILED_HELP_TEXT = ("""
   object's content type. For more information, please see:
   https://cloud.google.com/storage/docs/composite-objects
 
-  Note also that the gsutil cp command can automatically split uploads for
-  large files into multiple component objects, upload them in parallel, and
-  compose them into a final object. This will still perform all uploads from
-  a single machine. For extremely large files and/or very low per-machine
-  bandwidth, you may want to split the file and upload it from multiple
-  machines, and later compose these parts of the file manually. See the
-  'PARALLEL COMPOSITE UPLOADS' section under 'gsutil help cp' for details.
+  Note also that the ``gsutil cp`` command can automatically split uploads
+  for large files into multiple component objects, upload them in parallel,
+  and compose them into a final object. This will still perform all uploads
+  from a single machine. For extremely large files and/or very low
+  per-machine bandwidth, you may want to split the file and upload it from
+  multiple machines, and later compose these parts of the file manually.
 
   Appending simply entails uploading your new data to a temporary object,
   composing it with the growing append-target, and deleting the temporary
