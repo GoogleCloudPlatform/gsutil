@@ -2061,7 +2061,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                   data.
       """
       stderr = self.RunGsUtil([
-          '-D', 'cp', '-j', 'js, html',
+          '-DD', 'cp', '-j', 'js, html',
           os.path.join(tmpdir, 'test*'),
           suri(bucket_uri)
       ],
