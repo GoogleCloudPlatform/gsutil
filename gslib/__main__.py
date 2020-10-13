@@ -64,7 +64,7 @@ from gslib import metrics
 try:
   opts, args = GetArgumentsAndOptions()
 except CommandException as e:
-  reason = e.reason if e.information else 'CommandException: %s' % e.reason
+  reason = e.reason if e.informational else 'CommandException: %s' % e.reason
   err = '%s\n' % reason
   try:
     text_util.print_to_fd(err, end='', file=sys.stderr)
