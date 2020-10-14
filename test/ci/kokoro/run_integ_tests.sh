@@ -116,4 +116,6 @@ if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   system_profiler SPHardwareDataType
 fi
 
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+
 python "$GSUTIL_ENTRYPOINT" test -p "1" cp.TestCp.test_gzip_transport_encoded_upload_and_download
