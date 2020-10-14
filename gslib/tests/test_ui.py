@@ -94,7 +94,7 @@ def JoinThreadAndRaiseOnTimeout(ui_thread, thread_wait_time=THREAD_WAIT_TIME):
     Exception: Warns UIThread is still alive.
   """
   ui_thread.join(thread_wait_time)
-  if ui_thread.isAlive():
+  if ui_thread.is_alive():
     raise Exception('UIThread is still alive')
 
 
