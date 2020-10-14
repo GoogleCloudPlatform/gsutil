@@ -185,6 +185,12 @@ open_files_map = AtomicDict(
 # would be unnecessary.
 open_files_lock = parallelism_framework_util.CreateLock()
 
+# Declarations for tracking state of one-time warning that use of KMS is
+# disabling parallel composite uploads.
+global kms_compose_warning_counter, kms_compose_warning_lock
+kms_compose_warning_lock = parallelism_framework_util.CreateLock()
+kms_compose_warning = False
+
 # For debugging purposes; if True, files and objects that fail hash validation
 # will be saved with the below suffix appended.
 _RENAME_ON_HASH_MISMATCH = False
@@ -1272,6 +1278,14 @@ def _DoParallelCompositeUpload(fp,
   return elapsed_time, composed_object
 
 
+def _WarnOnceAboutKmsCompose(logger):
+    with kms_compose_warning_lock:
+        if kms_compose_warning:
+            kms_compose_warning = False
+            logger.warning('Not using parallel composite upload for KMS-encryption. ' +
+                           'This combination is not currently supported by GCS.')
+
+
 def _ShouldDoParallelCompositeUpload(logger,
                                      allow_splitting,
                                      src_url,
@@ -1342,8 +1356,7 @@ def _ShouldDoParallelCompositeUpload(logger,
   # compose functionality over objects with distinct KMS encryption keys (CMEKs)
   # or distinct CSEKs, don't utilize parallel composite uploads.
   if kms_keyname:
-      logger.warning('Not using parallel composite upload for KMS-encryption. ' +
-                     'This combination is not currently supported by GCS.')
+      _WarnOnceAboutKmsCompose(logger)
       return False
 
   # TODO(KMS, Compose): Once GCS supports compose operations over
@@ -1384,8 +1397,7 @@ def _ShouldDoParallelCompositeUpload(logger,
       # Treat an API call failure as if we checked and there was no key.
       bucket_metadata_pcu_check = True
     if not bucket_metadata_pcu_check:
-        logger.warning('Not using parallel composite upload for KMS-encryption. ' +
-                       'This combination is not currently supported by GCS.')
+        _WarnOnceAboutKmsCompose(logger)
     return bucket_metadata_pcu_check
 
 
