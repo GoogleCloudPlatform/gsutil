@@ -187,7 +187,7 @@ open_files_lock = parallelism_framework_util.CreateLock()
 
 # Declarations for tracking state of one-time warning that use of KMS is
 # disabling parallel composite uploads.
-global kms_compose_warning_counter, kms_compose_warning_lock
+global kms_compose_warning, kms_compose_warning_lock
 kms_compose_warning_lock = parallelism_framework_util.CreateLock()
 kms_compose_warning = True
 
@@ -1279,11 +1279,13 @@ def _DoParallelCompositeUpload(fp,
 
 
 def _WarnOnceAboutKmsCompose(logger):
+  global kms_compose_warning, kms_compose_warning_lock
   with kms_compose_warning_lock:
     if kms_compose_warning:
       kms_compose_warning = False
-      logger.warning('Not using parallel composite upload for KMS-encryption. ' +
-                     'This combination is not currently supported by GCS.')
+      logger.warning('WARNING: Not using parallel composite upload for ' +
+                     'KMS-encryption. This combination is not currently ' +
+                     'supported by GCS.')
 
 
 def _ShouldDoParallelCompositeUpload(logger,
