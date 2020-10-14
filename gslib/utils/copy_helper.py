@@ -189,7 +189,7 @@ open_files_lock = parallelism_framework_util.CreateLock()
 # disabling parallel composite uploads.
 global kms_compose_warning_counter, kms_compose_warning_lock
 kms_compose_warning_lock = parallelism_framework_util.CreateLock()
-kms_compose_warning = False
+kms_compose_warning = True
 
 # For debugging purposes; if True, files and objects that fail hash validation
 # will be saved with the below suffix appended.
@@ -1279,11 +1279,11 @@ def _DoParallelCompositeUpload(fp,
 
 
 def _WarnOnceAboutKmsCompose(logger):
-    with kms_compose_warning_lock:
-        if kms_compose_warning:
-            kms_compose_warning = False
-            logger.warning('Not using parallel composite upload for KMS-encryption. ' +
-                           'This combination is not currently supported by GCS.')
+  with kms_compose_warning_lock:
+    if kms_compose_warning:
+      kms_compose_warning = False
+      logger.warning('Not using parallel composite upload for KMS-encryption. ' +
+                     'This combination is not currently supported by GCS.')
 
 
 def _ShouldDoParallelCompositeUpload(logger,
@@ -1356,8 +1356,8 @@ def _ShouldDoParallelCompositeUpload(logger,
   # compose functionality over objects with distinct KMS encryption keys (CMEKs)
   # or distinct CSEKs, don't utilize parallel composite uploads.
   if kms_keyname:
-      _WarnOnceAboutKmsCompose(logger)
-      return False
+    _WarnOnceAboutKmsCompose(logger)
+    return False
 
   # TODO(KMS, Compose): Once GCS supports compose operations over
   # CMEK-encrypted objects, remove this check and return the boolean result of
@@ -1397,7 +1397,7 @@ def _ShouldDoParallelCompositeUpload(logger,
       # Treat an API call failure as if we checked and there was no key.
       bucket_metadata_pcu_check = True
     if not bucket_metadata_pcu_check:
-        _WarnOnceAboutKmsCompose(logger)
+      _WarnOnceAboutKmsCompose(logger)
     return bucket_metadata_pcu_check
 
 
