@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import boto
 from boto import config
+from gslib import context_config
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import CloudApi
 from gslib.cs_api_map import ApiMapConstants
@@ -209,6 +210,15 @@ class CloudApiDelegator(CloudApi):
     elif self.prefer_api in (
         self.api_map[ApiMapConstants.SUPPORT_MAP][selected_provider]):
       api = self.prefer_api
+
+    if (api == ApiSelector.XML and context_config.get_context_config() and
+        context_config.get_context_config().use_client_certificate):
+      raise ArgumentException(
+          'User enabled mTLS by setting "use_client_certificate", but mTLS'
+          ' is not supported for the selected XML API. Try configuring for '
+          ' the GCS JSON API or setting "use_client_certificate" to "False" in'
+          ' the Boto config.')
+
     return api
 
   def GetServiceAccountId(self, provider=None):

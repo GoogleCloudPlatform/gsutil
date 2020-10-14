@@ -41,6 +41,7 @@ from boto import config
 import httplib2
 import oauth2client
 
+from gslib import context_config
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import BadRequestException
@@ -169,6 +170,9 @@ _SKIP_LISTING_OBJECT = 'skip'
 _INSUFFICIENT_OAUTH2_SCOPE_MESSAGE = (
     'Insufficient OAuth2 scope to perform this operation.')
 
+DEFAULT_HOST = 'storage.googleapis.com'
+MTLS_HOST = 'storage.mtls.googleapis.com'
+
 
 class GcsJsonApi(CloudApi):
   """Google Cloud Storage JSON implementation of gsutil Cloud API."""
@@ -228,7 +232,18 @@ class GcsJsonApi(CloudApi):
 
     self.http_base = 'https://'
     gs_json_host = config.get('Credentials', 'gs_json_host', None)
-    self.host_base = gs_json_host or 'storage.googleapis.com'
+    if (context_config.get_context_config() and
+        context_config.get_context_config().use_client_certificate):
+      if gs_json_host:
+        raise ArgumentException(
+            '"use_client_certificate" is enabled, which sets gsutil to use the'
+            ' host {}. However, a custom host was set using'
+            ' "gs_json_host": {}. Please set "use_client_certificate" to'
+            ' "False" or comment out the "gs_json_host" line in the Boto'
+            ' config.'.format(MTLS_HOST, gs_json_host))
+      self.host_base = MTLS_HOST
+    else:
+      self.host_base = gs_json_host or DEFAULT_HOST
 
     if not gs_json_host:
       gs_host = config.get('Credentials', 'gs_host', None)

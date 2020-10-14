@@ -27,6 +27,7 @@ import six
 
 from gslib import context_config
 from gslib.tests import testcase
+from gslib.tests.testcase import base
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 
@@ -152,6 +153,8 @@ class TestPemFileParser(testcase.GsUtilUnitTestCase):
     self.assertIsNone(sections.get('ENCRYPTED PRIVATE KEY'))
 
 
+# Setting global context_config singleton causes issues in parallel.
+@base.NotParallelizable
 @testcase.integration_testcase.SkipForS3('mTLS only runs on GCS JSON API.')
 @testcase.integration_testcase.SkipForXML('mTLS only runs on GCS JSON API.')
 class TestContextConfig(testcase.GsUtilUnitTestCase):
@@ -160,7 +163,6 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   def setUp(self):
     super(TestContextConfig, self).setUp()
     self.mock_logger = mock.Mock()
-    context_config._singleton_config = None
 
   def testContextConfigIsASingleton(self):
     first = context_config.create_context_config(self.mock_logger)

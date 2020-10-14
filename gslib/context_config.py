@@ -122,7 +122,7 @@ class _ContextConfig(object):
     self.logger = logger
 
     self.use_client_certificate = config.getbool('Credentials',
-                                                 'use_client_certificate', None)
+                                                 'use_client_certificate')
     self.client_cert_path = None
     self.client_cert_password = None
 
@@ -162,7 +162,10 @@ class _ContextConfig(object):
       if command_process.returncode != 0:
         raise CertProvisionError(command_stderr)
 
-      sections = _SplitPemIntoSections(command_stdout, self.logger)
+      # Python 3 outputs bytes from communicate() by default.
+      command_stdout_string = str(command_stdout)
+
+      sections = _SplitPemIntoSections(command_stdout_string, self.logger)
       with open(cert_path, 'w+') as f:
         f.write(sections['CERTIFICATE'])
         f.write(sections['ENCRYPTED PRIVATE KEY'])
