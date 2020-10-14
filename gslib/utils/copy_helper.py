@@ -1283,8 +1283,8 @@ def _WarnOnceAboutKmsCompose(logger):
   with kms_compose_warning_lock:
     if kms_compose_warning:
       kms_compose_warning = False
-      logger.warning('WARNING: Not using parallel composite upload for ' +
-                     'KMS-encryption. This combination is not currently ' +
+      logger.warning('WARNING: Not using parallel composite upload for '
+                     'KMS-encryption. This combination is not currently '
                      'supported by GCS.')
 
 
