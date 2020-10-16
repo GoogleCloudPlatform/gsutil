@@ -219,6 +219,10 @@ class BotoTranslation(CloudApi):
     self.api_version = boto.config.get_value('GSUtil', 'default_api_version',
                                              '1')
 
+  def GetServiceAccountId(self):
+    """Service account credentials unused for S3."""
+    return None
+
   def GetBucket(self, bucket_name, provider=None, fields=None):
     """See CloudApi class for function doc strings."""
     _ = provider

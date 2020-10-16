@@ -1,3 +1,16 @@
+Release 4.53 (release date: 2020-08-19)
+======================================
+Bug Fixes
+------------------
+- Remove socksipy dependency to fix proxy authentication (#1084)
+- Retry on errors relating to region specification for S3 (#1049)
+
+Other Changes
+------------------
+- Prompt Daisy chain users to try STS (#1077)
+- Add new IAM types, and disable URL parsing for  IAM b/c it has subcommands. (#1067)
+- Many text updates and clarifications.
+
 Release 4.52 (release date: 2020-07-07)
 ======================================
 Bug Fixes

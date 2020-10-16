@@ -64,9 +64,9 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>DESCRIPTION</B>
   The gsutil rewrite command rewrites cloud objects, applying the specified
-  transformations to them. The transformation(s) are atomic and
-  applied based on the input transformation flags. Object metadata values are
-  preserved unless altered by a transformation.
+  transformations to them. The transformation(s) are atomic for each affected
+  object and applied based on the input transformation flags. Object metadata
+  values are preserved unless altered by a transformation.
 
   The -k flag is supported to add, rotate, or remove encryption keys on
   objects.  For example, the command:

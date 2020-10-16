@@ -259,9 +259,9 @@ class Bucket(_messages.Message):
           createdBefore: A date in RFC 3339 format with only the date part
             (for instance, "2013-01-15"). This condition is satisfied when an
             object is created before midnight of the specified date in UTC.
-          customTimeBefore: A timestamp in RFC 3339 format. This condition is
-            satisfied when the custom time on an object is before this
-            timestamp.
+          customTimeBefore: A date in RFC 3339 format with only the date part
+            (for instance, "2013-01-15"). This condition is satisfied when the
+            custom time on an object is before this date in UTC.
           daysSinceCustomTime: Number of days elapsed since the user-specified
             timestamp set on an object. The condition is satisfied if the days
             elapsed is at least this number. If no custom timestamp is
@@ -279,9 +279,10 @@ class Bucket(_messages.Message):
             specified by this condition will be matched. Values include
             MULTI_REGIONAL, REGIONAL, NEARLINE, COLDLINE, ARCHIVE, STANDARD,
             and DURABLE_REDUCED_AVAILABILITY.
-          noncurrentTimeBefore: A timestamp in RFC 3339 format. This condition
-            is satisfied when the noncurrent time on an object is before this
-            timestamp. This condition is relevant only for versioned objects.
+          noncurrentTimeBefore: A date in RFC 3339 format with only the date
+            part (for instance, "2013-01-15"). This condition is satisfied
+            when the noncurrent time on an object is before this date in UTC.
+            This condition is relevant only for versioned objects.
           numNewerVersions: Relevant only for versioned objects. If the value
             is N, this condition is satisfied when there are at least N
             versions (including the live version) newer than this version of
@@ -290,12 +291,12 @@ class Bucket(_messages.Message):
 
         age = _messages.IntegerField(1, variant=_messages.Variant.INT32)
         createdBefore = extra_types.DateField(2)
-        customTimeBefore = _message_types.DateTimeField(6)
+        customTimeBefore = extra_types.DateField(6)
         daysSinceCustomTime = _messages.IntegerField(7, variant=_messages.Variant.INT32)
         daysSinceNoncurrentTime = _messages.IntegerField(8, variant=_messages.Variant.INT32)
         isLive = _messages.BooleanField(3)
         matchesStorageClass = _messages.StringField(4, repeated=True)
-        noncurrentTimeBefore = _message_types.DateTimeField(9)
+        noncurrentTimeBefore = extra_types.DateField(9)
         numNewerVersions = _messages.IntegerField(5, variant=_messages.Variant.INT32)
 
       action = _messages.MessageField('ActionValue', 1)

@@ -185,6 +185,12 @@ open_files_map = AtomicDict(
 # would be unnecessary.
 open_files_lock = parallelism_framework_util.CreateLock()
 
+# Declarations for tracking state of one-time warning that use of KMS is
+# disabling parallel composite uploads.
+global kms_compose_warning, kms_compose_warning_lock
+kms_compose_warning_lock = parallelism_framework_util.CreateLock()
+kms_compose_warning = True
+
 # For debugging purposes; if True, files and objects that fail hash validation
 # will be saved with the below suffix appended.
 _RENAME_ON_HASH_MISMATCH = False
@@ -1272,6 +1278,16 @@ def _DoParallelCompositeUpload(fp,
   return elapsed_time, composed_object
 
 
+def _WarnOnceAboutKmsCompose(logger):
+  global kms_compose_warning, kms_compose_warning_lock
+  with kms_compose_warning_lock:
+    if kms_compose_warning:
+      kms_compose_warning = False
+      logger.warning('WARNING: Not using parallel composite upload for '
+                     'KMS-encryption. This combination is not currently '
+                     'supported by GCS.')
+
+
 def _ShouldDoParallelCompositeUpload(logger,
                                      allow_splitting,
                                      src_url,
@@ -1297,11 +1313,6 @@ def _ShouldDoParallelCompositeUpload(logger,
   Returns:
     True iff a parallel upload should be performed on the source file.
   """
-  # TODO(KMS, Compose): Until we ensure service-side that we have efficient
-  # compose functionality over objects with distinct KMS encryption keys (CMEKs)
-  # or distinct CSEKs, don't utilize parallel composite uploads.
-  if kms_keyname:
-    return False
 
   global suggested_sliced_transfers, suggested_sliced_transfers_lock
   parallel_composite_upload_threshold = HumanReadableToBytes(
@@ -1320,7 +1331,7 @@ def _ShouldDoParallelCompositeUpload(logger,
   # TODO: Once compiled crcmod is being distributed by major Linux distributions
   # remove this check.
   if (all_factors_but_size and parallel_composite_upload_threshold == 0 and
-      file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD):
+      file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD) and not kms_keyname:
     with suggested_sliced_transfers_lock:
       if not suggested_sliced_transfers.get('suggested'):
         logger.info('\n'.join(
@@ -1341,6 +1352,13 @@ def _ShouldDoParallelCompositeUpload(logger,
 
   if not (all_factors_but_size and parallel_composite_upload_threshold > 0 and
           file_size >= parallel_composite_upload_threshold):
+    return False
+
+  # TODO(KMS, Compose): Until we ensure service-side that we have efficient
+  # compose functionality over objects with distinct KMS encryption keys (CMEKs)
+  # or distinct CSEKs, don't utilize parallel composite uploads.
+  if kms_keyname:
+    _WarnOnceAboutKmsCompose(logger)
     return False
 
   # TODO(KMS, Compose): Once GCS supports compose operations over
@@ -1380,6 +1398,8 @@ def _ShouldDoParallelCompositeUpload(logger,
     except ServiceException:
       # Treat an API call failure as if we checked and there was no key.
       bucket_metadata_pcu_check = True
+    if not bucket_metadata_pcu_check:
+      _WarnOnceAboutKmsCompose(logger)
     return bucket_metadata_pcu_check
 
 
@@ -3369,6 +3389,12 @@ def _CopyObjToObjDaisyChainMode(src_url,
   Raises:
     CommandException: if errors encountered.
   """
+  logger.info('\n'.join(
+      textwrap.wrap('==> NOTE: For large cloud-to-cloud transfers, you '
+                    'may find significant performance gains by using the '
+                    'Storage Transfer Service '
+                    'https://console.cloud.google.com/transfer?gsutil')) + '\n')
+
   # We don't attempt to preserve ACLs across providers because
   # GCS and S3 support different ACLs and disjoint principals.
   if (global_copy_helper_opts.preserve_acl and

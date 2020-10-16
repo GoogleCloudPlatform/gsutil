@@ -100,22 +100,25 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
 
   def testSignUrlOutputP12(self):
     """Tests signurl output of a sample object with pkcs12 keystore."""
-    self._DoTestSignUrlOutput(self._GetKsFile())
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
+    cmd = [
+        'signurl', '-p', 'notasecret', '-m', 'PUT',
+        self._GetKsFile(),
+        suri(object_uri)
+    ]
+    stdout = self.RunGsUtil(cmd, return_stdout=True)
+    self.assertIn('x-goog-credential=test.apps.googleusercontent.com', stdout)
+    self.assertIn('x-goog-expires=3600', stdout)
+    self.assertIn('%2Fus-central1%2F', stdout)
+    self.assertIn('\tPUT\t', stdout)
 
   def testSignUrlOutputJSON(self):
     """Tests signurl output of a sample object with json keystore."""
-    self._DoTestSignUrlOutput(self._GetJSONKsFile(), json_keystore=True)
-
-  def _DoTestSignUrlOutput(self, ks_file, json_keystore=False):
-    """Tests signurl output of a sample object."""
-
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
-    cmd_base = ['signurl'] if json_keystore else ['signurl', '-p', 'notasecret']
-    stdout = self.RunGsUtil(
-        cmd_base +
-        ['-m', 'PUT', ks_file, suri(object_uri)], return_stdout=True)
-
+    cmd = ['signurl', '-m', 'PUT', self._GetJSONKsFile(), suri(object_uri)]
+    stdout = self.RunGsUtil(cmd, return_stdout=True)
     self.assertIn('x-goog-credential=test%40developer.gserviceaccount.com',
                   stdout)
     self.assertIn('x-goog-expires=3600', stdout)
@@ -155,8 +158,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     for obj, line, partial_url in zip(objs, lines, expected_partial_urls):
       self.assertIn(obj, line)
       self.assertIn(partial_url, line)
-      self.assertIn('x-goog-credential=test%40developer.gserviceaccount.com',
-                    line)
+      self.assertIn('x-goog-credential=test.apps.googleusercontent.com', line)
     self.assertIn('%2Fus%2F', stdout)
 
   def testSignUrlWithWildcard(self):

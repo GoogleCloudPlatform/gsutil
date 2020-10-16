@@ -94,7 +94,7 @@ _SET_DESCRIPTION = """
     gsutil acl set acl.txt gs://cats/file.txt
 
   Note that you can set an ACL on multiple buckets or objects at once. For
-  example, to set ACLs on all .jpg files found in a bucket::
+  example, to set ACLs on all .jpg files found in a bucket:
 
     gsutil acl set acl.txt gs://bucket/**.jpg
 

@@ -32,9 +32,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.encryption_helper import GetEncryptionKeyWrapper
 from gslib.utils.translation_helper import PreconditionsFromHeaders
 
-MAX_COMPONENT_COUNT = 1024
 MAX_COMPOSE_ARITY = 32
-MAX_COMPONENT_RATE = 200
 
 _SYNOPSIS = """
   gsutil compose gs://bucket/obj1 [gs://bucket/obj2 ...] gs://bucket/composite
@@ -52,13 +50,12 @@ _DETAILED_HELP_TEXT = ("""
   object's content type. For more information, please see:
   https://cloud.google.com/storage/docs/composite-objects
 
-  Note also that the gsutil cp command can automatically split uploads for
-  large files into multiple component objects, upload them in parallel, and
-  compose them into a final object. This will still perform all uploads from
-  a single machine. For extremely large files and/or very low per-machine
-  bandwidth, you may want to split the file and upload it from multiple
-  machines, and later compose these parts of the file manually. See the
-  'PARALLEL COMPOSITE UPLOADS' section under 'gsutil help cp' for details.
+  Note also that the ``gsutil cp`` command can automatically split uploads
+  for large files into multiple component objects, upload them in parallel,
+  and compose them into a final object. This will still perform all uploads
+  from a single machine. For extremely large files and/or very low
+  per-machine bandwidth, you may want to split the file and upload it from
+  multiple machines, and later compose these parts of the file manually.
 
   Appending simply entails uploading your new data to a temporary object,
   composing it with the growing append-target, and deleting the temporary

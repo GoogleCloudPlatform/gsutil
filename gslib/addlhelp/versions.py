@@ -27,14 +27,14 @@ _DETAILED_HELP_TEXT = ("""
   a way to un-delete data that you accidentally deleted, or to retrieve older
   versions of your data. You can turn versioning on or off for a bucket at any
   time. Turning versioning off leaves existing object versions in place and
-  simply causes the bucket to overwrite the live version of the object whenever
-  a new version is uploaded.
+  simply causes the bucket to delete the existing live version of the object
+  whenever a new version is uploaded.
 
   Regardless of whether you have enabled versioning on a bucket, every object
   has two associated positive integer fields:
 
-  - the generation, which is updated when the content of an object is
-    overwritten.
+  - the generation, which is updated when a new object replaces an existing
+    object with the same name.
   - the metageneration, which identifies the metadata generation. It starts
     at 1; is updated every time the metadata (e.g., ACL or Content-Type) for a
     given content generation is updated; and gets reset when the generation
@@ -263,7 +263,7 @@ _DETAILED_HELP_TEXT = ("""
       x-goog-if-metageneration-match:3 acl set public-read \\
       gs://bucket/object#1360699153986000
 
-  Without adding these headers, the update would simply overwrite the existing
+  Without adding these headers, the update would simply replace the existing
   ACL. Note that in contrast, the "gsutil acl ch" command uses these headers
   automatically, because it performs a read-modify-write cycle in order to edit
   ACLs.

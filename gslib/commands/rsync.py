@@ -361,7 +361,7 @@ _DETAILED_HELP_TEXT = ("""
   2. The gsutil rsync command considers only the live object version in
      the source and destination buckets when deciding what to copy / delete. If
      versioning is enabled in the destination bucket then gsutil rsync's
-     overwriting or deleting objects will end up creating versions, but the
+     replacing or deleting objects will end up creating versions, but the
      command doesn't try to make any noncurrent versions match in the source
      and destination buckets.
 
@@ -376,9 +376,9 @@ _DETAILED_HELP_TEXT = ("""
   4. The gsutil rsync command copies changed files in their entirety and does
      not employ the
      `rsync delta-transfer algorithm <https://rsync.samba.org/tech_report/>`_
-     to transfer portions of a changed file. This is because cloud objects are
-     immutable and no facility exists to read partial cloud object checksums or
-     perform partial overwrites.
+     to transfer portions of a changed file. This is because Cloud Storage
+     objects are immutable and no facility exists to read partial object
+     checksums or perform partial replacements.
 
 <B>OPTIONS</B>
   -a canned_acl  Sets named canned_acl when uploaded objects created. See
@@ -433,7 +433,7 @@ _DETAILED_HELP_TEXT = ("""
                  which is set to 2 GiB by default. This compression buffer
                  size can be changed to a higher limit, e.g.:
 
-                   gsutil -o "GSUtil:max_upload_compression_buffer_size=8G" \
+                   gsutil -o "GSUtil:max_upload_compression_buffer_size=8G" \\
                      -m rsync -j html,txt /local/source/dir gs://bucket/path
 
   -J             Applies gzip transport encoding to file uploads. This option

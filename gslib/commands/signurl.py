@@ -44,9 +44,8 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
+from gslib.utils import constants
 from gslib.utils.boto_util import GetNewHttp
-from gslib.utils.constants import NO_MAX
-from gslib.utils.constants import UTF8
 from gslib.utils.signurl_helper import CreatePayload, GetFinalUrl
 
 try:
@@ -183,7 +182,7 @@ _DETAILED_HELP_TEXT = ("""
 
   Create a signed url by impersonating a service account:
 
-    gsutil -i <service account email> signurl -d 10m -u gs://<bucket>/<object>  
+    gsutil -i <service account email> signurl -d 10m -u gs://<bucket>/<object>
 
   Create a signed url, valid for one hour, for uploading a plain text
   file via HTTP PUT:
@@ -322,8 +321,7 @@ def _GenSignedUrl(key,
 
 def _ReadKeystore(ks_contents, passwd):
   ks = load_pkcs12(ks_contents, passwd)
-  client_email = ks.get_certificate().get_subject().CN.replace(
-      '.apps.googleusercontent.com', '@developer.gserviceaccount.com')
+  client_email = ks.get_certificate().get_subject().CN
 
   return ks.get_privatekey(), client_email
 
@@ -375,7 +373,7 @@ class UrlSignCommand(Command):
       command_name_aliases=['signedurl', 'queryauth'],
       usage_synopsis=_SYNOPSIS,
       min_args=1,
-      max_args=NO_MAX,
+      max_args=constants.NO_MAX,
       supported_sub_args='m:d:b:c:p:r:u',
       supported_private_args=['use-service-account'],
       file_url_ok=False,
@@ -414,7 +412,7 @@ class UrlSignCommand(Command):
     for o, v in self.sub_opts:
       # TODO(PY3-ONLY): Delete this if block.
       if six.PY2:
-        v = v.decode(sys.stdin.encoding or UTF8)
+        v = v.decode(sys.stdin.encoding or constants.UTF8)
       if o == '-d':
         if delta is not None:
           delta += _DurationToTimeDelta(v)
@@ -535,8 +533,6 @@ class UrlSignCommand(Command):
     region_cache = {}
 
     key = None
-    client_email = None
-
     if not use_service_account:
       try:
         key, client_email = _ReadJSONKeystore(
@@ -551,6 +547,8 @@ class UrlSignCommand(Command):
         except ValueError:
           raise CommandException('Unable to parse private key from {0}'.format(
               self.args[0]))
+    else:
+      client_email = self.gsutil_api.GetServiceAccountId(provider='gs')
 
     print('URL\tHTTP Method\tExpiration\tSigned URL')
     for url in storage_urls:
@@ -571,7 +569,8 @@ class UrlSignCommand(Command):
         # computing the string to sign when checking the signature.
         gcs_path = '{0}/{1}'.format(
             url.bucket_name,
-            urllib.parse.quote(url.object_name.encode(UTF8), safe=b'/~'))
+            urllib.parse.quote(url.object_name.encode(constants.UTF8),
+                               safe=b'/~'))
 
       if region == _AUTO_DETECT_REGION:
         if url.bucket_name in region_cache:
@@ -610,14 +609,14 @@ class UrlSignCommand(Command):
       time_str = expiration_dt.strftime('%Y-%m-%d %H:%M:%S')
       # TODO(PY3-ONLY): Delete this if block.
       if six.PY2:
-        time_str = time_str.decode(UTF8)
+        time_str = time_str.decode(constants.UTF8)
 
       url_info_str = '{0}\t{1}\t{2}\t{3}'.format(url.url_string, method,
                                                  time_str, final_url)
 
       # TODO(PY3-ONLY): Delete this if block.
       if six.PY2:
-        url_info_str = url_info_str.encode(UTF8)
+        url_info_str = url_info_str.encode(constants.UTF8)
 
       print(url_info_str)
 
@@ -641,6 +640,6 @@ class UrlSignCommand(Command):
         self.logger.warn(
             '%s does not have permissions on %s, using this link will likely '
             'result in a 403 error until at least READ permissions are granted',
-            client_email, url)
+            client_email or 'The account', url)
 
     return 0
