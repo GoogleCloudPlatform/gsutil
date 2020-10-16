@@ -92,5 +92,4 @@ TEST_SIGN_URL_GET_USERPROJECT = (
     '4e8c03b1e8a57570&userProject=myproject&x-goog-algorithm=GOOG4-'
     'RSA-SHA256&x-goog-credential=test.apps.googleusercontent.com%2'
     'F19000101%2Fasia%2Fstorage%2Fgoog4_request&x-goog-date=1900010'
-    '1T000555Z&x-goog-expires=0&x-goog-signedheaders=host'
-)
+    '1T000555Z&x-goog-expires=0&x-goog-signedheaders=host')
