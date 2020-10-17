@@ -478,6 +478,10 @@ _OPTIONS_TEXT = """
                  over the files in the local directory, gsutil prints an error
                  message and aborts.
 
+  -C             Do not cleanup destination file before download. Used in case
+                 when destination is local file to reduce disk space
+                 requirements.
+
   -D             Copy in "daisy chain" mode, which means copying between two buckets
                  by first downloading to the machine where gsutil is run, then
                  uploading to the destination bucket. The default mode is a
@@ -698,7 +702,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([
     _OPTIONS_TEXT,
 ])
 
-CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRs:tUvz:Zj:J'
+CP_SUB_ARGS = 'a:AcCDeIL:MNnpPrRs:tUvz:Zj:J'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
@@ -919,7 +923,8 @@ class CpCommand(Command):
           manifest=self.manifest,
           gzip_encoded=self.gzip_encoded,
           gzip_exts=self.gzip_exts,
-          preserve_posix=preserve_posix)
+          preserve_posix=preserve_posix,
+          cleanup_before_download=self.cleanup_before_download)
       if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.url_string, 'md5', md5)
@@ -1164,6 +1169,7 @@ class CpCommand(Command):
     # continue_on_error is handled by Command parent class, so save in Command
     # state rather than CopyHelperOpts.
     self.continue_on_error = False
+    self.cleanup_before_download = True
     daisy_chain = False
     read_args_from_stdin = False
     print_ver = False
@@ -1205,6 +1211,8 @@ class CpCommand(Command):
           self.all_versions = True
         if o == '-c':
           self.continue_on_error = True
+        if o == '-C':
+          self.cleanup_before_download = False
         elif o == '-D':
           daisy_chain = True
         elif o == '-e':

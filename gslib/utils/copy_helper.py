@@ -2286,7 +2286,7 @@ def _UploadFileToObject(src_url,
           uploaded_object.md5Hash)
 
 
-def _GetDownloadFile(dst_url, src_obj_metadata, logger):
+def _GetDownloadFile(dst_url, src_obj_metadata, cleanup_before_download, logger):
   """Creates a new download file, and deletes the file that will be replaced.
 
   Names and creates a temporary file for this download. Also, if there is an
@@ -2296,6 +2296,7 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
   Args:
     dst_url: Destination FileUrl.
     src_obj_metadata: Metadata from the source object.
+    cleanup_before_download: Cleanup destination before download.
     logger: for outputting log messages.
 
   Returns:
@@ -2333,7 +2334,7 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
   # If a file exists at the permanent destination (where the file will be moved
   # after the download is completed), delete it here to reduce disk space
   # requirements.
-  if os.path.exists(dst_url.object_name):
+  if cleanup_before_download and os.path.exists(dst_url.object_name):
     os.unlink(dst_url.object_name)
 
   # Downloads open the temporary download file in r+b mode, which requires it
@@ -3007,7 +3008,8 @@ def _DownloadObjectToFile(src_url,
                           allow_splitting=True,
                           decryption_key=None,
                           is_rsync=False,
-                          preserve_posix=False):
+                          preserve_posix=False,
+                          cleanup_before_download=True):
   """Downloads an object to a local file.
 
   Args:
@@ -3022,6 +3024,7 @@ def _DownloadObjectToFile(src_url,
     decryption_key: Base64-encoded decryption key for the source object, if any.
     is_rsync: Whether or not the caller is the rsync command.
     preserve_posix: Whether or not to preserve POSIX attributes.
+    cleanup_before_download: Cleanup destination before download.
 
   Returns:
     (elapsed_time, bytes_transferred, dst_url, md5), where time elapsed
@@ -3047,7 +3050,9 @@ def _DownloadObjectToFile(src_url,
                                             allow_splitting, logger)
 
   download_file_name, need_to_unzip = _GetDownloadFile(dst_url,
-                                                       src_obj_metadata, logger)
+                                                       src_obj_metadata,
+                                                       cleanup_before_download,
+                                                       logger)
 
   # Ensure another process/thread is not already writing to this file.
   with open_files_lock:
@@ -3700,7 +3705,8 @@ def PerformCopy(logger,
                 gzip_exts=None,
                 is_rsync=False,
                 preserve_posix=False,
-                gzip_encoded=False):
+                gzip_encoded=False,
+                cleanup_before_download=True):
   """Performs copy from src_url to dst_url, handling various special cases.
 
   Args:
@@ -3726,6 +3732,8 @@ def PerformCopy(logger,
     gzip_encoded: Whether to use gzip transport encoding for the upload. Used
         in conjunction with gzip_exts. Streaming files compressed is only
         supported on the JSON GCS API.
+    cleanup_before_download: cleanup destination file before download, used in
+        case when destination is local file to reduce disk space requirements.
 
   Returns:
     (elapsed_time, bytes_transferred, version-specific dst_url) excluding
@@ -3900,7 +3908,8 @@ def PerformCopy(logger,
                                    allow_splitting=allow_splitting,
                                    decryption_key=decryption_key,
                                    is_rsync=is_rsync,
-                                   preserve_posix=preserve_posix)
+                                   preserve_posix=preserve_posix,
+                                   cleanup_before_download=cleanup_before_download)
     elif copy_in_the_cloud:
       PutToQueueWithTimeout(
           gsutil_api.status_queue,
