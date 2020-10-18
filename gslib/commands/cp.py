@@ -478,22 +478,6 @@ _OPTIONS_TEXT = """
                  over the files in the local directory, gsutil prints an error
                  message and aborts.
 
-  -C             Do not cleanup destination file before download. This flag is for
-                 the case when destination is local file and destination file is
-                 already exist. The default behaviour (when this flag is not
-                 provided) is that destination file will be removed before
-                 downloading starts in order to reduce disk space requirements.
-                 However, in this situation file will be temporary unavailable
-                 meaning there will be point in time between old file version and
-                 new file version when there will be no file on disk.
-                 So, using this flag will overcome such a situation, but user has
-                 to be aware and take responsibility of the fact that there should
-                 be enough space to store two copies of the same file for this short
-                 period of time.
-
-                 NOTE: ``-C`` is used only in case destination is local file, in
-                 other cases, this flag is ignored.
-
   -D             Copy in "daisy chain" mode, which means copying between two buckets
                  by first downloading to the machine where gsutil is run, then
                  uploading to the destination bucket. The default mode is a
@@ -550,6 +534,22 @@ _OPTIONS_TEXT = """
 
                  CAUTION: If some of the source files don't compress well, such
                  as binary data, using this option may result in longer uploads.
+
+  -k             Keep destination file before download. This flag is for
+                 the case when destination is local file and destination file is
+                 already exist. The default behaviour (when this flag is not
+                 provided) is that destination file will be removed before
+                 downloading starts in order to reduce disk space requirements.
+                 However, in this situation file will be temporary unavailable
+                 meaning there will be point in time between old file version and
+                 new file version when there will be no file on disk.
+                 So, using this flag will overcome such a situation, but user has
+                 to be aware and take responsibility of the fact that there should
+                 be enough space to store two copies of the same file for this short
+                 period of time.
+
+                 NOTE: ``-k`` is used only in case destination is local file, in
+                 other cases, this flag is ignored.
 
   -L <file>      Outputs a manifest log file with detailed information about
                  each item that was copied. This manifest contains the following
@@ -714,7 +714,7 @@ _DETAILED_HELP_TEXT = '\n\n'.join([
     _OPTIONS_TEXT,
 ])
 
-CP_SUB_ARGS = 'a:AcCDeIL:MNnpPrRs:tUvz:Zj:J'
+CP_SUB_ARGS = 'a:AcDeIkL:MNnpPrRs:tUvz:Zj:J'
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
@@ -936,7 +936,7 @@ class CpCommand(Command):
           gzip_encoded=self.gzip_encoded,
           gzip_exts=self.gzip_exts,
           preserve_posix=preserve_posix,
-          cleanup_before_download=self.cleanup_before_download)
+          keep_before_download=self.keep_before_download)
       if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.url_string, 'md5', md5)
@@ -1181,7 +1181,7 @@ class CpCommand(Command):
     # continue_on_error is handled by Command parent class, so save in Command
     # state rather than CopyHelperOpts.
     self.continue_on_error = False
-    self.cleanup_before_download = True
+    self.keep_before_download = False
     daisy_chain = False
     read_args_from_stdin = False
     print_ver = False
@@ -1223,8 +1223,6 @@ class CpCommand(Command):
           self.all_versions = True
         if o == '-c':
           self.continue_on_error = True
-        if o == '-C':
-          self.cleanup_before_download = False
         elif o == '-D':
           daisy_chain = True
         elif o == '-e':
@@ -1241,6 +1239,8 @@ class CpCommand(Command):
         elif o == '-J':
           gzip_encoded = True
           gzip_arg_all = GZIP_ALL_FILES
+        if o == '-k':
+          self.keep_before_download = True
         elif o == '-L':
           use_manifest = True
           self.manifest = Manifest(a)

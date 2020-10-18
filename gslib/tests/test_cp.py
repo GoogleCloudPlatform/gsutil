@@ -4542,20 +4542,20 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
                   warning_messages[0])
 
   @mock.patch('os.unlink')
-  def test_cp_cleanup_destination(self, mock_unlink):
-    """Test cleanup destination file before download (-C option)."""
+  def test_cp_keep_destination(self, mock_unlink):
+    """Test keep destination file before download (-k option)."""
     bucket_uri = self.CreateBucket(provider='s3')
     object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo1')
     object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo2')
     fpath = self.CreateTempFile('/tmp')
 
-    # Check with -C first.
-    self.RunCommand('cp', ['-C', suri(object_uri1), fpath])
+    # Check with -k first.
+    self.RunCommand('cp', ['-k', suri(object_uri1), fpath])
     mock_unlink.assert_not_called()
     with open(fpath, 'rb') as f:
       self.assertEqual(f.read(), b'foo1')
 
-    # Check without -C.
+    # Check without -k.
     self.RunCommand('cp', [suri(object_uri2), fpath])
     mock_unlink.assert_called_once_with(fpath)
     with open(fpath, 'rb') as f:
