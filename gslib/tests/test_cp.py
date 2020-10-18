@@ -130,6 +130,10 @@ if not IS_WINDOWS:
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
 
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
 
 def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
   """Helper function for preserve_posix_errors tests in test_cp and test_mv.
@@ -4536,3 +4540,23 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     self.assertEquals(1, len(warning_messages))
     self.assertIn('Found no hashes to validate object upload',
                   warning_messages[0])
+
+  @mock.patch('os.unlink')
+  def test_cp_cleanup_destination(self, mock_unlink):
+    """Test cleanup destination file before download (-C option)."""
+    bucket_uri = self.CreateBucket(provider='s3')
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo1')
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo2')
+    fpath = self.CreateTempFile('/tmp')
+
+    # Check with -C first.
+    self.RunCommand('cp', ['-C', suri(object_uri1), fpath])
+    mock_unlink.assert_not_called()
+    with open(fpath, 'rb') as f:
+      self.assertEqual(f.read(), b'foo1')
+
+    # Check without -C.
+    self.RunCommand('cp', [suri(object_uri2), fpath])
+    mock_unlink.assert_called_once_with(fpath)
+    with open(fpath, 'rb') as f:
+      self.assertEqual(f.read(), b'foo2')

@@ -2286,7 +2286,8 @@ def _UploadFileToObject(src_url,
           uploaded_object.md5Hash)
 
 
-def _GetDownloadFile(dst_url, src_obj_metadata, cleanup_before_download, logger):
+def _GetDownloadFile(dst_url, src_obj_metadata, cleanup_before_download,
+                     logger):
   """Creates a new download file, and deletes the file that will be replaced.
 
   Names and creates a temporary file for this download. Also, if there is an
@@ -3303,9 +3304,7 @@ def _ValidateAndCompleteDownload(logger,
 
   if file_name != final_file_name:
     # Data is still in a temporary file, so move it to a permanent location.
-    if os.path.exists(final_file_name):
-      os.unlink(final_file_name)
-    os.rename(file_name, final_file_name)
+    shutil.move(file_name, final_file_name)
   ParseAndSetPOSIXAttributes(final_file_name,
                              src_obj_metadata,
                              is_rsync=is_rsync,
@@ -3898,18 +3897,19 @@ def PerformCopy(logger,
                       message_type=FileMessage.FILE_DOWNLOAD,
                       size=src_obj_size,
                       finished=False))
-      return _DownloadObjectToFile(src_url,
-                                   src_obj_metadata,
-                                   dst_url,
-                                   gsutil_api,
-                                   logger,
-                                   command_obj,
-                                   copy_exception_handler,
-                                   allow_splitting=allow_splitting,
-                                   decryption_key=decryption_key,
-                                   is_rsync=is_rsync,
-                                   preserve_posix=preserve_posix,
-                                   cleanup_before_download=cleanup_before_download)
+      return _DownloadObjectToFile(
+          src_url,
+          src_obj_metadata,
+          dst_url,
+          gsutil_api,
+          logger,
+          command_obj,
+          copy_exception_handler,
+          allow_splitting=allow_splitting,
+          decryption_key=decryption_key,
+          is_rsync=is_rsync,
+          preserve_posix=preserve_posix,
+          cleanup_before_download=cleanup_before_download)
     elif copy_in_the_cloud:
       PutToQueueWithTimeout(
           gsutil_api.status_queue,
