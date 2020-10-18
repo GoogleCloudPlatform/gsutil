@@ -2296,7 +2296,7 @@ def _GetDownloadFile(dst_url, src_obj_metadata, keep_before_download, logger):
   Args:
     dst_url: Destination FileUrl.
     src_obj_metadata: Metadata from the source object.
-    keep_before_download: Keep destination file before download.
+    keep_before_download: Keep destination file before download starts.
     logger: for outputting log messages.
 
   Returns:
@@ -3024,7 +3024,7 @@ def _DownloadObjectToFile(src_url,
     decryption_key: Base64-encoded decryption key for the source object, if any.
     is_rsync: Whether or not the caller is the rsync command.
     preserve_posix: Whether or not to preserve POSIX attributes.
-    keep_before_download: Keep destination file before download.
+    keep_before_download: Keep destination file before download starts.
 
   Returns:
     (elapsed_time, bytes_transferred, dst_url, md5), where time elapsed
@@ -3731,7 +3731,7 @@ def PerformCopy(logger,
         in conjunction with gzip_exts. Streaming files compressed is only
         supported on the JSON GCS API.
     keep_before_download: keep destination file before download starts, in case
-        when destination is local file, by default file will be cleaned up
+        when destination is local file. By default file will be cleaned up
         before download starts to reduce disk space requirements.
 
   Returns:
