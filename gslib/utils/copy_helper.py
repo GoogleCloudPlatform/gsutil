@@ -2286,8 +2286,7 @@ def _UploadFileToObject(src_url,
           uploaded_object.md5Hash)
 
 
-def _GetDownloadFile(dst_url, src_obj_metadata, keep_before_download,
-                     logger):
+def _GetDownloadFile(dst_url, src_obj_metadata, keep_before_download, logger):
   """Creates a new download file, and deletes the file that will be replaced.
 
   Names and creates a temporary file for this download. Also, if there is an
@@ -3898,19 +3897,18 @@ def PerformCopy(logger,
                       message_type=FileMessage.FILE_DOWNLOAD,
                       size=src_obj_size,
                       finished=False))
-      return _DownloadObjectToFile(
-          src_url,
-          src_obj_metadata,
-          dst_url,
-          gsutil_api,
-          logger,
-          command_obj,
-          copy_exception_handler,
-          allow_splitting=allow_splitting,
-          decryption_key=decryption_key,
-          is_rsync=is_rsync,
-          preserve_posix=preserve_posix,
-          keep_before_download=keep_before_download)
+      return _DownloadObjectToFile(src_url,
+                                   src_obj_metadata,
+                                   dst_url,
+                                   gsutil_api,
+                                   logger,
+                                   command_obj,
+                                   copy_exception_handler,
+                                   allow_splitting=allow_splitting,
+                                   decryption_key=decryption_key,
+                                   is_rsync=is_rsync,
+                                   preserve_posix=preserve_posix,
+                                   keep_before_download=keep_before_download)
     elif copy_in_the_cloud:
       PutToQueueWithTimeout(
           gsutil_api.status_queue,
