@@ -63,6 +63,10 @@ if not IS_WINDOWS:
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
 
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
 if six.PY3:
   long = int
 
@@ -86,6 +90,39 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
     # Decode accepts language-appropriate string type, returns unicode.
     self.assertEqual(rsync._DecodeUrl(six.ensure_str(encoded_url)),
                      six.ensure_text(decoded_url))
+
+  def test_rsync_keep_destination(self):
+    """Test keep destination file before download (-k option)."""
+    bucket_uri = self.CreateBucket(provider='s3')
+    self.CreateObject(bucket_uri=bucket_uri, object_name='f1', contents=b'foo1')
+    self.CreateObject(bucket_uri=bucket_uri, object_name='f2', contents=b'foo2')
+    tmpdir = self.CreateTempDir()
+    fpath = self.CreateTempFile(tmpdir, file_name='f1')
+
+    # Check with -k.
+    with mock.patch('os.unlink') as mock_unlink:
+      self.RunCommand('rsync', ['-k', suri(bucket_uri), tmpdir])
+      self.assertNotIn(
+          fpath,
+          [call[0][0] for call in mock_unlink.call_args_list],
+      )
+      with open(os.path.join(tmpdir, 'f1'), 'rb') as f:
+        self.assertEqual(f.read(), b'foo1')
+      with open(os.path.join(tmpdir, 'f2'), 'rb') as f:
+        self.assertEqual(f.read(), b'foo2')
+
+    # Check without -k.
+    with mock.patch('os.unlink') as mock_unlink:
+      fpath = self.CreateTempFile(tmpdir, file_name='f1')
+      self.RunCommand('rsync', [suri(bucket_uri), tmpdir])
+      self.assertIn(
+          fpath,
+          [call[0][0] for call in mock_unlink.call_args_list],
+      )
+      with open(os.path.join(tmpdir, 'f1'), 'rb') as f:
+        self.assertEqual(f.read(), b'foo1')
+      with open(os.path.join(tmpdir, 'f2'), 'rb') as f:
+        self.assertEqual(f.read(), b'foo2')
 
 
 # TODO: Add inspection to the retry wrappers in this test suite where the state

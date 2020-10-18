@@ -444,6 +444,22 @@ _DETAILED_HELP_TEXT = ("""
                  don't compress well (e.g., that's often true of binary data),
                  this option may result in longer uploads.
 
+  -k             Keep destination file before download. This flag is for
+                 the case when destination is local file and destination file is
+                 already exist. The default behaviour (when this flag is not
+                 provided) is that destination file will be removed before
+                 downloading starts in order to reduce disk space requirements.
+                 However, in this situation file will be temporary unavailable
+                 meaning there will be point in time between old file version and
+                 new file version when there will be no file on disk.
+                 So, using this flag will overcome such a situation, but user has
+                 to be aware and take responsibility of the fact that there should
+                 be enough space to store two copies of the same file for this short
+                 period of time.
+
+                 NOTE: ``-k`` is used only in case destination is local file, in
+                 other cases, this flag is ignored.
+
   -n             Causes rsync to run in "dry run" mode, i.e., just outputting
                  what would be copied or deleted without actually doing any
                  copying/deleting.
@@ -1446,7 +1462,8 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
             is_rsync=True,
             gzip_encoded=cls.gzip_encoded,
             gzip_exts=cls.gzip_exts,
-            preserve_posix=cls.preserve_posix_attrs)
+            preserve_posix=cls.preserve_posix_attrs,
+            keep_before_download=cls.keep_before_download)
         if copy_result is not None:
           (_, bytes_transferred, _, _) = copy_result
           with cls.stats_lock:
@@ -1564,7 +1581,7 @@ class RsyncCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
-      supported_sub_args='a:cCdenpPrRuUx:j:J',
+      supported_sub_args='a:cCdeknpPrRuUx:j:J',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -1696,6 +1713,7 @@ class RsyncCommand(Command):
     # continue_on_error is handled by Command parent class, so save in Command
     # state rather than CopyHelperOpts.
     self.continue_on_error = False
+    self.keep_before_download = False
     self.delete_extras = False
     self.preserve_acl = False
     self.preserve_posix_attrs = False
@@ -1739,6 +1757,8 @@ class RsyncCommand(Command):
         elif o == '-J':
           gzip_encoded = True
           gzip_arg_all = GZIP_ALL_FILES
+        if o == '-k':
+          self.keep_before_download = True
         elif o == '-n':
           self.dryrun = True
         elif o == '-p':
