@@ -478,9 +478,21 @@ _OPTIONS_TEXT = """
                  over the files in the local directory, gsutil prints an error
                  message and aborts.
 
-  -C             Do not cleanup destination file before download. Used in case
-                 when destination is local file to reduce disk space
-                 requirements.
+  -C             Do not cleanup destination file before download. This flag is for
+                 the case when destination is local file and destination file is
+                 already exist. The default behaviour (when this flag is not
+                 provided) is that destination file will be removed before
+                 downloading starts in order to reduce disk space requirements.
+                 However, in this situation file will be temporary unavailable
+                 meaning there will be point in time between old file version and
+                 new file version when there will be no file on disk.
+                 So, using this flag will overcome such a situation, but user has
+                 to be aware and take responsibility of the fact that there should
+                 be enough space to store two copies of the same file for this short
+                 period of time.
+
+                 NOTE: ``-C`` is used only in case destination is local file, in
+                 other cases, this flag is ignored.
 
   -D             Copy in "daisy chain" mode, which means copying between two buckets
                  by first downloading to the machine where gsutil is run, then
