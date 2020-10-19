@@ -518,3 +518,25 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           region='asia',
           content_type='')
     self.assertEquals(expected, signed_url)
+
+  def testSignurlGetWithUserProject(self):
+    """Tests the _GenSignedUrl function with a userproject."""
+    expected = sigs.TEST_SIGN_URL_GET_USERPROJECT
+
+    duration = timedelta(seconds=0)
+    with SetBotoConfigForTest([('Credentials', 'gs_host',
+                                'storage.googleapis.com')]):
+      signed_url = gslib.commands.signurl._GenSignedUrl(
+          self.key,
+          api=None,
+          use_service_account=False,
+          provider='gs',
+          client_id=self.client_email,
+          method='GET',
+          gcs_path='test/test.txt',
+          duration=duration,
+          logger=self.logger,
+          region='asia',
+          content_type='',
+          billing_project='myproject')
+    self.assertEquals(expected, signed_url)

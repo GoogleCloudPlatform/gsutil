@@ -79,3 +79,17 @@ TEST_SIGN_URL_PUT_WITH_SERVICE_ACCOUNT = (
     '&x-goog-credential=fake_service_account_email%2F19000101%2Fus-'
     'east1%2Fstorage%2Fgoog4_request&x-goog-date=19000101T000555Z&x'
     '-goog-expires=3600&x-goog-signedheaders=host')
+TEST_SIGN_URL_GET_USERPROJECT = (
+    'https://storage.googleapis.com/test/test.txt?x-goog-signature='
+    '2a461e23321fbc6d6346848836a0b82fd53b796a58421e9978ac6ca011e2b4'
+    '557aa7db63328c9d3f2dacd98b3c3b13d849a25df813b1efefd448ce7a2c27'
+    '9851383b772f84b461dfafb4f2af4bec98d224880ea3b1be61ab447614ec1f'
+    '735b45aaedca9b257969d7bac69d64f7e2c4ea4b5c18cb2b04afff03fe0b8f'
+    'ba9d85bfce6ba81f5354070938bfd6bce614204a63e58098d47b66a711a9ac'
+    '44e2dfd06d3183e8007d8fb9c221ac79fee306c8b6a123d5918a586bb0fde9'
+    'e945a14ae1264496fe4146fcf92f9f1ed4a13880ec13543ffbcf4c985db2f2'
+    '01b287184f1f89dd14d2c801c26275c8f7f348e3eb3456c4ff42dcc0ae7fee'
+    '4e8c03b1e8a57570&userProject=myproject&x-goog-algorithm=GOOG4-'
+    'RSA-SHA256&x-goog-credential=test.apps.googleusercontent.com%2'
+    'F19000101%2Fasia%2Fstorage%2Fgoog4_request&x-goog-date=1900010'
+    '1T000555Z&x-goog-expires=0&x-goog-signedheaders=host')
