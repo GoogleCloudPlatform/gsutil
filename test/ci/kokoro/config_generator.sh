@@ -33,8 +33,4 @@ test_hmac_list_service_account = sa-hmac-list@bigstore-gsutil-testing.iam.gservi
 test_hmac_alt_service_account = sa-hmac2@bigstore-gsutil-testing.iam.gserviceaccount.com
 test_impersonate_service_account = bigstore-gsutil-impersonation@bigstore-gsutil-testing.iam.gserviceaccount.com
 test_impersonate_failure_account = no-impersonation@bigstore-gsutil-testing.iam.gserviceaccount.com
-
-[OAuth2]
-client_id = 909320924072.apps.googleusercontent.com
-client_secret = p3RlpR10xMFh9ZXBS/ZNLYUu
 EOM

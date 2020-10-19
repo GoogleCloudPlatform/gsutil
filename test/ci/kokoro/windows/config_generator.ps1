@@ -28,8 +28,5 @@ $stream.WriteLine("test_hmac_list_service_account = sa-hmac-list@bigstore-gsutil
 $stream.WriteLine("test_hmac_alt_service_account = sa-hmac2@bigstore-gsutil-testing.iam.gserviceaccount.com")
 $stream.WriteLine("test_impersonate_service_account = bigstore-gsutil-impersonation@bigstore-gsutil-testing.iam.gserviceaccount.com")
 $stream.WriteLine("test_impersonate_failure_account = no-impersonation@bigstore-gsutil-testing.iam.gserviceaccount.com")
-$stream.WriteLine("[OAuth2]")
-$stream.WriteLine("client_id = 909320924072.apps.googleusercontent.com")
-$stream.WriteLine("client_secret = p3RlpR10xMFh9ZXBS/ZNLYUu")
 $stream.close()
 
