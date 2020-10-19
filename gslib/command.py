@@ -1322,7 +1322,8 @@ class Command(HelpProvider):
                'update your config file(s) (located at %s) and set '
                '"parallel_process_count = 1".') %
               (os_name, ', '.join(GetFriendlyConfigFilePaths())))))
-    if os_name == 'macOS' and process_count > 1:
+    is_main_thread = self.recursive_apply_level == 0
+    if os_name == 'macOS' and process_count > 1 and is_main_thread:
       self.logger.warning(
           'If you experience problems with multiprocessing on MacOS, they '
           'might be related to https://bugs.python.org/issue33725. You can '
