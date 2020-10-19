@@ -39,10 +39,12 @@ from gslib.command import Command
 from gslib.command import CreateOrGetGsutilLogger
 from gslib.command import DummyArgChecker
 from gslib.tests.mock_cloud_api import MockCloudApi
+from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import RequiresIsolation
 from gslib.tests.util import unittest
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
+from gslib.utils.system_util import IS_OSX
 from gslib.utils.system_util import IS_WINDOWS
 
 # Amount of time for an individual test to run before timing out. We need a
@@ -618,6 +620,57 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testRecursiveDepthThreeDifferentFunctionsMultiProcessMultiThread(self):
     self._TestRecursiveDepthThreeDifferentFunctions(3, 3)
+    
+  @RequiresIsolation
+  @unittest.skipUnless(IS_OSX, 'This warning should only be printed on MacOS')
+  def testMacOSLogsMultiprocessingWarning(self):
+    logger = CreateOrGetGsutilLogger('FakeCommand')
+    mock_log_handler = MockLoggingHandler()
+    logger.addHandler(mock_log_handler)
+
+    self._TestRecursiveDepthThreeDifferentFunctions(3, 3)
+
+    macos_message = 'If you experience problems with multiprocessing on MacOS'
+    contains_message = [
+        message.startswith(macos_message)
+        for message in mock_log_handler.messages['warning']
+    ]
+    self.assertTrue(any(contains_message))
+    logger.removeHandler(mock_log_handler)
+
+  @RequiresIsolation
+  @unittest.skipIf(IS_OSX, 'This warning should be printed on MacOS')
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  def testNonMacOSDoesNotLogMultiprocessingWarning(self):
+    logger = CreateOrGetGsutilLogger('FakeCommand')
+    mock_log_handler = MockLoggingHandler()
+    logger.addHandler(mock_log_handler)
+
+    self._TestRecursiveDepthThreeDifferentFunctions(3, 3)
+
+    macos_message = 'If you experience problems with multiprocessing on MacOS'
+    contains_message = [
+        message.startswith(macos_message)
+        for message in mock_log_handler.messages['warning']
+    ]
+    self.assertFalse(any(contains_message))
+    logger.removeHandler(mock_log_handler)
+
+  @RequiresIsolation
+  def testMultithreadingDoesNotLogMacOSWarning(self):
+    logger = CreateOrGetGsutilLogger('FakeCommand')
+    mock_log_handler = MockLoggingHandler()
+    logger.addHandler(mock_log_handler)
+
+    self._TestRecursiveDepthThreeDifferentFunctions(1, 3)
+
+    macos_message = 'If you experience problems with multiprocessing on MacOS'
+    contains_message = [
+        message.startswith(macos_message)
+        for message in mock_log_handler.messages['warning']
+    ]
+    self.assertFalse(any(contains_message))
+    logger.removeHandler(mock_log_handler)
 
   @Timeout
   def _TestRecursiveDepthThreeDifferentFunctions(self, process_count,
