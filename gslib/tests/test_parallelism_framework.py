@@ -620,7 +620,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testRecursiveDepthThreeDifferentFunctionsMultiProcessMultiThread(self):
     self._TestRecursiveDepthThreeDifferentFunctions(3, 3)
-    
+
   @RequiresIsolation
   @unittest.skipUnless(IS_OSX, 'This warning should only be printed on MacOS')
   def testMacOSLogsMultiprocessingWarning(self):
