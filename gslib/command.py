@@ -1324,7 +1324,7 @@ class Command(HelpProvider):
               (os_name, ', '.join(GetFriendlyConfigFilePaths())))))
     is_main_thread = self.recursive_apply_level == 0
     if os_name == 'macOS' and process_count > 1 and is_main_thread:
-      self.logger.warning(
+      self.logger.info(
           'If you experience problems with multiprocessing on MacOS, they '
           'might be related to https://bugs.python.org/issue33725. You can '
           'disable multiprocessing by editing your .boto config or by adding '

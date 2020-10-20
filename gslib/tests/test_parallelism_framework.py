@@ -633,7 +633,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     macos_message = 'If you experience problems with multiprocessing on MacOS'
     contains_message = [
         message.startswith(macos_message)
-        for message in mock_log_handler.messages['warning']
+        for message in mock_log_handler.messages['info']
     ]
     self.assertTrue(any(contains_message))
     logger.removeHandler(mock_log_handler)
@@ -651,7 +651,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     macos_message = 'If you experience problems with multiprocessing on MacOS'
     contains_message = [
         message.startswith(macos_message)
-        for message in mock_log_handler.messages['warning']
+        for message in mock_log_handler.messages['info']
     ]
     self.assertFalse(any(contains_message))
     logger.removeHandler(mock_log_handler)
@@ -667,7 +667,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     macos_message = 'If you experience problems with multiprocessing on MacOS'
     contains_message = [
         message.startswith(macos_message)
-        for message in mock_log_handler.messages['warning']
+        for message in mock_log_handler.messages['info']
     ]
     self.assertFalse(any(contains_message))
     logger.removeHandler(mock_log_handler)
