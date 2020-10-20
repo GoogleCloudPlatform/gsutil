@@ -222,6 +222,23 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['stat', suri(objuri)], return_stdout=True)
     self.assertRegex(stdout, r'CaSe:\s+SeNsItIvE')
 
+  def test_remove_header(self):
+    """Tests removing a header"""
+    objuri = self.CreateObject(contents=b'foo')
+
+    def _Check1():
+      self.RunGsUtil(['setmeta', '-h', 'content-disposition:br', suri(objuri)])
+      stdout = self.RunGsUtil(['stat', suri(objuri)], return_stdout=True)
+      self.assertRegex(stdout, r'Content-Disposition')
+
+    def _Check2():
+      self.RunGsUtil(['setmeta', '-h', 'content-disposition', suri(objuri)])
+      stdout = self.RunGsUtil(['stat', suri(objuri)], return_stdout=True)
+      self.assertRegex(stdout, r'(?!Content-Disposition)')
+
+    _Check1()
+    _Check2()
+
   def test_disallowed_header(self):
     stderr = self.RunGsUtil(
         ['setmeta', '-h', 'Content-Length:5', 'gs://foo/bar'],

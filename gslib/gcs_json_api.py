@@ -1376,6 +1376,16 @@ class GcsJsonApi(CloudApi):
                         PredefinedAclValueValuesEnum(
                             self._ObjectCannedAclToPredefinedAcl(canned_acl)))
 
+    # Provide the ability to delete response headers from metadata.
+    if metadata.cacheControl == '':
+      apitools_include_fields.append('cacheControl')
+    if metadata.contentDisposition == '':
+      apitools_include_fields.append('contentDisposition')
+    if metadata.contentEncoding == '':
+      apitools_include_fields.append('contentEncoding')
+    if metadata.contentLanguage == '':
+      apitools_include_fields.append('contentLanguage')
+
     apitools_request = apitools_messages.StorageObjectsPatchRequest(
         bucket=bucket_name,
         object=object_name,
