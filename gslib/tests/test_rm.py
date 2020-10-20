@@ -39,6 +39,7 @@ MACOS_WARNING = (
     'flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that '
     'multithreading is still available even if you disable multiprocessing.')
 
+
 class TestRm(testcase.GsUtilIntegrationTestCase):
   """Integration tests for rm command."""
 

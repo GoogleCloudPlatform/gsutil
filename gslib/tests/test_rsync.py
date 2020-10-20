@@ -74,8 +74,12 @@ MACOS_WARNING = (
     'multithreading is still available even if you disable multiprocessing.\n\n'
 )
 
-NO_CHANGES = ('Building synchronization state...\n' + MACOS_WARNING +
-              'Starting synchronization...\n')
+if IS_OSX:
+  NO_CHANGES = ('Building synchronization state...\n' + MACOS_WARNING +
+                'Starting synchronization...\n')
+else:
+  NO_CHANGES = (
+      'Building synchronization state...\nStarting synchronization...\n')
 
 if not UsingCrcmodExtension():
   NO_CHANGES = SLOW_CRCMOD_RSYNC_WARNING + '\n' + NO_CHANGES
