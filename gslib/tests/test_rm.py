@@ -32,14 +32,12 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.utils.retry_util import Retry
 
-
 MACOS_WARNING = (
     'If you experience problems with multiprocessing on MacOS, they might be '
     'related to https://bugs.python.org/issue33725. You can disable '
     'multiprocessing by editing your .boto config or by adding the following '
     'flag to your command: `-o "GSUtil:parallel_process_count=1"`. Note that '
-    'multithreading is still available even if you disable multiprocessing.'
-)
+    'multithreading is still available even if you disable multiprocessing.')
 
 class TestRm(testcase.GsUtilIntegrationTestCase):
   """Integration tests for rm command."""
