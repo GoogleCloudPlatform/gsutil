@@ -1,3 +1,22 @@
+Release 4.54 (release date: 2020-10-22)
+======================================
+New Features
+------------------
+ - Add userProject support to signurl (#1068)
+
+Bug Fixes
+------------------
+ - Explicitly set multiprocessing start method to 'fork' (#1107)
+ - Headers can now be removed (#1091)
+ - Fix CommandException.informational attribute error (#1109)
+ - Fix broken signurl error message. (#1097)
+
+Other Changes
+------------------
+ - Warn when disabling parallel composite uploads for KMS encryption. (#1102)
+ - Handle SAML reauth challenge. (#1106)
+ - Several documentation updates and clarifications.
+
 Release 4.53 (release date: 2020-08-19)
 ======================================
 Bug Fixes
