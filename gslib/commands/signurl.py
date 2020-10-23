@@ -111,62 +111,62 @@ _DETAILED_HELP_TEXT = ("""
   directly. This avoids the need to download the private key file.
 
 <B>OPTIONS</B>
-  -b <project> Allows you to specify a user project that will be billed for
-               requests that use the signed URL. This is useful for generating
-               presigned links for buckets that use requester pays.
+  -b <project>  Allows you to specify a user project that will be billed for
+                requests that use the signed URL. This is useful for generating
+                presigned links for buckets that use requester pays.
 
-               Note that it's not valid to specify both the ``-b`` and
-               ``--use-service-account`` options together.
+                Note that it's not valid to specify both the ``-b`` and
+                ``--use-service-account`` options together.
 
-  -c           Specifies the content type for which the signed url is
-               valid for.
+  -c            Specifies the content type for which the signed url is
+                valid for.
 
-  -d           Specifies the duration that the signed url should be valid
-               for, default duration is 1 hour.
+  -d            Specifies the duration that the signed url should be valid
+                for, default duration is 1 hour.
 
-               Times may be specified with no suffix (default hours), or
-               with s = seconds, m = minutes, h = hours, d = days.
+                Times may be specified with no suffix (default hours), or
+                with s = seconds, m = minutes, h = hours, d = days.
 
-               This option may be specified multiple times, in which case
-               the duration the link remains valid is the sum of all the
-               duration options.
+                This option may be specified multiple times, in which case
+                the duration the link remains valid is the sum of all the
+                duration options.
 
-               The max duration allowed is 7 days when ``private-key-file``
-               is used.
+                The max duration allowed is 7 days when ``private-key-file``
+                is used.
 
-               The max duration allowed is 12 hours when -u option is used.
-               This limitation exists because the system-managed key used to
-               sign the url may not remain valid after 12 hours.
+                The max duration allowed is 12 hours when -u option is used.
+                This limitation exists because the system-managed key used to
+                sign the url may not remain valid after 12 hours.
 
-  -m           Specifies the HTTP method to be authorized for use
-               with the signed url, default is GET. You may also specify
-               RESUMABLE to create a signed resumable upload start URL. When
-               using a signed URL to start a resumable upload session, you will
-               need to specify the 'x-goog-resumable:start' header in the
-               request or else signature validation will fail.
+  -m            Specifies the HTTP method to be authorized for use
+                with the signed url, default is GET. You may also specify
+                RESUMABLE to create a signed resumable upload start URL. When
+                using a signed URL to start a resumable upload session, you will
+                need to specify the 'x-goog-resumable:start' header in the
+                request or else signature validation will fail.
 
-  -p           Specify the private key password instead of prompting.
+  -p            Specify the private key password instead of prompting.
 
-  -r <region>  Specifies the `region
-               <https://cloud.google.com/storage/docs/locations>`_ in
-               which the resources for which you are creating signed URLs are
-               stored.
+  -r <region>   Specifies the `region
+                <https://cloud.google.com/storage/docs/locations>`_ in
+                which the resources for which you are creating signed URLs are
+                stored.
 
-               Default value is 'auto' which will cause gsutil to fetch the
-               region for the resource. When auto-detecting the region, the
-               current gsutil user's credentials, not the credentials from the
-               private-key-file, are used to fetch the bucket's metadata.
+                Default value is 'auto' which will cause gsutil to fetch the
+                region for the resource. When auto-detecting the region, the
+                current gsutil user's credentials, not the credentials from the
+                private-key-file, are used to fetch the bucket's metadata.
 
-               This option must be specified and not 'auto' when generating a
-               signed URL to create a bucket.
+                This option must be specified and not 'auto' when generating a
+                signed URL to create a bucket.
 
-  -u           Use service account credentials instead of a private key file
-               to sign the url.
+  -u            Use service account credentials instead of a private key file
+                to sign the url.
 
-               You can also use the ``--use-service-account`` option,
-               which is equivalent to ``-u``.
-               Note that both options have a maximum allowed duration of
-               12 hours for a valid link.
+                You can also use the ``--use-service-account`` option,
+                which is equivalent to ``-u``.
+                Note that both options have a maximum allowed duration of
+                12 hours for a valid link.
 
 
 
