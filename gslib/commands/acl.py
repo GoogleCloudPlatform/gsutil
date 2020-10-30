@@ -53,10 +53,10 @@ _CH_SYNOPSIS = """
 
   where each <grant> is one of the following forms:
 
-    -u <id|email>:<perm>
-    -g <id|email|domain|All|AllAuth>:<perm>
-    -p <viewers|editors|owners>-<project number>:<perm>
-    -d <id|email|domain|All|AllAuth|<viewers|editors|owners>-<project number>:<perm>
+    -u <id>|<email>:<perm>
+    -g <id>|<email>|<domain>|All|AllAuth:<perm>
+    -p (viewers|editors|owners)-<project number>:<perm>
+    -d <id>|<email>|<domain>|All|AllAuth|(viewers|editors|owners)-<project number>
 """
 
 _GET_DESCRIPTION = """
