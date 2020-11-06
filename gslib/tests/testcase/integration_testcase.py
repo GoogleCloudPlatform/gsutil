@@ -264,6 +264,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       None
     """
+    LOGGER.info('_SetObjectCustomMetadataAttribute >>>>>> {}'.format(locals()))
     obj_metadata = apitools_messages.Object()
     obj_metadata.metadata = CreateCustomMetadata({attr_name: attr_value})
     if provider == 'gs':
@@ -287,6 +288,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                        gid=None,
                        mode=None):
     """Sets POSIX metadata for the object."""
+    LOGGER.info('SetPOSIXMetadata >>>>>> {}'.format(locals()))
     obj_metadata = apitools_messages.Object()
     obj_metadata.metadata = apitools_messages.Object.MetadataValue(
         additionalProperties=[])
@@ -487,6 +489,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       expected_is_locked: Indicates whether the Retention Policy should be
                           locked or not.
     """
+    LOGGER.info('VerifyRetentionPolicy >>>>>> {}'.format(locals()))
     actual_retention_policy = self.json_api.GetBucket(
         bucket_uri.bucket_name, fields=['retentionPolicy']).retentionPolicy
 
@@ -545,6 +548,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       StorageUri for the created bucket.
     """
+    LOGGER.info('CreateBucket >>>>>> {}'.format(locals()))
     if not provider:
       provider = self.default_provider
 
@@ -707,6 +711,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       A StorageUri for the created object.
     """
+    LOGGER.info('CreateObject >>>>>> {}'.format(locals()))
     bucket_uri = bucket_uri or self.CreateBucket()
     # checking for valid types - None or unicode/binary text
     if contents is not None:
@@ -915,6 +920,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       None
     """
+    LOGGER.info('VerifyObjectCustomAttribute >>>>>> {}'.format(locals()))
     gsutil_api = (self.json_api
                   if self.default_provider == 'gs' else self.xml_api)
     metadata = gsutil_api.GetObjectMetadata(bucket_name,
@@ -955,6 +961,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       If only one return_* value was specified, that value is returned directly
       rather than being returned within a 1-tuple.
     """
+    LOGGER.info('RunGsutil >>>>>> {}'.format(locals()))
     cmd = [
         gslib.GSUTIL_PATH, '--testexceptiontraces', '-o',
         'GSUtil:default_project_id=' + PopulateProjectId()
