@@ -124,7 +124,7 @@ _DETAILED_HELP_TEXT = ("""
   To compile manually on macOS, you will first need to install
   `XCode <https://developer.apple.com/xcode/>`_ and then run:
 
-    sudo pip3 install -U crcmod
+    pip3 install -U crcmod
 
   Windows
   -------
