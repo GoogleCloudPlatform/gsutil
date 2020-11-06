@@ -25,7 +25,6 @@ from gslib.tests import testcase
 from gslib.tests.testcase import integration_testcase
 from gslib.tests.util import unittest
 
-
 MTLS_AVAILABILITY_MESSAGE = (
     'mTLS/DCA authentication is only available for the GCS JSON API.')
 

@@ -20,7 +20,7 @@ set GsutilRepoDir="T:\src\github\src\gsutil"
 set "PyExePath=C:\python%PYMAJOR%%PYMINOR%\python.exe"
 set "PipPath=C:\python%PYMAJOR%%PYMINOR%\Scripts\pip.exe"
 
-PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\config_generator.ps1' -keyfile 'T:\src\keystore\74008_gsutil_kokoro_service_key' -api '%API%' -outfile '%BOTO_CONFIG%'"
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\config_generator.ps1' 'T:\src\keystore\74008_gsutil_kokoro_service_key' '%API%' '%BOTO_CONFIG%'"
 type %BOTO_CONFIG%
 
 cd %GsutilRepoDir%
@@ -32,3 +32,13 @@ rem Print config info prior to running tests
 
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%'"
 
+rem mTLS tests only run on GCS JSON.
+if not "json" == "%API%" exit /B 0
+
+set "MtlsTestAccountRefreshToken=T:\src\keystore\74008_mtls_test_account_refresh_token"
+set "MtlsTestAccountClientId=T:\src\keystore\74008_mtls_test_account_client_id"
+set "MtlsTestAccountClientSecret=T:\src\keystore\74008_mtls_test_account_client_secret"
+set "MtlsTestCertPath=T:\src\keystore\74008_mtls_test_cert"
+
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\config_generator.ps1' '' '%API%' '%BOTO_CONFIG%' '%MtlsTestAccountRefreshToken%' '%MtlsTestAccountClientId%' '%MtlsTestAccountClientSecret%' '%MtlsTestCertPath%'"
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%' -Tests 'mtls'"
