@@ -70,6 +70,7 @@ class AclChange(object):
       scope_type: Either ChangeType.USER or ChangeType.GROUP or
                   ChangeType.PROJECT, specifying the extent of the scope.
     """
+    print('AclChange.__init__ >>>>>> {}'.format(locals()))
     self.identifier = ''
 
     self.raw_descriptor = acl_change_descriptor
@@ -244,6 +245,7 @@ class AclChange(object):
     Returns:
       The number of changes that were made.
     """
+    print('AclChange.Execute >>>>>>'.format(locals()))
     logger.debug('Executing %s %s on %s', command_name, self.raw_descriptor,
                  storage_url)
 
@@ -280,6 +282,7 @@ class AclDel(object):
   }
 
   def __init__(self, identifier):
+    print('AclDel.__init__ >>>>>> {}'.format(locals()))
     self.raw_descriptor = '-d {0}'.format(identifier)
     self.identifier = identifier
     for regex, scope in self.scope_regexes.items():
@@ -316,6 +319,7 @@ class AclDel(object):
         yield entry
 
   def Execute(self, storage_url, current_acl, command_name, logger):
+    print('AclDel.Execute >>>>>> {}'.format(locals()))
     logger.debug('Executing %s %s on %s', command_name, self.raw_descriptor,
                  storage_url)
     matching_entries = list(self._YieldMatchingEntries(current_acl))
