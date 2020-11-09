@@ -144,7 +144,7 @@ class GsUtilTestCase(unittest.TestCase):
     Returns:
       The path to the new temporary directory.
     """
-    LOGGER.info('CreateTempDir >>>>>> {}'.format(locals()))
+    print('CreateTempDir >>>>>> {}'.format(locals()))
     tmpdir = tempfile.mkdtemp(prefix=self.MakeTempName('directory'))
     self.tempdirs.append(tmpdir)
     try:
@@ -216,7 +216,7 @@ class GsUtilTestCase(unittest.TestCase):
     Returns:
       The path to the new temporary file.
     """
-    LOGGER.info('CreateTempFile >>>>>> {}'.format(locals()))
+    print('CreateTempFile >>>>>> {}'.format(locals()))
     tmpdir = six.ensure_str(tmpdir or self.CreateTempDir())
     file_name = file_name or self.MakeTempName(str('file'))
     if isinstance(file_name, (six.text_type, six.binary_type)):
