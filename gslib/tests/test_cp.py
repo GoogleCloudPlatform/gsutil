@@ -1832,8 +1832,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=b'bar')
     with open(fpath, 'rb') as f_in:
-      file_md5 = base64.encodestring(
-          binascii.unhexlify(CalculateMd5FromContents(f_in))).rstrip(b'\n')
+      md5 = binascii.unhexlify(CalculateMd5FromContents(f_in))
+      try:
+        encoded_bytes = base64.encodebytes(md5)
+      except AttributeError:
+        # For Python 2 compatability.
+        encoded_bytes = base64.encodestring(md5)
+      file_md5 = encoded_bytes.rstrip(b'\n')
     self.RunGsUtil(['cp', fpath, suri(bucket_uri)])
 
     # Use @Retry as hedge against bucket listing eventual consistency.

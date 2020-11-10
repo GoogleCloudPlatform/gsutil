@@ -149,10 +149,18 @@ def Base64Sha256FromBase64EncryptionKey(csek_encryption_key):
   if six.PY3:
     if not isinstance(csek_encryption_key, bytes):
       csek_encryption_key = csek_encryption_key.encode('ascii')
-  decoded_bytes = base64.decodestring(csek_encryption_key)
+  try:
+    decoded_bytes = base64.decodebytes(csek_encryption_key)
+  except AttributeError:
+    # For Python 2 compatability.
+    decoded_bytes = base64.decodestring(csek_encryption_key)
   key_sha256 = _CalculateSha256FromString(decoded_bytes)
   sha256_bytes = binascii.unhexlify(key_sha256)
-  sha256_base64 = base64.encodestring(sha256_bytes)
+  try:
+    sha256_base64 = base64.encodebytes(sha256_bytes)
+  except AttributeError:
+    # For Python 2 compatability.
+    sha256_base64 = base64.encodestring(sha256_bytes)
   return sha256_base64.replace(b'\n', b'')
 
 
