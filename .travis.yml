@@ -1,3 +1,6 @@
+env:
+  - CRYPTOGRAPHY_ALLOW_OPENSSL_102=1
+
 language: python
 
 matrix:
