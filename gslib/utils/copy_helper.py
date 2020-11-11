@@ -3389,12 +3389,6 @@ def _CopyObjToObjDaisyChainMode(src_url,
   Raises:
     CommandException: if errors encountered.
   """
-  logger.info('\n'.join(
-      textwrap.wrap('==> NOTE: For large cloud-to-cloud transfers, you '
-                    'may find significant performance gains by using the '
-                    'Storage Transfer Service '
-                    'https://console.cloud.google.com/transfer?gsutil')) + '\n')
-
   # We don't attempt to preserve ACLs across providers because
   # GCS and S3 support different ACLs and disjoint principals.
   if (global_copy_helper_opts.preserve_acl and
