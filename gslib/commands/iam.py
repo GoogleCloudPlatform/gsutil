@@ -361,6 +361,7 @@ class IamCommand(Command):
     policy_str = json.dumps(
         policy_json,
         sort_keys=True,
+        separators=(',', ': '),
         indent=2,
     )
     print(policy_str)
