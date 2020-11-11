@@ -47,7 +47,7 @@ _SET_DESCRIPTION = """
 <B>SET</B>
   The "gsutil web set" command allows you to configure or disable
   Website Configuration on your bucket(s). The "set" sub-command has the
-  following options (leave both options blank to disable):
+  following options (omit both options to unset configuration):
 
 <B>SET OPTIONS</B>
   -m <index.html>      Specifies the object name to serve when a bucket
