@@ -504,19 +504,19 @@ _DETAILED_HELP_TEXT = ("""
                  is always relative (similar to Unix rsync or tar exclude
                  options). For example, if you run the command:
 
-                   gsutil rsync -x "data./.*\.txt$" dir gs://my-bucket
+                   gsutil rsync -x "data./.*\\.txt$" dir gs://my-bucket
 
                  it skips the file dir/data1/a.txt.
 
                  You can use regex alternation to specify multiple exclusions,
                  for example:
 
-                   gsutil rsync -x ".*\.txt$|.*\.jpg$" dir gs://my-bucket
+                   gsutil rsync -x ".*\\.txt$|.*\\.jpg$" dir gs://my-bucket
 
                  skips all .txt and .jpg files in dir.
 
                  NOTE: When using the Windows cmd.exe command line interpreter,
-                 use ^ as an escape character instead of \ and escape the |
+                 use ^ as an escape character instead of \\ and escape the |
                  character. When using Windows PowerShell, use ' instead of "
                  and surround the | character with ".
 """)
