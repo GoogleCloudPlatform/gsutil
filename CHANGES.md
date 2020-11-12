@@ -1,3 +1,16 @@
+Release 4.55 (release date: 2020-11-12)
+======================================
+Bug Fixes
+------------------
+ - Prevent trailing spaces in json output of iam get (#977)
+ - Fix deprecation warnings due to invalid escape sequences. (#1119)
+ - Use is_alive in favour of isAlive for Python 3.9 compatibility. (#1121)
+ - Fix for base64.{encode/decode}string in python 3.9 (#1129)
+
+Other Changes
+------------------
+ - Several documentation updates and clarifications.
+
 Release 4.54 (release date: 2020-10-22)
 ======================================
 New Features
