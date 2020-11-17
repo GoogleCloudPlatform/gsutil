@@ -2056,6 +2056,11 @@ def _DelegateUploadFileToObject(upload_delegate, upload_url, upload_stream,
       elapsed_time, uploaded_object = upload_delegate()
 
   finally:
+    # In the zipped_file case, this is the gzip stream. When the gzip stream is
+    # created, the original source stream is closed in
+    # _ApplyZippedUploadCompression. This means that we do not have to
+    # explicitly close the source stream here in the zipped_file case.
+    upload_stream.close()
     if zipped_file:
       try:
         os.unlink(upload_url.object_name)
@@ -2065,12 +2070,6 @@ def _DelegateUploadFileToObject(upload_delegate, upload_url, upload_stream,
         logger.warning(
             'Could not delete %s. This can occur in Windows because the '
             'temporary file is still locked.', upload_url.object_name)
-
-    # In the zipped_file case, this is the gzip stream. When the gzip stream is
-    # created, the original source stream is closed in
-    # _ApplyZippedUploadCompression. This means that we do not have to
-    # explicitly close the source stream here in the zipped_file case.
-    upload_stream.close()
   return elapsed_time, uploaded_object
 
 
