@@ -84,6 +84,7 @@ import httplib2
 import oauth2client
 from google_reauth import reauth_creds
 from google_reauth import errors as reauth_errors
+from gslib import context_config
 from gslib import wildcard_iterator
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import ArgumentException
@@ -398,6 +399,9 @@ def main():
       oauth2client.transport._LOGGER.setLevel(oa2c_logger_level)
       reauth_creds._LOGGER.setLevel(oa2c_logger_level)
       # pylint: enable=protected-access
+
+    # Initialize context configuration for device mTLS.
+    context_config.create_context_config(logging.getLogger())
 
     # TODO(reauth): Fix once reauth pins to pyu2f version newer than 0.1.3.
     # Fixes pyu2f v0.1.3 bug.
