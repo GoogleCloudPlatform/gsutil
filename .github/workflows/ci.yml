@@ -24,6 +24,7 @@ jobs:
       run: |
         set -x
         pip install .
+        git submodule update --init --recursive
     - name: Lint
       if: ${{ matrix.python-version  == 3.6 }}
       run: |
