@@ -652,13 +652,13 @@ _OPTIONS_TEXT = """
                  does the following:
 
                  - The ``cp`` command uploads the files ``cattypes.html`` and
-                    ``tabby.jpeg`` to the bucket ``gs://mycats``.
+                   ``tabby.jpeg`` to the bucket ``gs://mycats``.
                  - Based on the file extensions, gsutil sets the ``Content-Type``
-                    of ``cattypes.html`` to ``text/html`` and ``tabby.jpeg`` to
-                    ``image/jpeg``.
+                   of ``cattypes.html`` to ``text/html`` and ``tabby.jpeg`` to
+                   ``image/jpeg``.
                  - The ``-z`` option compresses the data in the file ``cattypes.html``.
                  - The ``-z`` option also sets the ``Content-Encoding`` for
-                    ``cattypes.html`` to ``gzip``.
+                   ``cattypes.html`` to ``gzip``.
                  - The ``-a`` option sets the ACL for both files to public-read.
                  - If a user tries to view ``cattypes.html`` in a browser, the
                    browser uncompresses the data based on the
