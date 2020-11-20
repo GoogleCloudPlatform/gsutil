@@ -24,15 +24,14 @@ jobs:
       run: |
         set -x
         pip install .
-        git submodule update --init --recursive
     - name: Lint
       if: ${{ matrix.python-version  == 3.6 }}
       run: |
         set -x
         pip install pylint
         pip install yapf
-        test/run_pylint.sh;
-        yapf -dr . ;
+        test/run_pylint.sh
+        yapf -dr . 
     - name: Test
       run: |
         set -x
