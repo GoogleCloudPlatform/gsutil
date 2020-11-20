@@ -163,7 +163,7 @@ class _ContextConfig(object):
         raise CertProvisionError(command_stderr)
 
       # Python 3 outputs bytes from communicate() by default.
-      command_stdout_string = str(command_stdout)
+      command_stdout_string = command_stdout.decode()
 
       sections = _SplitPemIntoSections(command_stdout_string, self.logger)
       with open(cert_path, 'w+') as f:
