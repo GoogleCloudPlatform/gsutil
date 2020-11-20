@@ -30,6 +30,7 @@ class TestFilePart(testcase.GsUtilUnitTestCase):
   """Unit tests for FilePart class."""
 
   def test_tell(self):
+    raise Exception
     filename = 'test_tell'
     contents = 100 * b'x'
     fpath = self.CreateTempFile(file_name=filename, contents=contents)
@@ -71,6 +72,7 @@ class TestFilePart(testcase.GsUtilUnitTestCase):
 
   def test_read(self):
     """Tests various reaad operations with FilePart."""
+    raise Exception
     filename = 'test_read'
     contents = bytearray(range(256))
     part_length = 23
