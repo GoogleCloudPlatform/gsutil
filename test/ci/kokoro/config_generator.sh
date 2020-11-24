@@ -21,8 +21,15 @@ GSUTIL_KEY=$1
 API=$2
 OUTPUT_FILE=$3
 
-cat > $3 << EOM
-[Credentials]
+# Get values from secrets files.
+read -r MTLS_TEST_ACCOUNT_REFRESH_TOKEN < $4
+read -r MTLS_TEST_ACCOUNT_CLIENT_ID < $5
+read -r MTLS_TEST_ACCOUNT_CLIENT_SECRET < $6
+
+MTLS_TEST_CERT_PATH=$7
+
+if [[ $GSUTIL_KEY ]]; then
+  echo "[Credentials]
 gs_service_key_file = $GSUTIL_KEY
 
 [GSUtil]
@@ -32,5 +39,22 @@ test_hmac_service_account = sa-hmac@bigstore-gsutil-testing.iam.gserviceaccount.
 test_hmac_list_service_account = sa-hmac-list@bigstore-gsutil-testing.iam.gserviceaccount.com
 test_hmac_alt_service_account = sa-hmac2@bigstore-gsutil-testing.iam.gserviceaccount.com
 test_impersonate_service_account = bigstore-gsutil-impersonation@bigstore-gsutil-testing.iam.gserviceaccount.com
-test_impersonate_failure_account = no-impersonation@bigstore-gsutil-testing.iam.gserviceaccount.com
-EOM
+test_impersonate_failure_account = no-impersonation@bigstore-gsutil-testing.iam.gserviceaccount.com" \
+> $OUTPUT_FILE
+
+else
+  echo "[Credentials]
+gs_oauth2_refresh_token = $MTLS_TEST_ACCOUNT_REFRESH_TOKEN
+use_client_certificate = True
+cert_provider_command = /bin/cat $MTLS_TEST_CERT_PATH
+
+[GSUtil]
+default_project_id = dcatest-281318
+prefer_api = $API
+
+[OAuth2]
+client_id = $MTLS_TEST_ACCOUNT_CLIENT_ID
+client_secret = $MTLS_TEST_ACCOUNT_CLIENT_SECRET" \
+> $OUTPUT_FILE
+
+fi
