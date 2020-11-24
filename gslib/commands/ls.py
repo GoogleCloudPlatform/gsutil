@@ -58,12 +58,10 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>LISTING PROVIDERS, BUCKETS, SUBDIRECTORIES, AND OBJECTS</B>
   If you run gsutil ls without URLs, it lists all of the Google Cloud Storage
-  buckets under your default project ID:
+  buckets under your default project ID (or all of the {{gcs_name}} buckets
+  under the project you specify with the -p flag):
 
     gsutil ls
-
-  (For details about projects, see "gsutil help projects" and also the -p
-  option in the OPTIONS section below.)
 
   If you specify one or more provider URLs, gsutil ls will list buckets at
   each listed provider:
@@ -257,7 +255,8 @@ _DETAILED_HELP_TEXT = ("""
   -h          When used with -l, prints object sizes in human readable format
               (e.g., 1 KiB, 234 MiB, 2 GiB, etc.)
 
-  -p proj_id  Specifies the project ID to use for listing buckets.
+  -p proj_id  Specifies the project ID or project number to use for listing
+              buckets.
 
   -R, -r      Requests a recursive listing, performing at least one listing
               operation per subdirectory. If you have a large number of
