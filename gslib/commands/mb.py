@@ -54,8 +54,7 @@ _DETAILED_HELP_TEXT = ("""
 
   If you don't specify a project ID using the -p option, the bucket is created
   using the default project ID specified in your `gsutil configuration file
-  <https://cloud.google.com/storage/docs/boto-gsutil>`_. For more details
-  about projects see "gsutil help projects".
+  <https://cloud.google.com/storage/docs/boto-gsutil>`_.
 
   The -c and -l options specify the storage class and location, respectively,
   for the bucket. Once a bucket is created in a given location and with a
@@ -147,8 +146,8 @@ _DETAILED_HELP_TEXT = ("""
                          for a discussion of this distinction. Default is US.
                          Locations are case insensitive.
 
-  -p proj_id             Specifies the project ID under which to create the
-                         bucket.
+  -p proj_id             Specifies the project ID or project number under which
+                         to create the bucket.
 
   -s class               Same as -c.
 
