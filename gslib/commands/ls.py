@@ -58,7 +58,7 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>LISTING PROVIDERS, BUCKETS, SUBDIRECTORIES, AND OBJECTS</B>
   If you run gsutil ls without URLs, it lists all of the Google Cloud Storage
-  buckets under your default project ID (or all of the {{gcs_name}} buckets
+  buckets under your default project ID (or all of the Cloud Storage buckets
   under the project you specify with the -p flag):
 
     gsutil ls
