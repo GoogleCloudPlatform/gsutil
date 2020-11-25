@@ -146,8 +146,8 @@ _DETAILED_HELP_TEXT = ("""
                          for a discussion of this distinction. Default is US.
                          Locations are case insensitive.
 
-  -p proj_id             Specifies the project ID or project number under which
-                         to create the bucket.
+  -p proj_id             Specifies the project ID or project number to create
+                         the bucket under.
 
   -s class               Same as -c.
 
