@@ -110,7 +110,6 @@ if 'win32' in str(sys.platform).lower():
 else:
   TRANSFER_BUFFER_SIZE = 8 * ONE_KIB
 
-
 UTF8 = 'utf-8'
 
 WINDOWS_1252 = 'cp1252'
