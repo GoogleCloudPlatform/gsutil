@@ -157,13 +157,12 @@ class _ContextConfig(object):
       command_process = subprocess.Popen(command_string.split(' '),
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE)
-
       command_stdout, command_stderr = command_process.communicate()
       if command_process.returncode != 0:
         raise CertProvisionError(command_stderr)
 
       # Python 3 outputs bytes from communicate() by default.
-      command_stdout_string = str(command_stdout)
+      command_stdout_string = command_stdout.decode()
 
       sections = _SplitPemIntoSections(command_stdout_string, self.logger)
       with open(cert_path, 'w+') as f:

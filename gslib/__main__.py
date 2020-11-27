@@ -400,9 +400,6 @@ def main():
       reauth_creds._LOGGER.setLevel(oa2c_logger_level)
       # pylint: enable=protected-access
 
-    # Initialize context configuration for device mTLS.
-    context_config.create_context_config(logging.getLogger())
-
     # TODO(reauth): Fix once reauth pins to pyu2f version newer than 0.1.3.
     # Fixes pyu2f v0.1.3 bug.
     import six  # pylint: disable=g-import-not-at-top
@@ -417,6 +414,10 @@ def main():
       command_name = 'help'
     else:
       command_name = args[0]
+      if command_name != 'test':
+        # Don't initialize mTLS authentication because
+        # tests that need it will do this initialization themselves.
+        context_config.create_context_config(logging.getLogger())
 
     _CheckAndWarnForProxyDifferences()
 

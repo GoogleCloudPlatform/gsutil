@@ -101,7 +101,7 @@ _DETAILED_HELP_TEXT = ("""
               gsutil performs the specified operation using a combination of
               multi-threading and multi-processing. The number of threads
               and processors are determined by ``parallel_thread_count`` and
-              ``parallel_process_count`, respectively. These values are set in
+              ``parallel_process_count``, respectively. These values are set in
               the .boto configuration file or specified in individual requests
               with the ``-o`` top-level flag. Because gsutil has no built-in
               support for throttling requests, you should experiment with these
