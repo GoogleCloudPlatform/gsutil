@@ -39,7 +39,6 @@ from gslib.utils.constants import DEBUGLEVEL_DUMP_REQUESTS
 from gslib.utils.constants import SSL_TIMEOUT_SEC
 from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 from gslib.utils.constants import UTF8
-from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils import text_util
 import httplib2
 from httplib2 import parse_uri
@@ -95,8 +94,6 @@ class UploadCallbackConnectionClassFactory(object):
     self.progress_callback = progress_callback
     self.logger = logger
     self.debug = debug
-    if IS_WINDOWS:
-      self.buffer_size = self.buffer_size * 8
 
   def GetConnectionClass(self):
     """Returns a connection class that overrides send."""
