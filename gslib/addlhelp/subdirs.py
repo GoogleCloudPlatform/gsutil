@@ -27,23 +27,21 @@ _DETAILED_HELP_TEXT = ("""
   Most users probably don't need to know these details, and can simply use
   the commands (like cp -r) that work with subdirectories. We provide this
   additional documentation to help users understand how gsutil handles
-  subdirectories differently than most GUI / web-based tools (e.g., why
-  those other tools create "dir_$folder$" objects), and also to explain cost and
-  performance implications of the gsutil approach, for those interested in such
-  details.
+  subdirectories differently than most GUI / web-based tools, and also to
+  explain cost and performance implications of the gsutil approach, for
+  those interested in such details.
 
   gsutil provides the illusion of a hierarchical file tree atop the "flat"
   name space supported by the Google Cloud Storage service. To the service,
-  the object gs://your-bucket/abc/def.txt is just an object that happens to
-  have "/" characters in its name. There is no "abc" directory; just a single
-  object with the given name. This diagram:
+  the object ``gs://your-bucket/abc/def.txt`` is just an object that happens to
+  have "/" characters in its name. There is no "abc" directory, just a single
+  object with the given name. The following diagram illustrates how gsutil
+  provides a hierarchical view of objects in a bucket:
 
   .. image::  https://cloud.google.com/storage/images/gsutil-subdirectories.svg
 
-  illustrates how gsutil provides a hierarchical view of objects in a bucket.
-
   gsutil achieves the hierarchical file tree illusion by applying a variety of
-  rules, to try to make naming work the way users would expect. For example, in
+  rules to try to make naming work the way users would expect. For example, in
   order to determine whether to treat a destination URL as an object name or the
   root of a directory under which objects should be copied gsutil uses these
   rules:
@@ -53,45 +51,38 @@ _DETAILED_HELP_TEXT = ("""
 
        gsutil cp your-file gs://your-bucket/abc/
 
-     gsutil will create the object gs://your-bucket/abc/your-file.
+     gsutil creates the object ``gs://your-bucket/abc/your-file``.
 
-  2. If the destination object is XYZ and an object exists called XYZ_$folder$
-     gsutil treats XYZ as a directory. For example, if you run the command:
-
-       gsutil cp your-file gs://your-bucket/abc
-
-     and there exists an object called abc_$folder$, gsutil will create the
-     object gs://your-bucket/abc/your-file.
-
-  3. If you attempt to copy multiple source files to a destination URL, gsutil
+  2. If you attempt to copy multiple source files to a destination URL, gsutil
      treats the destination URL as a directory. For example, if you run
      the command:
 
        gsutil cp -r your-dir gs://your-bucket/abc
 
-     gsutil will create objects like gs://your-bucket/abc/your-dir/file1, etc.
-     (assuming file1 is a file under the source directory your-dir).
+     gsutil creates objects like ``gs://your-bucket/abc/your-dir/file1``, etc.
+     (assuming ``file1`` is a file under the source directory ``your-dir``).
 
-  4. If none of the above rules applies, gsutil performs a bucket listing to
+  3. If none of the above rules applies, gsutil performs a bucket listing to
      determine if the target of the operation is a prefix match to the
      specified string. For example, if you run the command:
 
        gsutil cp your-file gs://your-bucket/abc
 
-     gsutil will make a bucket listing request for the named bucket, using
-     delimiter="/" and prefix="abc". It will then examine the bucket listing
-     results and determine whether there are objects in the bucket whose path
-     starts with gs://your-bucket/abc/, to determine whether to treat the target
-     as an object name or a directory name. In turn this impacts the name of the
-     object you create: If the above check indicates there is an "abc" directory
-     you will end up with the object gs://your-bucket/abc/your-file; otherwise
-     you will end up with the object gs://your-bucket/abc. (See
-     "HOW NAMES ARE CONSTRUCTED" under "gsutil help cp" for more details.)
+     gsutil makes a bucket listing request for the named bucket, using
+     ``delimiter="/"`` and ``prefix="abc"``. It then examines the bucket listing
+     results and determines whether there are objects in the bucket whose path
+     starts with ``gs://your-bucket/abc/``. If so, gsutil treats the target
+     as a directory name. In turn this impacts the name of the object you create
+     create: If the above check indicates there is an ``abc`` directory you end
+     up with the object ``gs://your-bucket/abc/your-file``; otherwise you end up
+     with the object ``gs://your-bucket/abc``. (See "HOW NAMES ARE CONSTRUCTED"
+     under "gsutil help cp" for more details)
 
   This rule-based approach stands in contrast to the way many tools work, which
-  create objects to mark the existence of folders (such as "dir_$folder$").
-  gsutil understands several conventions used by such tools but does not
-  require such marker objects to implement naming behavior consistent with
+  create 0-byte objects to mark the existence of folders. gsutil understands
+  several conventions used by such tools, such as the convention of adding
+  ``_$folder$`` to the end of the name of the 0-byte object, but gsutil does
+  not require such marker objects to implement naming behavior consistent with
   UNIX commands.
 
   A downside of the gsutil subdirectory naming approach is it requires an extra
