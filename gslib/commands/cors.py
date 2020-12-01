@@ -84,7 +84,7 @@ _DESCRIPTION = ("""
   The following (empty) CORS JSON document removes all CORS configuration for
   a bucket:
 
-  []
+    []
 
   The cors command has two sub-commands:
 """ + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION]) + """
