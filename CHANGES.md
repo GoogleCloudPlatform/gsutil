@@ -1,3 +1,15 @@
+Release 4.56 (release date: 2020-12-03)
+======================================
+New Features
+------------------
+ - mTLS/DCA Authentication (#1141, #1122, #1142)
+ - Add GitHub Actions CI (#1153)
+
+Bug Fixes
+------------------
+ - Delete the projects.py help topic (#1154)
+ - Format fix for cp.py (#1152)
+
 Release 4.55 (release date: 2020-11-12)
 ======================================
 Bug Fixes
@@ -139,7 +151,7 @@ Bug Fixes
  - Fixed exception when using CMEK with resumable uploads.
  - Fixed alias for new ubla command.
  - Fixed default RDNS behavior for backwards compatibility with 4.42 and earlier.
- 
+
 Other Changes
 ------------------
 - Improvements to continuous integration workflow.
