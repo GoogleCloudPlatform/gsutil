@@ -1006,7 +1006,7 @@ class ConfigCommand(Command):
 
         # The command line to execute, which prints the
         # certificate, private key, or password to use in
-        # conjunction with “use_client_certificate = True”.
+        # conjunction with "use_client_certificate = True".
         #cert_provider_command = <Absolute path to command to run for
         #                         certification. Ex: "/scripts/gen_cert.sh">
 
