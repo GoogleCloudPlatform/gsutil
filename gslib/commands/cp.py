@@ -332,7 +332,7 @@ _RESUMABLE_TRANSFERS_TEXT = """
   specify any special command line options to make this happen. If your upload
   is interrupted, you can restart the upload by running the same ``cp`` command that
   you used to start the upload. You can adjust the minimum size for performing
-  resumable uploads by changing the <code>resumable_threshold</code> parameter in
+  resumable uploads by changing the ``resumable_threshold`` parameter in
   the boto configuration file.
 
   Until the upload has completed successfully, it is not visible at the destination
@@ -409,6 +409,7 @@ _SLICED_OBJECT_DOWNLOADS_TEXT = """
 
 _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 <B>PARALLEL COMPOSITE UPLOADS</B>
+
   gsutil can automatically use
   `object composition <https://cloud.google.com/storage/docs/composite-objects>`_
   to perform uploads in parallel for large, local files being uploaded to
