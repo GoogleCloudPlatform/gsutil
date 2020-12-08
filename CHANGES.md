@@ -1,3 +1,9 @@
+Release 4.57 (release date: 2020-12-08)
+======================================
+Bug Fixes
+------------------
+ - Remove Unicode character from config command that was causing Python 2 issues.
+ - Sync docs with web.
 Release 4.56 (release date: 2020-12-03)
 ======================================
 New Features
