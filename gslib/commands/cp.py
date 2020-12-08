@@ -328,12 +328,13 @@ _RETRY_HANDLING_TEXT = """
 _RESUMABLE_TRANSFERS_TEXT = """
 <B>RESUMABLE TRANSFERS</B>
   gsutil automatically performs a resumable upload whenever you use the ``cp``
-  command to upload an object that is larger than 8 MiB. You do not need to
-  specify any special command line options to make this happen. If your upload
-  is interrupted, you can restart the upload by running the same ``cp`` command that
-  you used to start the upload. You can adjust the minimum size for performing
-  resumable uploads by changing the ``resumable_threshold`` parameter in
-  the boto configuration file.
+  command to upload an object that is larger than 8 MiB. If your upload is
+  interrupted, you can restart the upload by running the same ``cp`` command that
+  you used to start the upload. If your upload includes multiple files, you should
+  use the ``-n`` flag when restarting the upload in order to prevent re-uploading
+  files that have already completed successfully. You can adjust the minimum size
+  for performing resumable uploads by changing the ``resumable_threshold``
+  parameter in the boto configuration file.
 
   Until the upload has completed successfully, it is not visible at the destination
   object and does not supersede any existing object the upload is intended to
