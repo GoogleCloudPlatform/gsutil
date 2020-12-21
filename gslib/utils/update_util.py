@@ -77,6 +77,7 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
   addl_excludes = (
       '.coverage',
       '.DS_Store',
+      '.github',
       '.style.yapf',
       '.travis.yml',
       '.yapfignore',
