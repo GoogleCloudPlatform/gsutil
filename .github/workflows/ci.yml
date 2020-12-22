@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [pypy2, 2.7, pypy3, 3.5, 3.6, 3.7]
+        python-version: [pypy2, 2.7, pypy3, 3.5, 3.6, 3.7, 3.8]
 
     steps:
     - uses: actions/checkout@v2
@@ -31,7 +31,7 @@ jobs:
         pip install pylint
         pip install yapf
         test/run_pylint.sh
-        yapf -dr . 
+        yapf -dr .
     - name: Test
       run: |
         set -x
