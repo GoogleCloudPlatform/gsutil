@@ -2404,11 +2404,11 @@ class GcsJsonApi(CloudApi):
           return NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
                                    status=e.status_code)
         return ServiceException(
-          'A Cloud Storage bucket named \'%s\' already exists. Try another '
-          'name. Bucket names must be globally unique across all Google Cloud '
-          'projects, including those outside of your '
-          'organization.' % bucket_name,
-          status=e.status_code)
+            'A Cloud Storage bucket named \'%s\' already exists. Try another '
+            'name. Bucket names must be globally unique across all Google Cloud '
+            'projects, including those outside of your '
+            'organization.' % bucket_name,
+            status=e.status_code)
       elif e.status_code == 412:
         return PreconditionException(message, status=e.status_code)
       return ServiceException(message, status=e.status_code)
