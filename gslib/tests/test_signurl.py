@@ -131,6 +131,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
     cmd = ['signurl', self._GetJSONKsFile(), object_uri.version_specific_uri]
     stdout = self.RunGsUtil(cmd, return_stdout=True)
+    self.assertIn('x-goog-credential=test%40developer.gserviceaccount.com',
+                  stdout)
     self.assertIn('generation=' + object_uri.generation, stdout)
 
   def testSignUrlWithURLEncodeRequiredChars(self):
