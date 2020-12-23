@@ -282,10 +282,7 @@ class GcsJsonApi(CloudApi):
       additional_http_headers['Host'] = gs_json_host_header
 
     self._AddPerfTraceTokenToHeaders(additional_http_headers)
-
-    request_reason = os.environ.get(REQUEST_REASON_ENV_VAR)
-    if request_reason:
-      additional_http_headers[REQUEST_REASON_HEADER_KEY] = request_reason
+    self._AddReasonToHeaders(additional_http_headers)
 
     log_request = (debug >= 3)
     log_response = (debug >= 3)
@@ -329,6 +326,11 @@ class GcsJsonApi(CloudApi):
   def _AddPerfTraceTokenToHeaders(self, headers):
     if self.perf_trace_token:
       headers['cookie'] = self.perf_trace_token
+
+  def _AddReasonToHeaders(self, headers):
+    request_reason = os.environ.get(REQUEST_REASON_ENV_VAR)
+    if request_reason:
+      headers[REQUEST_REASON_HEADER_KEY] = request_reason
 
   def _GetNewDownloadHttp(self):
     return GetNewHttp(http_class=HttpWithDownloadStream)
@@ -1344,6 +1346,7 @@ class GcsJsonApi(CloudApi):
                                   compressed_encoding=compressed_encoding)
 
     self._AddPerfTraceTokenToHeaders(additional_headers)
+    self._AddReasonToHeaders(additional_headers)
     additional_headers.update(
         self._EncryptionHeadersFromTuple(decryption_tuple))
 
@@ -1483,6 +1486,7 @@ class GcsJsonApi(CloudApi):
         'user-agent': self.api_client.user_agent,
     }
     self._AddPerfTraceTokenToHeaders(additional_headers)
+    self._AddReasonToHeaders(additional_headers)
 
     try:
       content_type = None
@@ -1535,6 +1539,7 @@ class GcsJsonApi(CloudApi):
         }
         additional_headers.update(encryption_headers)
         self._AddPerfTraceTokenToHeaders(additional_headers)
+        self._AddReasonToHeaders(additional_headers)
 
         return self._PerformResumableUpload(
             upload_stream, self.authorized_upload_http, content_type, size,
