@@ -125,6 +125,14 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.assertIn('%2Fus-central1%2F', stdout)
     self.assertIn('\tPUT\t', stdout)
 
+  def testSignUrlWithJSONKeyFileAndObjectGeneration(self):
+    """Tests signurl output of a sample object version with json keystore."""
+    bucket_uri = self.CreateBucket(versioning_enabled=True)
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
+    cmd = ['signurl', self._GetJSONKsFile(), object_uri.version_specific_uri]
+    stdout = self.RunGsUtil(cmd, return_stdout=True)
+    self.assertIn('generation=' + object_uri.generation, stdout)
+
   def testSignUrlWithURLEncodeRequiredChars(self):
     objs = [
         'gs://example.org/test 1', 'gs://example.org/test/test 2',

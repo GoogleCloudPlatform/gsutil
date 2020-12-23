@@ -120,8 +120,8 @@ class CloudApi(object):
     """
     raise NotImplementedError('SetBucketIamPolicy must be overloaded')
 
-  def SignUrl(self, method, duration, path, logger, region, signed_headers,
-              string_to_sign_debug):
+  def SignUrl(self, method, duration, path, generation, logger, region,
+              signed_headers, string_to_sign_debug):
     """Sign a url using service account's system managed private key.
 
     Args:
@@ -129,6 +129,7 @@ class CloudApi(object):
       duration: timedelta for which the constructed signed URL should be valid.
       path: String path to the bucket or object for signing, in the form
           'bucket' or 'bucket/object'.
+      generation: If not None, specifies a version of an object for signing.
       logger: logging.Logger for warning and debug output.
       region: Geographic region in which the requested resource resides.
       signed_headers: Dict containing the header  info like host

@@ -242,6 +242,7 @@ def _GenSignedUrl(key,
                   method,
                   duration,
                   gcs_path,
+                  generation,
                   logger,
                   region,
                   content_type=None,
@@ -261,6 +262,7 @@ def _GenSignedUrl(key,
     duration: timedelta for which the constructed signed URL should be valid.
     gcs_path: String path to the bucket of object for signing, in the form
         'bucket' or 'bucket/object'.
+    generation: If not None, specifies a version of an object for signing.
     logger: logging.Logger for warning and debug output.
     region: Geographic region in which the requested resource resides.
     content_type: Optional Content-Type for the signed URL. HTTP requests using
@@ -292,6 +294,7 @@ def _GenSignedUrl(key,
                             method=method,
                             duration=duration,
                             path=gcs_path,
+                            generation=generation,
                             logger=logger,
                             region=region,
                             signed_headers=signed_headers,
@@ -308,6 +311,7 @@ def _GenSignedUrl(key,
         method=method,
         duration=duration,
         path=gcs_path,
+        generation=generation,
         logger=logger,
         region=region,
         signed_headers=signed_headers,
@@ -466,8 +470,8 @@ class UrlSignCommand(Command):
     return method, delta, content_type, passwd, region, use_service_account, billing_project
 
   def _ProbeObjectAccessWithClient(self, key, use_service_account, provider,
-                                   client_email, gcs_path, logger, region,
-                                   billing_project):
+                                   client_email, gcs_path, generation, logger,
+                                   region, billing_project):
     """Performs a head request against a signed url to check for read access."""
 
     # Choose a reasonable time in the future; if the user's system clock is
@@ -480,6 +484,7 @@ class UrlSignCommand(Command):
                                method='HEAD',
                                duration=timedelta(seconds=60),
                                gcs_path=gcs_path,
+                               generation=generation,
                                logger=logger,
                                region=region,
                                billing_project=billing_project,
@@ -597,6 +602,7 @@ class UrlSignCommand(Command):
                                 method=method,
                                 duration=delta,
                                 gcs_path=gcs_path,
+                                generation=url.generation,
                                 logger=self.logger,
                                 region=bucket_region,
                                 content_type=content_type,
@@ -622,7 +628,7 @@ class UrlSignCommand(Command):
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,
-          self.logger, bucket_region, billing_project)
+          url.generation, self.logger, bucket_region, billing_project)
 
       if response_code == 404:
         if url.IsBucket() and method != 'PUT':

@@ -40,6 +40,7 @@ def CreatePayload(client_id,
                   method,
                   duration,
                   path,
+                  generation,
                   logger,
                   region,
                   signed_headers,
@@ -53,6 +54,7 @@ def CreatePayload(client_id,
     duration: timedelta for which the constructed signed URL should be valid.
     path: String path to the bucket of object for signing, in the form
         'bucket' or 'bucket/object'.
+    generation: If not None, specifies a version of an object for signing.
     logger: logging.Logger for warning and debug output.
     region: Geographic region in which the requested resource resides.
     signed_headers: Dict containing the header  info like host
@@ -83,6 +85,9 @@ def CreatePayload(client_id,
 
   if (billing_project is not None):
     signed_query_params['userProject'] = billing_project
+
+  if generation is not None:
+    signed_query_params['generation'] = generation
 
   canonical_resource = '/{}'.format(path)
   canonical_query_string = '&'.join([
