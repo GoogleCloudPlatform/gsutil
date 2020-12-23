@@ -2338,8 +2338,9 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
 
   # Downloads open the temporary download file in r+b mode, which requires it
   # to already exist, so we create it here if it doesn't exist already.
-  fp = open(download_file_name, 'ab')
-  fp.close()
+  if not os.path.exists(download_file_name):
+    fp = open(download_file_name, 'w')
+    fp.close()
   return download_file_name, need_to_unzip
 
 
