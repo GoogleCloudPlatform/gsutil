@@ -1042,6 +1042,25 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                      r'\'x-goog-request-reason\': \'b/this_is_env_reason\'')
 
   @SequentialAndParallelTransfer
+  def test_request_reason_header_persists_multiple_requests(self):
+    """Test that x-goog-request-header works when cp sends multiple requests."""
+    os.environ['CLOUDSDK_CORE_REQUEST_REASON'] = 'b/this_is_env_reason'
+    bucket_uri = self.CreateBucket()
+    dst_uri = suri(bucket_uri, 'foo')
+    fpath = self._get_test_file('test.gif')
+
+    boto_config_for_test = ('GSUtil', 'resumable_threshold', '0')
+    with SetBotoConfigForTest([boto_config_for_test]):
+      stderr = self.RunGsUtil(['-D', 'cp', fpath, dst_uri], return_stderr=True)
+
+    # PUT follows GET request. Both need the request-reason header.
+    reason_regex = (r'Making http GET[\s\S]*'
+                    r'x-goog-request-reason\': \'b/this_is_env_reason[\s\S]*'
+                    r'send: b\'PUT.*x-goog-request-reason:'
+                    r' b/this_is_env_reason.*\\r\\n\\r\\n')
+    self.assertRegex(stderr, reason_regex)
+
+  @SequentialAndParallelTransfer
   def test_versioning(self):
     """Tests copy with versioning."""
     bucket_uri = self.CreateVersionedBucket()
