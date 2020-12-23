@@ -2697,7 +2697,7 @@ def _DoSlicedDownload(src_url,
                                       num_components)
 
   # Resize the download file so each child process can seek to its start byte.
-  with open(download_file_name, 'ab') as fp:
+  with open(download_file_name, 'r+b') as fp:
     fp.truncate(src_obj_metadata.size)
   # Assign a start FileMessage to each component
   for (i, component) in enumerate(components_to_download):
