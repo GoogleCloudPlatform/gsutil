@@ -1534,6 +1534,7 @@ class GcsJsonApi(CloudApi):
             'user-agent': self.api_client.user_agent,
         }
         additional_headers.update(encryption_headers)
+        self._AddPerfTraceTokenToHeaders(additional_headers)
 
         return self._PerformResumableUpload(
             upload_stream, self.authorized_upload_http, content_type, size,
