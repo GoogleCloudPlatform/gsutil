@@ -450,8 +450,8 @@ class GcsJsonApi(CloudApi):
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
       self._TranslateExceptionAndRaise(e, bucket_name=bucket_name)
 
-  def SignUrl(self, method, duration, path, logger, region, signed_headers,
-              string_to_sign_debug):
+  def SignUrl(self, method, duration, path, generation, logger, region,
+              signed_headers, string_to_sign_debug):
     """See CloudApi class for function doc strings."""
     service_account_id = self.GetServiceAccountId()
     string_to_sign, canonical_query_string = CreatePayload(
@@ -459,6 +459,7 @@ class GcsJsonApi(CloudApi):
         method=method,
         duration=duration,
         path=path,
+        generation=generation,
         logger=logger,
         region=region,
         signed_headers=signed_headers,

@@ -549,12 +549,13 @@ class CloudApiDelegator(CloudApi):
                                                service_account_email,
                                                show_deleted_keys)
 
-  def SignUrl(self, provider, method, duration, path, logger, region,
-              signed_headers, string_to_sign_debug):
+  def SignUrl(self, provider, method, duration, path, generation, logger,
+              region, signed_headers, string_to_sign_debug):
     return self._GetApi(provider).SignUrl(
         method=method,
         duration=duration,
         path=path,
+        generation=generation,
         logger=logger,
         region=region,
         signed_headers=signed_headers,

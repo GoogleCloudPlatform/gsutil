@@ -246,7 +246,8 @@ def _GenSignedUrl(key,
                   region,
                   content_type=None,
                   billing_project=None,
-                  string_to_sign_debug=False):
+                  string_to_sign_debug=False,
+                  generation=None):
   """Construct a string to sign with the provided key.
 
   Args:
@@ -269,6 +270,7 @@ def _GenSignedUrl(key,
     string_to_sign_debug: If true AND logger is enabled for debug level,
         print string to sign to debug. Used to differentiate user's
         signed URL from the probing permissions-check signed URL.
+    generation: If not None, specifies a version of an object for signing.
 
   Returns:
     The complete url (string).
@@ -292,6 +294,7 @@ def _GenSignedUrl(key,
                             method=method,
                             duration=duration,
                             path=gcs_path,
+                            generation=generation,
                             logger=logger,
                             region=region,
                             signed_headers=signed_headers,
@@ -308,6 +311,7 @@ def _GenSignedUrl(key,
         method=method,
         duration=duration,
         path=gcs_path,
+        generation=generation,
         logger=logger,
         region=region,
         signed_headers=signed_headers,
@@ -466,8 +470,8 @@ class UrlSignCommand(Command):
     return method, delta, content_type, passwd, region, use_service_account, billing_project
 
   def _ProbeObjectAccessWithClient(self, key, use_service_account, provider,
-                                   client_email, gcs_path, logger, region,
-                                   billing_project):
+                                   client_email, gcs_path, generation, logger,
+                                   region, billing_project):
     """Performs a head request against a signed url to check for read access."""
 
     # Choose a reasonable time in the future; if the user's system clock is
@@ -480,6 +484,7 @@ class UrlSignCommand(Command):
                                method='HEAD',
                                duration=timedelta(seconds=60),
                                gcs_path=gcs_path,
+                               generation=generation,
                                logger=logger,
                                region=region,
                                billing_project=billing_project,
@@ -597,6 +602,7 @@ class UrlSignCommand(Command):
                                 method=method,
                                 duration=delta,
                                 gcs_path=gcs_path,
+                                generation=url.generation,
                                 logger=self.logger,
                                 region=bucket_region,
                                 content_type=content_type,
@@ -622,7 +628,7 @@ class UrlSignCommand(Command):
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,
-          self.logger, bucket_region, billing_project)
+          url.generation, self.logger, bucket_region, billing_project)
 
       if response_code == 404:
         if url.IsBucket() and method != 'PUT':
