@@ -242,12 +242,12 @@ def _GenSignedUrl(key,
                   method,
                   duration,
                   gcs_path,
-                  generation,
                   logger,
                   region,
                   content_type=None,
                   billing_project=None,
-                  string_to_sign_debug=False):
+                  string_to_sign_debug=False,
+                  generation=None):
   """Construct a string to sign with the provided key.
 
   Args:
@@ -262,7 +262,6 @@ def _GenSignedUrl(key,
     duration: timedelta for which the constructed signed URL should be valid.
     gcs_path: String path to the bucket of object for signing, in the form
         'bucket' or 'bucket/object'.
-    generation: If not None, specifies a version of an object for signing.
     logger: logging.Logger for warning and debug output.
     region: Geographic region in which the requested resource resides.
     content_type: Optional Content-Type for the signed URL. HTTP requests using
@@ -271,6 +270,7 @@ def _GenSignedUrl(key,
     string_to_sign_debug: If true AND logger is enabled for debug level,
         print string to sign to debug. Used to differentiate user's
         signed URL from the probing permissions-check signed URL.
+    generation: If not None, specifies a version of an object for signing.
 
   Returns:
     The complete url (string).

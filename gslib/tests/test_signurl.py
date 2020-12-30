@@ -46,6 +46,7 @@ from six.moves import mock
 
 SERVICE_ACCOUNT = boto.config.get_value('GSUtil',
                                         'test_impersonate_service_account')
+TEST_EMAIL = 'test%40developer.gserviceaccount.com'
 
 
 # pylint: disable=protected-access
@@ -114,25 +115,23 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.assertIn('\tPUT\t', stdout)
 
   def testSignUrlOutputJSON(self):
-    """Tests signurl output of a sample object with json keystore."""
+    """Tests signurl output of a sample object with JSON keystore."""
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
     cmd = ['signurl', '-m', 'PUT', self._GetJSONKsFile(), suri(object_uri)]
     stdout = self.RunGsUtil(cmd, return_stdout=True)
-    self.assertIn('x-goog-credential=test%40developer.gserviceaccount.com',
-                  stdout)
+    self.assertIn('x-goog-credential=' + TEST_EMAIL, stdout)
     self.assertIn('x-goog-expires=3600', stdout)
     self.assertIn('%2Fus-central1%2F', stdout)
     self.assertIn('\tPUT\t', stdout)
 
   def testSignUrlWithJSONKeyFileAndObjectGeneration(self):
-    """Tests signurl output of a sample object version with json keystore."""
+    """Tests signurl output of a sample object version with JSON keystore."""
     bucket_uri = self.CreateBucket(versioning_enabled=True)
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
     cmd = ['signurl', self._GetJSONKsFile(), object_uri.version_specific_uri]
     stdout = self.RunGsUtil(cmd, return_stdout=True)
-    self.assertIn('x-goog-credential=test%40developer.gserviceaccount.com',
-                  stdout)
+    self.assertIn('x-goog-credential=' + TEST_EMAIL, stdout)
     self.assertIn('generation=' + object_uri.generation, stdout)
 
   def testSignUrlWithURLEncodeRequiredChars(self):
@@ -285,7 +284,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           client_id=self.client_email,
           method='RESUMABLE',
           gcs_path='test/test.txt',
-          generation=None,
           duration=duration,
           logger=self.logger,
           region='us-east',
@@ -316,7 +314,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           client_id=self.client_email,
           method='PUT',
           gcs_path='test/test.txt',
-          generation=None,
           duration=duration,
           logger=self.logger,
           region='us-east1',
@@ -355,7 +352,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                         client_id=self.client_email,
                         method='PUT',
                         gcs_path='test/test.txt',
-                        generation=None,
                         duration=duration,
                         logger=self.logger,
                         region='us-east1',
@@ -405,7 +401,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           client_id=self.client_email,
           method='PUT',
           gcs_path='test/test.txt',
-          generation=None,
           duration=duration,
           logger=self.logger,
           region='us-east1',
@@ -440,7 +435,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           client_id=self.client_email,
           method='RESUMABLE',
           gcs_path='test/test.txt',
-          generation=None,
           duration=duration,
           logger=mock_logger,
           region='us-east',
@@ -460,7 +454,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           client_id=self.client_email,
           method='RESUMABLE',
           gcs_path='test/test.txt',
-          generation=None,
           duration=duration,
           logger=mock_logger2,
           region='us-east',
@@ -483,7 +476,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           client_id=self.client_email,
           method='PUT',
           gcs_path='test/test.txt',
-          generation=None,
           duration=duration,
           logger=self.logger,
           region='eu',
@@ -505,7 +497,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           client_id=self.client_email,
           method='GET',
           gcs_path='test/test.txt',
-          generation=None,
           duration=duration,
           logger=self.logger,
           region='asia',
@@ -531,7 +522,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           client_id=client_email,
           method='GET',
           gcs_path='test/test.txt',
-          generation=None,
           duration=duration,
           logger=self.logger,
           region='asia',
@@ -553,7 +543,6 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           client_id=self.client_email,
           method='GET',
           gcs_path='test/test.txt',
-          generation=None,
           duration=duration,
           logger=self.logger,
           region='asia',
