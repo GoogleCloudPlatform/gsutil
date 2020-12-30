@@ -61,10 +61,10 @@ function install_pyenv {
       eval "$(pyenv init -)"
     fi
   fi
+  pyenv update
 }
 
 function install_python {
-  pyenv update
   pyenv install -s "$PYVERSIONTRIPLET"
 }
 
