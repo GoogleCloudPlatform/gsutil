@@ -23,6 +23,7 @@ import itertools
 import os
 import pkgutil
 import re
+import six
 from subprocess import PIPE
 from subprocess import Popen
 
@@ -33,6 +34,7 @@ import gslib.commands
 from gslib.exception import CommandException
 from gslib.help_provider import HelpProvider
 from gslib.help_provider import MAX_HELP_NAME_LEN
+from gslib.utils import constants
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.system_util import IsRunningInteractively
 from gslib.utils.system_util import GetTermLines
@@ -193,8 +195,12 @@ class HelpCommand(Command):
       if pager[0].endswith('less'):
         pager.append('-r')
       try:
+        if six.PY2:
+          input_for_pager = help_str.encode(constants.UTF8)
+        else:
+          input_for_pager = help_str
         Popen(pager, stdin=PIPE,
-              universal_newlines=True).communicate(input=help_str)
+              universal_newlines=True).communicate(input=input_for_pager)
       except OSError as e:
         raise CommandException('Unable to open pager (%s): %s' %
                                (' '.join(pager), e))
