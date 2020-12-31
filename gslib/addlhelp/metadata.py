@@ -51,27 +51,28 @@ _DETAILED_HELP_TEXT = ("""
   You can't set some metadata fields, such as ETag and Content-Length. The
   fields you can set are:
 
-  - Cache-Control
-  - Content-Disposition
-  - Content-Encoding
-  - Content-Language
-  - Content-Type
+  - ``Cache-Control``
+  - ``Content-Disposition``
+  - ``Content-Encoding``
+  - ``Content-Language``
+  - ``Content-Type``
+  - ``Custom-Time``
   - Custom metadata
 
   Field names are case-insensitive.
 
   All fields and their values must consist only of ASCII characters, with the
-  exception of values for x-goog-meta- fields, which may contain arbitrary
+  exception of values for ``x-goog-meta-`` fields, which may contain arbitrary
   Unicode values. Note that when setting metadata using the XML API, which sends
-  custom metadata as HTTP headers, Unicode characters will be encoded using
+  custom metadata as HTTP headers, Unicode characters are encoded using
   UTF-8, then url-encoded to ASCII. For example:
 
     gsutil setmeta -h "x-goog-meta-foo: ã" gs://bucket/object
 
-  would store the custom metadata key-value pair of "foo" and "%C3%A3".
-  Subsequently, running "ls -L" using the JSON API to list the object's metadata
-  would print "%C3%A3", while "ls -L" using the XML API would url-decode this
-  value automatically, printing the character "ã".
+  stores the custom metadata key-value pair of ``foo`` and ``%C3%A3``.
+  Subsequently, running ``ls -` using the JSON API to list the object's metadata
+  prints ``%C3%A3``, while ``ls -L`` using the XML API url-decodes this
+  value automatically, printing the character ``ã``.
 
 
 <B>VIEWING CURRENTLY SET METADATA</B>
