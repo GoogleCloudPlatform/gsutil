@@ -61,7 +61,10 @@ from gslib.utils.text_util import InsistAsciiHeaderValue
 from gslib.utils.text_util import print_to_fd
 from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.update_util import LookUpGsutilVersion
-from gslib.tests.util import HAS_NON_DEFAULT_GS_HOST
+try:
+  from gslib.tests.util import HAS_NON_DEFAULT_GS_HOST
+except ImportError:
+  HAS_NON_DEFAULT_GS_HOST = False
 
 
 def HandleHeaderCoding(headers):
