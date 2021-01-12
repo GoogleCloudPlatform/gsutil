@@ -70,9 +70,9 @@ _DETAILED_HELP_TEXT = ("""
     gsutil setmeta -h "x-goog-meta-foo: ã" gs://bucket/object
 
   stores the custom metadata key-value pair of ``foo`` and ``%C3%A3``.
-  Subsequently, running ``ls -` using the JSON API to list the object's metadata
-  prints ``%C3%A3``, while ``ls -L`` using the XML API url-decodes this
-  value automatically, printing the character ``ã``.
+  Subsequently, running ``ls -L`` using the JSON API to list the object's
+  metadata prints ``%C3%A3``, while ``ls -L`` using the XML API
+  url-decodes this value automatically, printing the character ``ã``.
 
 
 <B>VIEWING CURRENTLY SET METADATA</B>
