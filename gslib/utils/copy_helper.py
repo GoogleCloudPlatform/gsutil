@@ -741,12 +741,11 @@ def ConstructDstUrl(src_url,
 
 
 def _CreateDigestsFromDigesters(digesters):
-  b64enc = base64.encodestring if six.PY2 else base64.encodebytes
   digests = {}
   if digesters:
     for alg in digesters:
-      digests[alg] = b64enc(
-          digesters[alg].digest()).rstrip(b'\n').decode('ascii')
+      digests[alg] = base64.b64encode(
+          digesters[alg].digest()).decode('ascii')
   return digests
 
 

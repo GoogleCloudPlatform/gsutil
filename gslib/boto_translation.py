@@ -1529,14 +1529,13 @@ class BotoTranslation(CloudApi):
       if etag:
         etag = etag.strip('"\'')
     crc32c = None
-    encode_function = base64.encodestring if six.PY2 else base64.encodebytes
     if not fields or 'crc32c' in fields:
       if hasattr(key, 'cloud_hashes') and 'crc32c' in key.cloud_hashes:
-        crc32c = encode_function(key.cloud_hashes['crc32c']).rstrip(b'\n')
+        crc32c = base64.b64encode(key.cloud_hashes['crc32c'])
     md5_hash = None
     if not fields or 'md5Hash' in fields:
       if hasattr(key, 'cloud_hashes') and 'md5' in key.cloud_hashes:
-        md5_hash = encode_function(key.cloud_hashes['md5']).rstrip(b'\n')
+        md5_hash = base64.b64encode(key.cloud_hashes['md5'])
       elif self._GetMD5FromETag(getattr(key, 'etag', None)):
         md5_hash = Base64EncodeHash(self._GetMD5FromETag(key.etag))
       elif self.provider == 's3':
