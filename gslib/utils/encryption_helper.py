@@ -201,7 +201,8 @@ def _GetAndVerifyBase64EncryptionKey(boto_config):
   if encryption_key:
     # Ensure the key has a valid encoding.
     try:
-      base64.decodestring(encryption_key)
+      decode_function = base64.decodestring if six.PY2 else base64.decodebytes
+      decode_function(encryption_key)
     except:
       raise CommandException(
           'Configured encryption_key is not a valid base64 string. Please '
