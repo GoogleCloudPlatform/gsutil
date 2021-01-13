@@ -744,7 +744,8 @@ def _CreateDigestsFromDigesters(digesters):
   digests = {}
   if digesters:
     for alg in digesters:
-      digests[alg] = base64.b64encode(digesters[alg].digest()).decode('ascii')
+      digests[alg] = base64.b64encode(
+          digesters[alg].digest()).rstrip(b'\n').decode('ascii')
   return digests
 
 

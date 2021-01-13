@@ -261,7 +261,7 @@ def CalculateMd5FromContents(fp):
 def Base64EncodeHash(digest_value):
   """Returns the base64-encoded version of the input hex digest value."""
   encoded_bytes = base64.b64encode(binascii.unhexlify(digest_value))
-  return encoded_bytes.decode(UTF8)
+  return encoded_bytes.rstrip(b'\n').decode(UTF8)
 
 
 def Base64ToHexHash(base64_hash):
