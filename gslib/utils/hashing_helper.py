@@ -260,11 +260,7 @@ def CalculateMd5FromContents(fp):
 
 def Base64EncodeHash(digest_value):
   """Returns the base64-encoded version of the input hex digest value."""
-  try:
-    encoded_bytes = base64.encodebytes(binascii.unhexlify(digest_value))
-  except AttributeError:
-    # For Python 2 compatability.
-    encoded_bytes = base64.encodestring(binascii.unhexlify(digest_value))
+  encoded_bytes = base64.b64encode(binascii.unhexlify(digest_value))
   return encoded_bytes.rstrip(b'\n').decode(UTF8)
 
 
@@ -278,11 +274,7 @@ def Base64ToHexHash(base64_hash):
   Returns:
     Hex digest of the input argument.
   """
-  try:
-    decoded_bytes = base64.decodebytes(base64_hash.strip('\n"\'').encode(UTF8))
-  except AttributeError:
-    # For Python 2 compatability.
-    decoded_bytes = base64.decodestring(base64_hash.strip('\n"\'').encode(UTF8))
+  decoded_bytes = base64.b64decode(base64_hash.strip('\n"\'').encode(UTF8))
   return binascii.hexlify(decoded_bytes)
 
 
