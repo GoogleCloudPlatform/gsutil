@@ -1079,6 +1079,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         r'Final headers: \{[\s\S]*\''
         r'x-goog-request-reason\': \'b/this_is_env_reason\'[\s\S]*}')
 
+    # Pattern should match twice since two requests should have a reason header.
     self.assertRegex(stderr, reason_regex + r'[\s\S]*' + reason_regex)
 
   @SequentialAndParallelTransfer
