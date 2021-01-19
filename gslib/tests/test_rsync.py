@@ -2913,6 +2913,53 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check()
 
+  def test_dir_to_bucket_minus_i(self):
+    """Tests that rsync -i works correctly."""
+    tmpdir = self.CreateTempDir()
+    dst_bucket = self.CreateBucket()
+    ORIG_MTIME = 10
+
+    self.CreateObject(bucket_uri=dst_bucket,
+                      object_name='obj1',
+                      contents=b'obj1-1')
+    self.CreateObject(bucket_uri=dst_bucket,
+                      object_name='obj2',
+                      contents=b'obj2-1')
+    self.CreateObject(bucket_uri=dst_bucket,
+                      object_name='obj3',
+                      contents=b'obj3-1',
+                      mtime=ORIG_MTIME)
+
+    # Source files with same name should NOT be copied:
+    # Same size, different contents.
+    self.CreateTempFile(tmpdir=tmpdir, file_name='obj1', contents=b'obj1-2')
+    # Same size, same contents.
+    self.CreateTempFile(tmpdir=tmpdir,
+                        file_name='obj2',
+                        contents=b'obj2-1',
+                        mtime=ORIG_MTIME)
+    # Different size and contents.
+    self.CreateTempFile(tmpdir=tmpdir,
+                        file_name='obj3',
+                        contents=b'obj3-newer',
+                        mtime=ORIG_MTIME - 1)
+
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      self.RunGsUtil(['rsync', '-i', tmpdir, suri(dst_bucket)])
+      # Objects 1-3 should NOT have been overwritten:
+      self.assertEquals(
+          'obj1-1',
+          self.RunGsUtil(['cat', suri(dst_bucket, 'obj1')], return_stdout=True))
+      self.assertEquals(
+          'obj2-1',
+          self.RunGsUtil(['cat', suri(dst_bucket, 'obj2')], return_stdout=True))
+      self.assertEquals(
+          'obj3-1',
+          self.RunGsUtil(['cat', suri(dst_bucket, 'obj3')], return_stdout=True))
+
+    _Check()
+
   def test_rsync_files_with_whitespace(self):
     """Test to ensure filenames with whitespace can be rsynced"""
     filename = 'foo bar baz.txt'
