@@ -1076,8 +1076,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['-D', 'cp', fpath, dst_uri], return_stderr=True)
 
     reason_regex = (
-      r'Final headers: \{[\s\S]*\''
-      r'x-goog-request-reason\': \'b/this_is_env_reason\'[\s\S]*}')
+        r'Final headers: \{[\s\S]*\''
+        r'x-goog-request-reason\': \'b/this_is_env_reason\'[\s\S]*}')
 
     self.assertRegex(stderr, reason_regex + r'[\s\S]*' + reason_regex)
 
