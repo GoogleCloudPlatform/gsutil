@@ -1058,8 +1058,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # PUT follows GET request. Both need the request-reason header.
     reason_regex = (r'Making http GET[\s\S]*'
                     r'x-goog-request-reason\': \'b/this_is_env_reason[\s\S]*'
-                    r'send: b\'PUT.*x-goog-request-reason:'
-                    r' b/this_is_env_reason.*\\r\\n\\r\\n')
+                    r'send: (b\')?PUT[\s\S]*x-goog-request-reason:'
+                    r' b/this_is_env_reason')
     self.assertRegex(stderr, reason_regex)
 
   @SequentialAndParallelTransfer
