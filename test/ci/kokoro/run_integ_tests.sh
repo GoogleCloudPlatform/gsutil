@@ -107,6 +107,9 @@ update_submodules
 python "$GSUTIL_ENTRYPOINT" version -l
 # Run integration tests
 python "$GSUTIL_ENTRYPOINT" test -p "$PROCS"
+if ! [[ $? == 0 ]]; then
+  exit 1
+fi
 
 # Run mTLS authentication test.
 if [[ $API == "json" ]]; then
