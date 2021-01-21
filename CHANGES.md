@@ -1,9 +1,30 @@
-Release 4.57 (release date: 2020-12-08)
+ Release 4.58 (release date: 2021-01-21)
+======================================
+Bug Fixes
+------------------
+ - Fix more occurrences of encodestring/decodestring (#1177)
+ - Ignore the .github directory for updates (#1164)
+ - Make signurl use generation information. (#1169)
+ - Fix UnicodeEncodeError in Python2 for help metadata command (#1172)
+ - Open files in non-append mode to make stripe functionality work in Lustre file systems (#1171)
+ - Persist request reason header for resumable uploads and downloads. (#1170)
+ - improve upload speed significantly when it runs on Windows (#1146)
+ - Add perf-trace-token support for resumable uploads. (#1168)
+ - Improve error message when a bucket's name collides with another. (#1166)
+ - Fix formatting for empty CORS JSON document (#1156)
+
+Other Changes
+------------------
+ - Several documentation updates and clarifications.
+ - Add CI checks for Python 3.8 (#1167)
+
+ Release 4.57 (release date: 2020-12-08)
 ======================================
 Bug Fixes
 ------------------
  - Remove Unicode character from config command that was causing Python 2 issues.
  - Sync docs with web.
+
 Release 4.56 (release date: 2020-12-03)
 ======================================
 New Features
