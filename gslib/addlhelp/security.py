@@ -46,9 +46,11 @@ _DETAILED_HELP_TEXT = ("""
   setting is_secure to False is disallowed.  For more details about different
   credential options, see "gsutil help creds".
   
-  To add an extra layer of security, gsutil supports mutual TLS (mTLS) for the Cloud Storage JSON API.
-  With mTLS, the client verifies the server certificate, and the server also verifies the client.
-  You can find out more about how to enable mTLS, see the install docs.
+  To add an extra layer of security, gsutil supports mutual TLS (mTLS) for
+  the Cloud Storage JSON API. With mTLS, the client verifies the server
+  certificate, and the server also verifies the client.
+  To find out more about how to enable mTLS, see the `install docs
+  <https://cloud.google.com/storage/docs/gsutil_install>`_.
 
 
 <B>LOCAL FILE STORAGE SECURITY</B>
