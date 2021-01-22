@@ -242,7 +242,7 @@ New Features
 ------------------
 - Added HMAC key management for service accounts. This includes a new "hmac"
   command to create/get/list/update/delete HMAC keys on service accounts.
-  Currently, your project must be whitelisted for use with this new HMAC
+  Currently, your project must be added to the allowlist for use with this new HMAC
   functionality. This restriction will be lifted in the near future.
 
  Bug Fixes
@@ -330,8 +330,8 @@ New features
 - Added Bucket Policy Only support to gsutil. This includes a new
   "bucketpolicyonly" command to get/set BPO on existing buckets, as well adding
   the ability to set BPO at bucket creation time with "mb -b". Currently, your
-  project must be whitelisted for use with the new BPO functionality. This
-  restriction will be lifted in the near future.
+  project must be added to the allowlist for use with the new BPO functionality.
+  This restriction will be lifted in the near future.
 
 Bug Fixes
 ------------------
@@ -373,8 +373,8 @@ Release 4.34 (release date: 2018-09-11)
 =======================================
 New features
 ------------------
-- Added bucket lock support to gsutil. Currently, your project must be
-  whitelisted for use with the new bucket lock functionality. This restriction
+- Added bucket lock support to gsutil. Currently, your project must be added to
+  the allowlist for use with the new bucket lock functionality. This restriction
   will be lifted in the near future.
 
 Bug Fixes
@@ -715,7 +715,7 @@ New Features
   configuration file.
 - Added the iam commmand, which can be used to set IAM policies on
   Google Cloud Storage buckets and objects. This feature is currently in
-  alpha and requires a whitelist application to use it - see
+  alpha and requires a safelist application to use it - see
   "gsutil help iam" for  details.
 - The hash command now supports retrieving hashes for cloud objects.
 

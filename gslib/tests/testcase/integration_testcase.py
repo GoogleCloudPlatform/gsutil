@@ -335,8 +335,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
   def _ServiceAccountCredentialsPresent(self):
     # TODO: Currently, service accounts cannot be project owners (unless
-    # they are grandfathered). Unfortunately, setting a canned ACL other
-    # than project-private, the ACL that buckets get by default, removes
+    # they are exempted for legacy reasons). Unfortunately, setting a canned ACL
+    # other than project-private, the ACL that buckets get by default, removes
     # project-editors access from the bucket ACL. So any canned ACL that would
     # actually represent a change the bucket would also orphan the service
     # account's access to the bucket. If service accounts can be owners
