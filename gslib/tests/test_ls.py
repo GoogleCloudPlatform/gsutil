@@ -159,9 +159,7 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
   @mock.patch.object(ls.LsCommand, 'WildcardIterator')
   def test_object_and_prefix_same_name(self, mock_wildcard):
     bucket_uri = self.CreateBucket(bucket_name='foo')
-    bucket_metadata = apitools_messages.Bucket(
-        name='foo',
-        satisfiesPZS=True)
+    bucket_metadata = apitools_messages.Bucket(name='foo', satisfiesPZS=True)
     bucket_uri.root_object = bucket_metadata
     bucket_uri.url_string = 'foo'
     bucket_uri.storage_url = mock.Mock()

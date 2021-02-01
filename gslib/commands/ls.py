@@ -437,8 +437,7 @@ class LsCommand(Command):
          '\tLabels:\t\t\t\t{labels}\n' +
          '\tDefault KMS key:\t\t{default_kms_key}\n' + time_created_line +
          time_updated_line + metageneration_line +
-         bucket_policy_only_enabled_line +
-         satisifies_pzs_line +
+         bucket_policy_only_enabled_line + satisifies_pzs_line +
          '\tACL:\t\t\t\t{acl}\n'
          '\tDefault ACL:\t\t\t{default_acl}').format(**fields))
     if bucket_blr.storage_url.scheme == 's3':
