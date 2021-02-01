@@ -162,6 +162,3 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(
           ['cat', '-r 1-3', suri(object_uri)], return_stdout=True)
       self.assertEqual(stdout, '123')
-
-  def test_kokoro_registers_failures(self):
-    raise Exception
