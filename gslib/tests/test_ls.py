@@ -29,6 +29,7 @@ import sys
 import time
 
 import gslib
+from gslib.commands import ls
 from gslib.cs_api_map import ApiSelector
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
@@ -154,6 +155,23 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
     self.assertEqual(
         stor_update_time,
         datetime.strftime(new_update_time, '%a, %d %b %Y %H:%M:%S GMT'))
+
+  @mock.patch.object(ls.LsCommand, 'WildcardIterator')
+  def test_object_and_prefix_same_name(self, mock_wildcard):
+    bucket_uri = self.CreateBucket(bucket_name='foo')
+    bucket_metadata = apitools_messages.Bucket(
+        name='foo',
+        satisfiesPZS=True)
+    bucket_uri.root_object = bucket_metadata
+    bucket_uri.url_string = 'foo'
+    bucket_uri.storage_url = mock.Mock()
+
+    mock_wildcard.return_value.IterBuckets.return_value = [bucket_uri]
+    # MockKey doesn't support hash_algs, so the MD5 will not match.
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      stdout = self.RunCommand('ls', ['-Lb', suri(bucket_uri)],
+                               return_stdout=True)
+    self.assertRegex(stdout, 'Satisfies PZS:\t\t\tTrue')
 
 
 class TestLs(testcase.GsUtilIntegrationTestCase):
