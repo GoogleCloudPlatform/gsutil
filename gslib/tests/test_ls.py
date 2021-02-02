@@ -157,7 +157,7 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
         datetime.strftime(new_update_time, '%a, %d %b %Y %H:%M:%S GMT'))
 
   @mock.patch.object(ls.LsCommand, 'WildcardIterator')
-  def test_object_and_prefix_same_name(self, mock_wildcard):
+  def test_satisfies_pzs_is_displayed_if_present(self, mock_wildcard):
     bucket_uri = self.CreateBucket(bucket_name='foo')
     bucket_metadata = apitools_messages.Bucket(name='foo', satisfiesPZS=True)
     bucket_uri.root_object = bucket_metadata
