@@ -103,6 +103,8 @@ init_configs
 init_python
 update_submodules
 
+set -e
+
 # Check that we're using the correct config
 python "$GSUTIL_ENTRYPOINT" version -l
 # Run integration tests
