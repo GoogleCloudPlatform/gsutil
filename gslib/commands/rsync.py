@@ -414,6 +414,11 @@ _DETAILED_HELP_TEXT = ("""
                  ignored. Note that gsutil does not follow directory symlinks,
                  regardless of whether -e is specified.
 
+  -i             This forces rsync to skip any files which exist on the destination
+                 and have a modified time that is newer than the source file.
+                 (If an existing destination file has a modification time equal to
+                 the source file's, it will be updated if the sizes are different.)
+
   -j <ext,...>   Applies gzip transport encoding to any file upload whose
                  extension matches the -j extension list. This is useful when
                  uploading files with compressible content (such as .js, .css,
@@ -945,6 +950,7 @@ class _DiffIterator(object):
     self.base_dst_url = base_dst_url
     self.preserve_posix = command_obj.preserve_posix_attrs
     self.skip_old_files = command_obj.skip_old_files
+    self.ignore_existing = command_obj.ignore_existing
 
     self.logger.info('Building synchronization state...')
 
@@ -1141,6 +1147,8 @@ class _DiffIterator(object):
     use_hashes = (self.compute_file_checksums or
                   (StorageUrlFromString(src_url_str).IsCloudUrl() and
                    StorageUrlFromString(dst_url_str).IsCloudUrl()))
+    if self.ignore_existing:
+      return False, has_src_mtime, has_dst_mtime
     if (self.skip_old_files and has_src_mtime and has_dst_mtime and
         src_mtime < dst_mtime):
       return False, has_src_mtime, has_dst_mtime
@@ -1332,6 +1340,7 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
     self.base_src_url = initialized_diff_iterator.base_src_url
     self.base_dst_url = initialized_diff_iterator.base_dst_url
     self.skip_old_files = initialized_diff_iterator.skip_old_files
+    self.ignore_existing = initialized_diff_iterator.ignore_existing
 
     # Note that while this leaves 2 open file handles, we track these in a
     # global list to be closed (if not closed in the calling scope) and deleted
@@ -1564,7 +1573,7 @@ class RsyncCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
-      supported_sub_args='a:cCdenpPrRuUx:j:J',
+      supported_sub_args='a:cCdenpPriRuUx:j:J',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -1703,6 +1712,7 @@ class RsyncCommand(Command):
     self.dryrun = False
     self.exclude_pattern = None
     self.skip_old_files = False
+    self.ignore_existing = False
     self.skip_unsupported_objects = False
     # self.recursion_requested is initialized in command.py (so it can be
     # checked in parent class for all commands).
@@ -1751,6 +1761,8 @@ class RsyncCommand(Command):
           self.recursion_requested = True
         elif o == '-u':
           self.skip_old_files = True
+        elif o == '-i':
+          self.ignore_existing = True
         elif o == '-U':
           self.skip_unsupported_objects = True
         elif o == '-x':
