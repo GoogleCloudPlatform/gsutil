@@ -72,7 +72,7 @@ _DETAILED_HELP_TEXT = ("""
      ``delimiter="/"`` and ``prefix="abc"``. It then examines the bucket listing
      results and determines whether there are objects in the bucket whose path
      starts with ``gs://your-bucket/abc/``. If so, gsutil treats the target
-     as a directory name. In turn this impacts the name of the object you create
+     as a directory name. In turn this impacts the name of the object you
      create: If the above check indicates there is an ``abc`` directory you end
      up with the object ``gs://your-bucket/abc/your-file``; otherwise you end up
      with the object ``gs://your-bucket/abc``. (See "HOW NAMES ARE CONSTRUCTED"
