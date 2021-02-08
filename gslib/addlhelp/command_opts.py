@@ -74,14 +74,12 @@ _DETAILED_HELP_TEXT = ("""
                 x-goog-meta-
 
               Note that for gs:// URLs, the Cache Control header is specific to
-              the API being used. The XML API will accept any cache control
-              headers and return them during object downloads.  The JSON API
-              respects only the public, private, no-cache, and max-age cache
-              control headers, and may add its own no-transform directive even
-              if it was not specified. See 'gsutil help apis' for more
-              information on gsutil's interaction with APIs.
+              the API being used. The XML API accepts any cache control headers
+              and returns them during object downloads.  The JSON API respects
+              only the public, private, no-cache, max-age, and no-tranform
+              cache control headers.
 
-              See also "gsutil help setmeta" for the ability to set metadata
+              See "gsutil help setmeta" for the ability to set metadata
               fields on objects after they have been uploaded.
 
   -i          Allows you to use the configured credentials to impersonate a
