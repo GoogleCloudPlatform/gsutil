@@ -1,4 +1,20 @@
- Release 4.58 (release date: 2021-01-21)
+Release 4.59 (release date: 2021-02-10)
+======================================
+New Features
+------------------
+ - Add ignore-existing option for rsync (#1183).
+ - Show satisifiesPZS info in bucket info listing (ls -Lb) (#1191).
+
+Bug Fixes
+------------------
+ - Register integration test failures in kokoro script (#1189).
+
+Other Changes
+------------------
+ - Use respectful code (#1190).
+ - Several documentation updates and clarifications.
+
+Release 4.58 (release date: 2021-01-21)
 ======================================
 Bug Fixes
 ------------------
