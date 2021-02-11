@@ -63,12 +63,12 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil ls
 
-  If you specify one or more provider URLs, gsutil ls will list buckets at
-  each listed provider:
+  If you specify one or more provider URLs, gsutil ls lists buckets at each
+  listed provider:
 
     gsutil ls gs://
 
-  If you specify bucket URLs, gsutil ls will list objects at the top level of
+  If you specify bucket URLs, gsutil ls lists objects at the top level of
   each bucket, along with the names of each subdirectory. For example:
 
     gsutil ls gs://bucket
@@ -85,13 +85,13 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil ls gs://bucket/images*
 
-  If you specify object URLs, gsutil ls will list the specified objects. For
+  If you specify object URLs, gsutil ls lists the specified objects. For
   example:
 
     gsutil ls gs://bucket/*.txt
 
-  will list all files whose name matches the above wildcard at the top level
-  of the bucket.
+  lists all files whose name matches the above wildcard at the top level of
+  the bucket.
 
   See "gsutil help wildcards" for more details on working with wildcards.
 
@@ -103,8 +103,8 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil ls -r gs://bucket
 
-  will list the top-level objects and buckets, then the objects and
-  buckets under gs://bucket/images1, then those under gs://bucket/images2, etc.
+  lists the top-level objects and buckets, then the objects and buckets under
+  gs://bucket/images1, then those under gs://bucket/images2, etc.
 
   If you want to see all objects in the bucket in one "flat" listing use the
   recursive ("**") wildcard, like:
@@ -121,17 +121,18 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>LISTING OBJECT DETAILS</B>
-  If you specify the -l option, gsutil will output additional information
-  about each matching provider, bucket, subdirectory, or object. For example:
+  If you specify the -l option, gsutil outputs additional information about
+  each matching provider, bucket, subdirectory, or object. For example:
 
-    gsutil ls -l gs://bucket/*.txt
+    gsutil ls -l gs://bucket/*.html gs://bucket/*.txt
 
-  will print the object size, creation time stamp, and name of each matching
+  prints the object size, creation time stamp, and name of each matching
   object, along with the total count and sum of sizes of all matching objects:
 
-       2276224  2017-03-02T19:25:17Z  gs://bucket/obj1
-       3914624  2017-03-02T19:30:27Z  gs://bucket/obj2
-    TOTAL: 2 objects, 6190848 bytes (5.9 MiB)
+       2276224  2020-03-02T19:25:17Z  gs://bucket/obj1.html
+       3914624  2020-03-02T19:30:27Z  gs://bucket/obj2.html
+       131  2020-03-02T19:37:45Z  gs://bucket/obj3.txt
+    TOTAL: 3 objects, 6190979 bytes (5.9 MiB)
 
   Note that the total listed in parentheses above is in mebibytes (or gibibytes,
   tebibytes, etc.), which corresponds to the unit of billing measurement for
@@ -147,7 +148,7 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil ls -L gs://bucket/obj1
 
-  will print something like:
+  prints something like:
 
     gs://bucket/obj1:
             Creation time:                    Fri, 26 May 2017 22:55:44 GMT
@@ -192,7 +193,7 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil ls -L -b gs://bucket
 
-  will print something like:
+  prints something like:
 
     gs://bucket/ :
             Storage class:                STANDARD
@@ -242,9 +243,9 @@ _DETAILED_HELP_TEXT = ("""
   -L          Prints even more detail than -l.
   
               Note: If you use this option with the (non-default) XML API it
-              will generate an additional request per object being listed,
-              which makes the -L option run much more slowly (and cost more)
-              using the XML API than the default JSON API.
+              generates an additional request per object being listed, which
+              makes the -L option run much more slowly and cost more than the
+              default JSON API.
 
   -d          List matching subdirectory names instead of contents, and do not
               recurse into matching subdirectories even if the -R option is
@@ -262,8 +263,8 @@ _DETAILED_HELP_TEXT = ("""
               operation per subdirectory. If you have a large number of
               subdirectories and do not require recursive-style output ordering,
               you may be able to instead use wildcards to perform a flat
-              listing, e.g.  `gsutil ls gs://mybucket/**`, which will generally
-              perform fewer listing operations.
+              listing, e.g.  `gsutil ls gs://mybucket/**`, which generally
+              performs fewer listing operations.
 
   -a          Includes non-current object versions / generations in the listing
               (only useful with a versioning-enabled bucket). If combined with
