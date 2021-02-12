@@ -121,13 +121,21 @@ _DETAILED_HELP_TEXT = ("""
   the second attempt will encounter an already existing source subdirectory
   and result in the above-described naming problem.
 
-  There are a couple of ways to avoid this problem:
+  There are a few ways to avoid this problem:
 
-  1. Use gsutil rsync. Since rsync doesn't use the Unix cp-defined directory
+  1. Append a trailing slash to the target directory. If the destination object
+  ends with a "/" gsutil treats it as a directory. For example, if you run the
+  command:
+
+    gsutil cp your-file gs://your-bucket/abc/
+
+  gsutil creates the object ``gs://your-bucket/abc/your-file``.
+
+  2. Use gsutil rsync. Since rsync doesn't use the Unix cp-defined directory
   naming rules, it will work consistently whether the destination subdirectory
   exists or not.
 
-  2. If using rsync won't work for you, you can start by creating a
+  3. If using rsync won't work for you, you can start by creating a
   "placeholder" object to establish that the destination is a subdirectory, by
   running a command such as:
 
