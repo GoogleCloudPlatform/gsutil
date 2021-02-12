@@ -30,6 +30,10 @@ _DETAILED_HELP_TEXT = ("""
   will copy all objects that start with gs://bucket/data/abc followed by any
   number of characters within that subdirectory.
 
+  Note: Some shells require that wildcarded expressions be surrounded with
+  single quotes (on Linux) or double quotes (on Windows). For example:
+  
+    gsutil cp "gs://bucket/data/abc*" .
 
 <B>DIRECTORY BY DIRECTORY VS RECURSIVE WILDCARDS</B>
   The "*" wildcard only matches up to the end of a path within
