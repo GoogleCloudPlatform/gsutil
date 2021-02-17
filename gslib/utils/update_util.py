@@ -78,9 +78,9 @@ def DisallowUpdateIfDataInGsutilDir(directory=gslib.GSUTIL_DIR):
       '.coverage',
       '.DS_Store',
       '.style.yapf',
-      '.travis.yml',
       '.yapfignore',
       '__pycache__',
+      '.github',
   )
   for filename in os.listdir(directory):
     if filename.endswith('.pyc') or filename in addl_excludes:
