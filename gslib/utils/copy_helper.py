@@ -3298,8 +3298,8 @@ def _ValidateAndCompleteDownload(logger,
 
   if file_name != final_file_name:
     # Data is still in a temporary file, so move it to a permanent location.
-    if os.path.exists(final_file_name):
-      os.unlink(final_file_name)
+    # if os.path.exists(final_file_name):
+    #   os.unlink(final_file_name)
     os.rename(file_name, final_file_name)
   ParseAndSetPOSIXAttributes(final_file_name,
                              src_obj_metadata,
