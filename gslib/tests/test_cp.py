@@ -591,12 +591,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SequentialAndParallelTransfer
   def test_cp_overwrites_existing_destinations(self):
-    key_uri = self.CreateObject(contents=b'foo')
+    ten_mb_string = b'1' * 10 * 1024 * 1024
+    key_uri = self.CreateObject(contents=ten_mb_string)
     fpath = self.CreateTempFile(contents=b'bar')
     stderr = self.RunGsUtil(['cp', suri(key_uri), fpath],
                             return_stderr=True)
     with open(fpath, 'rb') as f:
-      self.assertEqual(f.read(), b'foo')
+      self.assertEqual(f.read(), ten_mb_string)
 
   @SequentialAndParallelTransfer
   def test_noclobber(self):
