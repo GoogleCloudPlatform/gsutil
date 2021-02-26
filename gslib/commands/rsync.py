@@ -502,11 +502,12 @@ _DETAILED_HELP_TEXT = ("""
                  storage class.
 
   -x pattern     Causes files/objects matching pattern to be excluded, i.e., any
-                 matching files/objects are not copied or deleted. Note that
-                 the pattern is a Python regular expression, not a wildcard (so,
-                 matching any string ending in "abc" would be specified using
-                 ".*abc$" rather than "*abc"). Note also that the exclude path
-                 is always relative (similar to Unix rsync or tar exclude
+                 matching files/objects are not copied or deleted. Note that the
+                 pattern is a `Python regular expression
+                 <https://docs.python.org/3/howto/regex.html>`_, not a wildcard
+                 (so, matching any string ending in "abc" would be specified
+                 using ".*abc$" rather than "*abc"). Note also that the exclude
+                 path is always relative (similar to Unix rsync or tar exclude
                  options). For example, if you run the command:
 
                    gsutil rsync -x "data./.*\\.txt$" dir gs://my-bucket
