@@ -4537,6 +4537,30 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         'CommandException: Cannot upload from a stream when using gsutil -m',
         stderr)
 
+  @SequentialAndParallelTransfer
+  def test_cp_overwrites_existing_destination(self):
+    key_uri = self.CreateObject(contents=b'foo')
+    fpath = self.CreateTempFile(contents=b'bar')
+    stderr = self.RunGsUtil(['cp', suri(key_uri), fpath], return_stderr=True)
+    with open(fpath, 'rb') as f:
+      self.assertEqual(f.read(), b'foo')
+
+  @SequentialAndParallelTransfer
+  def test_downloads_are_reliable_with_more_than_one_gsutil_instance(self):
+    test_file_count = 10
+    temporary_directory = self.CreateTempDir()
+    bucket_uri = self.CreateBucket(test_objects=test_file_count)
+
+    cp_args = ['cp', suri(bucket_uri, '*'), temporary_directory]
+    process_1 = multiprocessing.Process(target=self.RunGsUtil, args=[cp_args])
+    process_2 = multiprocessing.Process(target=self.RunGsUtil, args=[cp_args])
+    process_1.start()
+    process_2.start()
+    process_1.join()
+    process_2.join()
+
+    self.assertEqual(len(os.listdir(temporary_directory)), test_file_count)
+
 
 class TestCpUnitTests(testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil cp."""
@@ -4583,28 +4607,3 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     self.assertEquals(1, len(warning_messages))
     self.assertIn('Found no hashes to validate object upload',
                   warning_messages[0])
-
-  @SequentialAndParallelTransfer
-  def test_cp_overwrites_existing_destination(self):
-    key_uri = self.CreateObject(contents=b'foo')
-    fpath = self.CreateTempFile(contents=b'bar')
-    stderr = self.RunGsUtil(['cp', suri(key_uri), fpath],
-                            return_stderr=True)
-    with open(fpath, 'rb') as f:
-      self.assertEqual(f.read(), b'foo')
-
-  @SequentialAndParallelTransfer
-  def test_downloads_are_reliable_with_more_than_one_gsutil_instance(self):
-    test_file_count = 10
-    temporary_directory = self.CreateTempDir()
-    bucket_uri = self.CreateBucket(test_objects=test_file_count)
-
-    cp_args = ['cp', suri(bucket_uri, '*'), temporary_directory]
-    process_1 = multiprocessing.Process(target=self.RunGsUtil, args=[cp_args])
-    process_2 = multiprocessing.Process(target=self.RunGsUtil, args=[cp_args])
-    process_1.start()
-    process_2.start()
-    process_1.join()
-    process_2.join()
-
-    self.assertEqual(len(os.listdir(temporary_directory)), test_file_count)
