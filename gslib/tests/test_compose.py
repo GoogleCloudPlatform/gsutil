@@ -49,7 +49,8 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
         for data in data_list
     ]
 
-    composite = bucket_uri.clone_replace_name(self.MakeTempName('obj'))
+    composite = self.StorageUriCloneReplaceName(bucket_uri,
+                                                self.MakeTempName('obj'))
 
     self.RunGsUtil(['compose'] + components + [composite.uri])
     self.assertEqual(composite.get_contents_as_string(), b''.join(data_list))
@@ -108,7 +109,8 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
                                    contents=b'world!',
                                    object_name='component2')
 
-    composite = bucket_uri.clone_replace_name(self.MakeTempName('obj'))
+    composite = self.StorageUriCloneReplaceName(bucket_uri,
+                                                self.MakeTempName('obj'))
 
     self.RunGsUtil(['compose', component1.uri, component2.uri, composite.uri])
     self.assertEqual(composite.get_contents_as_string(), b'hello world!')

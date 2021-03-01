@@ -164,10 +164,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_all_versions_current(self):
     """Test that 'rm -a' for an object with a current version works."""
     bucket_uri = self.CreateVersionedBucket()
-    key_uri = bucket_uri.clone_replace_name('foo')
-    key_uri.set_contents_from_string('bar')
+    key_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
+    self.StorageUriSetContentsFromString(key_uri, 'bar')
     g1 = urigen(key_uri)
-    key_uri.set_contents_from_string('baz')
+    self.StorageUriSetContentsFromString(key_uri, 'baz')
     g2 = urigen(key_uri)
 
     def _Check1(stderr_lines):
@@ -198,10 +198,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_all_versions_no_current(self):
     """Test that 'rm -a' for an object without a current version works."""
     bucket_uri = self.CreateVersionedBucket()
-    key_uri = bucket_uri.clone_replace_name('foo')
-    key_uri.set_contents_from_string('bar')
+    key_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
+    self.StorageUriSetContentsFromString(key_uri, 'bar')
     g1 = urigen(key_uri)
-    key_uri.set_contents_from_string('baz')
+    self.StorageUriSetContentsFromString(key_uri, 'baz')
     g2 = urigen(key_uri)
     self._RunRemoveCommandAndCheck(
         ['-m', 'rm', '-a', suri(key_uri)],
@@ -234,14 +234,14 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_remove_all_versions_recursive_on_bucket(self):
     """Test that 'rm -r' works on bucket."""
     bucket_uri = self.CreateVersionedBucket()
-    k1_uri = bucket_uri.clone_replace_name('foo')
-    k2_uri = bucket_uri.clone_replace_name('foo2')
-    k1_uri.set_contents_from_string('bar')
-    k2_uri.set_contents_from_string('bar2')
+    k1_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
+    k2_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo2')
+    self.StorageUriSetContentsFromString(k1_uri, 'bar')
+    self.StorageUriSetContentsFromString(k2_uri, 'bar2')
     k1g1 = urigen(k1_uri)
     k2g1 = urigen(k2_uri)
-    k1_uri.set_contents_from_string('baz')
-    k2_uri.set_contents_from_string('baz2')
+    self.StorageUriSetContentsFromString(k1_uri, 'baz')
+    self.StorageUriSetContentsFromString(k2_uri, 'baz2')
     k1g2 = urigen(k1_uri)
     k2g2 = urigen(k2_uri)
 
@@ -271,14 +271,14 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_remove_all_versions_recursive_on_subdir(self):
     """Test that 'rm -r' works on subdir."""
     bucket_uri = self.CreateVersionedBucket()
-    k1_uri = bucket_uri.clone_replace_name('dir/foo')
-    k2_uri = bucket_uri.clone_replace_name('dir/foo2')
-    k1_uri.set_contents_from_string('bar')
-    k2_uri.set_contents_from_string('bar2')
+    k1_uri = self.StorageUriCloneReplaceName(bucket_uri, 'dir/foo')
+    k2_uri = self.StorageUriCloneReplaceName(bucket_uri, 'dir/foo2')
+    self.StorageUriSetContentsFromString(k1_uri, 'bar')
+    self.StorageUriSetContentsFromString(k2_uri, 'bar2')
     k1g1 = urigen(k1_uri)
     k2g1 = urigen(k2_uri)
-    k1_uri.set_contents_from_string('baz')
-    k2_uri.set_contents_from_string('baz2')
+    self.StorageUriSetContentsFromString(k1_uri, 'baz')
+    self.StorageUriSetContentsFromString(k2_uri, 'baz2')
     k1g2 = urigen(k1_uri)
     k2g2 = urigen(k2_uri)
 
@@ -335,8 +335,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_some_missing(self):
     """Test that 'rm -a' fails when some but not all uris don't exist."""
     bucket_uri = self.CreateVersionedBucket()
-    key_uri = bucket_uri.clone_replace_name('foo')
-    key_uri.set_contents_from_string('bar')
+    key_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
+    self.StorageUriSetContentsFromString(key_uri, 'bar')
     if self.multiregional_buckets:
       self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
     stderr = self.RunGsUtil(
@@ -351,8 +351,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_some_missing_force(self):
     """Test that 'rm -af' succeeds despite hidden first uri."""
     bucket_uri = self.CreateVersionedBucket()
-    key_uri = bucket_uri.clone_replace_name('foo')
-    key_uri.set_contents_from_string('bar')
+    key_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
+    self.StorageUriSetContentsFromString(key_uri, 'bar')
     if self.multiregional_buckets:
       self.AssertNObjectsInBucket(bucket_uri, 1, versioned=True)
     stderr = self.RunGsUtil(
@@ -367,10 +367,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_folder_objects_deleted(self):
     """Test for 'rm -r' of a folder with a dir_$folder$ marker."""
     bucket_uri = self.CreateVersionedBucket()
-    key_uri = bucket_uri.clone_replace_name('abc/o1')
-    key_uri.set_contents_from_string('foobar')
-    folder_uri = bucket_uri.clone_replace_name('abc_$folder$')
-    folder_uri.set_contents_from_string('')
+    key_uri = self.StorageUriCloneReplaceName(bucket_uri, 'abc/o1')
+    self.StorageUriSetContentsFromString(key_uri, 'foobar')
+    folder_uri = self.StorageUriCloneReplaceName(bucket_uri, 'abc_$folder$')
+    self.StorageUriSetContentsFromString(folder_uri, '')
 
     def _RemoveAndCheck():
       self.RunGsUtil(['rm', '-r', '%s' % suri(bucket_uri, 'abc')],
@@ -394,10 +394,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
   def test_folder_objects_deleted_with_wildcard(self):
     """Test for 'rm -r' of a folder with a dir_$folder$ marker."""
     bucket_uri = self.CreateVersionedBucket()
-    key_uri = bucket_uri.clone_replace_name('abc/o1')
-    key_uri.set_contents_from_string('foobar')
-    folder_uri = bucket_uri.clone_replace_name('abc_$folder$')
-    folder_uri.set_contents_from_string('')
+    key_uri = self.StorageUriCloneReplaceName(bucket_uri, 'abc/o1')
+    self.StorageUriSetContentsFromString(key_uri, 'foobar')
+    folder_uri = self.StorageUriCloneReplaceName(bucket_uri, 'abc_$folder$')
+    self.StorageUriSetContentsFromString(folder_uri, '')
 
     if self.multiregional_buckets:
       self.AssertNObjectsInBucket(bucket_uri, 2, versioned=True)

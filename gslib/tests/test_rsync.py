@@ -2199,7 +2199,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       object_name='obj1',
                       contents=b'obj1')
     # Create a placeholder like what can be left over by web GUI tools.
-    key_uri = bucket_uri.clone_replace_name('/')
+    key_uri = self.StorageUriCloneReplaceName(bucket_uri, '/')
     key_uri.set_contents_from_string('')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
@@ -2537,7 +2537,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(
           suri(bucket_url, 'subdir'),
-          self.FlatListBucket(bucket_url.clone_replace_name('subdir')))
+          self.StorageUriCloneReplaceName(
+              self.FlatListBucket(bucket_url, 'subdir')))
       # Dir should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3']))
       # Bucket subdir should have content like dir.
@@ -2583,7 +2584,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(
           suri(bucket_url, 'foo'),
-          self.FlatListBucket(bucket_url.clone_replace_name('foo')))
+          self.StorageUriCloneReplaceName(self.FlatListBucket(
+              bucket_url, 'foo')))
       # Dir should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2']))
       # Bucket subdir should have content like dir.

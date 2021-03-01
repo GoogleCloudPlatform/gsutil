@@ -723,7 +723,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         stdin='bar',
         return_stderr=True)
     self.assertIn('Copying from <STDIN>', stderr)
-    key_uri = bucket_uri.clone_replace_name('foo')
+    key_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
     self.assertEqual(key_uri.get_contents_as_string(), b'bar')
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
@@ -757,7 +757,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.fail('Reading/writing to the fifo timed out.')
     self.assertIn('Copying from named pipe', list_for_output[0])
 
-    key_uri = bucket_uri.clone_replace_name(object_name)
+    key_uri = self.StorageUriCloneReplaceName(bucket_uri, object_name)
     self.assertEqual(key_uri.get_contents_as_string(), object_contents)
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
@@ -1090,8 +1090,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     k2_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'data1')
     g1 = urigen(k2_uri)
     self.RunGsUtil(['cp', suri(k1_uri), suri(k2_uri)])
-    k2_uri = bucket_uri.clone_replace_name(k2_uri.object_name)
-    k2_uri = bucket_uri.clone_replace_key(k2_uri.get_key())
+    k2_uri = self.StorageUriCloneReplaceName(bucket_uri, k2_uri.object_name)
+    k2_uri = self.StorageUriCloneReplaceKey(bucket_uri, k2_uri.get_key())
     g2 = urigen(k2_uri)
     k2_uri.set_contents_from_string('data3')
     g3 = urigen(k2_uri)
@@ -1809,7 +1809,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                       contents=b'def')
 
     # Create a placeholder like what can be left over by web GUI tools.
-    key_uri = src_bucket_uri.clone_replace_name('/')
+    key_uri = self.StorageUriCloneReplaceName(src_bucket_uri, '/')
     key_uri.set_contents_from_string('')
     self.AssertNObjectsInBucket(src_bucket_uri, 3)
 
@@ -1837,7 +1837,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                       contents=b'def')
 
     # Create a placeholder like what can be left over by web GUI tools.
-    key_uri = src_bucket_uri.clone_replace_name('foo/')
+    key_uri = self.StorageUriCloneReplaceName(src_bucket_uri, 'foo/')
     key_uri.set_contents_from_string('')
     self.AssertNObjectsInBucket(src_bucket_uri, 3)
 
@@ -1856,11 +1856,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
   def test_copy_quiet(self):
     bucket_uri = self.CreateBucket()
     key_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
-    stderr = self.RunGsUtil(
-        ['-q', 'cp',
-         suri(key_uri),
-         suri(bucket_uri.clone_replace_name('o2'))],
-        return_stderr=True)
+    stderr = self.RunGsUtil([
+        '-q', 'cp',
+        suri(key_uri),
+        self.StorageUriCloneReplaceName(suri(bucket_uri, 'o2'))
+    ],
+                            return_stderr=True)
     self.assertEqual(stderr.count('Copying '), 0)
 
   def test_cp_md5_match(self):
