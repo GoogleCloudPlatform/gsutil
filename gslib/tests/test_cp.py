@@ -26,7 +26,6 @@ import datetime
 import gzip
 import hashlib
 import logging
-import multiprocessing
 import os
 import pickle
 import pkgutil
@@ -4552,12 +4551,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket(test_objects=test_file_count)
 
     cp_args = ['cp', suri(bucket_uri, '*'), temporary_directory]
-    process_1 = multiprocessing.Process(target=self.RunGsUtil, args=[cp_args])
-    process_2 = multiprocessing.Process(target=self.RunGsUtil, args=[cp_args])
-    process_1.start()
-    process_2.start()
-    process_1.join()
-    process_2.join()
+    threads = []
+    for _ in range(2):
+      thread = threading.Thread(target=self.RunGsUtil, args=[cp_args])
+      thread.start()
+      threads.append(thread)
+    [t.join() for t in threads]
 
     self.assertEqual(len(os.listdir(temporary_directory)), test_file_count)
 
