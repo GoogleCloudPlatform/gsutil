@@ -1242,7 +1242,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       key: new object name
     """
     return storage_uri.clone_replace_name(name)
-  
+
   def StorageUriSetContentsFromString(self, storage_uri, contents):
     """Wrapper for StorageUri.set_contents_from_string().
 
@@ -1251,6 +1251,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       contents: String of the new contents of the object
     """
     return storage_uri.set_contents_from_string(contents)
+
 
 class KmsTestingResources(object):
   """Constants for KMS resource names to be used in integration testing."""

@@ -1093,7 +1093,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     k2_uri = self.StorageUriCloneReplaceName(bucket_uri, k2_uri.object_name)
     k2_uri = self.StorageUriCloneReplaceKey(bucket_uri, k2_uri.get_key())
     g2 = urigen(k2_uri)
-    k2_uri.set_contents_from_string('data3')
+    self.StorageUriSetContentsFromString(k2_uri, 'data3')
     g3 = urigen(k2_uri)
 
     fpath = self.CreateTempFile()
@@ -1810,7 +1810,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     # Create a placeholder like what can be left over by web GUI tools.
     key_uri = self.StorageUriCloneReplaceName(src_bucket_uri, '/')
-    key_uri.set_contents_from_string('')
+    self.StorageUriSetContentsFromString(key_uri, '')
     self.AssertNObjectsInBucket(src_bucket_uri, 3)
 
     self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), dst_dir])
@@ -1838,7 +1838,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     # Create a placeholder like what can be left over by web GUI tools.
     key_uri = self.StorageUriCloneReplaceName(src_bucket_uri, 'foo/')
-    key_uri.set_contents_from_string('')
+    self.StorageUriSetContentsFromString(key_uri, '')
     self.AssertNObjectsInBucket(src_bucket_uri, 3)
 
     self.RunGsUtil(['cp', '-R', suri(src_bucket_uri), dst_dir])

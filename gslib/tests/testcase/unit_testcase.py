@@ -445,7 +445,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     """
     bucket_uri = bucket_uri or self.CreateBucket(provider=self.default_provider)
     object_name = object_name or self.MakeTempName('obj')
-    key_uri = self.StorageUriCloneReplaceName(bucket_uri, object_name)
+    key_uri = bucket_uri.clone_replace_name(object_name)
     if contents is not None:
       key_uri.set_contents_from_string(contents)
     return key_uri

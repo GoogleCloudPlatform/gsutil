@@ -2200,7 +2200,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       contents=b'obj1')
     # Create a placeholder like what can be left over by web GUI tools.
     key_uri = self.StorageUriCloneReplaceName(bucket_uri, '/')
-    key_uri.set_contents_from_string('')
+    self.StorageUriSetContentsFromString(key_uri, '')
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
