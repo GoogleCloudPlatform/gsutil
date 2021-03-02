@@ -1859,7 +1859,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil([
         '-q', 'cp',
         suri(key_uri),
-        self.StorageUriCloneReplaceName(suri(bucket_uri, 'o2'))
+        suri(self.StorageUriCloneReplaceName(bucket_uri, 'o2'))
     ],
                             return_stderr=True)
     self.assertEqual(stderr.count('Copying '), 0)

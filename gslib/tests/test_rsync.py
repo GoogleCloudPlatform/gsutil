@@ -2537,8 +2537,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(
           suri(bucket_url, 'subdir'),
-          self.StorageUriCloneReplaceName(
-              self.FlatListBucket(bucket_url, 'subdir')))
+          self.FlatListBucket(self.StorageUriCloneReplaceName(
+              bucket_url, 'subdir')))
       # Dir should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2', '/subdir/obj3']))
       # Bucket subdir should have content like dir.
@@ -2584,7 +2584,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(
           suri(bucket_url, 'foo'),
-          self.StorageUriCloneReplaceName(self.FlatListBucket(
+          self.FlatListBucket(self.StorageUriCloneReplaceName(
               bucket_url, 'foo')))
       # Dir should have un-altered content.
       self.assertEquals(listing1, set(['/obj1', '/.obj2']))

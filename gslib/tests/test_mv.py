@@ -82,7 +82,7 @@ class TestMv(testcase.GsUtilIntegrationTestCase):
 
     # Move the 1 remaining object back.
     objs = [
-        self.StorageUriCloneReplaceKey(suri(bucket2_uri, key))
+        suri(self.StorageUriCloneReplaceKey(bucket2_uri, key))
         for key in bucket2_uri.list_bucket()
     ]
     cmd = (['-m', 'mv'] + objs + [suri(bucket1_uri)])
