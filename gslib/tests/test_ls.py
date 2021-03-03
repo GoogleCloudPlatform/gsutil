@@ -422,10 +422,10 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_subdir(self):
     """Tests listing a bucket subdirectory."""
     bucket_uri = self.CreateBucket(test_objects=1)
-    k1_uri = bucket_uri.clone_replace_name('foo')
-    k1_uri.set_contents_from_string('baz')
-    k2_uri = bucket_uri.clone_replace_name('dir/foo')
-    k2_uri.set_contents_from_string('bar')
+    k1_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
+    self.StorageUriSetContentsFromString(k1_uri, 'baz')
+    k2_uri = self.StorageUriCloneReplaceName(bucket_uri, 'dir/foo')
+    self.StorageUriSetContentsFromString(k2_uri, 'bar')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
@@ -444,14 +444,14 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     to show multiple matching subdirectories.
     """
     bucket_uri = self.CreateBucket(test_objects=1)
-    k1_uri = bucket_uri.clone_replace_name('foo')
-    k1_uri.set_contents_from_string('baz')
-    k2_uri = bucket_uri.clone_replace_name('dir/foo')
-    k2_uri.set_contents_from_string('bar')
-    k3_uri = bucket_uri.clone_replace_name('dir/foo2')
-    k3_uri.set_contents_from_string('foo')
-    k4_uri = bucket_uri.clone_replace_name('dir2/foo3')
-    k4_uri.set_contents_from_string('foo2')
+    k1_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
+    self.StorageUriSetContentsFromString(k1_uri, 'baz')
+    k2_uri = self.StorageUriCloneReplaceName(bucket_uri, 'dir/foo')
+    self.StorageUriSetContentsFromString(k2_uri, 'bar')
+    k3_uri = self.StorageUriCloneReplaceName(bucket_uri, 'dir/foo2')
+    self.StorageUriSetContentsFromString(k3_uri, 'foo')
+    k4_uri = self.StorageUriCloneReplaceName(bucket_uri, 'dir2/foo3')
+    self.StorageUriSetContentsFromString(k4_uri, 'foo2')
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
@@ -472,7 +472,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_list = list(bucket1_uri.list_bucket())
 
     objuri = [
-        bucket1_uri.clone_replace_key(key).versionless_uri
+        self.StorageUriCloneReplaceKey(bucket1_uri, key).versionless_uri
         for key in bucket_list
     ][0]
     self.RunGsUtil(['cp', objuri, suri(bucket2_uri)])
@@ -485,8 +485,10 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       self.assertNumLines(stdout, 3)
       stdout = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)],
                               return_stdout=True)
-      self.assertIn('%s#' % bucket2_uri.clone_replace_name(bucket_list[0].name),
-                    stdout)
+      self.assertIn(
+          '%s#' %
+          self.StorageUriCloneReplaceName(bucket2_uri, bucket_list[0].name),
+          stdout)
       self.assertIn('metageneration=', stdout)
 
     _Check2()

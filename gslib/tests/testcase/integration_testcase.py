@@ -1225,6 +1225,33 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     return self.RunGsUtil(['ls', suri(bucket_url_string, '**')],
                           return_stdout=True)
 
+  def StorageUriCloneReplaceKey(self, storage_uri, key):
+    """Wrapper for StorageUri.clone_replace_key().
+
+    Args:
+      storage_uri: URI representing the object to be cloned
+      key: key for the new StorageUri to represent
+    """
+    return storage_uri.clone_replace_key(key)
+
+  def StorageUriCloneReplaceName(self, storage_uri, name):
+    """Wrapper for StorageUri.clone_replace_name().
+
+    Args:
+      storage_uri: URI representing the object to be cloned
+      key: new object name
+    """
+    return storage_uri.clone_replace_name(name)
+
+  def StorageUriSetContentsFromString(self, storage_uri, contents):
+    """Wrapper for StorageUri.set_contents_from_string().
+
+    Args:
+      storage_uri: URI representing the object
+      contents: String of the new contents of the object
+    """
+    return storage_uri.set_contents_from_string(contents)
+
 
 class KmsTestingResources(object):
   """Constants for KMS resource names to be used in integration testing."""
