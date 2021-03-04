@@ -216,9 +216,10 @@ _DETAILED_HELP_TEXT = ("""
      it will be immediately evident that running that command without the -n
      option would cause many objects to be deleted.
 
-  2. Enable object versioning in your bucket, which will allow you to restore
+  2. Enable object versioning in your bucket, which allows you to restore
      objects if you accidentally delete them. For more details see
-     "gsutil help versions".
+     `Object Versioning
+     <https://cloud.google.com/storage/docs/object-versioning>`_.
 
 
 <B>BE CAREFUL WHEN SYNCHRONIZING OVER OS-SPECIFIC FILE TYPES (SYMLINKS, DEVICES, ETC.)</B>
