@@ -246,8 +246,7 @@ _COPY_IN_CLOUD_TEXT = """
 
     gsutil cp -A gs://bucket1/obj gs://bucket2
 
-  The top-level gsutil ``-m`` flag is  not allowed when using the ``cp -A`` flag, to
-  ensure that version ordering is preserved.
+  The top-level gsutil ``-m`` flag is  not allowed when using the ``cp -A`` flag.
 """
 
 _CHECKSUM_VALIDATION_TEXT = """
@@ -468,7 +467,9 @@ _OPTIONS_TEXT = """
                  copied.
 
                  NOTE: This option is only useful when the destination
-                 bucket has Object Versioning enabled.
+                 bucket has Object Versioning enabled. Additionally, the generation
+                 numbers of copied versions do not necessarily match the order of the
+                 original generation numbers.
 
   -c             If an error occurs, continue attempting to copy the remaining
                  files. If any copies are unsuccessful, gsutil's exit status
@@ -630,7 +631,9 @@ _OPTIONS_TEXT = """
                  use these URLs to safely make concurrent upload requests, because
                  Cloud Storage refuses to perform an update if the current
                  object version doesn't match the version-specific URL. See
-                 "gsutil help versions" for more details.
+                 `Generation numbers and preconditions
+                 <https://cloud.google.com/storage/docs/generations-preconditions>`_
+                 for more details.
 
   -z <ext,...>   Applies gzip content-encoding to any file upload whose
                  extension matches the ``-z`` extension list. This is useful when
