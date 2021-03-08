@@ -389,10 +389,6 @@ class IamCommand(Command):
     gsutil_api = GetCloudApiInstance(self, thread_state=thread_state)
 
     if storage_url.IsBucket():
-      # Temporarily setting version manually on bucket IAM policies, as
-      # setting version on objects incorrectly causes the API to throw an
-      # error. See b/140734851.
-      policy.version = IAM_POLICY_VERSION
       gsutil_api.SetBucketIamPolicy(storage_url.bucket_name,
                                     policy,
                                     provider=storage_url.scheme)
@@ -634,7 +630,11 @@ class IamCommand(Command):
     if not force_etag:
       etag = policy.get('etag', '')
 
-    policy_json = json.dumps({'bindings': bindings, 'etag': etag})
+    policy_json = json.dumps({
+        'bindings': bindings,
+        'etag': etag,
+        'version': IAM_POLICY_VERSION
+    })
     try:
       policy = protojson.decode_message(apitools_messages.Policy, policy_json)
     except DecodeError:
