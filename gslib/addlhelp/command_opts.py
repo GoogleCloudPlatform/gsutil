@@ -76,7 +76,7 @@ _DETAILED_HELP_TEXT = ("""
               Note that for gs:// URLs, the Cache Control header is specific to
               the API being used. The XML API accepts any cache control headers
               and returns them during object downloads.  The JSON API respects
-              only the public, private, no-cache, max-age, and no-tranform
+              only the public, private, no-cache, max-age, and no-transform
               cache control headers.
 
               See "gsutil help setmeta" for the ability to set metadata
