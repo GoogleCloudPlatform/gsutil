@@ -58,7 +58,8 @@ _DETAILED_HELP_TEXT = ("""
 <B>DESCRIPTION</B>
   NOTE: As part of verifying the existence of objects prior to deletion,
   ``gsutil rm`` makes ``GET`` requests to Cloud Storage for object metadata.
-  These requests incur network and operations charges.
+  These requests incur `network and operations charges
+  <https://cloud.google.com/storage/pricing>`_.
 
   The gsutil rm command removes objects and/or buckets.
   For example, the command:
