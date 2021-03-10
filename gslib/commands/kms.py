@@ -101,9 +101,12 @@ _ENCRYPTION_DESCRIPTION = """
 
     gsutil kms encryption gs://my-bucket
 
-  Clear the default KMS key so newly-written objects will not be encrypted:
+  Clear the default KMS key so newly-written objects are not encrypted using it:
 
     gsutil kms encryption -d gs://my-bucket
+    
+  Once you clear the default KMS key, newly-written objects are encrypted with
+  Google-managed encryption keys by default.
 
 <B>OPTIONS</B>
   -k <key>      Set the default KMS key for my-bucket using the
