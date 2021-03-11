@@ -1,3 +1,15 @@
+Release 4.60 (release date: 2021-03-11)
+=======================================
+Bug Fixes
+------------------
+ - Fixed proxy connections when using the GCS XML API.
+ - Improve reliability when multiple instances of gsutil transfer to the same destination. (#1202)
+
+Other Changes
+------------------
+ - Remove TravisCI and update "check for CI" references to use GitHub CI. (#1200)
+ - Several documentation updates and clarifications.
+
 Release 4.59 (release date: 2021-02-10)
 ======================================
 New Features
