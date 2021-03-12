@@ -66,7 +66,7 @@ _DETAILED_HELP_TEXT = ("""
     <https://cloud.google.com/storage/docs/object-versioning>`_
   - `Guide for using Object Versioning
     <https://cloud.google.com/storage/docs/using-object-versioning>`_
-  - The `reference page for the ``gsutil versioning`` command
+  - The `reference page for the gsutil versioning command
     <https://cloud.google.com/storage/docs/gsutil/commands/versioning>`_
   - `Overview of generation numbers and preconditions
     <https://cloud.google.com/storage/docs/generations-preconditions>`_
