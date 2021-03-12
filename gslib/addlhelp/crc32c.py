@@ -109,9 +109,9 @@ _DETAILED_HELP_TEXT = ("""
 
   To compile and install crcmod:
 
-    sudo zypper install gcc python3-devel
-    sudo pip3 uninstall crcmod
-    sudo pip3 install --no-cache-dir -U crcmod
+    sudo zypper install gcc python-devel
+    sudo pip uninstall crcmod
+    sudo pip install --no-cache-dir -U crcmod
 
   macOS
   -----
