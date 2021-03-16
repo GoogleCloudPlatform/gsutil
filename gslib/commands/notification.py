@@ -149,10 +149,8 @@ _CREATE_DESCRIPTION = """
   service account this permission. If not, the create command attempts to
   grant it.
 
-  You can create multiple notification configurations for a bucket, but their
-  triggers cannot overlap such that a single event could send multiple
-  notifications. Attempting to create a notification configuration that
-  overlaps with an existing notification configuration results in an error.
+  A bucket can have up to 100 total notification configurations and up to 10
+  notification configurations set to trigger for a specific event.
 
 <B>CREATE EXAMPLES</B>
   Begin sending notifications of all changes to the bucket example-bucket
