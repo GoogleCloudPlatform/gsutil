@@ -1958,6 +1958,11 @@ class GcsJsonApi(CloudApi):
     encryption_headers = self._EncryptionHeadersFromTuple(
         crypto_tuple=encryption_tuple)
 
+    kmsKeyName = None
+    if encryption_tuple:
+      if encryption_tuple.crypto_type == CryptoKeyType.CMEK:
+        kmsKeyName = encryption_tuple.crypto_key
+
     with self._ApitoolsRequestHeaders(encryption_headers):
       apitools_request = apitools_messages.StorageObjectsComposeRequest(
           composeRequest=src_objs_compose_request,
@@ -1965,7 +1970,8 @@ class GcsJsonApi(CloudApi):
           destinationObject=dst_obj_name,
           ifGenerationMatch=preconditions.gen_match,
           ifMetagenerationMatch=preconditions.meta_gen_match,
-          userProject=self.user_project)
+          userProject=self.user_project,
+          kmsKeyName=kmsKeyName)
       try:
         return self.api_client.objects.Compose(apitools_request,
                                                global_params=global_params)
