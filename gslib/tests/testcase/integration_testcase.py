@@ -1239,6 +1239,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       storage_uri: URI representing the object to be cloned
       key: key for the new StorageUri to represent
     """
+    print('StorageUriCloneReplaceKey >>>>>> {}'.format(locals()))
     return storage_uri.clone_replace_key(key)
 
   def StorageUriCloneReplaceName(self, storage_uri, name):
@@ -1248,6 +1249,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       storage_uri: URI representing the object to be cloned
       key: new object name
     """
+    print('StorageUriCloneReplaceName >>>>>> {}'.format(locals()))
     return storage_uri.clone_replace_name(name)
 
   def StorageUriSetContentsFromString(self, storage_uri, contents):
@@ -1257,6 +1259,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       storage_uri: URI representing the object
       contents: String of the new contents of the object
     """
+    print('StorageUriSetContentsFromString >>>>>> {}'.format(locals()))
     return storage_uri.set_contents_from_string(contents)
 
 
