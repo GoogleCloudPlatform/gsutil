@@ -33,7 +33,8 @@ _DETAILED_HELP_TEXT = ("""
   - Individual operations that fail within a command that is running operations
     in parallel using the -m top-level flag.
   
-  gsutil retries the following errors without requiring you to take additional action:
+  gsutil retries the following errors without requiring you to take additional
+  action:
   
   - Transient network failures.
   - HTTP 429 and 5xx error codes.
