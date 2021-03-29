@@ -61,7 +61,8 @@ _DETAILED_HELP_TEXT = ("""
   about this, see the "RESUMABLE TRANSFERS" section of "gsutil help cp".
   
   For information about how other Cloud Storage tools handle retry strategy,
-  see `Retry strategy <https://cloud.google.com/storage/docs/retry-strategy>`_.
+  see `Retry strategy
+  <https://cloud.google.com/storage/docs/retry-strategy>`_.
 """)
 
 
