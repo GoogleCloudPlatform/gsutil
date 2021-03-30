@@ -71,6 +71,7 @@ from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_WINDOWS
 
 from six import add_move, MovedModule
+
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
