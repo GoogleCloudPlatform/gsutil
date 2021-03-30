@@ -61,6 +61,7 @@ from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
 
 from six import add_move, MovedModule
+
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 

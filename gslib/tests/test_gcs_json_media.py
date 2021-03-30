@@ -32,6 +32,7 @@ import gslib.tests.testcase as testcase
 import six
 
 from six import add_move, MovedModule
+
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
