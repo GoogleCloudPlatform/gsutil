@@ -401,6 +401,11 @@ CONFIG_INPUTLESS_GSUTIL_SECTION_CONTENT = """
 #parallel_composite_upload_threshold = %(parallel_composite_upload_threshold)s
 #parallel_composite_upload_component_size = %(parallel_composite_upload_component_size)s
 
+#
+# 'parallel_composite_upload_bypass_kms_check' removes the object/bucket KMS checks
+# used to guard composition of KMS objects.
+#disable_parallel_composite_upload_kms_check = False
+
 # 'sliced_object_download_threshold' and
 # 'sliced_object_download_component_size' have analogous functionality to
 # their respective parallel_composite_upload config values.

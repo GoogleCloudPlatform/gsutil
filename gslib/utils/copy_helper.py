@@ -1318,6 +1318,9 @@ def _ShouldDoParallelCompositeUpload(logger,
       config.get('GSUtil', 'parallel_composite_upload_threshold',
                  DEFAULT_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD))
 
+  disable_parallel_composite_upload_kms_check = config.getbool(
+      'GSUtil', 'disable_parallel_composite_upload_kms_check', False)
+
   all_factors_but_size = (
       allow_splitting  # Don't split the pieces multiple times.
       and not src_url.IsStream()  # We can't partition streams.
@@ -1330,7 +1333,8 @@ def _ShouldDoParallelCompositeUpload(logger,
   # TODO: Once compiled crcmod is being distributed by major Linux distributions
   # remove this check.
   if (all_factors_but_size and parallel_composite_upload_threshold == 0 and
-      file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD) and not kms_keyname:
+      file_size >= PARALLEL_COMPOSITE_SUGGESTION_THRESHOLD) and (
+          not kms_keyname or disable_parallel_composite_upload_kms_check):
     with suggested_sliced_transfers_lock:
       if not suggested_sliced_transfers.get('suggested'):
         logger.info('\n'.join(
@@ -1349,8 +1353,15 @@ def _ShouldDoParallelCompositeUpload(logger,
                 'composite objects.')) + '\n')
         suggested_sliced_transfers['suggested'] = True
 
-  if not (all_factors_but_size and parallel_composite_upload_threshold > 0 and
-          file_size >= parallel_composite_upload_threshold):
+  all_factors_with_size = (all_factors_but_size and
+                           parallel_composite_upload_threshold > 0 and
+                           file_size >= parallel_composite_upload_threshold)
+
+  # TODO(b/177276545): 'disable_parallel_composite_upload_kms_check' is used to soft-launch support for kms composition.
+  # Remove this behavior once fully launched.
+  if disable_parallel_composite_upload_kms_check:
+    return all_factors_with_size
+  if not all_factors_with_size:
     return False
 
   # TODO(KMS, Compose): Until we ensure service-side that we have efficient
