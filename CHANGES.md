@@ -1,3 +1,14 @@
+Release 4.61 (release date: 2021-04-06)
+=======================================
+Bug Fixes
+------------------
+ - Update to RSA v4.5.
+ - CopyHelper accepts kms check bypass. (#1217)
+
+Other Changes
+------------------
+ - Doc updates.
+
 Release 4.60 (release date: 2021-03-11)
 =======================================
 Bug Fixes
