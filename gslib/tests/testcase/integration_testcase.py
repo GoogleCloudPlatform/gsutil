@@ -24,6 +24,7 @@ import datetime
 import locale
 import logging
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -520,7 +521,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                    bucket_policy_only=False,
                    bucket_name_prefix='',
                    bucket_name_suffix='',
-                   location=None):
+                   location=None,
+                   public_access_prevention=None):
     """Creates a test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -541,6 +543,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_name_prefix: Unicode string to be prepended to bucket_name
       bucket_name_suffix: Unicode string to be appended to bucket_name
       location: The location/region in which the bucket should be created.
+      public_access_prevention: String value of public access prevention. Valid
+          values are "enforced" and "unspecified".
 
     Returns:
       StorageUri for the created bucket.
@@ -572,13 +576,15 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                       suffix=bucket_name_suffix)
 
     if prefer_json_api and provider == 'gs':
-      json_bucket = self.CreateBucketJson(bucket_name=bucket_name,
-                                          test_objects=test_objects,
-                                          storage_class=storage_class,
-                                          location=location,
-                                          versioning_enabled=versioning_enabled,
-                                          retention_policy=retention_policy,
-                                          bucket_policy_only=bucket_policy_only)
+      json_bucket = self.CreateBucketJson(
+          bucket_name=bucket_name,
+          test_objects=test_objects,
+          storage_class=storage_class,
+          location=location,
+          versioning_enabled=versioning_enabled,
+          retention_policy=retention_policy,
+          bucket_policy_only=bucket_policy_only,
+          public_access_prevention=public_access_prevention)
       bucket_uri = boto.storage_uri('gs://%s' % json_bucket.name.lower(),
                                     suppress_consec_slashes=False)
       return bucket_uri
@@ -779,7 +785,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                        location=None,
                        versioning_enabled=False,
                        retention_policy=None,
-                       bucket_policy_only=False):
+                       bucket_policy_only=False,
+                       public_access_prevention=None):
     """Creates a test bucket using the JSON API.
 
     The bucket and all of its contents will be deleted after the test.
@@ -796,6 +803,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       retention_policy: Retention policy to be used on the bucket.
       bucket_policy_only: If True, set the bucket's iamConfiguration's
           bucketPolicyOnly attribute to True.
+      public_access_prevention: String value of public access prevention. Valid
+          values are "enforced" and "unspecified".
 
     Returns:
       Apitools Bucket for the created bucket.
@@ -812,10 +821,13 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           enabled=True))
     if retention_policy:
       bucket_metadata.retentionPolicy = retention_policy
-    if bucket_policy_only:
+    if bucket_policy_only or public_access_prevention:
       iam_config = apitools_messages.Bucket.IamConfigurationValue()
-      iam_config.bucketPolicyOnly = iam_config.BucketPolicyOnlyValue()
-      iam_config.bucketPolicyOnly.enabled = True
+      if bucket_policy_only:
+        iam_config.bucketPolicyOnly = iam_config.BucketPolicyOnlyValue()
+        iam_config.bucketPolicyOnly.enabled = True
+      if public_access_prevention:
+        iam_config.publicAccessPrevention = public_access_prevention
       bucket_metadata.iamConfiguration = iam_config
 
     # TODO: Add retry and exponential backoff.
@@ -925,6 +937,17 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         metadata, attr_name, default_value=expected_value)
     self.assertEqual(expected_present, attr_present)
     self.assertEqual(expected_value, value)
+
+  def VerifyPublicAccessPreventionValue(self, bucket_uri, value):
+    stdout = self.RunGsUtil(['publicaccessprevention', 'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
+    public_access_prevention_re = re.compile(r':\s+(?P<pap_val>.+)$')
+    public_access_prevention_match = re.search(public_access_prevention_re,
+                                               stdout)
+    public_access_prevention_val = public_access_prevention_match.group(
+        'pap_val')
+    self.assertEqual(str(value), public_access_prevention_val)
 
   def RunGsUtil(self,
                 cmd,
