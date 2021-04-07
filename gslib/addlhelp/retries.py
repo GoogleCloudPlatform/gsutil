@@ -25,6 +25,7 @@ _DETAILED_HELP_TEXT = ("""
 <B>RETRY STRATEGY</B>
   If a gsutil operation fails for the one of the following reasons, you must
   take action before retrying:
+  
   - Invalid credentials.
   - Network unreachable because of a proxy configuration problem.
   - Access denied, because the bucket or object you are trying to use has an
@@ -41,11 +42,13 @@ _DETAILED_HELP_TEXT = ("""
 
   For retryable errors, gsutil retries requests using a truncated binary
   exponential backoff strategy:
+  
   - Wait a random period between [0..1] seconds and retry;
   - If that fails, wait a random period between [0..2] seconds and retry;
   - If that fails, wait a random period between [0..4] seconds and retry;
-  - And so on, up to a configurable maximum number of retries,
-  with each retry period bounded by a configurable maximum period of time.
+  - And so on, up to a configurable maximum number of retries, with each
+    retry period bounded by a configurable maximum period of time.
+  
   By default, gsutil retries 23 times over 1+2+4+8+16+32+60 seconds
   for about 10 minutes. You can adjust the number of retries and maximum delay
   of any individual retry by editing the num_retries and max_retry_delay
