@@ -131,7 +131,7 @@ _DETAILED_HELP_TEXT = ("""
 
        2276224  2020-03-02T19:25:17Z  gs://bucket/obj1.html
        3914624  2020-03-02T19:30:27Z  gs://bucket/obj2.html
-       131  2020-03-02T19:37:45Z  gs://bucket/obj3.txt
+           131  2020-03-02T19:37:45Z  gs://bucket/obj3.txt
     TOTAL: 3 objects, 6190979 bytes (5.9 MiB)
 
   Note that the total listed in parentheses above is in mebibytes (or gibibytes,
