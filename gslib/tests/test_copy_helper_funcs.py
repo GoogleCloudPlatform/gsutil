@@ -371,9 +371,9 @@ class TestCpFuncs(GsUtilUnitTestCase):
     exc = apitools_exceptions.StreamExhausted('Not enough bytes')
     translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
     self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))
-    self.assertIn('if this issue persists, try deleting the tracker files'
-                  ' present under ~/.gsutil/tracker-files/',
-                  translated_exc.reason)
+    self.assertIn(
+        'if this issue persists, try deleting the tracker files'
+        ' present under ~/.gsutil/tracker-files/', translated_exc.reason)
 
   def testSetContentTypeFromFile(self):
     """Tests that content type is correctly determined for symlinks."""
