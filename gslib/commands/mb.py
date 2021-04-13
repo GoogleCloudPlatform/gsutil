@@ -125,7 +125,7 @@ _DETAILED_HELP_TEXT = ("""
   retention policy.
 
 <B>UNIFORM BUCKET-LEVEL ACCESS</B>
-  You can specify one of the available settings for a bucket
+  You can specify turn on uniform bucket-level access for a bucket
   with the -b option.
 
   Examples:
