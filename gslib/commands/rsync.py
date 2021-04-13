@@ -275,26 +275,23 @@ _DETAILED_HELP_TEXT = ("""
 <B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
   At the end of every upload or download, the gsutil rsync command validates
   that the checksum of the source file/object matches the checksum of the
-  destination file/object. If the checksums do not match, gsutil will delete
+  destination file/object. If the checksums do not match, gsutil deletes
   the invalid copy and print a warning message. This very rarely happens, but
   if it does, please contact gs-team@google.com.
 
-  The rsync command will retry when failures occur, but if enough failures
-  happen during a particular copy or delete operation the command will fail.
+  The rsync command retries failures when it is useful to do so, but if
+  enough failures happen during a particular copy or delete operation, or if
+  a failure isn't retryable, the overall command fails.
 
-  If the -C option is provided, the command will instead skip the failing
-  object and move on. At the end of the synchronization run if any failures
-  were not successfully retried, the rsync command will report the count of
-  failures, and exit with non-zero status. At this point you can run the rsync
-  command again, and it will attempt any remaining needed copy and/or delete
+  If the -C option is provided, the command instead skips failing objects and
+  moves on. At the end of the synchronization run, if any failures were not
+  successfully retried, the rsync command reports the count of failures and
+  exits with non-zero status. At this point you can run the rsync command
+  again, and gsutil attempts any remaining needed copy and/or delete
   operations.
 
-  Note that there are cases where retrying will never succeed, such as if you
-  don't have write permission to the destination bucket or if the destination
-  path for some objects is longer than the maximum allowed length.
-
-  For more details about gsutil's retry handling, please see
-  "gsutil help retries".
+  For more details about gsutil's retry handling, see `Retry strategy
+  <https://cloud.google.com/storage/docs/retry-strategy#tools>`_.
 
 
 <B>CHANGE DETECTION ALGORITHM</B>
