@@ -26,7 +26,6 @@ import csv
 import datetime
 import errno
 import gzip
-from hashlib import md5
 import json
 import logging
 import mimetypes
@@ -129,6 +128,7 @@ from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
 from gslib.utils.hashing_helper import CHECK_HASH_NEVER
 from gslib.utils.hashing_helper import ConcatCrc32c
 from gslib.utils.hashing_helper import GetDownloadHashAlgs
+from gslib.utils.hashing_helper import GetMd5
 from gslib.utils.hashing_helper import GetUploadHashAlgs
 from gslib.utils.hashing_helper import HashingFileUploadWrapper
 from gslib.utils.metadata_util import ObjectIsGzipEncoded
@@ -765,7 +765,7 @@ def _CreateDigestsFromLocalFile(status_queue, algs, file_name, src_url,
   """
   hash_dict = {}
   if 'md5' in algs:
-    hash_dict['md5'] = md5()
+    hash_dict['md5'] = GetMd5()
   if 'crc32c' in algs:
     hash_dict['crc32c'] = crcmod.predefined.Crc('crc-32c')
   with open(file_name, 'rb') as fp:
@@ -1012,7 +1012,7 @@ def _PartitionFile(fp,
     # naming scheme for the temporary components allows users to take
     # advantage of resumable uploads for each component.
     encoded_name = six.ensure_binary(PARALLEL_UPLOAD_STATIC_SALT + fp.name)
-    content_md5 = md5()
+    content_md5 = GetMd5()
     content_md5.update(encoded_name)
     digest = content_md5.hexdigest()
     temp_file_name = (random_prefix + PARALLEL_UPLOAD_TEMP_NAMESPACE + digest +

@@ -19,7 +19,6 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-from hashlib import md5
 import logging
 import os
 import time
@@ -165,7 +164,7 @@ class HashCommand(Command):
     if calc_crc32c:
       hash_dict['crc32c'] = crcmod.predefined.Crc('crc-32c')
     if calc_md5:
-      hash_dict['md5'] = md5()
+      hash_dict['md5'] = hashing_helper.GetMd5()
     return hash_dict
 
   def RunCommand(self):
