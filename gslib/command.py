@@ -107,6 +107,7 @@ except ImportError:
 # pylint: enable=g-import-not-at-top
 
 OFFER_GSUTIL_M_SUGGESTION_THRESHOLD = 5
+OFFER_GSUTIL_M_SUGGESTION_FREQUENCY = 1000
 
 
 def CreateOrGetGsutilLogger(command_name):
@@ -1585,9 +1586,11 @@ class Command(HelpProvider):
           continue
 
       sequential_call_count += 1
-      if sequential_call_count == OFFER_GSUTIL_M_SUGGESTION_THRESHOLD:
-        # Output suggestion near beginning of run, so user sees it early and can
-        # ^C and try gsutil -m.
+      if (sequential_call_count == OFFER_GSUTIL_M_SUGGESTION_THRESHOLD or
+          sequential_call_count % OFFER_GSUTIL_M_SUGGESTION_FREQUENCY == 0):
+        # Output suggestion near beginning of run, so user sees it early, and
+        # every so often while the command is executing, so they can ^C and try
+        # gsutil -m.
         self._MaybeSuggestGsutilDashM()
       if arg_checker(self, args):
         # Now that we actually have the next argument, perform the task.
@@ -1595,7 +1598,9 @@ class Command(HelpProvider):
                     should_return_results, arg_checker, fail_on_error)
         worker_thread.PerformTask(task, self)
 
-    if sequential_call_count >= GetTermLines():
+    lines_since_suggestion_last_printed = (sequential_call_count %
+                                           OFFER_GSUTIL_M_SUGGESTION_FREQUENCY)
+    if lines_since_suggestion_last_printed >= GetTermLines():
       # Output suggestion at end of long run, in case user missed it at the
       # start and it scrolled off-screen.
       self._MaybeSuggestGsutilDashM()

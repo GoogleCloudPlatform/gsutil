@@ -30,11 +30,14 @@ import functools
 import os
 import signal
 import threading
+import textwrap
 import time
+import mock
 
 import six
 from boto.storage_uri import BucketStorageUri
 from gslib import cs_api_map
+from gslib import command
 from gslib.command import Command
 from gslib.command import CreateOrGetGsutilLogger
 from gslib.command import DummyArgChecker
@@ -51,6 +54,12 @@ from gslib.utils.system_util import IS_WINDOWS
 # reasonably high value since if many tests are running in parallel, an
 # individual test may take a while to complete.
 _TEST_TIMEOUT_SECONDS = 120
+
+PARALLEL_PROCESSING_MESSAGE = ('\n' + textwrap.fill(
+    '==> NOTE: You are performing a sequence of gsutil operations that '
+    'may run significantly faster if you instead use gsutil -m fake ...\n'
+    'Please see the -m section under "gsutil help options" for further '
+    'information about when gsutil -m can be advantageous.') + '\n')
 
 
 def Timeout(func):
@@ -759,6 +768,78 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
                              thread_count,
                              arg_checker=_SkipEvenNumbersArgChecker)
     self.assertEqual(0, len(results))
+
+  @mock.patch.object(command, 'OFFER_GSUTIL_M_SUGGESTION_THRESHOLD', 2)
+  @mock.patch.object(command, 'GetTermLines', return_value=100)
+  def testSequentialApplyRecommendsParallelismAfterThreshold(
+      self, mock_get_term_lines):
+    mock_get_term_lines.return_value = 100
+    logger = CreateOrGetGsutilLogger('FakeCommand')
+    mock_log_handler = MockLoggingHandler()
+    logger.addHandler(mock_log_handler)
+
+    self._RunApply(_ReturnOneValue, range(2), process_count=1, thread_count=1)
+
+    contains_message = [
+        message == PARALLEL_PROCESSING_MESSAGE
+        for message in mock_log_handler.messages['info']
+    ]
+    self.assertTrue(any(contains_message))
+    logger.removeHandler(mock_log_handler)
+
+  @mock.patch.object(command, 'OFFER_GSUTIL_M_SUGGESTION_THRESHOLD', 100)
+  @mock.patch.object(command, 'OFFER_GSUTIL_M_SUGGESTION_FREQUENCY', 10)
+  @mock.patch.object(command, 'GetTermLines', return_value=100)
+  def testSequentialApplyRecommendsParallelismAtSuggestionFrequency(
+      self, mock_get_term_lines):
+    logger = CreateOrGetGsutilLogger('FakeCommand')
+    mock_log_handler = MockLoggingHandler()
+    logger.addHandler(mock_log_handler)
+
+    self._RunApply(_ReturnOneValue, range(30), process_count=1, thread_count=1)
+
+    contains_message = [
+        message == PARALLEL_PROCESSING_MESSAGE
+        for message in mock_log_handler.messages['info']
+    ]
+    self.assertEqual(sum(contains_message), 3)
+    logger.removeHandler(mock_log_handler)
+
+  @mock.patch.object(command, 'OFFER_GSUTIL_M_SUGGESTION_THRESHOLD', 100)
+  @mock.patch.object(command, 'OFFER_GSUTIL_M_SUGGESTION_FREQUENCY', 10)
+  @mock.patch.object(command, 'GetTermLines', return_value=2)
+  def testSequentialApplyRecommendsParallelismAtEndIfLastSuggestionIsOutOfView(
+      self, mock_get_term_lines):
+    logger = CreateOrGetGsutilLogger('FakeCommand')
+    mock_log_handler = MockLoggingHandler()
+    logger.addHandler(mock_log_handler)
+
+    self._RunApply(_ReturnOneValue, range(22), process_count=1, thread_count=1)
+
+    contains_message = [
+        message == PARALLEL_PROCESSING_MESSAGE
+        for message in mock_log_handler.messages['info']
+    ]
+    self.assertEqual(sum(contains_message), 3)
+    logger.removeHandler(mock_log_handler)
+
+  @mock.patch.object(command, 'OFFER_GSUTIL_M_SUGGESTION_THRESHOLD', 100)
+  @mock.patch.object(command, 'OFFER_GSUTIL_M_SUGGESTION_FREQUENCY', 10)
+  @mock.patch.object(command, 'GetTermLines', return_value=3)
+  def testSequentialApplyDoesNotRecommendParallelismAtEndIfLastSuggestionInView(
+      self, mock_get_term_lines):
+    logger = CreateOrGetGsutilLogger('FakeCommand')
+    mock_log_handler = MockLoggingHandler()
+    logger.addHandler(mock_log_handler)
+
+    self._RunApply(_ReturnOneValue, range(22), process_count=1, thread_count=1)
+
+    contains_message = [
+        message == PARALLEL_PROCESSING_MESSAGE
+        for message in mock_log_handler.messages['info']
+    ]
+    self.assertEqual(sum(contains_message), 2)
+    logger.removeHandler(mock_log_handler)
 
 
 class TestParallelismFrameworkWithoutMultiprocessing(TestParallelismFramework):
