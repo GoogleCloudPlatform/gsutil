@@ -311,17 +311,13 @@ _CHECKSUM_VALIDATION_TEXT = """
 _RETRY_HANDLING_TEXT = """
 <B>RETRY HANDLING</B>
   The ``cp`` command retries when failures occur, but if enough failures happen
-  during a particular copy or delete operation, the ``cp`` command skips that
-  object and moves on. If any failures were not successfully retried by the end
-  of the copy run, the ``cp`` command reports the number of failures, and
-  exits with a non-zero status.
-
-  Note that there are cases where retrying never succeeds, such as if you have
-  insufficient write permissions to the destination bucket, or if the destination
-  path for an object is longer than the maximum allowed length.
-
-  For more details about gsutil's retry handling, see
-  "gsutil help retries".
+  during a particular copy or delete operation, or if a failure isn't retryable,
+  the ``cp`` command skips that object and moves on. If any failures were not
+  successfully retried by the end of the copy run, the ``cp`` command reports the
+  number of failures, and exits with a non-zero status.
+  
+  For details about gsutil's overall retry handling, see `Retry strategy
+  <https://cloud.google.com/storage/docs/retry-strategy#tools>`_.
 """
 
 _RESUMABLE_TRANSFERS_TEXT = """
