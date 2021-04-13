@@ -53,8 +53,10 @@ from gslib.utils.translation_helper import PreconditionsFromHeaders
 MAX_PROGRESS_INDICATOR_COLUMNS = 65
 
 _SYNOPSIS = """
-  gsutil rewrite -k [-f] [-r] url...
-  gsutil rewrite -k [-f] [-r] -I
+  gsutil rewrite -k [-O] [-f] [-r] [-s] url...
+  gsutil rewrite -k [-O] [-f] [-r] [-s] -I
+  gsutil rewrite -s [-k] [-O] [-f] [-r] url...
+  gsutil rewrite -s [-k] [-O] [-f] [-r] -I
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -66,7 +68,8 @@ _DETAILED_HELP_TEXT = ("""
   The gsutil rewrite command rewrites cloud objects, applying the specified
   transformations to them. The transformation(s) are atomic for each affected
   object and applied based on the input transformation flags. Object metadata
-  values are preserved unless altered by a transformation.
+  values are preserved unless altered by a transformation. At least one
+  transformation flag, -k or -s, must be included in the command.
 
   The -k flag is supported to add, rotate, or remove encryption keys on
   objects.  For example, the command:
