@@ -41,6 +41,7 @@ from oauth2client import client
 from oauth2client.service_account import ServiceAccountCredentials
 
 from six import add_move, MovedModule
+
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
