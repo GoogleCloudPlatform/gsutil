@@ -327,9 +327,14 @@ class CloudWildcardIterator(WildcardIterator):
       end = wildcard_part.find('/')
       if end != -1:
         wildcard_part = wildcard_part[:end + 1]
-      # Remove trailing '/' so we will match gs://bucket/abc* as well as
-      # gs://bucket/abc*/ with the same wildcard regex.
-      prefix_wildcard = StripOneSlash((prefix or '') + wildcard_part)
+
+      prefix_wildcard = (prefix or '') + wildcard_part
+      if not prefix_wildcard.endswith('**/'):
+        # Remove trailing '/' so we will match gs://bucket/abc* as well as
+        # gs://bucket/abc*/ with the same wildcard regex. Don't do this for
+        # double wildcards because those won't pass a delimiter to the API.
+        prefix_wildcard = StripOneSlash(prefix_wildcard)
+
       suffix_wildcard = wildcard[match.end():]
       end = suffix_wildcard.find('/')
       if end == -1:
