@@ -51,6 +51,8 @@ _DETAILED_HELP_TEXT = ("""
   -f          Continues silently (without printing error messages) despite
               errors when removing buckets. If some buckets couldn't be removed,
               gsutil's exit status will be non-zero even if this flag is set.
+              If no buckets could be removed, the command raises a
+              "no matches" error.
 """)
 
 
