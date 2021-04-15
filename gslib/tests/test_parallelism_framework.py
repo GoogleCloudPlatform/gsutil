@@ -853,6 +853,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self.assertIsNone(StorageUri.connection)
     self.assertFalse(StorageUri.provider_pool)
 
+
 class TestParallelismFrameworkWithMultiprocessing(testcase.GsUtilUnitTestCase):
   """Tests that only run with multiprocessing enabled."""
 
@@ -861,24 +862,22 @@ class TestParallelismFrameworkWithMultiprocessing(testcase.GsUtilUnitTestCase):
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testResetConnectionPoolCalledOncePerProcess(self,
                                                   mock_reset_connection_pool):
-    # _ResetConnectionPool is called correctly in child processes, so we need
-    # a queue to record calls.
+    # _ResetConnectionPool is only called in child processes, so we need a queue
+    # to track calls.
     call_queue = multiprocessing_context.Queue()
+
     def log_call():
       call_queue.put(None)
 
     mock_reset_connection_pool.side_effect = log_call
 
     expected_call_count = 2
-    FakeCommand(True).Apply(
-        _ReturnOneValue,
-        [1, 2, 3],
-        _ExceptionHandler,
-        process_count=expected_call_count,
-        thread_count=3,
-        arg_checker=DummyArgChecker)
+    FakeCommand(True).Apply(_ReturnOneValue, [1, 2, 3],
+                            _ExceptionHandler,
+                            process_count=expected_call_count,
+                            thread_count=3,
+                            arg_checker=DummyArgChecker)
 
-    # The method tested is only called when parallel processing is enabled.
     for _ in range(expected_call_count):
       self.assertIsNone(call_queue.get(block=False))
 
