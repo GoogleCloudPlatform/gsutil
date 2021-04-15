@@ -46,6 +46,7 @@ from gslib.command import DummyArgChecker
 from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.base import RequiresIsolation
 from gslib.tests.util import unittest
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
@@ -854,23 +855,21 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self.assertFalse(StorageUri.provider_pool)
 
 
+# _ResetConnectionPool is only called in child processes, so we need a queue
+# to track calls.
+call_queue = multiprocessing_context.Queue()
+
+
 class TestParallelismFrameworkWithMultiprocessing(testcase.GsUtilUnitTestCase):
   """Tests that only run with multiprocessing enabled."""
 
   @RequiresIsolation
-  @mock.patch.object(FakeCommand, '_ResetConnectionPool')
+  @mock.patch.object(FakeCommand,
+                     '_ResetConnectionPool',
+                     side_effect=functools.partial(call_queue.put, None))
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
   def testResetConnectionPoolCalledOncePerProcess(self,
                                                   mock_reset_connection_pool):
-    # _ResetConnectionPool is only called in child processes, so we need a queue
-    # to track calls.
-    call_queue = multiprocessing_context.Queue()
-
-    def log_call():
-      call_queue.put(None)
-
-    mock_reset_connection_pool.side_effect = log_call
-
     expected_call_count = 2
     FakeCommand(True).Apply(_ReturnOneValue, [1, 2, 3],
                             _ExceptionHandler,
@@ -879,7 +878,7 @@ class TestParallelismFrameworkWithMultiprocessing(testcase.GsUtilUnitTestCase):
                             arg_checker=DummyArgChecker)
 
     for _ in range(expected_call_count):
-      self.assertIsNone(call_queue.get(block=False))
+      self.assertIsNone(call_queue.get(timeout=1.0))
 
 
 class TestParallelismFrameworkWithoutMultiprocessing(TestParallelismFramework):
