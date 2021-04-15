@@ -27,6 +27,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import functools
+import mock
+import multiprocessing
 import os
 import signal
 import threading
@@ -36,6 +38,8 @@ import mock
 
 import six
 from boto.storage_uri import BucketStorageUri
+from boto.storage_uri import StorageUri
+from gslib import command
 from gslib import cs_api_map
 from gslib import command
 from gslib.command import Command
@@ -840,6 +844,35 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     ]
     self.assertEqual(sum(contains_message), 2)
     logger.removeHandler(mock_log_handler)
+
+  def testResetConnectionPoolDeletesConnectionState(self):
+    StorageUri.connection = 'connection'
+    StorageUri.provider_pool = {'s3': 'connection'}
+
+    self.command_class(True)._ResetConnectionPool()
+
+    self.assertIsNone(StorageUri.connection)
+    self.assertFalse(StorageUri.provider_pool)
+
+  @RequiresIsolation
+  @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
+  @mock.patch.object(command.Command, '_ResetConnectionPool')
+  def testResetConnectionPoolCalledOncePerProcess(self,
+                                                  mock_reset_connection_pool):
+    # _ResetConnectionPool is never called in the main process, so we have to
+    # use a queue to collect calls.
+    call_queue = multiprocessing.Queue()
+
+    def log_call():
+      call_queue.put(None)
+
+    mock_reset_connection_pool.side_effect = log_call
+
+    expected_call_count = 2
+    self._TestBasicApply(expected_call_count, 3)
+
+    for _ in range(expected_call_count):
+      self.assertIsNone(call_queue.get(block=False))
 
 
 class TestParallelismFrameworkWithoutMultiprocessing(TestParallelismFramework):

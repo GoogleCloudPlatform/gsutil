@@ -1266,11 +1266,9 @@ class Command(HelpProvider):
     # the server to avoid writes from different OS processes interleaving
     # onto the same socket (and garbling the underlying SSL session).
     # We ensure each process gets its own set of connections here by
-    # closing all connections in the storage provider connection pool.
-    connection_pool = StorageUri.provider_pool
-    if connection_pool:
-      for i in connection_pool:
-        connection_pool[i].connection.close()
+    # reinitializing state that tracks connections.
+    StorageUri.provider_pool = {}
+    StorageUri.connection = None
 
   def _GetProcessAndThreadCount(self, process_count, thread_count,
                                 parallel_operations_override):
