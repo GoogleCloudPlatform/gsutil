@@ -46,7 +46,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     self.immed_child_obj_names = ['abcd', 'abdd', 'ade$']
     self.all_obj_names = [
         'abcd', 'abdd', 'ade$', 'nested1/nested2/xyz1', 'nested1/nested2/xyz2',
-        'nested1/nfile_abc'
+        'nested1/nested2xyz1', 'nested1/nfile_abc'
     ]
 
     self.base_bucket_uri = self.CreateBucket()
@@ -265,6 +265,24 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     self.assertTrue(len(blrs))
     for blr in blrs:
       self.assertTrue(blr.root_object and not blr.root_object.timeCreated)
+
+  def testDoesNotStripDelimiterForDoubleWildcard(self):
+    """Tests gs://bucket/*/subdir matching."""
+    actual_uri_strs = set()
+    actual_prefixes = set()
+    for blr in self._test_wildcard_iterator(
+        self.test_bucket0_uri.clone_replace_name('**/xyz*')):
+      if blr.IsPrefix():
+        actual_prefixes.add(blr.root_object)
+      else:
+        actual_uri_strs.add(blr.url_string)
+    expected_uri_strs = set([
+        self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz1').uri,
+        self.test_bucket0_uri.clone_replace_name('nested1/nested2/xyz2').uri
+    ])
+    expected_prefixes = set()
+    self.assertEqual(expected_prefixes, actual_prefixes)
+    self.assertEqual(expected_uri_strs, actual_uri_strs)
 
 
 class FileIteratorTests(testcase.GsUtilUnitTestCase):
