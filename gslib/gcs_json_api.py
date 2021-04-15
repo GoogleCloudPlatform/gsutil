@@ -2297,7 +2297,9 @@ class GcsJsonApi(CloudApi):
         return ResumableUploadAbortException(message or 'Bad Request',
                                              status=e.status_code)
     if isinstance(e, apitools_exceptions.StreamExhausted):
-      return ResumableUploadAbortException(e.message)
+      return ResumableUploadAbortException(
+          '%s; if this issue persists, try deleting the tracker files present'
+          ' under ~/.gsutil/tracker-files/' % str(e))
     if isinstance(e, apitools_exceptions.TransferError):
       if ('Aborting transfer' in str(e) or
           'Not enough bytes in stream' in str(e)):

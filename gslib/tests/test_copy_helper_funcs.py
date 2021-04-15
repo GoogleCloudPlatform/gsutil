@@ -364,6 +364,18 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertIn('this can happen if a file changes size',
                   translated_exc.reason)
 
+  def testTranslateApitoolsResumableUploadExceptionStreamExhausted(self):
+    """Test that StreamExhausted error gets handled."""
+    gsutil_api = GcsJsonApi(GSMockBucketStorageUri,
+                            CreateOrGetGsutilLogger('copy_test'),
+                            DiscardMessagesQueue())
+    exc = apitools_exceptions.StreamExhausted('Not enough bytes')
+    translated_exc = gsutil_api._TranslateApitoolsResumableUploadException(exc)
+    self.assertTrue(isinstance(translated_exc, ResumableUploadAbortException))
+    self.assertIn(
+        'if this issue persists, try deleting the tracker files'
+        ' present under ~/.gsutil/tracker-files/', translated_exc.reason)
+
   def testSetContentTypeFromFile(self):
     """Tests that content type is correctly determined for symlinks."""
     if system_util.IS_WINDOWS:
