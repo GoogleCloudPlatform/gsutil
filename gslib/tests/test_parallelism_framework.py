@@ -28,7 +28,6 @@ from __future__ import unicode_literals
 
 import functools
 import mock
-import multiprocessing
 import os
 import signal
 import threading
@@ -39,7 +38,6 @@ import mock
 import six
 from boto.storage_uri import BucketStorageUri
 from boto.storage_uri import StorageUri
-from gslib import command
 from gslib import cs_api_map
 from gslib import command
 from gslib.command import Command
@@ -51,6 +49,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import RequiresIsolation
 from gslib.tests.util import unittest
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
+from gslib.utils.parallelism_framework_util import multiprocessing_context
 from gslib.utils.system_util import IS_OSX
 from gslib.utils.system_util import IS_WINDOWS
 
@@ -854,23 +853,32 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self.assertIsNone(StorageUri.connection)
     self.assertFalse(StorageUri.provider_pool)
 
+class TestParallelismFrameworkWithMultiprocessing(testcase.GsUtilUnitTestCase):
+  """Tests that only run with multiprocessing enabled."""
+
   @RequiresIsolation
+  @mock.patch.object(FakeCommand, '_ResetConnectionPool')
   @unittest.skipIf(IS_WINDOWS, 'Multiprocessing is not supported on Windows')
-  @mock.patch.object(command.Command, '_ResetConnectionPool')
   def testResetConnectionPoolCalledOncePerProcess(self,
                                                   mock_reset_connection_pool):
-    # _ResetConnectionPool is never called in the main process, so we have to
-    # use a queue to collect calls.
-    call_queue = multiprocessing.Queue()
-
+    # _ResetConnectionPool is called correctly in child processes, so we need
+    # a queue to record calls.
+    call_queue = multiprocessing_context.Queue()
     def log_call():
       call_queue.put(None)
 
     mock_reset_connection_pool.side_effect = log_call
 
     expected_call_count = 2
-    self._TestBasicApply(expected_call_count, 3)
+    FakeCommand(True).Apply(
+        _ReturnOneValue,
+        [1, 2, 3],
+        _ExceptionHandler,
+        process_count=expected_call_count,
+        thread_count=3,
+        arg_checker=DummyArgChecker)
 
+    # The method tested is only called when parallel processing is enabled.
     for _ in range(expected_call_count):
       self.assertIsNone(call_queue.get(block=False))
 
