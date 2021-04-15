@@ -46,7 +46,6 @@ from gslib.command import DummyArgChecker
 from gslib.tests.mock_cloud_api import MockCloudApi
 from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
-from gslib.tests.testcase.base import NotParallelizable
 from gslib.tests.testcase.base import RequiresIsolation
 from gslib.tests.util import unittest
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
