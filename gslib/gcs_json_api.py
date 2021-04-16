@@ -40,6 +40,7 @@ from apitools.base.py.util import CalculateWaitForRetry
 from boto import config
 import httplib2
 import oauth2client
+from six.moves import urllib
 
 from gslib import context_config
 from gslib.cloud_api import AccessDeniedException
@@ -174,6 +175,34 @@ DEFAULT_HOST = 'storage.googleapis.com'
 MTLS_HOST = 'storage.mtls.googleapis.com'
 
 
+def _GetPatchedFinalizeTransferUrl(original_function, correct_netloc):
+  """Patch the Apitools client to always respect custom endpoints.
+
+  Complex uploads and downloads have cases where they initially take our
+  custom endpoints but ignore them later. This function
+  rewrites the URL host to the desired custom one before requests.
+
+  Args:
+    original_function: The original client FinalizeTransferUrl method.
+      We still want to run this, so we don't fall out of sync with the Apitools
+      dependency.
+    correct_netloc: String to overwrite the incoming URL's host and port with.
+      For example, this would be the "host.com:80" in "http://host.com:80/path."
+
+    Returns:
+      Patched FinalizeTransferUrl function.
+  """
+
+  def FinalizeTransferUrl(url):
+    modified_url = original_function(url)
+    parsed_url = urllib.parse.urlsplit(modified_url)
+    url_components = list(parsed_url)
+    url_components[1] = correct_netloc
+    return urllib.parse.urlunsplit(url_components)
+
+  return FinalizeTransferUrl
+
+
 class GcsJsonApi(CloudApi):
   """Google Cloud Storage JSON implementation of gsutil Cloud API."""
 
@@ -305,6 +334,9 @@ class GcsJsonApi(CloudApi):
 
     self.api_client.retry_func = LogAndHandleRetries(
         status_queue=self.status_queue)
+
+    self.api_client.FinalizeTransferUrl = _GetPatchedFinalizeTransferUrl(
+        self.api_client.FinalizeTransferUrl, self.host_base + self.host_port)
 
     if isinstance(self.credentials, NoOpCredentials):
       # This API key is not secret and is used to identify gsutil during
@@ -1162,14 +1194,20 @@ class GcsJsonApi(CloudApi):
     self.download_http.connections = {'https': download_http_class}
 
     if serialization_data:
+      serialization_dict = json.loads(six.ensure_str(serialization_data))
+
       # If we have an apiary trace token, add it to the URL.
       # TODO: Add query parameter support to apitools downloads so there is
       # a well-defined way to express query parameters. Currently, we assume
       # the URL ends in ?alt=media, and this will break if that changes.
       if self.trace_token:
-        serialization_dict = json.loads(six.ensure_str(serialization_data))
         serialization_dict['url'] += '&trace=token%%3A%s' % self.trace_token
-        serialization_data = json.dumps(serialization_dict)
+
+      # Maintain custom endpoints that might have been overrided.
+      serialization_dict['url'] = self.api_client.FinalizeTransferUrl(
+          serialization_dict['url'])
+
+      serialization_data = json.dumps(serialization_dict)
 
       apitools_download = apitools_transfer.Download.FromData(
           download_stream,
@@ -1564,6 +1602,14 @@ class GcsJsonApi(CloudApi):
     try:
       if serialization_data:
         # Resuming an existing upload.
+
+        serialization_dict = json.loads(six.ensure_str(serialization_data))
+        # Maintain custom endpoints that might have been overrided.
+        serialization_dict['url'] = self.api_client.FinalizeTransferUrl(
+            serialization_dict['url'])
+
+        serialization_data = json.dumps(serialization_dict)
+
         apitools_upload = apitools_transfer.Upload.FromData(
             upload_stream,
             serialization_data,

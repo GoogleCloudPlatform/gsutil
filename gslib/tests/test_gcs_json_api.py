@@ -69,3 +69,15 @@ class TestGcsJsonApi(testcase.GsUtilUnitTestCase):
                                ('Credentials', 'gs_host', None)]):
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertEqual(client.host_base, gcs_json_api.DEFAULT_HOST)
+
+  def testPatchesClientFinalizeTransferUrlMethod(self):
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_host', 'custom.p.googleapis.com'),
+        ('Credentials', 'gs_json_host', 'custom.p.googleapis.com')
+    ]):
+      client = gcs_json_api.GcsJsonApi(None, None, None, None).api_client
+      transformed_url = client.FinalizeTransferUrl(
+          'http://storage.googleapis.com/path')
+      # Apitools may add a key or other additional text to the URL.
+      expected_url_start = 'http://custom.p.googleapis.com/path'
+      self.assertTrue(transformed_url.startswith(expected_url_start))
