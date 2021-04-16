@@ -57,6 +57,7 @@ function install_pyenv {
     # For now, only doing this on mac,
     # beacuse that was the only place where it appeared to be missing.
     if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
+      brew update
       brew install pyenv
       eval "$(pyenv init -)"
     fi
