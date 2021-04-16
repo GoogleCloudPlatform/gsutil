@@ -141,7 +141,7 @@ class ComposeCommand(Command):
             apitools_messages.ComposeRequest.SourceObjectsValueListEntry(
                 name=src_url.object_name))
         if src_url.HasGeneration():
-          src_obj_metadata.generation = src_url.generation
+          src_obj_metadata.generation = int(src_url.generation)
         components.append(src_obj_metadata)
         # Avoid expanding too many components, and sanity check each name
         # expansion result.
