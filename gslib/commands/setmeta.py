@@ -189,6 +189,11 @@ class SetMetaCommand(Command):
     for header in metadata_minus:
       self.metadata_change[header] = ''
 
+    if not self.metadata_change:
+      raise CommandException(
+          'gsutil setmeta requires one or more headers to be provided with the'
+          ' -h flag. See "gsutil help setmeta" for more information.')
+
     if len(self.args) == 1 and not self.recursion_requested:
       url = StorageUrlFromString(self.args[0])
       if not (url.IsCloudUrl() and url.IsObject()):

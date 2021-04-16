@@ -282,3 +282,12 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
                             expected_status=1,
                             return_stderr=True)
     self.assertIn('Invalid non-ASCII value', stderr)
+
+  def test_setmeta_raises_error_if_not_provided_headers(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['setmeta', suri(bucket_uri)],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn(
+        'gsutil setmeta requires one or more headers to be provided with the'
+        ' -h flag. See "gsutil help setmeta" for more information.', stderr)
