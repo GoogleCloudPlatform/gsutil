@@ -1267,6 +1267,11 @@ class Command(HelpProvider):
     # onto the same socket (and garbling the underlying SSL session).
     # We ensure each process gets its own set of connections here by
     # reinitializing state that tracks connections.
+    connection_pool = StorageUri.provider_pool
+    if connection_pool:
+      for i in connection_pool:
+        connection_pool[i].connection.close()
+
     StorageUri.provider_pool = {}
     StorageUri.connection = None
 
