@@ -30,12 +30,12 @@ import functools
 import mock
 import os
 import signal
+import six
 import threading
 import textwrap
 import time
-import mock
 
-import six
+import boto
 from boto.storage_uri import BucketStorageUri
 from boto.storage_uri import StorageUri
 from gslib import cs_api_map
@@ -845,8 +845,10 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     logger.removeHandler(mock_log_handler)
 
   def testResetConnectionPoolDeletesConnectionState(self):
-    StorageUri.connection = 'connection'
-    StorageUri.provider_pool = {'s3': 'connection'}
+    StorageUri.connection = mock.Mock(spec=boto.s3.connection.S3Connection)
+    StorageUri.provider_pool = {
+        's3': mock.Mock(spec=boto.s3.connection.S3Connection)
+    }
 
     self.command_class(True)._ResetConnectionPool()
 
