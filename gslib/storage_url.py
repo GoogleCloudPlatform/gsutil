@@ -228,6 +228,11 @@ class _CloudUrl(StorageUrl):
         raise InvalidUrlError(
             'CloudUrl: URL string %s did not match URL regex' % url_string)
 
+    if url_string[(len(self.scheme) + len('://')):].startswith(self.delim):
+      raise InvalidUrlError(
+          'Cloud URL scheme should be followed by colon and two slashes: "://".'
+          ' Found: "{}"'.format(url_string))
+
   def Clone(self):
     return _CloudUrl(self.url_string)
 
