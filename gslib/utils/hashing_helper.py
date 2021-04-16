@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 import base64
 import binascii
-from hashlib import md5
+import hashlib
 import os
 
 import six
@@ -241,7 +241,7 @@ def CalculateB64EncodedMd5FromContents(fp):
   Returns:
     MD5 digest of the file in base64 format.
   """
-  return _CalculateB64EncodedHashFromContents(fp, md5())
+  return _CalculateB64EncodedHashFromContents(fp, GetMd5())
 
 
 def CalculateMd5FromContents(fp):
@@ -255,7 +255,7 @@ def CalculateMd5FromContents(fp):
   Returns:
     MD5 digest of the file in hex format.
   """
-  return _CalculateHashFromContents(fp, md5())
+  return _CalculateHashFromContents(fp, GetMd5())
 
 
 def Base64EncodeHash(digest_value):
@@ -307,7 +307,7 @@ def GetUploadHashAlgs():
                                    CHECK_HASH_IF_FAST_ELSE_FAIL)
   if check_hashes_config == 'never':
     return {}
-  return {'md5': md5}
+  return {'md5': GetMd5}
 
 
 def GetDownloadHashAlgs(logger, consider_md5=False, consider_crc32c=False):
@@ -332,7 +332,7 @@ def GetDownloadHashAlgs(logger, consider_md5=False, consider_crc32c=False):
 
   hash_algs = {}
   if consider_md5:
-    hash_algs['md5'] = md5
+    hash_algs['md5'] = GetMd5
   elif consider_crc32c:
     # If the cloud provider supplies a CRC, we'll compute a checksum to
     # validate if we're using a native crcmod installation and MD5 isn't
@@ -352,6 +352,29 @@ def GetDownloadHashAlgs(logger, consider_md5=False, consider_crc32c=False):
             'Your boto config \'check_hashes\' option is misconfigured.')
 
   return hash_algs
+
+
+def GetMd5(byte_string=b''):
+  """Returns md5 object, avoiding incorrect FIPS error on Red Hat systems.
+
+  Examples: GetMd5(b'abc')
+            GetMd5(bytes('abc', encoding='utf-8'))
+
+  Args:
+    byte_string (bytes): String in bytes form to hash. Don't include for empty
+      hash object, since md5(b'').digest() == md5().digest().
+
+  Returns:
+    md5 hash object.
+  """
+  try:
+    return hashlib.md5(byte_string)
+  except ValueError:
+    # On Red Hat-based platforms, may catch a FIPS error.
+    # "usedforsecurity" flag only available on Red Hat systems or Python 3.9+.
+    # pylint:disable=unexpected-keyword-arg
+    return hashlib.md5(byte_string, usedforsecurity=False)
+    # pylint:enable=unexpected-keyword-arg
 
 
 class HashingFileUploadWrapper(object):

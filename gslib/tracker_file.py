@@ -32,6 +32,7 @@ from gslib.exception import CommandException
 from gslib.utils.boto_util import GetGsutilStateDir
 from gslib.utils.boto_util import ResumableThreshold
 from gslib.utils.constants import UTF8
+from gslib.utils.hashing_helper import GetMd5
 from gslib.utils.system_util import CreateDirIfNeeded
 
 # The maximum length of a file name can vary wildly between different
@@ -306,7 +307,7 @@ def HashRewriteParameters(src_obj_metadata,
       not dst_obj_metadata or not dst_obj_metadata.bucket or
       not dst_obj_metadata.name or not projection):
     return
-  md5_hash = hashlib.md5()
+  md5_hash = GetMd5()
   for input_param in (
       src_obj_metadata,
       dst_obj_metadata,

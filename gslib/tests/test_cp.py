@@ -24,7 +24,6 @@ import base64
 import binascii
 import datetime
 import gzip
-import hashlib
 import logging
 import os
 import pickle
@@ -96,6 +95,7 @@ from gslib.utils.copy_helper import PARALLEL_UPLOAD_TEMP_NAMESPACE
 from gslib.utils.copy_helper import TrackerFileType
 from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.utils.hashing_helper import CalculateMd5FromContents
+from gslib.utils.hashing_helper import GetMd5
 from gslib.utils.posix_util import GID_ATTR
 from gslib.utils.posix_util import MODE_ATTR
 from gslib.utils.posix_util import NA_ID
@@ -2958,7 +2958,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Create component 0 to be used in the resume; it must match the name
     # that will be generated in copy_helper, so we use the same scheme.
     encoded_name = (PARALLEL_UPLOAD_STATIC_SALT + source_file).encode(UTF8)
-    content_md5 = hashlib.md5()
+    content_md5 = GetMd5()
     content_md5.update(encoded_name)
     digest = content_md5.hexdigest()
     component_object_name = (tracker_prefix + PARALLEL_UPLOAD_TEMP_NAMESPACE +
@@ -3583,7 +3583,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     ])
     # Compute the MD5 of the uncompressed bytes.
     with gzip.open(input_filename) as fp:
-      hash_dict = {'md5': hashlib.md5()}
+      hash_dict = {'md5': GetMd5()}
       hashing_helper.CalculateHashesFromContents(fp, hash_dict)
       in_file_md5 = hash_dict['md5'].digest()
 
@@ -3592,7 +3592,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(object_uri), suri(fpath2)])
     # Compute MD5 of the downloaded (uncompressed) file, and validate it.
     with open(fpath2, 'rb') as fp:
-      hash_dict = {'md5': hashlib.md5()}
+      hash_dict = {'md5': GetMd5()}
       hashing_helper.CalculateHashesFromContents(fp, hash_dict)
       out_file_md5 = hash_dict['md5'].digest()
     self.assertEqual(in_file_md5, out_file_md5)
