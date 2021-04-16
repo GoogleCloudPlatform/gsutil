@@ -2873,10 +2873,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     tmp_dir = self.CreateTempDir()
     fpath = self.CreateTempFile(file_name='foo',
                                 tmpdir=tmp_dir,
-                                contents=b'a' * ONE_KIB * 512)
+                                contents=b'a' * ONE_KIB * ONE_KIB)
     test_callback_file = self.CreateTempFile(contents=pickle.dumps(
         HaltingCopyCallbackHandler(True,
-                                   int(ONE_KIB) * 384)))
+                                   int(ONE_KIB) * 512)))
     resumable_threshold_for_test = ('GSUtil', 'resumable_threshold',
                                     str(ONE_KIB))
     resumable_chunk_size_for_test = ('GSUtil', 'json_resumable_chunk_size',
@@ -2892,7 +2892,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Artifically halting upload', stderr)
       fpath = self.CreateTempFile(file_name='foo',
                                   tmpdir=tmp_dir,
-                                  contents=b'b' * ONE_KIB * 512)
+                                  contents=b'b' * ONE_KIB * ONE_KIB)
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               expected_status=1,
                               return_stderr=True)
@@ -2908,10 +2908,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     tmp_dir = self.CreateTempDir()
     fpath = self.CreateTempFile(file_name='foo',
                                 tmpdir=tmp_dir,
-                                contents=b'a' * ONE_KIB * 512)
+                                contents=b'a' * ONE_KIB * ONE_KIB)
     test_callback_file = self.CreateTempFile(contents=pickle.dumps(
         HaltingCopyCallbackHandler(True,
-                                   int(ONE_KIB) * 384)))
+                                   int(ONE_KIB) * 512)))
     resumable_threshold_for_test = ('GSUtil', 'resumable_threshold',
                                     str(ONE_KIB))
     resumable_chunk_size_for_test = ('GSUtil', 'json_resumable_chunk_size',
@@ -2927,7 +2927,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Artifically halting upload', stderr)
       fpath = self.CreateTempFile(file_name='foo',
                                   tmpdir=tmp_dir,
-                                  contents=b'a' * ONE_KIB)
+                                  contents=b'a' * ONE_KIB * ONE_KIB)
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               expected_status=1,
                               return_stderr=True)
