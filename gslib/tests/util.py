@@ -665,7 +665,14 @@ class HaltingCopyCallbackHandler(object):
 
   # pylint: disable=invalid-name
   def call(self, total_bytes_transferred, total_size):
-    """Forcibly exits if the transfer has passed the halting point."""
+    """Forcibly exits if the transfer has passed the halting point.
+
+    Note that this function is only called when the linked conditions are
+    met: https://github.com/GoogleCloudPlatform/gsutil/blob/master/gslib/progress_callback.py#L128.
+
+    This means that self._halt_at_byte is only precise if it's divisible by
+    progress_callback._START_BYTES_PER_CALLBACK.
+    """
     if total_bytes_transferred >= self._halt_at_byte:
       sys.stderr.write(
           'Halting transfer after byte %s. %s/%s transferred.\r\n' %
