@@ -2927,7 +2927,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Artifically halting upload', stderr)
       fpath = self.CreateTempFile(file_name='foo',
                                   tmpdir=tmp_dir,
-                                  contents=b'a' * ONE_KIB * ONE_KIB)
+                                  contents=b'a' * ONE_KIB)
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               expected_status=1,
                               return_stderr=True)
