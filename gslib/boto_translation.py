@@ -40,6 +40,7 @@ from xml.sax import _exceptions as SaxExceptions
 import six
 from six.moves import http_client
 import boto
+from boto import config
 from boto import handler
 from boto.gs.cors import Cors
 from boto.gs.lifecycle import LifecycleConfig
@@ -125,6 +126,19 @@ NON_EXISTENT_OBJECT_REGEX = re.compile(r'.*non-\s*existent\s*object',
                                        flags=re.DOTALL)
 # Determines whether an etag is a valid MD5.
 MD5_REGEX = re.compile(r'^"*[a-fA-F0-9]{32}"*$')
+
+
+def _AddCustomEndpointToKey(key):
+  """Update Boto Key object with user config's custom endpoint."""
+  user_setting_to_key_attribute = {
+      'gs_host': 'host',
+      'gs_port': 'port',
+      'gs_host_header': 'host_header',
+  }
+  for user_setting, key_attribute in user_setting_to_key_attribute.items():
+    user_setting_value = config.get('Credentials', user_setting, None)
+    if user_setting_value is not None:
+      setattr(key.bucket.connection, key_attribute, user_setting_value)
 
 
 def InitializeMultiprocessingVariables():  # pylint: disable=invalid-name
@@ -546,6 +560,8 @@ class BotoTranslation(CloudApi):
     if serialization_data:
       serialization_dict = json.loads(serialization_data)
       key = pickle.loads(binascii.a2b_base64(serialization_dict['url']))
+      if self.provider == 'gs':
+        _AddCustomEndpointToKey(key)
     else:
       key = self._GetBotoKey(bucket_name, object_name, generation=generation)
 
