@@ -22,8 +22,6 @@ from __future__ import unicode_literals
 from collections import defaultdict
 from collections import namedtuple
 
-import logging
-
 import six
 from apitools.base.protorpclite import protojson
 from gslib.exception import CommandException
