@@ -305,6 +305,7 @@ class GcsJsonApi(CloudApi):
 
     self.api_client.retry_func = LogAndHandleRetries(
         status_queue=self.status_queue)
+    self.api_client.overwrite_transfer_urls_with_client_base = True
 
     if isinstance(self.credentials, NoOpCredentials):
       # This API key is not secret and is used to identify gsutil during
@@ -1175,7 +1176,8 @@ class GcsJsonApi(CloudApi):
           download_stream,
           serialization_data,
           self.api_client.http,
-          num_retries=self.num_retries)
+          num_retries=self.num_retries,
+          client=self.api_client)
     else:
       apitools_download = apitools_transfer.Download.FromStream(
           download_stream,
@@ -1569,7 +1571,8 @@ class GcsJsonApi(CloudApi):
             serialization_data,
             self.api_client.http,
             num_retries=self.num_retries,
-            gzip_encoded=gzip_encoded)
+            gzip_encoded=gzip_encoded,
+            client=self.api_client)
         apitools_upload.chunksize = GetJsonResumableChunkSize()
         apitools_upload.bytes_http = authorized_upload_http
       else:
