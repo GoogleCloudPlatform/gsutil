@@ -28,7 +28,6 @@ from gslib.tests.util import ObjectToURI
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 
-
 # Get full output from stdout, which might not be piped in Python 3.
 PYTHON_UNBUFFERED_ENV_VAR = {'PYTHONUNBUFFERED': '1'}
 
@@ -48,7 +47,8 @@ class TestPsc(testcase.GsUtilIntegrationTestCase):
     temporary_directory = self.CreateTempDir()
     with SetBotoConfigForTest([
         ('GSUtil', 'sliced_object_download_threshold', '1B'),
-        ('GSUtil', 'sliced_object_download_component_size', '1B')]):
+        ('GSUtil', 'sliced_object_download_component_size', '1B')
+    ]):
       bucket_uri = self.CreateBucket()
       key_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
 
@@ -72,12 +72,14 @@ class TestPsc(testcase.GsUtilIntegrationTestCase):
     temporary_directory = self.CreateTempDir()
     with SetBotoConfigForTest([
         ('GSUtil', 'sliced_object_download_threshold', '1B'),
-        ('GSUtil', 'sliced_object_download_component_size', '1B')]):
+        ('GSUtil', 'sliced_object_download_component_size', '1B')
+    ]):
       bucket_uri = self.CreateBucket()
       key_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
       stdout, stderr = self.RunGsUtil(
           ['-D', 'cp', ObjectToURI(key_uri), temporary_directory],
-          return_stdout=True, return_stderr=True)
+          return_stdout=True,
+          return_stderr=True)
 
     output = stdout + stderr
 
@@ -86,7 +88,8 @@ class TestPsc(testcase.GsUtilIntegrationTestCase):
 
   @integration_testcase.SkipForXML('JSON test.')
   @integration_testcase.SkipForS3('Custom endpoints not available for S3.')
-  def test_persists_custom_endpoint_through_json_parallel_composite_upload(self):
+  def test_persists_custom_endpoint_through_json_parallel_composite_upload(
+      self):
     gs_host = config.get('Credentials', 'gs_json_host', DEFAULT_HOST)
     if gs_host == DEFAULT_HOST:
       # Captures case where user may have manually set gs_host to the
@@ -96,10 +99,12 @@ class TestPsc(testcase.GsUtilIntegrationTestCase):
     temporary_file = self.CreateTempFile(contents=b'foo')
     with SetBotoConfigForTest([
         ('GSUtil', 'parallel_composite_upload_threshold', '1B'),
-        ('GSUtil', 'parallel_composite_upload_component_size', '1B')]):
+        ('GSUtil', 'parallel_composite_upload_component_size', '1B')
+    ]):
       bucket_uri = self.CreateBucket()
       stdout = self.RunGsUtil(
-          ['-DD', 'cp', temporary_file, ObjectToURI(bucket_uri)],
+          ['-DD', 'cp', temporary_file,
+           ObjectToURI(bucket_uri)],
           env_vars=PYTHON_UNBUFFERED_ENV_VAR,
           return_stdout=True)
 
@@ -118,11 +123,14 @@ class TestPsc(testcase.GsUtilIntegrationTestCase):
     temporary_file = self.CreateTempFile(contents=b'foo')
     with SetBotoConfigForTest([
         ('GSUtil', 'parallel_composite_upload_threshold', '1B'),
-        ('GSUtil', 'parallel_composite_upload_component_size', '1B')]):
+        ('GSUtil', 'parallel_composite_upload_component_size', '1B')
+    ]):
       bucket_uri = self.CreateBucket()
       stdout, stderr = self.RunGsUtil(
-          ['-D', 'cp', temporary_file, ObjectToURI(bucket_uri)],
-          return_stdout=True, return_stderr=True)
+          ['-D', 'cp', temporary_file,
+           ObjectToURI(bucket_uri)],
+          return_stdout=True,
+          return_stderr=True)
 
     output = stdout + stderr
     self.assertIn(gs_host, output)
