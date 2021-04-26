@@ -53,9 +53,9 @@ _CH_SYNOPSIS = """
 
   where each <grant> is one of the following forms:
 
-    -u <id>|<email>:<perm>
-    -g <id>|<email>|<domain>|All|AllAuth:<perm>
-    -p (viewers|editors|owners)-<project number>:<perm>
+    -u <id>|<email>:<permission>
+    -g <id>|<email>|<domain>|All|AllAuth:<permission>
+    -p (viewers|editors|owners)-<project number>:<permission>
     -d <id>|<email>|<domain>|All|AllAuth|(viewers|editors|owners)-<project number>
 """
 
@@ -245,7 +245,7 @@ _CH_DESCRIPTION = """
   "-u john-doe@gmail.com:r". Note: Service Accounts are considered to be users.
 
   Groups are like users, but specified with the -g flag, as in
-  "-g power-users@example.com:fc". Groups may also be specified as a full
+  "-g power-users@example.com:O". Groups may also be specified as a full
   domain, as in "-g my-company.com:r".
 
   AllAuthenticatedUsers and AllUsers are specified directly, as
