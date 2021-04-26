@@ -36,9 +36,6 @@ _DETAILED_HELP_TEXT = ("""
   gsutil's wildcarding support in such shells by single-quoting (on Linux)
   or double-quoting (on Windows) the argument. For example:
   
-  Some shells require that wildcarded expressions be surrounded with
-  single quotes (on Linux) or double quotes (on Windows). For example:
-  
     gsutil cp 'data/abc**' gs://bucket
     
 
