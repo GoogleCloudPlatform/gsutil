@@ -262,15 +262,15 @@ class DaisyChainWrapper(object):
         # Buffer was empty, yield thread priority so the download thread can fill.
         time.sleep(0)
     with self.lock:
-      # Note that we are not handling the rare case where len(valid_data) < amt
+      # Note that we are not handling the rare case where len(valid_data) < amt,
       # and there are elements in the buffer.
-      # For e.g if valid_data = 'foo' and amt = 5, and we have 'barbaz' in
+      # e.g if valid_data = 'foo' and amt = 5, and we have 'barbaz' in
       # self.buffer, instead of returning 'fooba' in the current call, we
-      # return 'foo' and in the subsequent calls we will return 'barba' and 'z'
-      # This is done with the assumption in mind that the length of data
-      # that gets written to self.buffer is always in the multiple of "amt",
-      # which means the chances of such cases are pretty rare.
-      # This assumption helps us keep this logic simple and avoid
+      # return 'foo', and in the subsequent calls
+      # we will return 'barba' and 'z'. This is done with the assumption
+      # that the length of data that gets written to self.buffer is always
+      # a multiple of "amt", which means the chances of such cases are pretty
+      # rare. This assumption helps us keep this logic simple and avoid
       # string concatenations and splits ('foo' + 'ba' in the above case).
       if not valid_data:
         data = self.buffer.popleft()
