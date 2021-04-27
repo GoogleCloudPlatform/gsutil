@@ -174,8 +174,8 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
         mock_api,
         download_chunk_size=TRANSFER_BUFFER_SIZE)
     self._WriteFromWrapperToFile(daisy_chain_wrapper, upload_file)
-    num_expected_calls = math.ceil(
-        self.test_data_file_len / TRANSFER_BUFFER_SIZE)
+    num_expected_calls = math.ceil(self.test_data_file_len /
+                                   TRANSFER_BUFFER_SIZE)
     # Since the chunk size is < the file size, multiple calls to GetObjectMedia
     # should be made.
     self.assertEqual(mock_api.get_calls, num_expected_calls)
