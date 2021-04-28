@@ -37,8 +37,8 @@ class TestPublicAccessPrevention(testcase.GsUtilIntegrationTestCase):
   def test_turning_off_on_enabled_buckets(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('XML API has no concept of Public Access Prevention')
-    bucket_uri = self.CreateBucket(
-        public_access_prevention='enforced', prefer_json_api=True)
+    bucket_uri = self.CreateBucket(public_access_prevention='enforced',
+                                   prefer_json_api=True)
     self.VerifyPublicAccessPreventionValue(bucket_uri, 'enforced')
 
     self.RunGsUtil(self._set_publicaccessprevention_cmd +
@@ -72,17 +72,15 @@ class TestPublicAccessPrevention(testcase.GsUtilIntegrationTestCase):
   def test_too_few_arguments_fails(self):
     """Ensures publicaccessprevention commands fail with too few arguments."""
     # No arguments for set, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._set_publicaccessprevention_cmd,
-        return_stderr=True,
-        expected_status=1)
+    stderr = self.RunGsUtil(self._set_publicaccessprevention_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # No arguments for get, but valid subcommand.
-    stderr = self.RunGsUtil(
-        self._get_publicaccessprevention_cmd,
-        return_stderr=True,
-        expected_status=1)
+    stderr = self.RunGsUtil(self._get_publicaccessprevention_cmd,
+                            return_stderr=True,
+                            expected_status=1)
     self.assertIn('command requires at least', stderr)
 
     # Neither arguments nor subcommand.
