@@ -269,7 +269,7 @@ class DaisyChainWrapper(object):
       # return 'foo', and in the subsequent calls
       # we will return 'barba' and 'z'. This is done with the assumption
       # that the length of data that gets written to self.buffer is always
-      # a multiple of "amt", which means the chances of such cases are pretty
+      # a multiple of "amt", which means the chance of such cases are pretty
       # rare. This assumption helps us keep this logic simple and avoid
       # string concatenations and splits ('foo' + 'ba' in the above case).
       if not valid_data:
