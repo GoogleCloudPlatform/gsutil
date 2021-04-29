@@ -31,6 +31,7 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TEST_ENCRYPTION_KEY1
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import unittest
+from gslib.project_id import PopulateProjectId
 
 
 @SkipForS3('S3 does not support object composition.')
@@ -192,6 +193,44 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
           suri(object_uri2),
           suri(bucket_uri, 'obj')
       ])
+
+  def authorize_project_to_use_testing_kms_key(
+      self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
+    # Make sure our keyRing and cryptoKey exist.
+    keyring_fqn = self.kms_api.CreateKeyRing(
+        PopulateProjectId(None),
+        testcase.KmsTestingResources.KEYRING_NAME,
+        location=testcase.KmsTestingResources.KEYRING_LOCATION)
+    key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
+    # Make sure that the service account for our default project is authorized
+    # to use our test KMS key.
+    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn])
+    return key_fqn
+
+  @SkipForS3('Test uses gs-specific KMS encryption')
+  def test_compose_with_kms_encryption(self):
+    """Tests composing encrypted objects."""
+    if self.test_api == ApiSelector.XML:
+      return unittest.skip(
+          'gsutil does not support encryption with the XML API')
+    bucket_uri = self.CreateBucket()
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'bar')
+
+    obj_suri = suri(bucket_uri, 'composed')
+    key_fqn = self.authorize_project_to_use_testing_kms_key()
+
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
+      self.RunGsUtil([
+          'compose',
+          suri(object_uri1),
+          suri(object_uri2),
+          obj_suri,
+      ])
+
+    # verify composed object uses CMEK.
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      self.AssertObjectUsesCMEK(obj_suri, key_fqn)
 
   def test_compose_different_encryption_keys(self):
     """Tests composing encrypted objects with different encryption keys."""

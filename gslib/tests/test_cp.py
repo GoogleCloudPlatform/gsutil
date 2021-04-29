@@ -3054,6 +3054,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       # Clean up if something went wrong.
       DeleteTrackerFile(tracker_file_name)
 
+  @SkipForS3('Test uses gs-specific KMS encryption')
+  def test_kms_key_correctly_applied_to_composite_upload(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=b'abcd')
+    obj_suri = suri(bucket_uri, 'composed')
+    key_fqn = self.authorize_project_to_use_testing_kms_key()
+
+    with SetBotoConfigForTest([
+        ('GSUtil', 'encryption_key', key_fqn),
+        ('GSUtil', 'parallel_composite_upload_threshold', '1'),
+        ('GSUtil', 'parallel_composite_upload_component_size', '1')
+    ]):
+      self.RunGsUtil(['cp', fpath, obj_suri])
+
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      self.AssertObjectUsesCMEK(obj_suri, key_fqn)
+
   # This temporarily changes the tracker directory to unwritable which
   # interferes with any parallel running tests that use the tracker directory.
   @NotParallelizable
