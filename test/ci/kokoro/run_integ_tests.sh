@@ -106,10 +106,18 @@ update_submodules
 
 set -e
 
-# Check that we're using the correct config
+# Check that we're using the correct config.
 python "$GSUTIL_ENTRYPOINT" version -l
-# Run integration tests
+# Run integration tests.
 python "$GSUTIL_ENTRYPOINT" test -p "$PROCS"
+# Run custom endpoint tests.
+# We don't generate a .boto for these tests since there are only a few settings.
+python "$GSUTIL_ENTRYPOINT" \
+  -o "Credentials:gs_host=storage-psc.p.googleapis.com" \
+  -o "Credentials:gs_host_header=storage.googleapis.com" \
+  -o "Credentials:gs_json_host=storage-psc.p.googleapis.com" \
+  -o "Credentials:gs_json_host_header=www.googleapis.com" \
+  test gslib.tests.test_psc
 
 # Run mTLS authentication test.
 if [[ $API == "json" ]]; then

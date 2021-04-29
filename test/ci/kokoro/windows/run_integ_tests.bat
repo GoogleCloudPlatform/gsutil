@@ -32,6 +32,14 @@ rem Print config info prior to running tests
 
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%'" || exit /B 1
 
+rem Run custom endpont tests.
+rem Not enough settings to merit generating a boto config.
+set PscConfig=-o "Credentials:gs_host=storage-psc.p.googleapis.com"^
+ -o "Credentials:gs_host_header=storage.googleapis.com"^
+ -o "Credentials:gs_json_host=storage-psc.p.googleapis.com"^
+ -o "Credentials:gs_json_host_header=www.googleapis.com"
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%' -Tests 'psc' -TopLevelFlags '%PscConfig%'" || exit /B 1
+
 rem mTLS tests only run on GCS JSON.
 if not "json" == "%API%" exit /B 0
 
