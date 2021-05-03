@@ -214,8 +214,24 @@ def BindingStringToTuple(is_grant, input_str):
 
   if not input_str.count(':'):
     input_str += ':'
+
+  # Allows user specified PUBLIC_MEMBERS and TYPES to be case insensitive.
+  tokens = input_str.split(":")
+  public_members = {s.lower(): s for s in PUBLIC_MEMBERS}
+  types = {s.lower(): s for s in TYPES}
+  possible_public_member_or_type = tokens[0].lower()
+  possible_type = '%s:%s' % (tokens[0].lower(), tokens[1].lower())
+  if possible_public_member_or_type in public_members:
+    tokens[0] = public_members[possible_public_member_or_type]
+  elif possible_public_member_or_type in types:
+    tokens[0] = types[possible_public_member_or_type]
+  elif possible_type in types:
+    (tokens[0], tokens[1]) = types[possible_type].split(':')
+  input_str = ":".join(tokens)
+
   if input_str.count(':') == 1:
     tokens = input_str.split(':')
+
     if '%s:%s' % (tokens[0], tokens[1]) in TYPES:
       raise CommandException('Incorrect public member type for binding %s' %
                              input_str)
