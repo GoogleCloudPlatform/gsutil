@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import collections
 import datetime
 import logging
 import os
@@ -47,6 +48,7 @@ from gslib.utils import parallelism_framework_util
 from gslib.utils import posix_util
 from gslib.utils import system_util
 from gslib.utils import hashing_helper
+from gslib.utils.copy_helper import _CheckCloudHashes
 from gslib.utils.copy_helper import _DelegateUploadFileToObject
 from gslib.utils.copy_helper import _GetPartitionInfo
 from gslib.utils.copy_helper import _SelectUploadCompressionStrategy
@@ -750,3 +752,14 @@ class TestExpandUrlToSingleBlr(GsUtilUnitTestCase):
 
     self.assertTrue(have_existing_dst_container)
     self.assertEqual(exp_url, StorageUrlFromString('gs://test/folder/'))
+
+  def testCheckCloudHashesIsSkippedCorrectly(self):
+    FakeObject = collections.namedtuple('FakeObject', ['md5Hash'])
+
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      # Should not raise a hash mismatch error:
+      _CheckCloudHashes(logger=None,
+                        src_url=None,
+                        dst_url=None,
+                        src_obj_metadata=FakeObject(md5Hash='a'),
+                        dst_obj_metadata=FakeObject(md5Hash='b'))
