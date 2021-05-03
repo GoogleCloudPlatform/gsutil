@@ -798,6 +798,15 @@ def _CheckCloudHashes(logger, src_url, dst_url, src_obj_metadata,
     CommandException: if cloud digests don't match local digests.
   """
   # See hack comment in _CheckHashes.
+
+  # Sometimes (e.g. when kms is enabled for s3) the values we check below are
+  # not actually content hashes. The early exit here provides users a workaround
+  # for this case and any others we've missed.
+  check_hashes_config = config.get('GSUtil', 'check_hashes',
+                                   CHECK_HASH_IF_FAST_ELSE_FAIL)
+  if check_hashes_config == CHECK_HASH_NEVER:
+    return
+
   checked_one = False
   download_hashes = {}
   upload_hashes = {}
