@@ -286,6 +286,21 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     if self.test_api == ApiSelector.JSON:
       self.assertIn('One of the source objects does not exist', stderr)
 
+  def test_compose_with_generations(self):
+    """Tests composing objects with generations."""
+    bucket_uri = self.CreateBucket()
+    components = []
+    data_list = [b'1', b'2', b'3']
+    for data in data_list:
+      object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=data)
+      components.append(object_uri.version_specific_uri)
+
+    composite = self.StorageUriCloneReplaceName(bucket_uri,
+                                                self.MakeTempName('obj'))
+
+    self.RunGsUtil(['compose'] + components + [composite.uri])
+    self.assertEqual(composite.get_contents_as_string(), b''.join(data_list))
+
 
 class TestCompatibleCompose(testcase.GsUtilIntegrationTestCase):
 
@@ -304,18 +319,3 @@ class TestCompatibleCompose(testcase.GsUtilIntegrationTestCase):
     expected_msg = ('CommandException: "compose" called on URL with '
                     'unsupported provider (%s).\n' % 's3://b/o2')
     self.assertIn(expected_msg, stderr)
-
-  def test_compose_with_generations(self):
-    """Tests composing objects with generations."""
-    bucket_uri = self.CreateBucket()
-    components = []
-    data_list = [b'1', b'2', b'3']
-    for data in data_list:
-      object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=data)
-      components.append(object_uri.version_specific_uri)
-
-    composite = self.StorageUriCloneReplaceName(bucket_uri,
-                                                self.MakeTempName('obj'))
-
-    self.RunGsUtil(['compose'] + components + [composite.uri])
-    self.assertEqual(composite.get_contents_as_string(), b''.join(data_list))
