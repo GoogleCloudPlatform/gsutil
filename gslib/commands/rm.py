@@ -391,10 +391,20 @@ class RmCommand(Command):
 
     exp_src_url = name_expansion_result.expanded_storage_url
     self.logger.info('Removing %s...', exp_src_url)
-    gsutil_api.DeleteObject(exp_src_url.bucket_name,
-                            exp_src_url.object_name,
-                            preconditions=self.preconditions,
-                            generation=exp_src_url.generation,
-                            provider=exp_src_url.scheme)
+    try:
+      gsutil_api.DeleteObject(exp_src_url.bucket_name,
+                              exp_src_url.object_name,
+                              preconditions=self.preconditions,
+                              generation=exp_src_url.generation,
+                              provider=exp_src_url.scheme)
+    except NotFoundException as e:
+      # DeleteObject will sometimes return a 504 (DEADLINE_EXCEEDED) when
+      # the operation was in fact successful. When a retry is attempted in
+      # these cases, it will fail with a (harmless) 404. The 404 is harmless
+      # since it really just means the file was already deleted, which is
+      # what we want anyway. Here we simply downgrade the message to info
+      # rather than error and correct the command-level failure total.
+      self.logger.info('Cannot find %s', exp_src_url)
+      DecrementFailureCount()
     _PutToQueueWithTimeout(gsutil_api.status_queue,
                            MetadataMessage(message_time=time.time()))
