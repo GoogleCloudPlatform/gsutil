@@ -597,8 +597,9 @@ def ConstructDstUrl(src_url,
   if exp_src_url.IsFileUrl() and (exp_src_url.IsStream() or
                                   exp_src_url.IsFifo()):
     if have_existing_dest_subdir:
+      type_text = 'stream' if exp_src_url.IsStream() else 'named pipe'
       raise CommandException('Destination object name needed when '
-                             'source is a stream')
+                             'source is a %s' % type_text)
     return exp_dst_url
 
   if not recursion_requested and not have_multiple_srcs:

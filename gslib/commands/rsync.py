@@ -1430,6 +1430,12 @@ def _RsyncFunc(cls, diff_to_apply, thread_state=None):
           # getmtime can return a float, so it needs to be converted to long.
           if posix_attrs.mtime > long(time.time()) + SECONDS_PER_DAY:
             WarnFutureTimestamp('mtime', src_url.url_string)
+          if src_url.IsFifo() or src_url.IsStream():
+            type_text = 'Streams' if src_url.IsStream() else 'Named pipes'
+            cls.logger.warn(
+                'WARNING: %s are not supported by gsutil rsync and '
+                'will likely fail. Use the -x option to exclude %s by name.',
+                type_text, src_url.url_string)
         if src_obj_metadata.metadata:
           custom_metadata = src_obj_metadata.metadata
         else:
