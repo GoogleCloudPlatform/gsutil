@@ -36,9 +36,10 @@ _DETAILED_HELP_TEXT = ("""
   eavesdropped and reused.
 
   gsutil also supports the older HMAC style of authentication via the XML API
-  (see "gsutil help apis").  While HMAC authentication does not use bearer
-  tokens (and thus is not subject to eavesdropping/replay attacks), it's still
-  important to encrypt data traffic.
+  (see `gsutil endpoints
+  <https://cloud.google.com/storage/docs/request-endpoints#gsutil>`_).  While
+  HMAC authentication does not use bearer tokens (and thus is not subject to
+  eavesdropping/replay attacks), it's still important to encrypt data traffic.
 
   Prior to gsutil release 4.0 it was possible to use HTTP instead of HTTPS by
   setting the "is_secure" configuration parameter in the [Boto] section of the
