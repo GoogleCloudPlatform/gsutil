@@ -492,7 +492,9 @@ _OPTIONS_TEXT = """
 
                  NOTE: "Daisy chain" mode is automatically used when copying
                  between providers: for example, when copying data from Cloud Storage
-                 to another provider.
+                 to another provider. The combiation with -p option should be used to 
+                 preserve ACLs when copying, omit -p if not required  (e.g. for bucket with 
+                 uniform bucket-level access)
 
   -e             Exclude symlinks. When specified, symbolic links are not copied.
 
