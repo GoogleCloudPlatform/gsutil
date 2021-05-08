@@ -487,14 +487,12 @@ _OPTIONS_TEXT = """
                  at its destination. However, you can use "daisy chain" mode to change a
                  composite object into a non-composite object. For example:
 
-                     gsutil cp -D -p gs://bucket/obj gs://bucket/obj_tmp
-                     gsutil mv -p gs://bucket/obj_tmp gs://bucket/obj
+                     gsutil cp -D gs://bucket/obj gs://bucket/obj_tmp
+                     gsutil mv gs://bucket/obj_tmp gs://bucket/obj
 
                  NOTE: "Daisy chain" mode is automatically used when copying
                  between providers: for example, when copying data from Cloud Storage
-                 to another provider. The combiation with -p option should be used to 
-                 preserve ACLs when copying, omit -p if not required  (e.g. for bucket with 
-                 uniform bucket-level access)
+                 to another provider.
 
   -e             Exclude symlinks. When specified, symbolic links are not copied.
 
