@@ -61,7 +61,6 @@ from gslib.utils.text_util import InsistAsciiHeaderValue
 from gslib.utils.text_util import print_to_fd
 from gslib.utils.unit_util import SECONDS_PER_DAY
 from gslib.utils.update_util import LookUpGsutilVersion
-from gslib.tests.util import HAS_NON_DEFAULT_GS_HOST
 
 
 def HandleHeaderCoding(headers):
@@ -459,8 +458,8 @@ class CommandRunner(object):
     logger = logging.getLogger()
     if (not system_util.IsRunningInteractively() or
         command_name in ('config', 'update', 'ver', 'version') or
-        not logger.isEnabledFor(logging.INFO) or HAS_NON_DEFAULT_GS_HOST or
-        system_util.InvokedViaCloudSdk()):
+        not logger.isEnabledFor(logging.INFO) or
+        boto_util.HasUserSpecifiedGsHost() or system_util.InvokedViaCloudSdk()):
       return False
 
     software_update_check_period = boto.config.getint(

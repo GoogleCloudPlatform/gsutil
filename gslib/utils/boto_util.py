@@ -636,3 +636,12 @@ def _PatchedShouldRetryMethod(self, response, chunked_transfer=False):
       )
 
   return False
+
+def HasUserSpecifiedGsHost():
+  gs_host = boto.config.get('Credentials', 'gs_host', None)
+  default_host = six.ensure_str(boto.gs.connection.GSConnection.DefaultHost)
+
+  if gs_host is not None:
+    return default_host == six.ensure_str(gs_host)
+
+  return False
