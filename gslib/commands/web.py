@@ -76,7 +76,7 @@ _DESCRIPTION = """
   Cloud Storage allows you to configure a bucket to behave like a static
   website. When you set a configuration, requests made to the bucket via a
   `custom domain
-  <https://cloud.google.com/storage/docs/request-endpoints#custom-domains">`_
+  <https://cloud.google.com/storage/docs/request-endpoints#custom-domains>`_
   work like any other website. For example, if you set a ``main_page_suffix``,
   a subsequent GET bucket request through a custom domain serves the specified
   "main" page instead of performing the usual bucket listing. Similarly, if
@@ -86,7 +86,7 @@ _DESCRIPTION = """
 
   
   See `Static website examples and tips
-  <https://cloud.google.com/storage/docs/static-website">`_ for additional
+  <https://cloud.google.com/storage/docs/static-website>`_ for additional
   examples and information.
 
   Notes:
