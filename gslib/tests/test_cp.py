@@ -4607,9 +4607,9 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
     destination_path = 'random_dir' + os.path.sep
 
-    with self.assertRaisesRegex(InvalidUrlError,
-                                'Invalid destination path: random_dir/'):
+    with self.assertRaises(InvalidUrlError) as error:
       self.RunCommand('cp', [suri(object_uri), destination_path])
+      self.assertEqual(str(error), 'Invalid destination path: random_dir/')
 
   def test_object_and_prefix_same_name(self):
     bucket_uri = self.CreateBucket()
