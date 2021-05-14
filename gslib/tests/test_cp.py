@@ -46,6 +46,7 @@ from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import _DEFAULT_DOWNLOAD_CHUNK_SIZE
 from gslib.discard_messages_queue import DiscardMessagesQueue
+from gslib.exception import InvalidUrlError
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.parallel_tracker_file import ObjectFromTracker
 from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
@@ -4598,6 +4599,17 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
         warning_messages[0], r'Non-MD5 etag \(12345\) present for key .*, '
         r'data integrity checks are not possible')
     self.assertIn('Integrity cannot be assured', warning_messages[1])
+
+  def testDownloadWithDestinationEndingWithDelimiterRaisesError(self):
+    """Tests a download with no valid server-supplied hash."""
+    # S3 should have a special message for non-MD5 etags.
+    bucket_uri = self.CreateBucket(provider='s3')
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    destination_path = 'random_dir' + os.path.sep
+
+    with self.assertRaisesRegex(InvalidUrlError,
+                                'Invalid destination path: random_dir/'):
+      self.RunCommand('cp', [suri(object_uri), destination_path])
 
   def test_object_and_prefix_same_name(self):
     bucket_uri = self.CreateBucket()

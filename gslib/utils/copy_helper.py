@@ -77,6 +77,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.exception import CommandException
 from gslib.exception import HashMismatchException
+from gslib.exception import InvalidUrlError
 from gslib.file_part import FilePart
 from gslib.parallel_tracker_file import GenerateComponentObjectPrefix
 from gslib.parallel_tracker_file import ReadParallelUploadTrackerFile
@@ -2968,7 +2969,7 @@ def _DownloadObjectToFile(src_url,
             'typically happens when using gsutil to download from a subdirectory '
             'created by the Cloud Console (https://cloud.google.com/console)' %
             dst_url.object_name)))
-    return (0, 0, dst_url, '')
+    raise InvalidUrlError('Invalid destination path: %s' % dst_url.object_name)
 
   api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
   download_strategy = _SelectDownloadStrategy(dst_url)
