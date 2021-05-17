@@ -64,7 +64,6 @@ function install_pyenv {
   fi
   pyenv update
   # To address pyenv issue: See b/187701234#comment12
-  echo "Going to update python-build"
   cd /home/kbuilder/.pyenv/plugins/python-build/../.. && git pull && \
     git checkout 783870759566a77d09b426e0305bc0993a522765 && cd -
 }
