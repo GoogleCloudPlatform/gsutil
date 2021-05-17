@@ -2969,6 +2969,8 @@ def _DownloadObjectToFile(src_url,
             'typically happens when using gsutil to download from a subdirectory '
             'created by the Cloud Console (https://cloud.google.com/console)' %
             dst_url.object_name)))
+    # The warning above is needed because before this error might get ignored
+    # for parallel processing.
     raise InvalidUrlError('Invalid destination path: %s' % dst_url.object_name)
 
   api_selector = gsutil_api.GetApiSelector(provider=src_url.scheme)
