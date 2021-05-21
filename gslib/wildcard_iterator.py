@@ -221,7 +221,8 @@ class CloudWildcardIterator(WildcardIterator):
           url = StorageUrlFromString(urls_needing_expansion.pop(0))
           (prefix, delimiter, prefix_wildcard,
            suffix_wildcard) = (self._BuildBucketFilterStrings(url.object_name))
-          prog = re.compile(fnmatch.translate(prefix_wildcard))
+          # prog = re.compile(fnmatch.translate(prefix_wildcard))
+          regex_patterns = self._GetRegexPatterns(prefix_wildcard)
 
           # If we have a suffix wildcard, we only care about listing prefixes.
           listing_fields = (set(['prefixes'])
@@ -235,44 +236,81 @@ class CloudWildcardIterator(WildcardIterator):
               all_versions=self.all_versions or single_version_request,
               provider=self.wildcard_url.scheme,
               fields=listing_fields):
-            if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT:
-              gcs_object = obj_or_prefix.data
-              if prog.match(gcs_object.name):
-                if not suffix_wildcard or (StripOneSlash(gcs_object.name)
-                                           == suffix_wildcard):
-                  if not single_version_request or (self._SingleVersionMatches(
-                      gcs_object.generation)):
-                    yield self._GetObjectRef(
-                        bucket_url_string,
-                        gcs_object,
-                        with_version=(self.all_versions or
-                                      single_version_request))
-            else:  # CloudApi.CsObjectOrPrefixType.PREFIX
-              prefix = obj_or_prefix.data
+            for prog in regex_patterns:
+              if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT:
+                gcs_object = obj_or_prefix.data
+                if prog.match(gcs_object.name):
+                  if not suffix_wildcard or (StripOneSlash(gcs_object.name)
+                                             == suffix_wildcard):
+                    if not single_version_request or (
+                        self._SingleVersionMatches(gcs_object.generation)):
+                      yield self._GetObjectRef(
+                          bucket_url_string,
+                          gcs_object,
+                          with_version=(self.all_versions or
+                                        single_version_request))
+                  break
+              else:  # CloudApi.CsObjectOrPrefixType.PREFIX
+                prefix = obj_or_prefix.data
 
-              if ContainsWildcard(prefix):
-                # TODO: Disambiguate user-supplied strings from iterated
-                # prefix and object names so that we can better reason
-                # about wildcards and handle this case without raising an error.
-                raise CommandException(
-                    'Cloud folder %s%s contains a wildcard; gsutil does '
-                    'not currently support objects with wildcards in their '
-                    'name.' % (bucket_url_string, prefix))
+                if ContainsWildcard(prefix):
+                  # TODO: Disambiguate user-supplied strings from iterated
+                  # prefix and object names so that we can better reason
+                  # about wildcards and handle this case without raising
+                  # an error.
+                  raise CommandException(
+                      'Cloud folder %s%s contains a wildcard; gsutil does '
+                      'not currently support objects with wildcards in their '
+                      'name.' % (bucket_url_string, prefix))
 
-              # If the prefix ends with a slash, remove it.  Note that we only
-              # remove one slash so that we can successfully enumerate dirs
-              # containing multiple slashes.
-              rstripped_prefix = StripOneSlash(prefix)
-              if prog.match(rstripped_prefix):
-                if suffix_wildcard and rstripped_prefix != suffix_wildcard:
-                  # There's more wildcard left to expand.
-                  url_append_string = '%s%s' % (bucket_url_string,
-                                                rstripped_prefix + '/' +
-                                                suffix_wildcard)
-                  urls_needing_expansion.append(url_append_string)
-                else:
-                  # No wildcard to expand, just yield the prefix
-                  yield self._GetPrefixRef(bucket_url_string, prefix)
+                # If the prefix ends with a slash, remove it.  Note that we only
+                # remove one slash so that we can successfully enumerate dirs
+                # containing multiple slashes.
+                rstripped_prefix = StripOneSlash(prefix)
+                if prog.match(rstripped_prefix):
+                  if suffix_wildcard and rstripped_prefix != suffix_wildcard:
+                    # There's more wildcard left to expand.
+                    url_append_string = '%s%s' % (bucket_url_string,
+                                                  rstripped_prefix + '/' +
+                                                  suffix_wildcard)
+                    urls_needing_expansion.append(url_append_string)
+                  else:
+                    # No wildcard to expand, just yield the prefix
+                    yield self._GetPrefixRef(bucket_url_string, prefix)
+                  break
+
+  def _GetRegexPatterns(self, wildcard_pattern):
+    """Returns list of regex patterns derived from the wildcard patterns.
+
+    Args:
+      wildcard_pattern (str): A wilcard_pattern to filter the resources.
+
+    Returns:
+      List of compiled regex patterns.
+
+    This translates the wildcard_pattern and also creates some additional
+    patterns so that we can treat ** in a/b/c/**/d.txt as zero or more folders.
+    This means, a/b/c/d.txt will also be returned along with a/b/c/e/f/d.txt.
+    """
+    # Case 1: The original pattern should always be present.
+    wildcard_patterns = [wildcard_pattern]
+    if '/**/' in wildcard_pattern:
+      # Case 2: Will fetch object gs://bucket/dir1/a.txt if pattern is
+      # gs://bucket/dir1/**/a.txt
+      updated_pattern = wildcard_pattern.replace('/**/', '/')
+      wildcard_patterns.append(updated_pattern)
+    else:
+      updated_pattern = wildcard_pattern
+
+    for pattern in (wildcard_pattern, updated_pattern):
+      if pattern.startswith('**/'):
+        # Case 3 (using wildcard_pattern): Will fetch object gs://bucket/a.txt
+        # if pattern is gs://bucket/**/a.txt. Note that '/**/' will match
+        # '/a.txt' not 'a.txt'.
+        # Case 4:(using updated_pattern) Will fetch gs://bucket/dir1/dir2/a.txt
+        # if the pattern is gs://bucket/**/dir1/**/a.txt
+        wildcard_patterns.append(pattern[3:])
+    return [re.compile(fnmatch.translate(p)) for p in wildcard_patterns]
 
   def _BuildBucketFilterStrings(self, wildcard):
     """Builds strings needed for querying a bucket and filtering results.
