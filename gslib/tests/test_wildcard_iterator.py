@@ -94,8 +94,6 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
                                   contents='')
       self.test_bucket2_obj_uri_strs.add(suri(obj_uri))
 
-
-
   def testNoOpObjectIterator(self):
     """Tests that bucket-only URI iterates just that one URI."""
     results = list(
