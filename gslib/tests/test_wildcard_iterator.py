@@ -345,7 +345,7 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(expected_prefixes, actual_prefixes)
     self.assertEqual(expected_uri_strs, actual_uri_strs)
 
-  def testDoubleWildcardAfterBucketAndPrefix(self):
+  def testDoubleWildcardBeforeAndAfterPrefix(self):
     """Tests gs://bucket/**/dir/**/object matching."""
     actual_uri_strs = set()
     actual_prefixes = set()

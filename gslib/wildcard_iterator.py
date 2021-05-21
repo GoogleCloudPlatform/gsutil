@@ -221,7 +221,6 @@ class CloudWildcardIterator(WildcardIterator):
           url = StorageUrlFromString(urls_needing_expansion.pop(0))
           (prefix, delimiter, prefix_wildcard,
            suffix_wildcard) = (self._BuildBucketFilterStrings(url.object_name))
-          # prog = re.compile(fnmatch.translate(prefix_wildcard))
           regex_patterns = self._GetRegexPatterns(prefix_wildcard)
 
           # If we have a suffix wildcard, we only care about listing prefixes.
@@ -236,10 +235,10 @@ class CloudWildcardIterator(WildcardIterator):
               all_versions=self.all_versions or single_version_request,
               provider=self.wildcard_url.scheme,
               fields=listing_fields):
-            for prog in regex_patterns:
+            for pattern in regex_patterns:
               if obj_or_prefix.datatype == CloudApi.CsObjectOrPrefixType.OBJECT:
                 gcs_object = obj_or_prefix.data
-                if prog.match(gcs_object.name):
+                if pattern.match(gcs_object.name):
                   if not suffix_wildcard or (StripOneSlash(gcs_object.name)
                                              == suffix_wildcard):
                     if not single_version_request or (
@@ -267,7 +266,7 @@ class CloudWildcardIterator(WildcardIterator):
                 # remove one slash so that we can successfully enumerate dirs
                 # containing multiple slashes.
                 rstripped_prefix = StripOneSlash(prefix)
-                if prog.match(rstripped_prefix):
+                if pattern.match(rstripped_prefix):
                   if suffix_wildcard and rstripped_prefix != suffix_wildcard:
                     # There's more wildcard left to expand.
                     url_append_string = '%s%s' % (bucket_url_string,
@@ -275,7 +274,7 @@ class CloudWildcardIterator(WildcardIterator):
                                                   suffix_wildcard)
                     urls_needing_expansion.append(url_append_string)
                   else:
-                    # No wildcard to expand, just yield the prefix
+                    # No wildcard to expand, just yield the prefix.
                     yield self._GetPrefixRef(bucket_url_string, prefix)
                   break
 
