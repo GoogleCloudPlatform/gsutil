@@ -56,18 +56,14 @@ function install_pyenv {
   if ! [ "$(pyenv --version)" ]; then
     # For now, only doing this on mac,
     # beacuse that was the only place where it appeared to be missing.
-    if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
-      brew update
-      brew install pyenv
-      eval "$(pyenv init -)"
-    fi
+    git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
   fi
-  if ! [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
-    pyenv update
-    # To address pyenv issue: See b/187701234#comment12
-    cd /home/kbuilder/.pyenv/plugins/python-build/../.. && git pull && \
+  pyenv update
+  # To address pyenv issue: See b/187701234#comment12
+  cd /home/kbuilder/.pyenv/plugins/python-build/../.. && git pull && \
      git checkout 783870759566a77d09b426e0305bc0993a522765 && cd -
-  fi
 }
 
 function install_python {
