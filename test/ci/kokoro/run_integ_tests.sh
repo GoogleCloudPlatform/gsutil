@@ -59,6 +59,7 @@ function install_pyenv {
     git clone https://github.com/pyenv/pyenv.git ~/.pyenv
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
   fi
   pyenv update
   # To address pyenv issue: See b/187701234#comment12
