@@ -270,12 +270,10 @@ class KmsCommand(Command):
       if self.warn_on_key_authorize_failure:
         text_util.print_to_fd('\n'.join(
             textwrap.wrap(
-                'Warning: Unable to check the IAM policy for the specified '
-                'encryption key. Check that your Cloud Platform project\'s '
-                'service account has the '
-                '"cloudkms.cryptoKeyEncrypterDecrypter" role for the '
-                'specified key. Without this role, you may not be able to '
-                'encrypt or decrypt objects using the key which will '
+                'Warning: Check that your Cloud Platform project\'s service '
+                'account has the "cloudkms.cryptoKeyEncrypterDecrypter" role '
+                'for the specified key. Without this role, you may not be '
+                'able to encrypt or decrypt objects using the key which will '
                 'prevent you from uploading or downloading objects.')))
         return (service_account, False)
       else:
