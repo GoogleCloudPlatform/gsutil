@@ -62,10 +62,12 @@ function install_pyenv {
       eval "$(pyenv init -)"
     fi
   fi
-  pyenv update
-  # To address pyenv issue: See b/187701234#comment12
-  cd /home/kbuilder/.pyenv/plugins/python-build/../.. && git pull && \
-    git checkout 783870759566a77d09b426e0305bc0993a522765 && cd -
+  if ! [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
+    pyenv update
+    # To address pyenv issue: See b/187701234#comment12
+    cd /home/kbuilder/.pyenv/plugins/python-build/../.. && git pull && \
+     git checkout 783870759566a77d09b426e0305bc0993a522765 && cd -
+  fi
 }
 
 function install_python {
