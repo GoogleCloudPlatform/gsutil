@@ -60,6 +60,7 @@ function install_pyenv {
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
+    pyenv init
   fi
   pyenv update
   # To address pyenv issue: See b/187701234#comment12
