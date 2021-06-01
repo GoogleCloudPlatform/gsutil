@@ -74,7 +74,8 @@ _DETAILED_HELP_TEXT = ("""
 
 top_level_usage_string = (
     'Usage: gsutil [-D] [-DD] [-h header]... [-i service_account] '
-    '[-m] [-o section:flag=value]... [-q] [-u user_project] [command [opts...] args...]')
+    '[-m] [-o section:flag=value]... [-q] [-u user_project] [command [opts...] args...]'
+)
 
 
 class HelpCommand(Command):
