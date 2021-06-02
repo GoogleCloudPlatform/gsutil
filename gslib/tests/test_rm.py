@@ -611,8 +611,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
          suri(object_uri)],
         return_stderr=True,
         expected_status=1)
-    self.assertRegex(
-        stderr, r'PreconditionException: 412 (Precondition)?\s*(Failed|None)')
+    self.assertRegex(stderr, r'PreconditionException: 412')
 
   def test_stdin_args(self):
     """Tests rm with the -I option."""
