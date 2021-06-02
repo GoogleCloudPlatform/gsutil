@@ -24,10 +24,11 @@ from gslib.help_provider import HelpProvider
 _DETAILED_HELP_TEXT = ("""
 <B>OVERVIEW</B>
   gsutil currently supports several types of credentials/authentication, as
-  well as the ability to access public data anonymously (see "gsutil help anon"
-  for more on anonymous access). Each of these type of credentials is discussed
-  in more detail below, along with information about configuring and using
-  credentials via either the Cloud SDK or standalone installations of gsutil.
+  well as the ability to `access public data anonymously
+  <https://cloud.google.com/storage/docs/access-public-data>`_. Each of these
+  type of credentials is discussed in more detail below, along with
+  information about configuring and using credentials via either the Cloud SDK
+  or standalone installations of gsutil.
 
 
 <B>Configuring/Using Credentials via Cloud SDK Distribution of gsutil</B>
