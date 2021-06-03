@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import atexit
+import json
 import os
 import subprocess
 
@@ -132,10 +133,9 @@ class _ContextConfig(object):
 
     # Generates certificate and deletes it afterwards.
     atexit.register(self._UnprovisionClientCert)
-    command_string = config.get('Credentials', 'cert_provider_command', None)
-    if not command_string:
-      raise CertProvisionError('No cert provider detected.')
-
+    config_path = config.get('Credentials',
+                             'context_aware_config_path', None)
+    command_string = self._GetProviderCommand(config_path)
     self.client_cert_path = os.path.join(gslib.GSUTIL_DIR, 'caa_cert.pem')
     try:
       # Certs provisioned using endpoint verification are stored as a
@@ -143,6 +143,18 @@ class _ContextConfig(object):
       self._ProvisionClientCert(command_string, self.client_cert_path)
     except CertProvisionError as e:
       self.logger.error('Failed to provision client certificate: %s' % e)
+
+  def _GetProviderCommand(self, config_path):
+    if not config_path:
+      raise CertProvisionError('No cert provider detected.')
+    try:
+        with open(config_path, 'r') as f:
+          json_out = json.loads(f.read())
+          if 'cert_provider_command' in json_out:
+            return json_out['cert_provider_command']
+          raise CertProvisionError('No cert provider detected.')
+    except OSError as e:
+      raise CertProvisionError('Invalid context aware config path.')
 
   def _ProvisionClientCert(self, command_string, cert_path):
     """Executes certificate provider to obtain client certificate and keys."""
