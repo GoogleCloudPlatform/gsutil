@@ -1,3 +1,19 @@
+Release 4.63 (release date: 2021-06-09)
+=======================================
+Bug Fixes
+------------------
+ - Update warning text on KMS access denied (#1278)
+ - Make ** to represent zero or more folders for cloud urls (#1277)
+ - Raise error if final destination path ends with a delimiter. (#1273)
+
+Other Changes
+------------------
+ - Fix flaky test for rm using preconditions (#1288)
+ - Fix pyenv issue for macOS (#1280)
+ - Fix rewrite tests (#1279)
+ - Remove unused progress callback. (#1274)
+ - Several documentation updates and clarifications.
+
 Release 4.62 (release date: 2021-05-13)
 =======================================
 New Features
