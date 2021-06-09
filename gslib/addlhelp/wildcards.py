@@ -115,8 +115,8 @@ _DETAILED_HELP_TEXT = ("""
      character sets. For example, if you use zsh with the extendedglob option
      enabled it treats ``#`` as a special character, which conflicts with
      that character's use in referencing versioned objects (see
-     `Copy noncurrent object versions
-     <https://cloud.google.com/storage/docs/using-object-versioning#copy>`_
+     `Restore noncurrent object versions
+     <https://cloud.google.com/storage/docs/using-versioned-objects#restore>`_
      for an example).
 
      To avoid these problems, surround the wildcarded expression with single
