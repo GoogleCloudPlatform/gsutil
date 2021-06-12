@@ -170,8 +170,8 @@ class Bucket(_messages.Message):
 
     Fields:
       bucketPolicyOnly: The bucket's Bucket Policy Only configuration.
-      publicAccessPrevention: The bucket's Public Access Prevention
-        configuration. Currently, 'unspecified' and 'enforced' are supported.
+      publicAccessPrevention: The bucket's public access prevention
+        configuration. Valid values are `unspecified` and `enforced`.
     """
 
     class BucketPolicyOnlyValue(_messages.Message):

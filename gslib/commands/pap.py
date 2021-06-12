@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""This module provides the publicaccessprevention command to gsutil."""
+"""This module provides the pap command to gsutil."""
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -30,47 +30,46 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.constants import NO_MAX
 
 _SET_SYNOPSIS = """
-  gsutil publicaccessprevention set (enforced|unspecified) gs://<bucket_name>...
+  gsutil pap set (enforced|unspecified) gs://<bucket_name>...
 """
 
 _GET_SYNOPSIS = """
-  gsutil publicaccessprevention get bucket_url...
+  gsutil pap get bucket_url...
 """
 
 _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 
 _SET_DESCRIPTION = """
 <B>SET</B>
-  The ``publicaccessprevention set`` command configures public access prevention
+  The ``pap set`` command configures public access prevention
   for Google Cloud Storage buckets.
 
 <B>SET EXAMPLES</B>
   Configure your buckets to use public access prevention:
 
-    gsutil publicaccessprevention set enforced gs://redbucket gs://bluebucket
+    gsutil pap set enforced gs://redbucket gs://bluebucket
 
   Configure your buckets to NOT use public access prevention:
 
-    gsutil publicaccessprevention set unspecified gs://redbucket gs://bluebucket
+    gsutil pap set unspecified gs://redbucket gs://bluebucket
 """
 
 _GET_DESCRIPTION = """
 <B>GET</B>
-  The ``publicaccessprevention get`` command returns public access prevention
-  value for the specified Cloud Storage bucket(s).
+  The ``pap get`` command returns public access prevention
+  value for the specified Cloud Storage buckets.
 
 <B>GET EXAMPLES</B>
   Check if your buckets are using public access prevention:
 
-    gsutil publicaccessprevention get gs://redbucket gs://bluebucket
+    gsutil pap get gs://redbucket gs://bluebucket
 """
 
 _DESCRIPTION = """
-  The ``publicaccessprevention`` command is used to retrieve or configure the
+  The ``pap`` command is used to retrieve or configure the
   `public access prevention
   <https://cloud.google.com/storage/docs/public-access-prevention>`_ setting of
-  Cloud Storage bucket(s). This command has two sub-commands, ``get`` and
-  ``set``.
+  Cloud Storage buckets. This command has two sub-commands: ``get`` and ``set``.
 """ + _GET_DESCRIPTION + _SET_DESCRIPTION
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
@@ -81,8 +80,8 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
 
 
-class PublicAccessPreventionCommand(Command):
-  """Implements the gsutil publicaccessprevention command."""
+class PapCommand(Command):
+  """Implements the gsutil pap command."""
 
   command_spec = Command.CreateCommandSpec(
       'pap',
@@ -108,7 +107,7 @@ class PublicAccessPreventionCommand(Command):
       help_name='pap',
       help_name_aliases=['publicaccessprevention'],
       help_type='command_help',
-      help_one_line_summary='Configure Public Access Prevention',
+      help_one_line_summary='Configure public access prevention',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
@@ -123,7 +122,7 @@ class PublicAccessPreventionCommand(Command):
           self.command_name)
 
   def _GetPublicAccessPrevention(self, blr):
-    """Gets the Public Access Prevention setting for a bucket."""
+    """Gets the public access prevention setting for a bucket."""
     bucket_url = blr.storage_url
 
     bucket_metadata = self.gsutil_api.GetBucket(bucket_url.bucket_name,
@@ -132,8 +131,7 @@ class PublicAccessPreventionCommand(Command):
     iam_config = bucket_metadata.iamConfiguration
     public_access_prevention = iam_config.publicAccessPrevention or 'unspecified'
     bucket = str(bucket_url).rstrip('/')
-    print('Public Access Prevention setting for %s: %s' %
-          (bucket, public_access_prevention))
+    print('%s: %s' % (bucket, public_access_prevention))
 
   def _SetPublicAccessPrevention(self, blr, setting_arg):
     """Sets the Public Access Prevention setting for a bucket enforced or unspecified."""
@@ -153,12 +151,12 @@ class PublicAccessPreventionCommand(Command):
                                 provider=bucket_url.scheme)
     return 0
 
-  def _publicaccessprevention(self):
-    """Handles publicaccessprevention command on a Cloud Storage bucket."""
+  def _pap(self):
+    """Handles pap command on Cloud Storage buckets."""
     subcommand = self.args.pop(0)
 
     if subcommand not in ('get', 'set'):
-      raise CommandException('publicaccessprevention only supports get|set')
+      raise CommandException('pap only supports get|set')
 
     subcommand_func = None
     subcommand_args = []
@@ -180,6 +178,13 @@ class PublicAccessPreventionCommand(Command):
       # Throws a CommandException if the argument is not a bucket.
       bucket_iter = self.GetBucketUrlIterFromArg(url_str)
       for bucket_listing_ref in bucket_iter:
+        # raise CommandException("jon: " + str(bucket_listing_ref.storage_url))
+        if self.gsutil_api.GetApiSelector(
+            bucket_listing_ref.storage_url.scheme) != ApiSelector.JSON:
+          raise CommandException('\n'.join(
+              textwrap.wrap(
+                  'The "%s" command can only be used for GCS Buckets with the Cloud Storage JSON API.'
+                  % self.command_name)))
         some_matched = True
         subcommand_func(bucket_listing_ref, *subcommand_args)
 
@@ -188,20 +193,14 @@ class PublicAccessPreventionCommand(Command):
     return 0
 
   def RunCommand(self):
-    """Command entry point for the publicaccessprevention command."""
-    if self.gsutil_api.GetApiSelector(provider='gs') != ApiSelector.JSON:
-      raise CommandException('\n'.join(
-          textwrap.wrap(
-              'The "%s" command can only be used with the Cloud Storage JSON API.'
-              % self.command_name)))
-
+    """Command entry point for the pap command."""
     action_subcommand = self.args[0]
     self.ParseSubOpts(check_args=True)
 
     if action_subcommand == 'get' or action_subcommand == 'set':
       metrics.LogCommandParams(sub_opts=self.sub_opts)
       metrics.LogCommandParams(subcommands=[action_subcommand])
-      self._publicaccessprevention()
+      self._pap()
     else:
       raise CommandException('Invalid subcommand "%s", use get|set instead.' %
                              action_subcommand)

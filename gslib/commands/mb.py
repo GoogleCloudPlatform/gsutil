@@ -159,7 +159,7 @@ _DETAILED_HELP_TEXT = ("""
                          requires using the JSON API.
 
   --pap setting          Specifies the public access prevention setting.
-                         Valid values are <enforced|unspecified>.
+                         Valid values are "enforced" or "unspecified".
                          Default is "unspecified".
 
 """)
@@ -246,9 +246,6 @@ class MbCommand(Command):
           InsistOnOrOff(a, 'Only on and off values allowed for -b option')
           bucket_policy_only = (a == 'on')
         elif o == '--pap':
-          if self.gsutil_api.GetApiSelector('gs') != ApiSelector.JSON:
-            raise CommandException('The --pap <enforced|unspecified> option '
-                                   'can only be used with the JSON API')
           public_access_prevention = a
 
     bucket_metadata = apitools_messages.Bucket(location=location,
@@ -272,6 +269,11 @@ class MbCommand(Command):
             retentionPeriod=seconds))
         bucket_metadata.retentionPolicy = retention_policy
 
+      if public_access_prevention and self.gsutil_api.GetApiSelector(
+          bucket_url.scheme) != ApiSelector.JSON:
+        raise CommandException(
+            'The --pap option can only be used for GCS Buckets with the JSON API'
+        )
       if not bucket_url.IsBucket():
         raise CommandException('The mb command requires a URL that specifies a '
                                'bucket.\n"%s" is not valid.' % bucket_url)
