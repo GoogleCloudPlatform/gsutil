@@ -105,6 +105,8 @@ class Bucket(_messages.Message):
       retention policy cannot be removed or shortened in duration for the
       lifetime of the bucket. Attempting to remove or decrease period of a
       locked retention policy will result in a PERMISSION_DENIED error.
+    rpo: The Recovery Point Objective (RPO) of this bucket. Set to
+      ASYNC_PREMIUM to turn on Turbo Replication on a bucket.
     satisfiesPZS: Reserved for future use.
     selfLink: The URI of this bucket.
     storageClass: The bucket's default storage class, used whenever no
@@ -408,13 +410,14 @@ class Bucket(_messages.Message):
   owner = _messages.MessageField('OwnerValue', 18)
   projectNumber = _messages.IntegerField(19, variant=_messages.Variant.UINT64)
   retentionPolicy = _messages.MessageField('RetentionPolicyValue', 20)
-  satisfiesPZS = _messages.BooleanField(21)
-  selfLink = _messages.StringField(22)
-  storageClass = _messages.StringField(23)
-  timeCreated = _message_types.DateTimeField(24)
-  updated = _message_types.DateTimeField(25)
-  versioning = _messages.MessageField('VersioningValue', 26)
-  website = _messages.MessageField('WebsiteValue', 27)
+  rpo = _messages.StringField(21)
+  satisfiesPZS = _messages.BooleanField(22)
+  selfLink = _messages.StringField(23)
+  storageClass = _messages.StringField(24)
+  timeCreated = _message_types.DateTimeField(25)
+  updated = _message_types.DateTimeField(26)
+  versioning = _messages.MessageField('VersioningValue', 27)
+  website = _messages.MessageField('WebsiteValue', 28)
 
 
 class BucketAccessControl(_messages.Message):
