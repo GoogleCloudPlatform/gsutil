@@ -1,3 +1,13 @@
+Release 4.64 (release date: 2021-06-18)
+=======================================
+Bug Fixes
+------------------
+ - None
+
+Other Changes
+------------------
+ - Link fix pointing to CGC docs.
+
 Release 4.63 (release date: 2021-06-09)
 =======================================
 Bug Fixes
