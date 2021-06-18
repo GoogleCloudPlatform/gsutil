@@ -151,7 +151,7 @@ class PapCommand(Command):
                                 provider=bucket_url.scheme)
     return 0
 
-  def _pap(self):
+  def _Pap(self):
     """Handles pap command on Cloud Storage buckets."""
     subcommand = self.args.pop(0)
 
@@ -169,6 +169,11 @@ class PapCommand(Command):
       setting_arg = self.args.pop(0)
       subcommand_args.append(setting_arg)
 
+    if self.gsutil_api.GetApiSelector('gs') != ApiSelector.JSON:
+      raise CommandException('\n'.join(
+          textwrap.wrap(('The "%s" command can only be with the Cloud Storage '
+                         'JSON API.') % self.command_name)))
+
     # Iterate over bucket args, performing the specified subsubcommand.
     some_matched = False
     url_args = self.args
@@ -178,13 +183,12 @@ class PapCommand(Command):
       # Throws a CommandException if the argument is not a bucket.
       bucket_iter = self.GetBucketUrlIterFromArg(url_str)
       for bucket_listing_ref in bucket_iter:
-        # raise CommandException("jon: " + str(bucket_listing_ref.storage_url))
         if self.gsutil_api.GetApiSelector(
             bucket_listing_ref.storage_url.scheme) != ApiSelector.JSON:
           raise CommandException('\n'.join(
-              textwrap.wrap(
-                  'The "%s" command can only be used for GCS Buckets with the Cloud Storage JSON API.'
-                  % self.command_name)))
+              textwrap.wrap(('The "%s" command can only be used for GCS '
+                             'Buckets.') % self.command_name)))
+
         some_matched = True
         subcommand_func(bucket_listing_ref, *subcommand_args)
 
@@ -200,7 +204,7 @@ class PapCommand(Command):
     if action_subcommand == 'get' or action_subcommand == 'set':
       metrics.LogCommandParams(sub_opts=self.sub_opts)
       metrics.LogCommandParams(subcommands=[action_subcommand])
-      self._pap()
+      self._Pap()
     else:
       raise CommandException('Invalid subcommand "%s", use get|set instead.' %
                              action_subcommand)

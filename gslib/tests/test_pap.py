@@ -21,6 +21,7 @@ from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForJSON
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
 
 
 class TestPublicAccessPrevention(testcase.GsUtilIntegrationTestCase):
@@ -60,6 +61,7 @@ class TestPublicAccessPrevention(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_pap_cmd + ['unspecified', suri(bucket_uri)])
     self.VerifyPublicAccessPreventionValue(bucket_uri, 'unspecified')
 
+  @SkipForXML('Public access prevention only runs on GCS JSON API')
   def test_multiple_buckets(self):
     bucket_uri1 = self.CreateBucket()
     bucket_uri2 = self.CreateBucket()
@@ -72,50 +74,63 @@ class TestPublicAccessPrevention(testcase.GsUtilIntegrationTestCase):
 
   @SkipForJSON('Testing XML only behavior')
   def test_xml_fails(self):
-    stderr = self.RunGsUtil(self._set_pap_cmd,
-                            return_stderr=True,
-                            expected_status=1)
-    self.assertIn(
-        'set command can only be used for GCS Buckets with the Cloud Storage JSON API',
-        stderr)
+    # use HMAC for force XML API
+    boto_config_hmac_auth_only = [
+        # Overwrite other credential types.
+        ('Credentials', 'gs_oauth2_refresh_token', None),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None),
+        ('Credentials', 'gs_service_key_file_password', None),
+        # Add hmac credentials.
+        ('Credentials', 'gs_access_key_id', 'dummykey'),
+        ('Credentials', 'gs_secret_access_key', 'dummysecret'),
+    ]
+    with SetBotoConfigForTest(boto_config_hmac_auth_only):
+      bucket_uri = 'gs://any-bucket-name'
+      stderr = self.RunGsUtil(self._set_pap_cmd + ['unspecified', bucket_uri],
+                              return_stderr=True,
+                              expected_status=1)
+      self.assertIn('command can only be with the Cloud Storage JSON API',
+                    stderr)
 
-    stderr = self.RunGsUtil(self._get_pap_cmd,
-                            return_stderr=True,
-                            expected_status=1)
-    self.assertIn(
-        'get command can only be used for GCS Buckets with the Cloud Storage JSON API',
-        stderr)
+      stderr = self.RunGsUtil(self._get_pap_cmd + [bucket_uri],
+                              return_stderr=True,
+                              expected_status=1)
+      self.assertIn('command can only be with the Cloud Storage JSON API',
+                    stderr)
 
   @SkipForGS('Testing S3 only behavior')
   def test_s3_fails(self):
-    stderr = self.RunGsUtil(self._set_pap_cmd,
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(self._set_pap_cmd +
+                            ['unspecified', suri(bucket_uri)],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn(
-        'set command can only be used for GCS Buckets with the Cloud Storage JSON API',
-        stderr)
+    self.assertIn('command can only be used for GCS Buckets', stderr)
 
-    stderr = self.RunGsUtil(self._get_pap_cmd,
+    stderr = self.RunGsUtil(self._get_pap_cmd + [suri(bucket_uri)],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn(
-        'get command can only be used for GCS Buckets with the Cloud Storage JSON API',
-        stderr)
+    self.assertIn('command can only be used for GCS Buckets', stderr)
 
-  def test_too_few_arguments_fails(self):
-    """Ensures pap commands fail with too few arguments."""
-    # No arguments for set, but valid subcommand.
+  def test_set_too_few_arguments_fails(self):
     stderr = self.RunGsUtil(self._set_pap_cmd,
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('command requires at least', stderr)
 
-    # No arguments for get, but valid subcommand.
+  def test_get_too_few_arguments_fails(self):
     stderr = self.RunGsUtil(self._get_pap_cmd,
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('command requires at least', stderr)
 
-    # Neither arguments nor subcommand.
+  def test_no_subcommand_fails(self):
     stderr = self.RunGsUtil(['pap'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
+
+  def test_invalid_subcommand_fails(self):
+    stderr = self.RunGsUtil(['pap', 'fakecommand', 'test'],
+                            return_stderr=True,
+                            expected_status=1)
+    self.assertIn('Invalid subcommand', stderr)
