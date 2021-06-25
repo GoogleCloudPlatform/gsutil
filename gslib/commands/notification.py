@@ -142,11 +142,11 @@ _CREATE_DESCRIPTION = """
   create command uses the Cloud Pub/Sub topic
   "projects/default-project/topics/example-bucket".
 
-  In order to enable notifications, a `special Cloud Storage service account
+  In order to enable notifications, your project's `Cloud Storage service agent
   <https://cloud.google.com/storage/docs/projects#service-accounts>`_ unique to
   each project must have the IAM permission "pubsub.topics.publish". This
   command checks to see if the destination Cloud Pub/Sub topic grants the
-  service account this permission. If not, the create command attempts to
+  service agent this permission. If not, the create command attempts to
   grant it.
 
   A bucket can have up to 100 total notification configurations and up to 10
