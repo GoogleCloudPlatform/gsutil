@@ -150,6 +150,9 @@ _DETAILED_HELP_TEXT = ("""
   flow through the machine where gsutil is running, doing this can make your
   transfer run significantly faster than running gsutil on your local
   workstation.
+  
+  Note 3: rsync does not copy empty directory trees, since Cloud Storage uses a
+  `flat namespace <https://cloud.google.com/storage/docs/folders>`_.
 
 
 <B>Using -d Option (with caution!) to mirror source and destination.</B>
