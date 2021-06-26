@@ -54,8 +54,9 @@ _SET_DESCRIPTION = """
 <B>ON</B>
   The "gsutil logging set on" command will enable usage logging of the
   buckets named by the specified URLs, outputting log files in the specified
-  logging_bucket. logging_bucket must already exist, and all URLs must name
-  buckets (e.g., gs://bucket). The required bucket parameter specifies the
+  logging_bucket. Cloud Storage doesn't validate the existence of logging_bucket
+  so users should ensure it already exists, and all URLs must name buckets
+  (e.g., gs://bucket). The required bucket parameter specifies the
   bucket to which the logs are written, and the optional log_object_prefix
   parameter specifies the prefix for log object names. The default prefix
   is the bucket name. For example, the command:
