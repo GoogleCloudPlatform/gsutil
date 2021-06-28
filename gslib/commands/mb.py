@@ -38,7 +38,7 @@ from gslib.utils.text_util import NormalizeStorageClass
 
 _SYNOPSIS = """
   gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
-            [--retention <time>] gs://<bucket_name>...
+            [--retention <time>] [--pap <setting>] gs://<bucket_name>...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -69,6 +69,9 @@ _DETAILED_HELP_TEXT = ("""
   ACLs assigned to objects are not evaluated in buckets with uniform bucket-
   level access enabled. Consequently, only IAM policies grant access to objects
   in these buckets.
+
+  The --pap option specifies the public access prevention setting of the bucket.
+  When enforced, objects in this bucket cannot be made publicly accessible.
 
 <B>BUCKET STORAGE CLASSES</B>
   You can specify one of the `storage classes
@@ -154,6 +157,11 @@ _DETAILED_HELP_TEXT = ("""
   --retention time       Specifies the retention policy. Default is no retention
                          policy. This can only be set on gs:// buckets and
                          requires using the JSON API.
+
+  --pap setting          Specifies the public access prevention setting.
+                         Valid values are "enforced" or "unspecified".
+                         Default is "unspecified".
+
 """)
 
 # Regex to disallow buckets violating charset or not [3..255] chars total.
@@ -176,7 +184,7 @@ class MbCommand(Command):
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='b:c:l:p:s:',
-      supported_private_args=['retention='],
+      supported_private_args=['retention=', 'pap='],
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -218,6 +226,7 @@ class MbCommand(Command):
     location = None
     storage_class = None
     seconds = None
+    public_access_prevention = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
@@ -236,14 +245,19 @@ class MbCommand(Command):
                                    'can only be used with the JSON API')
           InsistOnOrOff(a, 'Only on and off values allowed for -b option')
           bucket_policy_only = (a == 'on')
+        elif o == '--pap':
+          public_access_prevention = a
 
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                storageClass=storage_class)
-    if bucket_policy_only:
+    if bucket_policy_only or public_access_prevention:
       bucket_metadata.iamConfiguration = IamConfigurationValue()
       iam_config = bucket_metadata.iamConfiguration
-      iam_config.bucketPolicyOnly = BucketPolicyOnlyValue()
-      iam_config.bucketPolicyOnly.enabled = bucket_policy_only
+      if bucket_policy_only:
+        iam_config.bucketPolicyOnly = BucketPolicyOnlyValue()
+        iam_config.bucketPolicyOnly.enabled = bucket_policy_only
+      if public_access_prevention:
+        iam_config.publicAccessPrevention = public_access_prevention
 
     for bucket_url_str in self.args:
       bucket_url = StorageUrlFromString(bucket_url_str)
@@ -255,6 +269,11 @@ class MbCommand(Command):
             retentionPeriod=seconds))
         bucket_metadata.retentionPolicy = retention_policy
 
+      if public_access_prevention and self.gsutil_api.GetApiSelector(
+          bucket_url.scheme) != ApiSelector.JSON:
+        raise CommandException(
+            'The --pap option can only be used for GCS Buckets with the JSON API'
+        )
       if not bucket_url.IsBucket():
         raise CommandException('The mb command requires a URL that specifies a '
                                'bucket.\n"%s" is not valid.' % bucket_url)

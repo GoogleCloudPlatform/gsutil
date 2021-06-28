@@ -170,6 +170,8 @@ class Bucket(_messages.Message):
 
     Fields:
       bucketPolicyOnly: The bucket's Bucket Policy Only configuration.
+      publicAccessPrevention: The bucket's public access prevention
+        configuration. Valid values are `unspecified` and `enforced`.
     """
 
     class BucketPolicyOnlyValue(_messages.Message):
@@ -189,6 +191,7 @@ class Bucket(_messages.Message):
       lockedTime = _message_types.DateTimeField(2)
 
     bucketPolicyOnly = _messages.MessageField('BucketPolicyOnlyValue', 1)
+    publicAccessPrevention = _messages.StringField(2)
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class LabelsValue(_messages.Message):

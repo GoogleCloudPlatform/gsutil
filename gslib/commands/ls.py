@@ -376,9 +376,13 @@ class LsCommand(Command):
       fields['updated'] = bucket.updated.strftime('%a, %d %b %Y %H:%M:%S GMT')
     if bucket.defaultEventBasedHold:
       fields['default_eventbased_hold'] = bucket.defaultEventBasedHold
-    if bucket.iamConfiguration and bucket.iamConfiguration.bucketPolicyOnly:
-      enabled = bucket.iamConfiguration.bucketPolicyOnly.enabled
-      fields['bucket_policy_only_enabled'] = enabled
+    if bucket.iamConfiguration:
+      if bucket.iamConfiguration.bucketPolicyOnly:
+        enabled = bucket.iamConfiguration.bucketPolicyOnly.enabled
+        fields['bucket_policy_only_enabled'] = enabled
+      if bucket.iamConfiguration.publicAccessPrevention:
+        fields[
+            'public_access_prevention'] = bucket.iamConfiguration.publicAccessPrevention
     if bucket.satisfiesPZS:
       fields['satisfies_pzs'] = bucket.satisfiesPZS
 
@@ -404,6 +408,7 @@ class LsCommand(Command):
     default_eventbased_hold_line = ''
     retention_policy_line = ''
     bucket_policy_only_enabled_line = ''
+    public_access_prevention_line = ''
     satisifies_pzs_line = ''
     if 'location_type' in fields:
       location_type_line = '\tLocation type:\t\t\t{location_type}\n'
@@ -421,6 +426,9 @@ class LsCommand(Command):
     if 'bucket_policy_only_enabled' in fields:
       bucket_policy_only_enabled_line = ('\tBucket Policy Only enabled:\t'
                                          '{bucket_policy_only_enabled}\n')
+    if 'public_access_prevention' in fields:
+      public_access_prevention_line = ('\tPublic access prevention:\t'
+                                       '{public_access_prevention}\n')
     if 'satisfies_pzs' in fields:
       satisifies_pzs_line = '\tSatisfies PZS:\t\t\t{satisfies_pzs}\n'
 
@@ -438,8 +446,8 @@ class LsCommand(Command):
          '\tLabels:\t\t\t\t{labels}\n' +
          '\tDefault KMS key:\t\t{default_kms_key}\n' + time_created_line +
          time_updated_line + metageneration_line +
-         bucket_policy_only_enabled_line + satisifies_pzs_line +
-         '\tACL:\t\t\t\t{acl}\n'
+         bucket_policy_only_enabled_line + public_access_prevention_line +
+         satisifies_pzs_line + '\tACL:\t\t\t\t{acl}\n'
          '\tDefault ACL:\t\t\t{default_acl}').format(**fields))
     if bucket_blr.storage_url.scheme == 's3':
       text_util.print_to_fd(

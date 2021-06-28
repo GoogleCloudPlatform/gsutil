@@ -1061,3 +1061,14 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['retention', 'event', 'release', suri(object_uri)])
     stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)], return_stdout=True)
     self.assertNotRegex(stdout, r'Event-Based Hold')
+
+  @SkipForXML('public access prevention is not supported for the XML API.')
+  @SkipForS3('public access prevention is not supported for S3 buckets.')
+  def test_list_public_access_prevention(self):
+    bucket_uri = self.CreateBucket()
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r'Public access prevention:\t*unspecified')
+    # Enforce public access prevention.
+    self.RunGsUtil(['pap', 'set', 'enforced', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r'Public access prevention:\t*enforced')
