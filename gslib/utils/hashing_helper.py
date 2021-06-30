@@ -530,7 +530,7 @@ class HashingFileUploadWrapper(object):
 
     for alg in self._digesters:
       if bytes_to_read >= MIN_SIZE_COMPUTE_LOGGING:
-        self._logger.info('Catching up %s for %s...', alg,
+        self._logger.debug('Catching up %s for %s...', alg,
                           self._src_url.url_string)
       self._digesters_previous[alg] = self._digesters[alg].copy()
 
