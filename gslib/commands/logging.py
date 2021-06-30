@@ -103,13 +103,15 @@ _GET_DESCRIPTION = """
 """
 
 _DESCRIPTION = """
-  Google Cloud Storage offers usage logs and storage data in the form of
-  CSV files that you can download and view. Usage logs provide information
-  for all of the requests made on a specified bucket in the last 24 hours,
-  while the storage logs provide information about the storage consumption of
-  that bucket for the last 24 hour period. The logs and storage data files
-  are automatically created as new objects in a bucket that you specify, in
-  24 hour intervals.
+  Google Cloud Storage offers usage logs and storage logs in the form of CSV
+  files that you can download and view. Usage logs provide information for all
+  of the requests made on a specified bucket and are created hourly. Storage
+  logs provide information about the storage consumption of that bucket for
+  the last day and are created daily.
+  
+  Once set up, usage logs and storage logs are automatically created as new
+  objects in a bucket that you specify. Usage logs and storage logs are
+  subject to the same pricing as other objects stored in Cloud Storage.
 
   The logging command has two sub-commands:
 """ + _SET_DESCRIPTION + _GET_DESCRIPTION + """
