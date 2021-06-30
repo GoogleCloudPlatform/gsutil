@@ -20,8 +20,10 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import atexit
+import json
 import os
 import subprocess
+import six
 
 from boto import config
 
@@ -30,15 +32,16 @@ import gslib
 # Maintain a single context configuration.
 _singleton_config = None
 
+# Metadata JSON that stores information about the default certificate provider
+_CONTEXT_AWARE_METADATA_PATH = "~/.secureConnect/context_aware_metadata.json"
+_CERT_PROVIDER_COMMAND = "cert_provider_command"
+_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION = "--with_passphrase"
 
 class CertProvisionError(Exception):
   """Represents errors when provisioning a client certificate."""
-  pass
-
 
 class ContextConfigSingletonAlreadyExistsError(Exception):
   """Error for when create_context_config is called multiple times."""
-  pass
 
 
 def _IsPemSectionMarker(line):
@@ -107,6 +110,58 @@ def _SplitPemIntoSections(contents, logger):
   return result
 
 
+def _check_path():
+  """Checks for context aware metadata. If it exists, returns the absolute path;
+  otherwise returns None.
+  Returns:
+      str: absolute path if exists and None otherwise.
+  """
+  metadata_path = os.path.expanduser(_CONTEXT_AWARE_METADATA_PATH)
+  if not os.path.exists(metadata_path):
+    _LOGGER.debug("%s is not found, skip client SSL authentication.", metadata_path)
+    return None
+  return metadata_path
+
+
+def _read_metadata_file(metadata_path):
+  """Loads context aware metadata from the given path.
+  Returns:
+      Dict[str, str]: The metadata.
+  Raises:
+      google.auth.CertProvisionError: If failed to parse metadata as JSON.
+  """
+  try:
+    with open(metadata_path) as f:
+      metadata = json.load(f)
+  except ValueError as caught_exc:
+    new_exc = CertProvisionError(caught_exc)
+    six.raise_from(new_exc, caught_exc)
+
+  return metadata
+
+
+def _default_command():
+  """Loads default cert provider command
+  Returns:
+      str: The default command
+  Raises:
+      google.auth.CertProvisionError: If command cannot be found
+  """
+  metadata_path = _check_path()
+  if metadata_path:
+    metadata_json = _read_metadata_file(metadata_path)
+
+    if _CERT_PROVIDER_COMMAND not in metadata_json:
+      raise CertProvisionError("Client certificate provider is not found")
+
+    command = metadata_json[_CERT_PROVIDER_COMMAND]
+    if (_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION not in command):
+      command.append(_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION)
+    return command
+
+  raise CertProvisionError("Client certificate provider is not found")
+
+
 class _ContextConfig(object):
   """Represents the configurations associated with context aware access.
 
@@ -124,37 +179,30 @@ class _ContextConfig(object):
     self.use_client_certificate = config.getbool('Credentials',
                                                  'use_client_certificate')
     self.client_cert_path = None
-    self.client_cert_password = None
-
     if not self.use_client_certificate:
       # Don't spend time generating values gsutil won't need.
       return
 
     # Generates certificate and deletes it afterwards.
-    atexit.register(self._UnprovisionClientCert)
-    command_string = config.get('Credentials', 'cert_provider_command', None)
-    if not command_string:
-      raise CertProvisionError('No cert provider detected.')
-
+    # atexit.register(self._UnprovisionClientCert)
     self.client_cert_path = os.path.join(gslib.GSUTIL_DIR, 'caa_cert.pem')
     try:
       # Certs provisioned using endpoint verification are stored as a
       # single file holding both the public certificate and the private key.
-      self._ProvisionClientCert(command_string, self.client_cert_path)
+      self._ProvisionClientCert(self.client_cert_path)
     except CertProvisionError as e:
       self.logger.error('Failed to provision client certificate: %s' % e)
 
-  def _ProvisionClientCert(self, command_string, cert_path):
+
+  def _ProvisionClientCert(self, cert_path):
     """Executes certificate provider to obtain client certificate and keys."""
-    # Monkey-patch command line args to get password-protected certificate.
-    # Adds password flag if it's not already there.
-    password_arg = ' --with_passphrase'
-    if ('--print_certificate' in command_string and
-        password_arg not in command_string):
-      command_string += password_arg
+    cert_command = config.get('Credentials', 'cert_provider_command', None)
+    if not cert_command:
+      # Load the default certificate provider if sit is not provided by user.
+      cert_command = _default_command()
 
     try:
-      command_process = subprocess.Popen(command_string.split(' '),
+      command_process = subprocess.Popen(cert_command,
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE)
       command_stdout, command_stderr = command_process.communicate()
@@ -168,12 +216,13 @@ class _ContextConfig(object):
       with open(cert_path, 'w+') as f:
         f.write(sections['CERTIFICATE'])
         f.write(sections['ENCRYPTED PRIVATE KEY'])
-      self.client_cert_password = sections['PASSPHRASE'].splitlines()[1]
+        self.client_cert_password = sections['PASSPHRASE'].splitlines()[1]
     except OSError as e:
       raise CertProvisionError(e)
     except KeyError as e:
       raise CertProvisionError(
           'Invalid output format from certificate provider, no %s' % e)
+
 
   def _UnprovisionClientCert(self):
     """Cleans up any files or resources provisioned during config init."""
