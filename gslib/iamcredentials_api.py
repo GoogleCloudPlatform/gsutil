@@ -109,7 +109,7 @@ class IamcredentailsApi(object):
     try:
       return self.api_client.projects_serviceAccounts.SignBlob(request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
-      raise self._TranslateExceptionAndRaise(e, service_account_id)
+      self._TranslateExceptionAndRaise(e, service_account_id)
 
   def GenerateAccessToken(self, service_account_id, scopes):
     """Generates an access token for the given service account."""
@@ -125,7 +125,7 @@ class IamcredentailsApi(object):
       return self.api_client.projects_serviceAccounts.GenerateAccessToken(
           request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
-      raise self._TranslateExceptionAndRaise(e, service_account_id)
+      self._TranslateExceptionAndRaise(e, service_account_id)
 
   def _TranslateExceptionAndRaise(self, e, service_account_id=None):
     """Translates an HTTP exception and raises the translated or original value.
