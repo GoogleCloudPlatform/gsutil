@@ -118,7 +118,6 @@ def _check_path():
   """
   metadata_path = os.path.expanduser(_CONTEXT_AWARE_METADATA_PATH)
   if not os.path.exists(metadata_path):
-    _LOGGER.debug("%s is not found, skip client SSL authentication.", metadata_path)
     return None
   return metadata_path
 
@@ -136,7 +135,6 @@ def _read_metadata_file(metadata_path):
   except ValueError as caught_exc:
     new_exc = CertProvisionError(caught_exc)
     six.raise_from(new_exc, caught_exc)
-
   return metadata
 
 
