@@ -36,9 +36,11 @@ _CONTEXT_AWARE_METADATA_PATH = "~/.secureConnect/context_aware_metadata.json"
 _CERT_PROVIDER_COMMAND = "cert_provider_command"
 _CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION = "--with_passphrase"
 
+
 class CertProvisionError(Exception):
   """Represents errors when provisioning a client certificate."""
   pass
+
 
 class ContextConfigSingletonAlreadyExistsError(Exception):
   """Error for when create_context_config is called multiple times."""
@@ -191,7 +193,6 @@ class _ContextConfig(object):
     except CertProvisionError as e:
       self.logger.error('Failed to provision client certificate: %s' % e)
 
-
   def _ProvisionClientCert(self, cert_path):
     """Executes certificate provider to obtain client certificate and keys."""
     cert_command = config.get('Credentials', 'cert_provider_command', None)
@@ -220,7 +221,6 @@ class _ContextConfig(object):
     except KeyError as e:
       raise CertProvisionError(
           'Invalid output format from certificate provider, no %s' % e)
-
 
   def _UnprovisionClientCert(self):
     """Cleans up any files or resources provisioned during config init."""
