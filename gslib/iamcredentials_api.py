@@ -109,7 +109,7 @@ class IamcredentailsApi(object):
     try:
       return self.api_client.projects_serviceAccounts.SignBlob(request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
-      raise self._TranslateExceptionAndRaise(e, service_account_id)
+      self._TranslateExceptionAndRaise(e, service_account_id)
 
   def GenerateAccessToken(self, service_account_id, scopes):
     """Generates an access token for the given service account."""
@@ -125,7 +125,7 @@ class IamcredentailsApi(object):
       return self.api_client.projects_serviceAccounts.GenerateAccessToken(
           request)
     except TRANSLATABLE_APITOOLS_EXCEPTIONS as e:
-      raise self._TranslateExceptionAndRaise(e, service_account_id)
+      self._TranslateExceptionAndRaise(e, service_account_id)
 
   def _TranslateExceptionAndRaise(self, e, service_account_id=None):
     """Translates an HTTP exception and raises the translated or original value.
@@ -138,7 +138,6 @@ class IamcredentailsApi(object):
       Translated CloudApi exception, or the original exception if it was not
       translatable.
     """
-    # pylint: disable=raising-bad-type
     if self.logger.isEnabledFor(logging.DEBUG):
       self.logger.debug('TranslateExceptionAndRaise: %s',
                         traceback.format_exc())
@@ -148,7 +147,6 @@ class IamcredentailsApi(object):
       raise translated_exception
     else:
       raise
-    # pylint: enable=raising-bad-type
 
   def _TranslateApitoolsException(self, e, service_account_id=None):
     """Translates apitools exceptions into their gsutil equivalents.
