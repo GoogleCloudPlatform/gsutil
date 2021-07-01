@@ -23,7 +23,6 @@ import atexit
 import json
 import os
 import subprocess
-import six
 
 from boto import config
 
@@ -39,9 +38,11 @@ _CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION = "--with_passphrase"
 
 class CertProvisionError(Exception):
   """Represents errors when provisioning a client certificate."""
+  pass
 
 class ContextConfigSingletonAlreadyExistsError(Exception):
   """Error for when create_context_config is called multiple times."""
+  pass
 
 
 def _IsPemSectionMarker(line):
@@ -127,37 +128,36 @@ def _read_metadata_file(metadata_path):
   Returns:
       Dict[str, str]: The metadata.
   Raises:
-      google.auth.CertProvisionError: If failed to parse metadata as JSON.
+      CertProvisionError: If failed to parse metadata as JSON.
   """
   try:
     with open(metadata_path) as f:
       metadata = json.load(f)
-  except ValueError as caught_exc:
-    new_exc = CertProvisionError(caught_exc)
-    six.raise_from(new_exc, caught_exc)
+  except ValueError as e:
+    raise CertProvisionError(e)
   return metadata
 
 
 def _default_command():
-  """Loads default cert provider command
+  """Loads default cert provider command.
   Returns:
-      str: The default command
+      str: The default command.
   Raises:
-      google.auth.CertProvisionError: If command cannot be found
+      CertProvisionError: If command cannot be found.
   """
   metadata_path = _check_path()
   if metadata_path:
     metadata_json = _read_metadata_file(metadata_path)
 
     if _CERT_PROVIDER_COMMAND not in metadata_json:
-      raise CertProvisionError("Client certificate provider is not found")
+      raise CertProvisionError("Client certificate provider is not found.")
 
     command = metadata_json[_CERT_PROVIDER_COMMAND]
     if (_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION not in command):
       command.append(_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION)
     return command
 
-  raise CertProvisionError("Client certificate provider is not found")
+  raise CertProvisionError("Client certificate provider is not found.")
 
 
 class _ContextConfig(object):
