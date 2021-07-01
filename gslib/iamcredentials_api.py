@@ -138,6 +138,7 @@ class IamcredentailsApi(object):
       Translated CloudApi exception, or the original exception if it was not
       translatable.
     """
+    # pylint: disable=raising-bad-type
     if self.logger.isEnabledFor(logging.DEBUG):
       self.logger.debug('TranslateExceptionAndRaise: %s',
                         traceback.format_exc())
@@ -147,6 +148,7 @@ class IamcredentailsApi(object):
       raise translated_exception
     else:
       raise
+    # pylint: enable=raising-bad-type
 
   def _TranslateApitoolsException(self, e, service_account_id=None):
     """Translates apitools exceptions into their gsutil equivalents.
