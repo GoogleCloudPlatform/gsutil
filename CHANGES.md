@@ -1,3 +1,24 @@
+Release 4.65 (release date: 2021-07-02)
+=======================================
+New Features
+------------------
+ - Add gsutil support for Public Access Prevention (#1255)
+
+Bug Fixes
+------------------
+ - Fix raising-bad-type yapf errors. (#1303)
+
+Other Changes
+------------------
+ - Link fix pointing to CGC docs again (#1291).
+ - Backfill some small doc changes (#1294)
+ - Small text tweak (#1293)
+ - Update CHECKSUM and VERSION for 4.64 release.
+ - Update CHANGES.md for 4.64 release.
+ - Delete encryption addhelp page (#1297)
+ - Putting cl/381035251 into github (#1296)
+ - Backfill cl/381932961 (#1298)
+
 Release 4.64 (release date: 2021-06-18)
 =======================================
 Bug Fixes
