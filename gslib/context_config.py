@@ -31,8 +31,8 @@ import gslib
 # Maintain a single context configuration.
 _singleton_config = None
 
-# Metadata JSON that stores information about the default certificate provider
-_CONTEXT_AWARE_METADATA_PATH = "~/.secureConnect/context_aware_metadata.json"
+# Metadata JSON that stores information about the default certificate provider.
+_DEFAULT_METADATA_PATH = "~/.secureConnect/context_aware_metadata.json"
 _CERT_PROVIDER_COMMAND = "cert_provider_command"
 _CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION = "--with_passphrase"
 
@@ -114,12 +114,15 @@ def _SplitPemIntoSections(contents, logger):
 
 
 def _check_path():
-  """Checks for context aware metadata. If it exists, returns the absolute path;
-  otherwise returns None.
+  """Checks for content aware metadata.
+
+  If content aware metadata exists, return its absolute path;
+  otherwise, returns None.
+
   Returns:
-      str: absolute path if exists and None otherwise.
+    str: Absolute path if exists. Otherwise, None.
   """
-  metadata_path = os.path.expanduser(_CONTEXT_AWARE_METADATA_PATH)
+  metadata_path = os.path.expanduser(_DEFAULT_METADATA_PATH)
   if not os.path.exists(metadata_path):
     return None
   return metadata_path
@@ -127,39 +130,43 @@ def _check_path():
 
 def _read_metadata_file(metadata_path):
   """Loads context aware metadata from the given path.
+
   Returns:
       Dict[str, str]: The metadata.
+
   Raises:
       CertProvisionError: If failed to parse metadata as JSON.
   """
   try:
     with open(metadata_path) as f:
-      metadata = json.load(f)
+      return json.load(f)
   except ValueError as e:
     raise CertProvisionError(e)
-  return metadata
 
 
 def _default_command():
   """Loads default cert provider command.
+
   Returns:
       str: The default command.
+
   Raises:
       CertProvisionError: If command cannot be found.
   """
   metadata_path = _check_path()
-  if metadata_path:
-    metadata_json = _read_metadata_file(metadata_path)
 
-    if _CERT_PROVIDER_COMMAND not in metadata_json:
-      raise CertProvisionError("Client certificate provider is not found.")
+  if not metadata_path:
+    raise CertProvisionError("Client certificate provider is not found.")
 
-    command = metadata_json[_CERT_PROVIDER_COMMAND]
-    if (_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION not in command):
-      command.append(_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION)
-    return command
+  metadata_json = _read_metadata_file(metadata_path)
 
-  raise CertProvisionError("Client certificate provider is not found.")
+  if _CERT_PROVIDER_COMMAND not in metadata_json:
+    raise CertProvisionError("Client certificate provider is not found.")
+
+  command = metadata_json[_CERT_PROVIDER_COMMAND]
+  if (_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION not in command):
+    command.append(_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION)
+  return command
 
 
 class _ContextConfig(object):
@@ -184,7 +191,7 @@ class _ContextConfig(object):
       return
 
     # Generates certificate and deletes it afterwards.
-    # atexit.register(self._UnprovisionClientCert)
+    atexit.register(self._UnprovisionClientCert)
     self.client_cert_path = os.path.join(gslib.GSUTIL_DIR, 'caa_cert.pem')
     try:
       # Certs provisioned using endpoint verification are stored as a
@@ -215,7 +222,7 @@ class _ContextConfig(object):
       with open(cert_path, 'w+') as f:
         f.write(sections['CERTIFICATE'])
         f.write(sections['ENCRYPTED PRIVATE KEY'])
-        self.client_cert_password = sections['PASSPHRASE'].splitlines()[1]
+      self.client_cert_password = sections['PASSPHRASE'].splitlines()[1]
     except OSError as e:
       raise CertProvisionError(e)
     except KeyError as e:
