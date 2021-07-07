@@ -31,6 +31,10 @@ from gslib.tests.testcase import base
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 
+DEFAULT_METADATA = """
+{"cert_provider_command":["some/helper","--print_certificate"]}
+"""
+
 CERT_SECTION = """-----BEGIN CERTIFICATE-----
 LKJHLSDJKFHLEUIORWUYERWEHJHL
 KLJHGFDLSJKH(@#*&$)@*#KJHFLKJDSFSD
@@ -186,13 +190,35 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
     context_config.create_context_config(self.mock_logger)
     mock_Popen.assert_not_called()
 
-  def testRaisesErrorIfCertProviderCommandAbsent(self):
+  @mock.patch.object(subprocess, 'Popen')
+  @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
+  def testDefaultCommand(self, mock_Popen, mock_open):
+    mock_open.return_value = DEFAULT_METADATA
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      # Purposely end execution here to avoid writing a file.
+      with self.assertRaises(ValueError):
+        context_config.create_context_config(self.mock_logger)
+
+        mock_open.assert_called_once_with(
+            '~/.secureConnect/context_aware_metadata.json')
+        mock_Popen.assert_called_once_with(os.path.realpath('some/helper'),
+                                           '--print_certificate',
+                                           '--with_passphrase')
+
+  @mock.patch.object(subprocess, 'Popen')
+  def testCustomCommand(self, mock_Popen):
     with SetBotoConfigForTest([
         ('Credentials', 'use_client_certificate', 'True'),
-        ('Credentials', 'cert_provider_command', None),
+        ('Credentials', 'cert_provider_command', 'some/path')
     ]):
-      with self.assertRaises(context_config.CertProvisionError):
+      # Purposely end execution here to avoid writing a file.
+      with self.assertRaises(ValueError):
         context_config.create_context_config(self.mock_logger)
+
+        mock_Popen.assert_called_once_with(os.path.realpath('some/path'),
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE)
 
   @mock.patch.object(subprocess, 'Popen')
   def testConvertsAndLogsProvisoningCertProviderUnexpectedExitError(
@@ -238,53 +264,6 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
           "Failed to provision client certificate:"
           " Invalid output format from certificate provider, no " +
           unicode_escaped_error_string)
-
-  @mock.patch.object(subprocess, 'Popen')
-  def testDoesNotAddPasswordFlagToCommandIfPrintCertificateFlagAbsent(
-      self, mock_Popen):
-    # Purposely end execution here to avoid writing a file.
-    with SetBotoConfigForTest([
-        ('Credentials', 'use_client_certificate', 'True'),
-        ('Credentials', 'cert_provider_command', 'some/path')
-    ]):
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
-
-        mock_Popen.assert_called_once_with(os.path.realpath('some/path'),
-                                           stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE)
-
-  @mock.patch.object(subprocess, 'Popen')
-  def testDoesNotAddPasswordFlagToCommandIfAlreadyThere(self, mock_Popen):
-    with SetBotoConfigForTest([
-        ('Credentials', 'use_client_certificate', 'True'),
-        ('Credentials', 'cert_provider_command', 'path --with_passphrase')
-    ]):
-      # Purposely end execution here to avoid writing a file.
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
-
-        mock_Popen.assert_called_once_with(
-            os.path.realpath('path --with_passphrase'),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-
-  @mock.patch.object(subprocess, 'Popen')
-  def testAddsPasswordFlagIfMissingAndPrintCertificateFlagPresent(
-      self, mock_Popen):
-    with SetBotoConfigForTest([
-        ('Credentials', 'use_client_certificate', 'True'),
-        ('Credentials', 'cert_provider_command',
-         'some/path --print_certificate --with_passphrase')
-    ]):
-      # Purposely end execution here to avoid writing a file.
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
-
-        mock_Popen.assert_called_once_with(
-            os.path.realpath('some/path --print_certificate --with_passphrase'),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
 
   @mock.patch.object(os, 'remove')
   def testDoesNotUnprovisionIfNoClientCertificate(self, mock_remove):
