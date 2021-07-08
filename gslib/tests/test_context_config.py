@@ -31,8 +31,16 @@ from gslib.tests.testcase import base
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 
-DEFAULT_METADATA = """
+DEFAULT_CERT_PROVIDER_FILE_CONTENTS = """
 {"cert_provider_command":["some/helper","--print_certificate"]}
+"""
+
+DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE = """
+{"cert_provider_command":["some/cert helper","--print_certificate"]}
+"""
+
+DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND = """
+{"foo":["foo"]}
 """
 
 CERT_SECTION = """-----BEGIN CERTIFICATE-----
@@ -192,8 +200,8 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
 
   @mock.patch.object(subprocess, 'Popen')
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testDefaultCommand(self, mock_Popen, mock_open):
-    mock_open.return_value = DEFAULT_METADATA
+  def testDefaultProviderExecutesCommand(self, mock_Popen, mock_open):
+    mock_open.return_value = DEFAULT_CERT_PROVIDER_FILE_CONTENTS
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
                               ]):
       # Purposely end execution here to avoid writing a file.
@@ -207,7 +215,38 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
                                            '--with_passphrase')
 
   @mock.patch.object(subprocess, 'Popen')
-  def testCustomCommand(self, mock_Popen):
+  @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
+  def testDefaultProviderExecutesCommandWithSpace(self, mock_Popen, mock_open):
+    mock_open.return_value = DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      # Purposely end execution here to avoid writing a file.
+      with self.assertRaises(ValueError):
+        context_config.create_context_config(self.mock_logger)
+
+        mock_open.assert_called_once_with(
+            '~/.secureConnect/context_aware_metadata.json')
+        mock_Popen.assert_called_once_with(os.path.realpath('some/cert helper'),
+                                           '--print_certificate',
+                                           '--with_passphrase')
+
+  @mock.patch.object(subprocess, 'Popen')
+  @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
+  def testDefaultProviderNoCommandError(self, mock_Popen, mock_open):
+    mock_open.return_value = DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      # Purposely end execution here to avoid writing a file.
+      with self.assertRaises(ValueError):
+        context_config.create_context_config(self.mock_logger)
+
+        mock_open.assert_called_once_with(
+            '~/.secureConnect/context_aware_metadata.json')
+        self.mock_logger.error.assert_called_once_with(
+            'Client certificate provider command not found.')
+
+  @mock.patch.object(subprocess, 'Popen')
+  def testCustomProviderExecutesCommand(self, mock_Popen):
     with SetBotoConfigForTest([
         ('Credentials', 'use_client_certificate', 'True'),
         ('Credentials', 'cert_provider_command', 'some/path')

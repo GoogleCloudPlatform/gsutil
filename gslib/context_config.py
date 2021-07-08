@@ -132,7 +132,7 @@ def _read_metadata_file(metadata_path):
   """Loads context aware metadata from the given path.
 
   Returns:
-      Dict[str, str]: The metadata.
+      dict: The metadata JSON.
 
   Raises:
       CertProvisionError: If failed to parse metadata as JSON.
@@ -156,12 +156,12 @@ def _default_command():
   metadata_path = _check_path()
 
   if not metadata_path:
-    raise CertProvisionError("Client certificate provider is not found.")
+    raise CertProvisionError("Client certificate provider file not found.")
 
   metadata_json = _read_metadata_file(metadata_path)
 
   if _CERT_PROVIDER_COMMAND not in metadata_json:
-    raise CertProvisionError("Client certificate provider is not found.")
+    raise CertProvisionError("Client certificate provider command not found.")
 
   command = metadata_json[_CERT_PROVIDER_COMMAND]
   if (_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION not in command):
