@@ -216,7 +216,8 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
 
   @mock.patch.object(subprocess, 'Popen')
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testExecutesProviderCommandWithSpaceFromDefaultFile(self, mock_Popen, mock_open):
+  def testExecutesProviderCommandWithSpaceFromDefaultFile(
+      self, mock_Popen, mock_open):
     mock_open.return_value = DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
                               ]):
