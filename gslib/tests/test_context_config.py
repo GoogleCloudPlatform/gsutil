@@ -216,7 +216,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
 
   @mock.patch.object(subprocess, 'Popen')
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testDefaultProviderExecutesCommandWithSpace(self, mock_Popen, mock_open):
+  def testExecutesProviderCommandWithSpaceFromDefaultFile(self, mock_Popen, mock_open):
     mock_open.return_value = DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
                               ]):
@@ -246,7 +246,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
             'Client certificate provider command not found.')
 
   @mock.patch.object(subprocess, 'Popen')
-  def testCustomProviderExecutesCommand(self, mock_Popen):
+  def testExecutesCustomProviderCommandFromBotoConfig(self, mock_Popen):
     with SetBotoConfigForTest([
         ('Credentials', 'use_client_certificate', 'True'),
         ('Credentials', 'cert_provider_command', 'some/path')
