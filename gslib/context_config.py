@@ -202,8 +202,11 @@ class _ContextConfig(object):
 
   def _ProvisionClientCert(self, cert_path):
     """Executes certificate provider to obtain client certificate and keys."""
-    cert_command = config.get('Credentials', 'cert_provider_command', None)
-    if not cert_command:
+    cert_command_string = config.get('Credentials', 'cert_provider_command',
+                                     None)
+    if cert_command_string:
+      cert_command = cert_command_string.split(' ')
+    else:
       # Load the default certificate provider if sit is not provided by user.
       cert_command = _default_command()
 
