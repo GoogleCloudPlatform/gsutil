@@ -246,6 +246,18 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
         self.mock_logger.error.assert_called_once_with(
             'Client certificate provider command not found.')
 
+  @mock.patch('os.path.exists')
+  def testDefaultProviderNotFoundError(self, mock_path):
+    mock_path.return_value = False
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      # Purposely end execution here to avoid writing a file.
+      with self.assertRaises(ValueError):
+        context_config.create_context_config(self.mock_logger)
+
+        self.mock_logger.error.assert_called_once_with(
+            'Client certificate provider file not found.')
+
   @mock.patch.object(subprocess, 'Popen')
   def testExecutesCustomProviderCommandFromBotoConfig(self, mock_Popen):
     with SetBotoConfigForTest([
