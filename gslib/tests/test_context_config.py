@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import json
 import mock
 import os
 import subprocess
@@ -244,7 +245,8 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
         mock_open.assert_called_once_with(
             '~/.secureConnect/context_aware_metadata.json')
         self.mock_logger.error.assert_called_once_with(
-            'Client certificate provider command not found.')
+            "Failed to provision client certificate: "
+            "Client certificate provider command not found.")
 
   @mock.patch('os.path.exists')
   def testDefaultProviderNotFoundError(self, mock_path):
@@ -256,7 +258,21 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
         context_config.create_context_config(self.mock_logger)
 
         self.mock_logger.error.assert_called_once_with(
-            'Client certificate provider file not found.')
+            "Failed to provision client certificate: "
+            "Client certificate provider file not found.")
+
+  @mock.patch.object(json, 'load', autospec=True)
+  def testRaisesCertProvisionErrorOnJsonLoadError(self, mock_json_load):
+    mock_json_load.side_effect = ValueError('valueError')
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      with self.assertRaises(CertProvisionError):
+        context_config.create_context_config(self.mock_logger)
+
+        mock_open.assert_called_once_with(
+            '~/.secureConnect/context_aware_metadata.json')
+        self.mock_logger.error.assert_called_once_with(
+            'Failed to provision client certificate: valueError')
 
   @mock.patch.object(subprocess, 'Popen')
   def testExecutesCustomProviderCommandFromBotoConfig(self, mock_Popen):
