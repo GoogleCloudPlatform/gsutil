@@ -32,7 +32,8 @@ import gslib
 _singleton_config = None
 
 # Metadata JSON that stores information about the default certificate provider.
-_DEFAULT_METADATA_PATH = "~/.secureConnect/context_aware_metadata.json"
+_DEFAULT_METADATA_PATH = os.path.expanduser(
+    os.path.join('~', '.secureConnect', 'context_aware_metadata.json'))
 _CERT_PROVIDER_COMMAND = "cert_provider_command"
 _CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION = "--with_passphrase"
 
