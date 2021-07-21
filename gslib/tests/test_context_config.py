@@ -24,25 +24,23 @@ import mock
 import os
 import subprocess
 
+from boto import config
 import six
 
 from gslib import context_config
+from gslib.context_config import CertProvisionError
 from gslib.tests import testcase
 from gslib.tests.testcase import base
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 
-DEFAULT_CERT_PROVIDER_FILE_CONTENTS = """
-{"cert_provider_command":["some/helper","--print_certificate"]}
-"""
+DEFAULT_CERT_PROVIDER_FILE_CONTENTS = {
+    "cert_provider_command": [ "some/helper", "--print_certificate" ] }
 
-DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE = """
-{"cert_provider_command":["some/cert helper","--print_certificate"]}
-"""
+DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE = {
+    "cert_provider_command": [ "/some helper", "--print_certificate" ] }
 
-DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND = """
-{"foo":["foo"]}
-"""
+DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND = { "foo": "foo" }
 
 CERT_SECTION = """-----BEGIN CERTIFICATE-----
 LKJHLSDJKFHLEUIORWUYERWEHJHL
@@ -167,7 +165,7 @@ class TestPemFileParser(testcase.GsUtilUnitTestCase):
 
 
 # Setting global context_config singleton causes issues in parallel.
-@base.NotParallelizable
+# @base.NotParallelizable
 @testcase.integration_testcase.SkipForS3('mTLS only runs on GCS JSON API.')
 @testcase.integration_testcase.SkipForXML('mTLS only runs on GCS JSON API.')
 class TestContextConfig(testcase.GsUtilUnitTestCase):
@@ -199,80 +197,83 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
     context_config.create_context_config(self.mock_logger)
     mock_Popen.assert_not_called()
 
+  @mock.patch.object(json, 'load', autospec=True)
+  @mock.patch.object(config, 'getbool')
+  @mock.patch.object(os.path, 'exists')
   @mock.patch.object(subprocess, 'Popen')
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testDefaultProviderExecutesCommand(self, mock_Popen, mock_open):
-    mock_open.return_value = DEFAULT_CERT_PROVIDER_FILE_CONTENTS
-    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
-                              ]):
-      # Purposely end execution here to avoid writing a file.
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
+  def testExecutesProviderCommandFromDefaultFile(
+      self, mock_open, mock_Popen, mock_path, mock_config_bool, mock_json_load):
+    mock_config_bool.return_value = True
+    mock_json_load.side_effect = [
+        DEFAULT_CERT_PROVIDER_FILE_CONTENTS ]
 
-        mock_open.assert_called_once_with(
-            '~/.secureConnect/context_aware_metadata.json')
-        mock_Popen.assert_called_once_with(os.path.realpath('some/helper'),
-                                           '--print_certificate',
-                                           '--with_passphrase')
+    # Purposely end execution here to avoid writing a file.
+    with self.assertRaises(ValueError):
+      context_config.create_context_config(self.mock_logger)
 
+      mock_open.assert_called_with(
+          os.path.expanduser('~/.secureConnect/context_aware_metadata.json'))
+      mock_Popen.assert_called_once_with(os.path.realpath('some/helper'),
+                                         '--print_certificate',
+                                         '--with_passphrase')
+
+  @mock.patch.object(json, 'load', autospec=True)
+  @mock.patch.object(config, 'getbool')
+  @mock.patch.object(os.path, 'exists')
   @mock.patch.object(subprocess, 'Popen')
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
   def testExecutesProviderCommandWithSpaceFromDefaultFile(
-      self, mock_Popen, mock_open):
-    mock_open.return_value = DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE
-    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
-                              ]):
-      # Purposely end execution here to avoid writing a file.
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
+      self, mock_open, mock_Popen, mock_path, mock_config_bool, mock_json_load):
+    mock_config_bool.return_value = True
+    mock_json_load.side_effect = [
+        DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE ]
 
-        mock_open.assert_called_once_with(
-            '~/.secureConnect/context_aware_metadata.json')
-        mock_Popen.assert_called_once_with(os.path.realpath('some/cert helper'),
-                                           '--print_certificate',
-                                           '--with_passphrase')
+    # Purposely end execution here to avoid writing a file.
+    with self.assertRaises(ValueError):
+      context_config.create_context_config(self.mock_logger)
 
-  @mock.patch.object(subprocess, 'Popen')
-  @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testDefaultProviderNoCommandError(self, mock_Popen, mock_open):
-    mock_open.return_value = DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND
-    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
-                              ]):
-      # Purposely end execution here to avoid writing a file.
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
+      mock_open.assert_called_with(
+          os.path.expanduser('~/.secureConnect/context_aware_metadata.json'))
+      mock_Popen.assert_called_once_with(os.path.realpath('some/cert helper'),
+                                         '--print_certificate',
+                                         '--with_passphrase')
 
-        mock_open.assert_called_once_with(
-            '~/.secureConnect/context_aware_metadata.json')
-        self.mock_logger.error.assert_called_once_with(
-            "Failed to provision client certificate: "
-            "Client certificate provider command not found.")
+  @mock.patch.object(os.path, 'exists')
+  @mock.patch.object(config, 'getbool')
+  @mock.patch.object(json, 'load', autospec=True)
+  def testDefaultProviderNoCommandError(
+      self, mock_open, mock_json_load, mock_config_bool, mock_path):
+    # Mock the use_client_certificate flag as true
+    mock_config_bool.return_value = True
+    mock_json_load.return_value = DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND
+
+    context_config.create_context_config(self.mock_logger)
+    mock_open.assert_called_once_with(
+        os.path.expanduser('~/.secureConnect/context_aware_metadata.json'))
+    self.mock_logger.error.assert_called_once_with(
+        "Failed to provision client certificate: "
+        "Client certificate provider command not found.")
 
   @mock.patch('os.path.exists')
   def testDefaultProviderNotFoundError(self, mock_path):
     mock_path.return_value = False
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
                               ]):
-      # Purposely end execution here to avoid writing a file.
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
+      context_config.create_context_config(self.mock_logger)
 
-        self.mock_logger.error.assert_called_once_with(
-            "Failed to provision client certificate: "
-            "Client certificate provider file not found.")
+      self.mock_logger.error.assert_called_once_with(
+          "Failed to provision client certificate: "
+          "Client certificate provider file not found.")
 
   @mock.patch.object(json, 'load', autospec=True)
   def testRaisesCertProvisionErrorOnJsonLoadError(self, mock_json_load):
     mock_json_load.side_effect = ValueError('valueError')
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
                               ]):
-      with self.assertRaises(CertProvisionError):
-        context_config.create_context_config(self.mock_logger)
-
-        mock_open.assert_called_once_with(
-            '~/.secureConnect/context_aware_metadata.json')
-        self.mock_logger.error.assert_called_once_with(
-            'Failed to provision client certificate: valueError')
+      context_config.create_context_config(self.mock_logger)
+      self.mock_logger.error.assert_called_once_with(
+          'Failed to provision client certificate: valueError')
 
   @mock.patch.object(subprocess, 'Popen')
   def testExecutesCustomProviderCommandFromBotoConfig(self, mock_Popen):
