@@ -34,14 +34,16 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 
 DEFAULT_CERT_PROVIDER_FILE_CONTENTS = {
-    "cert_provider_command": ["some/helper", "--print_certificate"]
+    'cert_provider_command': [
+        os.path.join('some', 'helper'), '--print_certificate'
+    ]
 }
 
 DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE = {
-    "cert_provider_command": ["/some helper", "--print_certificate"]
+    'cert_provider_command': ['some helper', '--print_certificate']
 }
 
-DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND = {"foo": "foo"}
+DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND = {'foo': 'foo'}
 
 CERT_SECTION = """-----BEGIN CERTIFICATE-----
 LKJHLSDJKFHLEUIORWUYERWEHJHL
@@ -212,9 +214,9 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
         context_config.create_context_config(self.mock_logger)
 
         mock_open.assert_called_with(context_config._DEFAULT_METADATA_PATH)
-        mock_Popen.assert_called_once_with(os.path.realpath('some/cert'),
-                                           '--print_certificate',
-                                           '--with_passphrase')
+        mock_Popen.assert_called_once_with(
+            os.path.realpath(os.path.join('some', 'helper')),
+            '--print_certificate', '--with_passphrase')
 
   @mock.patch('os.path.exists', new=mock.Mock(return_value=True))
   @mock.patch.object(json, 'load', autospec=True)
@@ -232,7 +234,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
         context_config.create_context_config(self.mock_logger)
 
         mock_open.assert_called_with(context_config._DEFAULT_METADATA_PATH)
-        mock_Popen.assert_called_once_with(os.path.realpath('some/cert helper'),
+        mock_Popen.assert_called_once_with(os.path.realpath('cert helper'),
                                            '--print_certificate',
                                            '--with_passphrase')
 
