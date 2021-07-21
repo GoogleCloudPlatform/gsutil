@@ -197,7 +197,7 @@ class MbCommand(Command):
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='b:c:l:p:s:',
-      supported_private_args=['retention=', 'pap=', 'rpo='],
+      supported_private_args=['retention=', 'pap=', 'placement=', 'rpo='],
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -241,6 +241,7 @@ class MbCommand(Command):
     seconds = None
     public_access_prevention = None
     rpo = None
+    placements = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
@@ -267,6 +268,11 @@ class MbCommand(Command):
           bucket_policy_only = (a == 'on')
         elif o == '--pap':
           public_access_prevention = a
+        elif o == '--placement':
+          placements = a.split(',')
+          if len(placements) > 2:
+            raise CommandException(
+                'More than two regions specified: {}'.format(a))
 
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                storageClass=storage_class,
@@ -279,6 +285,11 @@ class MbCommand(Command):
         iam_config.bucketPolicyOnly.enabled = bucket_policy_only
       if public_access_prevention:
         iam_config.publicAccessPrevention = public_access_prevention
+
+    if placements:
+      placement_config = apitools_messages.Bucket.CustomPlacementConfigValue()
+      placement_config.dataLocations = placements
+      bucket_metadata.customPlacementConfig = placement_config
 
     for bucket_url_str in self.args:
       bucket_url = StorageUrlFromString(bucket_url_str)
