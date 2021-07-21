@@ -76,7 +76,7 @@ _DETAILED_HELP_TEXT = ("""
   The --pap option specifies the public access prevention setting of the bucket.
   When enforced, objects in this bucket cannot be made publicly accessible.
   
-    The --rpo option specifies the replication setting
+  The --rpo option specifies the replication setting
   <https://cloud.google.com/storage/docs/turbo-replication>`_ setting of
   bucket.
 
