@@ -35,12 +35,14 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 
 DEFAULT_CERT_PROVIDER_FILE_CONTENTS = {
-    "cert_provider_command": [ "some/helper", "--print_certificate" ] }
+    "cert_provider_command": ["some/helper", "--print_certificate"]
+}
 
 DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE = {
-    "cert_provider_command": [ "/some helper", "--print_certificate" ] }
+    "cert_provider_command": ["/some helper", "--print_certificate"]
+}
 
-DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND = { "foo": "foo" }
+DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND = {"foo": "foo"}
 
 CERT_SECTION = """-----BEGIN CERTIFICATE-----
 LKJHLSDJKFHLEUIORWUYERWEHJHL
@@ -165,7 +167,7 @@ class TestPemFileParser(testcase.GsUtilUnitTestCase):
 
 
 # Setting global context_config singleton causes issues in parallel.
-# @base.NotParallelizable
+@base.NotParallelizable
 @testcase.integration_testcase.SkipForS3('mTLS only runs on GCS JSON API.')
 @testcase.integration_testcase.SkipForXML('mTLS only runs on GCS JSON API.')
 class TestContextConfig(testcase.GsUtilUnitTestCase):
@@ -202,11 +204,11 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   @mock.patch.object(os.path, 'exists')
   @mock.patch.object(subprocess, 'Popen')
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testExecutesProviderCommandFromDefaultFile(
-      self, mock_open, mock_Popen, mock_path, mock_config_bool, mock_json_load):
+  def testExecutesProviderCommandFromDefaultFile(self, mock_open, mock_Popen,
+                                                 mock_path, mock_config_bool,
+                                                 mock_json_load):
     mock_config_bool.return_value = True
-    mock_json_load.side_effect = [
-        DEFAULT_CERT_PROVIDER_FILE_CONTENTS ]
+    mock_json_load.side_effect = [DEFAULT_CERT_PROVIDER_FILE_CONTENTS]
 
     # Purposely end execution here to avoid writing a file.
     with self.assertRaises(ValueError):
@@ -227,7 +229,8 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
       self, mock_open, mock_Popen, mock_path, mock_config_bool, mock_json_load):
     mock_config_bool.return_value = True
     mock_json_load.side_effect = [
-        DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE ]
+        DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE
+    ]
 
     # Purposely end execution here to avoid writing a file.
     with self.assertRaises(ValueError):
@@ -242,8 +245,8 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   @mock.patch.object(os.path, 'exists')
   @mock.patch.object(config, 'getbool')
   @mock.patch.object(json, 'load', autospec=True)
-  def testDefaultProviderNoCommandError(
-      self, mock_open, mock_json_load, mock_config_bool, mock_path):
+  def testDefaultProviderNoCommandError(self, mock_open, mock_json_load,
+                                        mock_config_bool, mock_path):
     # Mock the use_client_certificate flag as true
     mock_config_bool.return_value = True
     mock_json_load.return_value = DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND
