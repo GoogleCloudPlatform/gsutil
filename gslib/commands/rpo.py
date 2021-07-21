@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 Google Inc. All Rights Reserved.
+# Copyright 2021 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""This module provides the command to gsutil."""
+"""This module provides the rpo command to gsutil."""
 
 from __future__ import absolute_import
 from __future__ import print_function
 
-import getopt
 import textwrap
 
 from gslib import metrics
@@ -29,11 +28,15 @@ from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
-from gslib.utils.text_util import InsistOnOrOff
+
+
+VALID_RPO_VALUES = ('ASYNC_TURBO', 'DEFAULT')
+VALID_RPO_VALUES_STRING = '({})'.format('|'.join(VALID_RPO_VALUES))
+
 
 _SET_SYNOPSIS = """
-  gsutil rpo set (on|off) gs://<bucket_name>...
-"""
+  gsutil rpo set {} gs://<bucket_name>...
+""".format(VALID_RPO_VALUES_STRING)
 
 _GET_SYNOPSIS = """
   gsutil rpo get bucket_url...
@@ -43,47 +46,40 @@ _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 
 _SET_DESCRIPTION = """
 <B>SET</B>
-  The ``rpo set`` command enables or disables uniform
-  bucket-level access for Google Cloud Storage buckets.
+  The ``rpo set`` command configures turbo replication
+  for Google Cloud Storage buckets.
 
 <B>SET EXAMPLES</B>
-  Configure your buckets to use rpo:
+  Configure your buckets to use Turbo Replication:
 
-    gsutil rpo set ASYNC_PREMIUM gs://redbucket gs://bluebucket
+    gsutil rpo set ASYNC_TURBO gs://redbucket gs://bluebucket
 
-  Configure your buckets to NOT use rapid replication:
+  Configure your buckets to NOT use Turbo Replication:
 
     gsutil rpo set DEFAULT gs://redbucket gs://bluebucket
 """
 
 _GET_DESCRIPTION = """
-TODO
 <B>GET</B>
-  The ``ubla get`` command shows whether uniform bucket-level access is enabled
-  for the specified Cloud Storage bucket(s).
+  The ``rpo get`` command returns the replication setting
+  for the specified Cloud Storage buckets.
 
 <B>GET EXAMPLES</B>
-  Check if your buckets are using uniform bucket-level access:
+  Check if your buckets are using Turbo replication:
 
-    gsutil ubla get gs://redbucket gs://bluebucket
+    gsutil rpo get gs://redbucket gs://bluebucket
 """
 
 _DESCRIPTION = """
-  TODO
-  The ``ubla`` command is used to retrieve or configure the
-  `uniform bucket-level access
-  <https://cloud.google.com/storage/docs/bucket-policy-only>`_ setting of
-  Cloud Storage bucket(s). This command has two sub-commands, ``get`` and
-  ``set``.
+  The ``rpo`` command is used to retrieve or configure the
+  `replication setting
+  <https://cloud.google.com/storage/docs/turbo-replication>`_ setting of
+  Cloud Storage buckets. This command has two sub-commands: ``get`` and ``set``.
 """ + _GET_DESCRIPTION + _SET_DESCRIPTION
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
-
-# Aliases to make these more likely to fit on one line.
-IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
-uniformBucketLevelAccessValue = IamConfigurationValue.BucketPolicyOnlyValue
 
 
 class RpoCommand(Command):
@@ -104,7 +100,7 @@ class RpoCommand(Command):
       argparse_arguments={
           'get': [CommandArgument.MakeNCloudURLsArgument(1),],
           'set': [
-              CommandArgument('mode', choices=['DEFAULT', 'ASYNC_PREMIUM']),
+              CommandArgument('mode', choices=list(VALID_RPO_VALUES)),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
       })
@@ -113,7 +109,7 @@ class RpoCommand(Command):
       help_name='rpo',
       help_name_aliases=[],
       help_type='command_help',
-      help_one_line_summary='Configure RPO',
+      help_one_line_summary='Configure replication',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
@@ -127,46 +123,39 @@ class RpoCommand(Command):
           'The %s command can only be used with gs:// bucket URLs.' %
           self.command_name)
 
-  def _GetRpo(self, url_args):
-    """Gets the Uniform bucket-level access setting for a bucket."""
-    some_matched = False
-    for url_str in url_args:
-      bucket_iter = self.GetBucketUrlIterFromArg(url_str,
-                                                 bucket_fields=['rpo',
-                                                                'versioning'])
-      for blr in bucket_iter:
-        print('{}: {}'.format(blr.url_string.rstrip('/'),
-                              blr.root_object.rpo))
-        some_matched = True
-
-    if not some_matched:
-      raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
-
-  def _SetUbla(self, blr, setting_arg):
-    """Sets the Uniform bucket-level access setting for a bucket on or off."""
-    self._ValidateBucketListingRefAndReturnBucketName(blr)
+  def _GetRpo(self, blr):
+    """Gets the rpo setting for a bucket."""
     bucket_url = blr.storage_url
 
-    iam_config = IamConfigurationValue()
-    # TODO(mynameisrafe): Replace bucketPolicyOnly with uniformBucketLevelAccess
-    # when the property is live.
-    iam_config.bucketPolicyOnly = uniformBucketLevelAccessValue()
-    iam_config.bucketPolicyOnly.enabled = (setting_arg == 'on')
+    bucket_metadata = self.gsutil_api.GetBucket(bucket_url.bucket_name,
+                                                fields=['rpo'],
+                                                provider=bucket_url.scheme)
+    rpo = bucket_metadata.rpo
+    bucket = str(bucket_url).rstrip('/')
+    print('%s: %s' % (bucket, rpo))
 
-    bucket_metadata = apitools_messages.Bucket(iamConfiguration=iam_config)
+  def _SetRpo(self, blr, rpo):
+    """Sets the rpo setting for a bucket."""
+    bucket_url = blr.storage_url
+    rpo_value = rpo.upper()
+    if rpo_value not in VALID_RPO_VALUES:
+      raise CommandException(
+          'Invalid value for rpo set.'
+          ' Should be one of {}'.format(VALID_RPO_VALUES_STRING))
 
-    setting_verb = 'Enabling' if setting_arg == 'on' else 'Disabling'
-    print('%s Uniform bucket-level access for %s...' %
-          (setting_verb, str(bucket_url).rstrip('/')))
+    bucket_metadata = apitools_messages.Bucket(rpo=rpo_value)
+
+    self.logger.info('Setting rpo %s for %s' %
+                     (rpo_value, str(bucket_url).rstrip('/')))
 
     self.gsutil_api.PatchBucket(bucket_url.bucket_name,
                                 bucket_metadata,
-                                fields=['iamConfiguration'],
+                                fields=['rpo'],
                                 provider=bucket_url.scheme)
     return 0
 
   def _Rpo(self):
-    """Handles ubla command on a Cloud Storage bucket."""
+    """Handles rpo command on Cloud Storage buckets."""
     subcommand = self.args.pop(0)
 
     if subcommand not in ('get', 'set'):
@@ -174,31 +163,45 @@ class RpoCommand(Command):
 
     subcommand_func = None
     subcommand_args = []
-    setting_arg = None
 
     if subcommand == 'get':
       subcommand_func = self._GetRpo
     elif subcommand == 'set':
       subcommand_func = self._SetRpo
       setting_arg = self.args.pop(0)
-      InsistOnOrOff(setting_arg,
-                    'Only on and off values allowed for set option')
       subcommand_args.append(setting_arg)
 
+    # TODO: Remove this as rpo should work for XML as well.
+    if self.gsutil_api.GetApiSelector('gs') != ApiSelector.JSON:
+      raise CommandException('\n'.join(
+          textwrap.wrap(('The "%s" command can only be with the Cloud Storage '
+                         'JSON API.') % self.command_name)))
+
+    # Iterate over bucket args, performing the specified subsubcommand.
+    some_matched = False
     url_args = self.args
     if not url_args:
       self.RaiseWrongNumberOfArgumentsException()
-    subcommand_func(url_args)
+    for url_str in url_args:
+      # Throws a CommandException if the argument is not a bucket.
+      bucket_iter = self.GetBucketUrlIterFromArg(url_str)
+      for bucket_listing_ref in bucket_iter:
+        # TODO: Remove this check
+        if self.gsutil_api.GetApiSelector(
+            bucket_listing_ref.storage_url.scheme) != ApiSelector.JSON:
+          raise CommandException('\n'.join(
+              textwrap.wrap(('The "%s" command can only be used for GCS '
+                             'Buckets.') % self.command_name)))
+
+        some_matched = True
+        subcommand_func(bucket_listing_ref, *subcommand_args)
+
+    if not some_matched:
+      raise CommandException(NO_URLS_MATCHED_TARGET % list(url_args))
     return 0
 
   def RunCommand(self):
-    """Command entry point for the ubla command."""
-    if self.gsutil_api.GetApiSelector(provider='gs') != ApiSelector.JSON:
-      raise CommandException('\n'.join(
-          textwrap.wrap(
-              'The "%s" command can only be used with the Cloud Storage JSON API.'
-              % self.command_name)))
-
+    """Command entry point for the rpo command."""
     action_subcommand = self.args[0]
     self.ParseSubOpts(check_args=True)
 
