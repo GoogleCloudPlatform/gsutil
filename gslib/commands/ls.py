@@ -385,6 +385,8 @@ class LsCommand(Command):
       if bucket.iamConfiguration.publicAccessPrevention:
         fields[
             'public_access_prevention'] = bucket.iamConfiguration.publicAccessPrevention
+    if bucket.rpo:
+      fields['rpo'] = bucket.rpo
     if bucket.satisfiesPZS:
       fields['satisfies_pzs'] = bucket.satisfiesPZS
 
@@ -411,6 +413,7 @@ class LsCommand(Command):
     retention_policy_line = ''
     bucket_policy_only_enabled_line = ''
     public_access_prevention_line = ''
+    rpo_line = ''
     satisifies_pzs_line = ''
     if 'location_type' in fields:
       location_type_line = '\tLocation type:\t\t\t{location_type}\n'
@@ -431,6 +434,8 @@ class LsCommand(Command):
     if 'public_access_prevention' in fields:
       public_access_prevention_line = ('\tPublic access prevention:\t'
                                        '{public_access_prevention}\n')
+    if 'rpo' in fields:
+      rpo_line = ('\tRPO:\t\t\t\t{rpo}\n')
     if 'satisfies_pzs' in fields:
       satisifies_pzs_line = '\tSatisfies PZS:\t\t\t{satisfies_pzs}\n'
 
@@ -449,7 +454,7 @@ class LsCommand(Command):
          '\tDefault KMS key:\t\t{default_kms_key}\n' + time_created_line +
          time_updated_line + metageneration_line +
          bucket_policy_only_enabled_line + public_access_prevention_line +
-         satisifies_pzs_line + '\tACL:\t\t\t\t{acl}\n'
+         rpo_line + satisifies_pzs_line + '\tACL:\t\t\t\t{acl}\n'
          '\tDefault ACL:\t\t\t{default_acl}').format(**fields))
     if bucket_blr.storage_url.scheme == 's3':
       text_util.print_to_fd(
@@ -566,6 +571,7 @@ class LsCommand(Command):
             'metageneration',
             'retentionPolicy',
             'defaultEventBasedHold',
+            'rpo',
             'satisfiesPZS',
             'storageClass',
             'timeCreated',
