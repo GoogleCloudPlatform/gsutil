@@ -162,7 +162,14 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
 
   def setUp(self):
     super(TestContextConfig, self).setUp()
+    self._old_context_config = context_config._singleton_config
+    context_config._singleton_config = None
+
     self.mock_logger = mock.Mock()
+
+  def tearDown(self):
+    super(TestContextConfig, self).tearDown()
+    context_config._singleton_config = self._old_context_config
 
   def testContextConfigIsASingleton(self):
     first = context_config.create_context_config(self.mock_logger)
@@ -180,8 +187,10 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
     mock_Popen.assert_not_called()
 
   def testRaisesErrorIfCertProviderCommandAbsent(self):
-    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
-                              ]):
+    with SetBotoConfigForTest([
+        ('Credentials', 'use_client_certificate', 'True'),
+        ('Credentials', 'cert_provider_command', None),
+    ]):
       with self.assertRaises(context_config.CertProvisionError):
         context_config.create_context_config(self.mock_logger)
 
@@ -301,7 +310,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
       self, mock_Popen, mock_remove, mock_open):
     mock_command_process = mock.Mock()
     mock_command_process.returncode = 0
-    mock_command_process.communicate.return_value = (FULL_CERT, None)
+    mock_command_process.communicate.return_value = (FULL_CERT.encode(), None)
     mock_Popen.return_value = mock_command_process
 
     with SetBotoConfigForTest([
