@@ -1,3 +1,13 @@
+Release 4.66 (release date: 2021-07-29)
+=======================================
+New Features
+------------------
+ - Onboard mTLS support with AIP-4114 for gsutil (#1302)
+
+Other Changes
+------------------
+ - Several documentation updates and clarifications.
+
 Release 4.65 (release date: 2021-07-02)
 =======================================
 New Features
