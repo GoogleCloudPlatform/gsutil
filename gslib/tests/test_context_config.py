@@ -264,11 +264,15 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
           "Client certificate provider file not found.")
 
   @mock.patch.object(json, 'load', autospec=True)
-  def testRaisesCertProvisionErrorOnJsonLoadError(self, mock_json_load):
+  @mock.patch('os.path.exists', new=mock.Mock(return_value=True))
+  @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
+  def testRaisesCertProvisionErrorOnJsonLoadError(self, mock_open,
+                                                  mock_json_load):
     mock_json_load.side_effect = ValueError('valueError')
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
                               ]):
       context_config.create_context_config(self.mock_logger)
+      mock_open.assert_called_with(context_config._DEFAULT_METADATA_PATH)
       self.mock_logger.error.assert_called_once_with(
           'Failed to provision client certificate: valueError')
 
