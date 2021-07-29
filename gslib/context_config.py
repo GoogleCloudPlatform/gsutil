@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import atexit
+import json
 import os
 import subprocess
 
@@ -29,6 +30,12 @@ import gslib
 
 # Maintain a single context configuration.
 _singleton_config = None
+
+# Metadata JSON that stores information about the default certificate provider.
+_DEFAULT_METADATA_PATH = os.path.expanduser(
+    os.path.join('~', '.secureConnect', 'context_aware_metadata.json'))
+_CERT_PROVIDER_COMMAND = "cert_provider_command"
+_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION = "--with_passphrase"
 
 
 class CertProvisionError(Exception):
@@ -107,6 +114,62 @@ def _SplitPemIntoSections(contents, logger):
   return result
 
 
+def _check_path():
+  """Checks for content aware metadata.
+
+  If content aware metadata exists, return its absolute path;
+  otherwise, returns None.
+
+  Returns:
+    str: Absolute path if exists. Otherwise, None.
+  """
+  metadata_path = os.path.expanduser(_DEFAULT_METADATA_PATH)
+  if not os.path.exists(metadata_path):
+    return None
+  return metadata_path
+
+
+def _read_metadata_file(metadata_path):
+  """Loads context aware metadata from the given path.
+
+  Returns:
+      dict: The metadata JSON.
+
+  Raises:
+      CertProvisionError: If failed to parse metadata as JSON.
+  """
+  try:
+    with open(metadata_path) as f:
+      return json.load(f)
+  except ValueError as e:
+    raise CertProvisionError(e)
+
+
+def _default_command():
+  """Loads default cert provider command.
+
+  Returns:
+      str: The default command.
+
+  Raises:
+      CertProvisionError: If command cannot be found.
+  """
+  metadata_path = _check_path()
+
+  if not metadata_path:
+    raise CertProvisionError("Client certificate provider file not found.")
+
+  metadata_json = _read_metadata_file(metadata_path)
+
+  if _CERT_PROVIDER_COMMAND not in metadata_json:
+    raise CertProvisionError("Client certificate provider command not found.")
+
+  command = metadata_json[_CERT_PROVIDER_COMMAND]
+  if (_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION not in command):
+    command.append(_CERT_PROVIDER_COMMAND_PASSPHRASE_OPTION)
+  return command
+
+
 class _ContextConfig(object):
   """Represents the configurations associated with context aware access.
 
@@ -124,37 +187,32 @@ class _ContextConfig(object):
     self.use_client_certificate = config.getbool('Credentials',
                                                  'use_client_certificate')
     self.client_cert_path = None
-    self.client_cert_password = None
-
     if not self.use_client_certificate:
       # Don't spend time generating values gsutil won't need.
       return
 
     # Generates certificate and deletes it afterwards.
     atexit.register(self._UnprovisionClientCert)
-    command_string = config.get('Credentials', 'cert_provider_command', None)
-    if not command_string:
-      raise CertProvisionError('No cert provider detected.')
-
     self.client_cert_path = os.path.join(gslib.GSUTIL_DIR, 'caa_cert.pem')
     try:
       # Certs provisioned using endpoint verification are stored as a
       # single file holding both the public certificate and the private key.
-      self._ProvisionClientCert(command_string, self.client_cert_path)
+      self._ProvisionClientCert(self.client_cert_path)
     except CertProvisionError as e:
       self.logger.error('Failed to provision client certificate: %s' % e)
 
-  def _ProvisionClientCert(self, command_string, cert_path):
+  def _ProvisionClientCert(self, cert_path):
     """Executes certificate provider to obtain client certificate and keys."""
-    # Monkey-patch command line args to get password-protected certificate.
-    # Adds password flag if it's not already there.
-    password_arg = ' --with_passphrase'
-    if ('--print_certificate' in command_string and
-        password_arg not in command_string):
-      command_string += password_arg
+    cert_command_string = config.get('Credentials', 'cert_provider_command',
+                                     None)
+    if cert_command_string:
+      cert_command = cert_command_string.split(' ')
+    else:
+      # Load the default certificate provider if sit is not provided by user.
+      cert_command = _default_command()
 
     try:
-      command_process = subprocess.Popen(command_string.split(' '),
+      command_process = subprocess.Popen(cert_command,
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE)
       command_stdout, command_stderr = command_process.communicate()

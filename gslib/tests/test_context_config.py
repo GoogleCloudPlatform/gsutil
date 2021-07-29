@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import json
 import mock
 import os
 import subprocess
@@ -26,10 +27,23 @@ import subprocess
 import six
 
 from gslib import context_config
+from gslib.context_config import CertProvisionError
 from gslib.tests import testcase
 from gslib.tests.testcase import base
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+
+DEFAULT_CERT_PROVIDER_FILE_CONTENTS = {
+    'cert_provider_command': [
+        os.path.join('some', 'helper'), '--print_certificate'
+    ]
+}
+
+DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE = {
+    'cert_provider_command': ['some helper', '--print_certificate']
+}
+
+DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND = {'foo': 'foo'}
 
 CERT_SECTION = """-----BEGIN CERTIFICATE-----
 LKJHLSDJKFHLEUIORWUYERWEHJHL
@@ -186,13 +200,95 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
     context_config.create_context_config(self.mock_logger)
     mock_Popen.assert_not_called()
 
-  def testRaisesErrorIfCertProviderCommandAbsent(self):
+  @mock.patch('os.path.exists', new=mock.Mock(return_value=True))
+  @mock.patch.object(json, 'load', autospec=True)
+  @mock.patch.object(subprocess, 'Popen', autospec=True)
+  @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
+  def testExecutesProviderCommandFromDefaultFile(self, mock_open, mock_Popen,
+                                                 mock_json_load):
+    mock_json_load.side_effect = [DEFAULT_CERT_PROVIDER_FILE_CONTENTS]
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      # Purposely end execution here to avoid writing a file.
+      with self.assertRaises(ValueError):
+        context_config.create_context_config(self.mock_logger)
+
+        mock_open.assert_called_with(context_config._DEFAULT_METADATA_PATH)
+        mock_Popen.assert_called_once_with(
+            os.path.realpath(os.path.join('some', 'helper')),
+            '--print_certificate', '--with_passphrase')
+
+  @mock.patch('os.path.exists', new=mock.Mock(return_value=True))
+  @mock.patch.object(json, 'load', autospec=True)
+  @mock.patch.object(subprocess, 'Popen', autospec=True)
+  @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
+  def testExecutesProviderCommandWithSpaceFromDefaultFile(
+      self, mock_open, mock_Popen, mock_json_load):
+    mock_json_load.side_effect = [
+        DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE
+    ]
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      # Purposely end execution here to avoid writing a file.
+      with self.assertRaises(ValueError):
+        context_config.create_context_config(self.mock_logger)
+
+        mock_open.assert_called_with(context_config._DEFAULT_METADATA_PATH)
+        mock_Popen.assert_called_once_with(os.path.realpath('cert helper'),
+                                           '--print_certificate',
+                                           '--with_passphrase')
+
+  @mock.patch('os.path.exists', new=mock.Mock(return_value=True))
+  @mock.patch.object(json, 'load', autospec=True)
+  @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
+  def testDefaultProviderNoCommandError(self, mock_open, mock_json_load):
+    mock_json_load.return_value = DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND
+
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      context_config.create_context_config(self.mock_logger)
+
+      mock_open.assert_called_with(context_config._DEFAULT_METADATA_PATH)
+      self.mock_logger.error.assert_called_once_with(
+          "Failed to provision client certificate: "
+          "Client certificate provider command not found.")
+
+  @mock.patch('os.path.exists', new=mock.Mock(return_value=False))
+  def testDefaultProviderNotFoundError(self):
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      context_config.create_context_config(self.mock_logger)
+
+      self.mock_logger.error.assert_called_once_with(
+          "Failed to provision client certificate: "
+          "Client certificate provider file not found.")
+
+  @mock.patch.object(json, 'load', autospec=True)
+  @mock.patch('os.path.exists', new=mock.Mock(return_value=True))
+  @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
+  def testRaisesCertProvisionErrorOnJsonLoadError(self, mock_open,
+                                                  mock_json_load):
+    mock_json_load.side_effect = ValueError('valueError')
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
+                              ]):
+      context_config.create_context_config(self.mock_logger)
+      mock_open.assert_called_with(context_config._DEFAULT_METADATA_PATH)
+      self.mock_logger.error.assert_called_once_with(
+          'Failed to provision client certificate: valueError')
+
+  @mock.patch.object(subprocess, 'Popen', autospec=True)
+  def testExecutesCustomProviderCommandFromBotoConfig(self, mock_Popen):
     with SetBotoConfigForTest([
         ('Credentials', 'use_client_certificate', 'True'),
-        ('Credentials', 'cert_provider_command', None),
+        ('Credentials', 'cert_provider_command', 'some/path')
     ]):
-      with self.assertRaises(context_config.CertProvisionError):
+      # Purposely end execution here to avoid writing a file.
+      with self.assertRaises(ValueError):
         context_config.create_context_config(self.mock_logger)
+
+        mock_Popen.assert_called_once_with(os.path.realpath('some/path'),
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE)
 
   @mock.patch.object(subprocess, 'Popen')
   def testConvertsAndLogsProvisoningCertProviderUnexpectedExitError(
@@ -238,53 +334,6 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
           "Failed to provision client certificate:"
           " Invalid output format from certificate provider, no " +
           unicode_escaped_error_string)
-
-  @mock.patch.object(subprocess, 'Popen')
-  def testDoesNotAddPasswordFlagToCommandIfPrintCertificateFlagAbsent(
-      self, mock_Popen):
-    # Purposely end execution here to avoid writing a file.
-    with SetBotoConfigForTest([
-        ('Credentials', 'use_client_certificate', 'True'),
-        ('Credentials', 'cert_provider_command', 'some/path')
-    ]):
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
-
-        mock_Popen.assert_called_once_with(os.path.realpath('some/path'),
-                                           stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE)
-
-  @mock.patch.object(subprocess, 'Popen')
-  def testDoesNotAddPasswordFlagToCommandIfAlreadyThere(self, mock_Popen):
-    with SetBotoConfigForTest([
-        ('Credentials', 'use_client_certificate', 'True'),
-        ('Credentials', 'cert_provider_command', 'path --with_passphrase')
-    ]):
-      # Purposely end execution here to avoid writing a file.
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
-
-        mock_Popen.assert_called_once_with(
-            os.path.realpath('path --with_passphrase'),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-
-  @mock.patch.object(subprocess, 'Popen')
-  def testAddsPasswordFlagIfMissingAndPrintCertificateFlagPresent(
-      self, mock_Popen):
-    with SetBotoConfigForTest([
-        ('Credentials', 'use_client_certificate', 'True'),
-        ('Credentials', 'cert_provider_command',
-         'some/path --print_certificate --with_passphrase')
-    ]):
-      # Purposely end execution here to avoid writing a file.
-      with self.assertRaises(ValueError):
-        context_config.create_context_config(self.mock_logger)
-
-        mock_Popen.assert_called_once_with(
-            os.path.realpath('some/path --print_certificate --with_passphrase'),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
 
   @mock.patch.object(os, 'remove')
   def testDoesNotUnprovisionIfNoClientCertificate(self, mock_remove):
