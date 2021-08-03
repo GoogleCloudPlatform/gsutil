@@ -34,7 +34,7 @@ _SET_SYNOPSIS = """
 """
 
 _GET_SYNOPSIS = """
-  gsutil pap get bucket_url...
+  gsutil pap get gs://<bucket_name>...
 """
 
 _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
@@ -42,25 +42,27 @@ _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 _SET_DESCRIPTION = """
 <B>SET</B>
   The ``pap set`` command configures public access prevention
-  for Google Cloud Storage buckets.
+  for Cloud Storage buckets. If you set a bucket to be
+  ``unspecified``, it uses public access prevention only if
+  the bucket is subject to the `public access prevention
+  <https://cloud.google.com/storage/docs/org-policy-constraints#public-access-prevention>`_
+  organization policy.
 
 <B>SET EXAMPLES</B>
-  Configure your buckets to use public access prevention:
+  Configure ``redbucket`` and ``bluebucket`` to use public
+  access prevention:
 
     gsutil pap set enforced gs://redbucket gs://bluebucket
-
-  Configure your buckets to NOT use public access prevention:
-
-    gsutil pap set unspecified gs://redbucket gs://bluebucket
 """
 
 _GET_DESCRIPTION = """
 <B>GET</B>
   The ``pap get`` command returns public access prevention
-  value for the specified Cloud Storage buckets.
+  values for the specified Cloud Storage buckets.
 
 <B>GET EXAMPLES</B>
-  Check if your buckets are using public access prevention:
+  Check if ``redbucket`` and ``bluebucket`` are using public
+  access prevention:
 
     gsutil pap get gs://redbucket gs://bluebucket
 """
