@@ -1,3 +1,13 @@
+Release 4.67 (release date: 2021-08-16)
+=======================================
+Bug Fixes
+------------------
+- Update pyu2f to latest version to fix a security key reauth bug (#1310)
+
+Other Changes
+------------------
+ - Several documentation updates and clarifications.
+
 Release 4.66 (release date: 2021-07-29)
 =======================================
 New Features
