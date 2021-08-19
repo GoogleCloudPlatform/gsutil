@@ -38,15 +38,15 @@ from six.moves import mock
 class TestLsUnit(testcase.GsUtilUnitTestCase):
 
   def test_get_for_multiple_bucket_calls_api(self):
-    bucket_uri1 = self.CreateBucket(bucket_name='foo')
-    bucket_uri2 = self.CreateBucket(bucket_name='bar')
+    bucket_uri1 = self.CreateBucket(bucket_name='rpofoo')
+    bucket_uri2 = self.CreateBucket(bucket_name='rpobar')
     stdout = self.RunCommand(
         'rpo',
         ['get', suri(bucket_uri1), suri(bucket_uri2)],
         return_stdout=True)
     expected_string = textwrap.dedent("""\
-      gs://foo: None
-      gs://bar: None
+      gs://rpofoo: None
+      gs://rpobar: None
       """)
     self.assertEqual(expected_string, stdout)
 
