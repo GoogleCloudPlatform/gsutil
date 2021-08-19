@@ -29,10 +29,8 @@ from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
 
-
 VALID_RPO_VALUES = ('ASYNC_TURBO', 'DEFAULT')
 VALID_RPO_VALUES_STRING = '({})'.format('|'.join(VALID_RPO_VALUES))
-
 
 _SET_SYNOPSIS = """
   gsutil rpo set {} gs://<bucket_name>...
