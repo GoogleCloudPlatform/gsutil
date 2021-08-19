@@ -61,17 +61,20 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
     self.assertEqual(expected_string, stdout)
 
   def test_get_with_wrong_url_raises_error(self):
-    with self.assertRaisesRegex(CommandException, 'No URLs matched'):
+    with self.assertRaisesRegexp(CommandException, 'No URLs matched'):
       self.RunCommand('rpo', ['get', 'gs://invalid*'])
 
-  def test_set_called_with_incorrect_value(self):
-    with self.assertRaisesRegex(CommandException, 'Invalid value for rpo set.'):
+  def test_set_called_with_incorrect_value_raises_error(self):
+    with self.assertRaisesRegexp(
+        CommandException,
+        r'Invalid value for rpo set. Should be one of \(ASYNC_TURBO\|DEFAULT\)'
+    ):
       self.RunCommand('rpo', ['set', 'random', 'gs://boo*'])
 
   def test_invalid_subcommand_raises_error(self):
-    with self.assertRaisesRegex(
-        CommandException, r'Invalid subcommand "blah", use get|set instead'):
-      self.RunCommand('rpo', ['blah', 'random', 'gs://boo*'])
+    with self.assertRaisesRegexp(
+        CommandException, 'Invalid subcommand "blah", use get|set instead'):
+      self.RunCommand('rpo', ['blah', 'DEFAULT', 'gs://boo*'])
 
 
 class TestRpo(testcase.GsUtilIntegrationTestCase):
