@@ -133,3 +133,48 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                             expected_status=1,
                             return_stderr=True)
     self.assertRegexpMatches(stderr, r'invalid_arg is not a valid value')
+
+  @SkipForXML('Rpo only runs on GCS JSON API')
+  def test_create_with_rpo_async_turbo(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(
+        ['mb', '-l', 'nam4', '--rpo', 'ASYNC_TURBO',
+         suri(bucket_uri)])
+    self.VerifyCommandGet(bucket_uri, 'rpo', 'ASYNC_TURBO')
+
+  @SkipForXML('Rpo only runs on GCS JSON API')
+  def test_create_sets_rpo_to_default(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(['mb', '-l', 'nam4', suri(bucket_uri)])
+    self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
+
+  @SkipForXML('Rpo only runs on GCS JSON API')
+  def test_create_with_rpo_async_turbo_fails_for_regional_bucket(self):
+    """Rpo is only meant for dual and multi-region buckets."""
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(
+        ['mb', '-l', 'us-central1', '--rpo', 'ASYNC_TURBO',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('Invalid argument', stderr)
+
+  @SkipForXML('Rpo only runs on GCS JSON API')
+  def test_create_with_rpo_incorrect_value_raises_error(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(
+        ['mb', '-l', 'nam4', '--rpo', 'incorrect_value',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'Invalid value for --rpo. Must be one of: (ASYNC_TURBO|DEFAULT),'
+        ' provided: incorrect_value', stderr)

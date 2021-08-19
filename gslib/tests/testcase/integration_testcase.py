@@ -939,6 +939,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     self.assertEqual(expected_value, value)
 
   def VerifyPublicAccessPreventionValue(self, bucket_uri, value):
+    # TODO: Delete this method in favor of VerifyCommandGet
     stdout = self.RunGsUtil(['publicaccessprevention', 'get',
                              suri(bucket_uri)],
                             return_stdout=True)
@@ -948,6 +949,16 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     public_access_prevention_val = public_access_prevention_match.group(
         'pap_val')
     self.assertEqual(str(value), public_access_prevention_val)
+
+  def VerifyCommandGet(self, bucket_uri, command, expected):
+    """Verifies if <command> get returns the expected value."""
+    stdout = self.RunGsUtil([command, 'get', suri(bucket_uri)],
+                            return_stdout=True)
+    print(stdout)
+    output_regex = re.compile(r'{}: (?P<actual>.+)$'.format(suri(bucket_uri)))
+    output_match = re.search(output_regex, stdout)
+    actual = output_match.group('actual')
+    self.assertEqual(actual, expected)
 
   def RunGsUtil(self,
                 cmd,
