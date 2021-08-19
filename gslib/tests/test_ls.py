@@ -1091,3 +1091,14 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['pap', 'set', 'enforced', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     self.assertRegex(stdout, r'Public access prevention:\t*enforced')
+
+  @SkipForXML('Rpo is not supported for the XML API.')
+  @SkipForS3('Rpo is not supported for S3 buckets.')
+  def test_list_Lb_displays_rpo(self):
+    bucket_uri = self.CreateBucket(location='nam4')
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r'RPO:\t\t\t\tDEFAULT')
+    # Set RPO to ASYNC_TURBO
+    self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r'RPO:\t\t\t\tASYNC_TURBO')
