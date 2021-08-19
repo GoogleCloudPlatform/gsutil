@@ -22,7 +22,7 @@ from __future__ import unicode_literals
 import subprocess
 
 
-def execute_external_command(command_and_flags):
+def ExecuteExternalCommand(command_and_flags):
   """Runs external terminal command.
 
   Args:
@@ -40,12 +40,12 @@ def execute_external_command(command_and_flags):
   command_stdout, command_stderr = command_process.communicate()
 
   # Python 3 outputs bytes from communicate() by default.
-  if command_stdout is not None:
-    command_stdout = str(command_stdout)
-  if command_stderr is not None:
-    command_stderr = str(command_stderr)
+  if command_stdout is not None and not isinstance(command_stdout, str):
+    command_stdout = command_stdout.decode()
+  if command_stderr is not None and not isinstance(command_stderr, str):
+    command_stderr = command_stderr.decode()
 
   if command_process.returncode != 0:
     raise OSError(command_stderr)
 
-  return (command_stdout, command_stderr)
+  return command_stdout, command_stderr
