@@ -67,6 +67,8 @@ _DETAILED_HELP_TEXT = ("""
   listed provider:
 
     gsutil ls gs://
+    
+  gsutil currently supports ``gs://`` and ``s3://`` as valid providers
 
   If you specify bucket URLs, gsutil ls lists objects at the top level of
   each bucket, along with the names of each subdirectory. For example:
@@ -263,7 +265,7 @@ _DETAILED_HELP_TEXT = ("""
               operation per subdirectory. If you have a large number of
               subdirectories and do not require recursive-style output ordering,
               you may be able to instead use wildcards to perform a flat
-              listing, e.g.  `gsutil ls gs://mybucket/**`, which generally
+              listing, e.g.  ``gsutil ls gs://mybucket/**``, which generally
               performs fewer listing operations.
 
   -a          Includes non-current object versions / generations in the listing
