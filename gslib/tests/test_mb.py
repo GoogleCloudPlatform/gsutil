@@ -134,7 +134,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertRegexpMatches(stderr, r'invalid_arg is not a valid value')
 
-  @SkipForXML('Rpo only runs on GCS JSON API')
+  @SkipForXML('Rpo flag only works for GCS JSON API')
   def test_create_with_rpo_async_turbo(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
@@ -144,7 +144,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
          suri(bucket_uri)])
     self.VerifyCommandGet(bucket_uri, 'rpo', 'ASYNC_TURBO')
 
-  @SkipForXML('Rpo only runs on GCS JSON API')
+  @SkipForXML('Rpo flag only works for GCS JSON API')
   def test_create_sets_rpo_to_default(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
@@ -152,9 +152,9 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['mb', '-l', 'nam4', suri(bucket_uri)])
     self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
 
-  @SkipForXML('Rpo only runs on GCS JSON API')
+  @SkipForXML('Rpo flag only works for GCS JSON API')
   def test_create_with_rpo_async_turbo_fails_for_regional_bucket(self):
-    """Rpo is only meant for dual-region and multi-region buckets."""
+    """Turbo replication is only meant for dual-region."""
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
@@ -165,7 +165,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         expected_status=1)
     self.assertIn('Invalid argument', stderr)
 
-  @SkipForXML('Rpo only runs on GCS JSON API')
+  @SkipForXML('Rpo flag only works for GCS JSON API')
   def test_create_with_rpo_incorrect_value_raises_error(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),

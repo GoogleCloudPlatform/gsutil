@@ -45,7 +45,7 @@ _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
 _SET_DESCRIPTION = """
 <B>SET</B>
   The ``rpo set`` command configures turbo replication
-  for Google Cloud Storage buckets.
+  for dual-region Google Cloud Storage buckets.
 
 <B>SET EXAMPLES</B>
   Configure your buckets to use turbo replication:
@@ -72,7 +72,8 @@ _DESCRIPTION = """
   The ``rpo`` command is used to retrieve or configure the
   `replication setting
   <https://cloud.google.com/storage/docs/turbo-replication>`_ setting of
-  Cloud Storage buckets. This command has two sub-commands: ``get`` and ``set``.
+  dual-region Cloud Storage buckets.
+  This command has two sub-commands: ``get`` and ``set``.
 """ + _GET_DESCRIPTION + _SET_DESCRIPTION
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
