@@ -43,8 +43,9 @@ requires = [
     'google-apitools>=0.5.32',
     'httplib2>=0.18',
     'google-reauth>=0.1.0',
-    # TODO: Remove mock dependency once Python 2 support is removed.
-    'mock>=4.0.3',
+    # mock is part of the standard library in Python 3.3 onwards.
+    # 3.0.5 is the last version that supports Python 3.3 or lower.
+    'mock>=2.0.0, <=3.0.5; python_version < "3.3"',
     'monotonic>=1.4',
     'pyOpenSSL>=0.13',
     'retry_decorator>=1.0.0',
