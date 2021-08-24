@@ -43,8 +43,7 @@ requires = [
     'google-apitools>=0.5.32',
     'httplib2>=0.18',
     'google-reauth>=0.1.0',
-    # TODO: Sync submodule with tag referenced here once #339 is fixed in mock.
-    'mock==2.0.0',
+    'mock>=4.0.3',
     'monotonic>=1.4',
     'pyOpenSSL>=0.13',
     'retry_decorator>=1.0.0',
