@@ -170,9 +170,10 @@ _DETAILED_HELP_TEXT = ("""
                          Default is "unspecified".
 
   --rpo setting          Specifies the replication setting.
-                         Valid values are {rpo}. Default is None which results
-                         in DEFAULT setting for dual-region and multi-region
-                         buckets and None for single-region buckets.
+                         Valid values are {rpo}. If unspecified,
+                         the DEFAULT setting is applied for dual-region and
+                         multi-region buckets and
+                         None for single-region buckets.
 
 """.format(rpo=VALID_RPO_VALUES_STRING))
 
