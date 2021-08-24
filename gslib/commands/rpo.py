@@ -48,11 +48,11 @@ _SET_DESCRIPTION = """
   for Google Cloud Storage buckets.
 
 <B>SET EXAMPLES</B>
-  Configure your buckets to use Turbo Replication:
+  Configure your buckets to use turbo replication:
 
     gsutil rpo set ASYNC_TURBO gs://redbucket gs://bluebucket
 
-  Configure your buckets to NOT use Turbo Replication:
+  Configure your buckets to NOT use turbo replication:
 
     gsutil rpo set DEFAULT gs://redbucket gs://bluebucket
 """
@@ -63,7 +63,7 @@ _GET_DESCRIPTION = """
   for the specified Cloud Storage buckets.
 
 <B>GET EXAMPLES</B>
-  Check if your buckets are using Turbo replication:
+  Check if your buckets are using turbo replication:
 
     gsutil rpo get gs://redbucket gs://bluebucket
 """

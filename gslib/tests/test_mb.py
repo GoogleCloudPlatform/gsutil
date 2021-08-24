@@ -154,7 +154,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
 
   @SkipForXML('Rpo only runs on GCS JSON API')
   def test_create_with_rpo_async_turbo_fails_for_regional_bucket(self):
-    """Rpo is only meant for dual and multi-region buckets."""
+    """Rpo is only meant for dual-region and multi-region buckets."""
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
