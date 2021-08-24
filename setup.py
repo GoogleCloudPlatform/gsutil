@@ -43,6 +43,7 @@ requires = [
     'google-apitools>=0.5.32',
     'httplib2>=0.18',
     'google-reauth>=0.1.0',
+    # TODO: Remove mock dependency once Python 2 support is removed.
     'mock>=4.0.3',
     'monotonic>=1.4',
     'pyOpenSSL>=0.13',
