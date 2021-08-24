@@ -54,11 +54,11 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
     self.CreateBucket(bucket_name='boo1')
     self.CreateBucket(bucket_name='boo2')
     stdout = self.RunCommand('rpo', ['get', 'gs://boo*'], return_stdout=True)
+    actual = '\n'.join(sorted(stdout.strip().split('\n')))
     expected_string = textwrap.dedent("""\
       gs://boo1: None
-      gs://boo2: None
-      """)
-    self.assertEqual(expected_string, stdout)
+      gs://boo2: None""")
+    self.assertEqual(actual, expected_string)
 
   def test_get_with_wrong_url_raises_error(self):
     with self.assertRaisesRegexp(CommandException, 'No URLs matched'):
