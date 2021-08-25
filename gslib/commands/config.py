@@ -45,6 +45,7 @@ from gslib.exception import CommandException
 from gslib.metrics import CheckAndMaybePromptForAnalyticsEnabling
 from gslib.sig_handling import RegisterSignalHandler
 from gslib.utils import constants
+from gslib.utils import stet_util
 from gslib.utils import system_util
 from gslib.utils.hashing_helper import CHECK_HASH_ALWAYS
 from gslib.utils.hashing_helper import CHECK_HASH_IF_FAST_ELSE_FAIL
@@ -533,7 +534,7 @@ content_language = en
 #stet_binary_path = <Path to binary "/usr/local/bin/stet">
 
 # STET config path. If not specified, gsutil checks the default config location:
-# "~/.config/stet.yaml"
+# "{default_stet_config_path}"
 #stet_config_path = <Path to config file "~/.config/my_config.yaml">
 
 """ % {
@@ -559,6 +560,7 @@ content_language = en
     'max_upload_compression_buffer_size':
         (DEFAULT_MAX_UPLOAD_COMPRESSION_BUFFER_SIZE),
     'gzip_compression_level': DEFAULT_GZIP_COMPRESSION_LEVEL,
+    'default_stet_config_path': stet_util.DEFAULT_STET_CONFIG_PATH,
 }
 
 CONFIG_OAUTH2_CONFIG_CONTENT = """
