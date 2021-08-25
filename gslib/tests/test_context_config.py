@@ -227,8 +227,9 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
     mock_json_load.side_effect = [
         DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE
     ]
-    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
-                              ]):
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate',
+                                'True'),
+                               ('Credentials', 'cert_provider_command', None)]):
       # Purposely end execution here to avoid writing a file.
       with self.assertRaises(ValueError):
         context_config.create_context_config(self.mock_logger)
@@ -244,8 +245,9 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   def testDefaultProviderNoCommandError(self, mock_open, mock_json_load):
     mock_json_load.return_value = DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND
 
-    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
-                              ]):
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate',
+                                'True'),
+                               ('Credentials', 'cert_provider_command', None)]):
       context_config.create_context_config(self.mock_logger)
 
       mock_open.assert_called_with(context_config._DEFAULT_METADATA_PATH)
@@ -255,8 +257,9 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
 
   @mock.patch('os.path.exists', new=mock.Mock(return_value=False))
   def testDefaultProviderNotFoundError(self):
-    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
-                              ]):
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate',
+                                'True'),
+                               ('Credentials', 'cert_provider_command', None)]):
       context_config.create_context_config(self.mock_logger)
 
       self.mock_logger.error.assert_called_once_with(
@@ -269,8 +272,9 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   def testRaisesCertProvisionErrorOnJsonLoadError(self, mock_open,
                                                   mock_json_load):
     mock_json_load.side_effect = ValueError('valueError')
-    with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
-                              ]):
+    with SetBotoConfigForTest([('Credentials', 'use_client_certificate',
+                                'True'),
+                               ('Credentials', 'cert_provider_command', None)]):
       context_config.create_context_config(self.mock_logger)
       mock_open.assert_called_with(context_config._DEFAULT_METADATA_PATH)
       self.mock_logger.error.assert_called_once_with(

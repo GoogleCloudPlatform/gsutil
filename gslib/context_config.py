@@ -22,11 +22,11 @@ from __future__ import unicode_literals
 import atexit
 import json
 import os
-import subprocess
 
 from boto import config
 
 import gslib
+from gslib.utils import execution_util
 
 # Maintain a single context configuration.
 _singleton_config = None
@@ -212,15 +212,8 @@ class _ContextConfig(object):
       cert_command = _default_command()
 
     try:
-      command_process = subprocess.Popen(cert_command,
-                                         stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE)
-      command_stdout, command_stderr = command_process.communicate()
-      if command_process.returncode != 0:
-        raise CertProvisionError(command_stderr)
-
-      # Python 3 outputs bytes from communicate() by default.
-      command_stdout_string = command_stdout.decode()
+      command_stdout_string, _ = execution_util.ExecuteExternalCommand(
+          cert_command)
 
       sections = _SplitPemIntoSections(command_stdout_string, self.logger)
       with open(cert_path, 'w+') as f:

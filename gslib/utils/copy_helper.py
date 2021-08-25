@@ -107,6 +107,7 @@ from gslib.tracker_file import TrackerFileType
 from gslib.tracker_file import WriteDownloadComponentTrackerFile
 from gslib.tracker_file import WriteJsonDataToTrackerFile
 from gslib.utils import parallelism_framework_util
+from gslib.utils import temporary_file_util
 from gslib.utils import text_util
 from gslib.utils.boto_util import GetJsonResumableChunkSize
 from gslib.utils.boto_util import GetMaxRetryDelay
@@ -2254,10 +2255,10 @@ def _GetDownloadFile(dst_url, src_obj_metadata, logger):
   # we will fail our hash check for the object.
   if ObjectIsGzipEncoded(src_obj_metadata):
     need_to_unzip = True
-    download_file_name = _GetDownloadTempZipFileName(dst_url)
+    download_file_name = temporary_file_util.GetTempZipFileName(dst_url)
     logger.info('Downloading to temp gzip filename %s', download_file_name)
   else:
-    download_file_name = _GetDownloadTempFileName(dst_url)
+    download_file_name = temporary_file_util.GetTempFileName(dst_url)
 
   # If a file exists at the permanent destination (where the file will be moved
   # after the download is completed), delete it here to reduce disk space
@@ -3071,16 +3072,6 @@ def _DownloadObjectToFile(src_url,
                   finished=True))
 
   return (end_time - start_time, bytes_transferred, dst_url, local_md5)
-
-
-def _GetDownloadTempZipFileName(dst_url):
-  """Returns temporary file name for a temporarily compressed download."""
-  return '%s_.gztmp' % dst_url.object_name
-
-
-def _GetDownloadTempFileName(dst_url):
-  """Returns temporary download file name for uncompressed downloads."""
-  return '%s_.gstmp' % dst_url.object_name
 
 
 def _ValidateAndCompleteDownload(logger,
