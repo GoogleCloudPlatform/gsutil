@@ -682,7 +682,7 @@ _OPTIONS_TEXT = """
 
   --stet         If the STET binary can be found in boto or PATH, and STET
                  config file can be found in boto or default location, cp will
-                 use the split-trust encryption tool for end-to-end encryption.
+                 use STET for end-to-end encryption.
 """
 
 _DETAILED_HELP_TEXT = '\n\n'.join([
@@ -1037,7 +1037,8 @@ class CpCommand(Command):
                   copy_helper_opts.skip_unsupported_objects,
                   copy_helper_opts.preserve_acl,
                   preserve_posix=self.preserve_posix_attrs,
-                  delete_source=copy_helper_opts.perform_mv)),
+                  delete_source=copy_helper_opts.perform_mv,
+                  file_size_will_change=self.use_stet)),
           DestinationInfo(exp_dst_url, have_existing_dst_container))
 
       self.has_file_dst = self.has_file_dst or exp_dst_url.IsFileUrl()
@@ -1081,7 +1082,6 @@ class CpCommand(Command):
     self.has_file_dst = False
     self.has_cloud_dst = False
     self.provider_types = set()
-
     # Because cp may have multiple source URLs and multiple destinations, we
     # wrap the name expansion iterator in order to collect analytics.
     name_expansion_iterator = CopyObjectsIterator(
@@ -1102,7 +1102,8 @@ class CpCommand(Command):
           self.recursion_requested or copy_helper_opts.perform_mv,
           all_versions=self.all_versions,
           project_id=self.project_id,
-          ignore_symlinks=self.exclude_symlinks)
+          ignore_symlinks=self.exclude_symlinks,
+          file_size_will_change=self.use_stet)
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.

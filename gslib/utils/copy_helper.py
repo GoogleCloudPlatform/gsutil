@@ -3432,7 +3432,8 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud,
                                  preserve_acl,
                                  is_rsync=False,
                                  preserve_posix=False,
-                                 delete_source=False):
+                                 delete_source=False,
+                                 file_size_will_change=False):
   """Determines the metadata fields needed for a copy operation.
 
   This function returns the fields we will need to successfully copy any
@@ -3459,6 +3460,7 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud,
     preserve_posix: if true, retrieves POSIX attributes into user metadata.
     delete_source: if true, source object will be deleted after the copy
                    (mv command).
+    file_size_will_change: if true, do not try to record file size.
 
   Returns:
     List of necessary field metadata field names.
@@ -3489,13 +3491,14 @@ def GetSourceFieldsNeededForCopy(dst_is_cloud,
         'mediaLink',
         'metadata',
         'metageneration',
-        'size',
         'storageClass',
         'timeCreated',
     ])
     # We only need the ACL if we're going to preserve it.
     if preserve_acl:
       src_obj_fields_set.update(['acl'])
+    if not file_size_will_change:
+      src_obj_fields_set.update(['size'])
 
   else:
     # Just get the fields needed to perform and validate the download.

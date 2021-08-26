@@ -44,6 +44,7 @@ from gslib.tests.util import GSMockBucketStorageUri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils import copy_helper
 from gslib.utils import parallelism_framework_util
 from gslib.utils import posix_util
 from gslib.utils import system_util
@@ -598,6 +599,11 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertTrue(mock_stream.close.called)
     # Ensure the lock was released.
     self.assertFalse(mock_lock.__exit__.called)
+
+  def testDoesNotGetSizeSourceFieldIfFileSizeWillChange(self):
+    fields = copy_helper.GetSourceFieldsNeededForCopy(
+        True, True, False, file_size_will_change=True)
+    self.assertNotIn('size', fields)
 
 
 class TestExpandUrlToSingleBlr(GsUtilUnitTestCase):
