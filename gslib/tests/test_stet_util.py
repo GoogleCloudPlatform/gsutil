@@ -140,19 +140,21 @@ class TestStetUtil(testcase.GsUtilUnitTestCase):
 
     source_url = storage_url.StorageUrlFromString('gs://bucket/obj')
     destination_url = storage_url.StorageUrlFromString('out')
+    temporary_file_name = 'out_.gstmp'
     with util.SetBotoConfigForTest([
         ('GSUtil', 'stet_binary_path', 'fake_binary_path'),
         ('GSUtil', 'stet_config_path', fake_config_path),
     ]):
-      stet_util.decrypt_download(source_url, destination_url, mock_logger)
+      stet_util.decrypt_download(
+          source_url, destination_url, temporary_file_name, mock_logger)
 
     mock_execute_external_command.assert_called_once_with([
         'fake_binary_path', 'decrypt',
         '--config-file={}'.format(fake_config_path),
-        '--blob-id=gs://bucket/obj', 'out', 'out_.stet_tmp'
+        '--blob-id=gs://bucket/obj', 'out_.gstmp', 'out_.stet_tmp'
     ])
     mock_logger.debug.assert_called_once_with('stderr')
-    mock_move.assert_called_once_with('out_.stet_tmp', 'out')
+    mock_move.assert_called_once_with('out_.stet_tmp', 'out_.gstmp')
 
   @mock.patch.object(stet_util,
                      '_get_stet_binary_from_path',

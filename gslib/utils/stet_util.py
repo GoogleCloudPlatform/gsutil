@@ -101,15 +101,16 @@ def encrypt_upload(source_url, destination_url, logger):
   return storage_url.StorageUrlFromString(out_file)
 
 
-def decrypt_download(source_url, destination_url, logger):
+def decrypt_download(source_url, destination_url, temporary_file_name, logger):
   """STET-decrypts downloaded file.
 
   Args:
     source_url (StorageUrl): Copy source.
     destination_url (StorageUrl): Copy destination.
+    temporary_file_name (str): Path to temporary file used for download.
     logger (logging.Logger): For logging STET binary output.
   """
-  in_file = destination_url.object_name
+  in_file = temporary_file_name
   out_file = temporary_file_util.GetStetTempFileName(destination_url)
   blob_id = source_url.url_string
 

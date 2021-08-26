@@ -2939,7 +2939,8 @@ def _DownloadObjectToFile(src_url,
                           allow_splitting=True,
                           decryption_key=None,
                           is_rsync=False,
-                          preserve_posix=False):
+                          preserve_posix=False,
+                          use_stet=False):
   """Downloads an object to a local file.
 
   Args:
@@ -2954,6 +2955,7 @@ def _DownloadObjectToFile(src_url,
     decryption_key: Base64-encoded decryption key for the source object, if any.
     is_rsync: Whether or not the caller is the rsync command.
     preserve_posix: Whether or not to preserve POSIX attributes.
+    use_stet: Decrypt downloaded file with STET binary if available on system.
 
   Returns:
     (elapsed_time, bytes_transferred, dst_url, md5), where time elapsed
@@ -3058,7 +3060,8 @@ def _DownloadObjectToFile(src_url,
                                            bytes_transferred,
                                            gsutil_api,
                                            is_rsync=is_rsync,
-                                           preserve_posix=preserve_posix)
+                                           preserve_posix=preserve_posix,
+                                           use_stet=use_stet)
 
   with open_files_lock:
     open_files_map.delete(download_file_name)
@@ -3083,12 +3086,13 @@ def _ValidateAndCompleteDownload(logger,
                                  server_gzip,
                                  digesters,
                                  hash_algs,
-                                 download_file_name,
+                                 temporary_file_name,
                                  api_selector,
                                  bytes_transferred,
                                  gsutil_api,
                                  is_rsync=False,
-                                 preserve_posix=False):
+                                 preserve_posix=False,
+                                 use_stet=False):
   """Validates and performs necessary operations on a downloaded file.
 
   Validates the integrity of the downloaded file using hash_algs. If the file
@@ -3112,20 +3116,21 @@ def _ValidateAndCompleteDownload(logger,
                hash must be recomputed from the local file.
     hash_algs: dict of {string, hash algorithm} that can be used if digesters
                don't have up-to-date digests.
-    download_file_name: Temporary file name that was used for download.
+    temporary_file_name: Temporary file name that was used for download.
     api_selector: The Cloud API implementation used (used tracker file naming).
     bytes_transferred: Number of bytes downloaded (used for logging).
     gsutil_api: Cloud API to use for service and status.
     is_rsync: Whether or not the caller is the rsync function. Used to determine
               if timeCreated should be used.
     preserve_posix: Whether or not to preserve the posix attributes.
+    use_stet: If True, attempt to decrypt downloaded files with the STET
+              binary if it's present on the system.
 
   Returns:
     An MD5 of the local file, if one was calculated as part of the integrity
     check.
   """
   final_file_name = dst_url.object_name
-  file_name = download_file_name
   digesters_succeeded = True
 
   for alg in digesters:
@@ -3140,8 +3145,8 @@ def _ValidateAndCompleteDownload(logger,
     local_hashes = _CreateDigestsFromDigesters(digesters)
   else:
     local_hashes = _CreateDigestsFromLocalFile(gsutil_api.status_queue,
-                                               hash_algs, file_name, src_url,
-                                               src_obj_metadata)
+                                               hash_algs, temporary_file_name,
+                                               src_url, src_obj_metadata)
 
   digest_verified = True
   hash_invalid_exception = None
@@ -3167,12 +3172,18 @@ def _ValidateAndCompleteDownload(logger,
     else:
       DeleteDownloadTrackerFiles(dst_url, api_selector)
       if _RENAME_ON_HASH_MISMATCH:
-        os.rename(file_name, final_file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
+        os.rename(temporary_file_name,
+                  final_file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
       else:
-        os.unlink(file_name)
+        os.unlink(temporary_file_name)
       raise
 
-  if need_to_unzip or server_gzip:
+  if not (need_to_unzip or server_gzip):
+    unzipped_temporary_file_name = temporary_file_name
+  else:
+    # This will not result in the same string as temporary_file_name b/c
+    # GetTempFileName returns ".gstmp" and gzipped temp files have ".gztmp".
+    unzipped_temporary_file_name = temporary_file_util.GetTempFileName(dst_url)
     # Log that we're uncompressing if the file is big enough that
     # decompressing would make it look like the transfer "stalled" at the end.
     if bytes_transferred > TEN_MIB:
@@ -3183,8 +3194,8 @@ def _ValidateAndCompleteDownload(logger,
     try:
       # Downloaded temporarily gzipped file, unzip to file without '_.gztmp'
       # suffix.
-      gzip_fp = gzip.open(file_name, 'rb')
-      with open(final_file_name, 'wb') as f_out:
+      gzip_fp = gzip.open(temporary_file_name, 'rb')
+      with open(unzipped_temporary_file_name, 'wb') as f_out:
         data = gzip_fp.read(GZIP_CHUNK_SIZE)
         while data:
           f_out.write(data)
@@ -3200,29 +3211,34 @@ def _ValidateAndCompleteDownload(logger,
       if gzip_fp:
         gzip_fp.close()
 
-    os.unlink(file_name)
-    file_name = final_file_name
+    os.unlink(temporary_file_name)
 
   if not digest_verified:
     try:
       # Recalculate hashes on the unzipped local file.
       local_hashes = _CreateDigestsFromLocalFile(gsutil_api.status_queue,
-                                                 hash_algs, file_name, src_url,
-                                                 src_obj_metadata)
+                                                 hash_algs,
+                                                 unzipped_temporary_file_name,
+                                                 src_url, src_obj_metadata)
       _CheckHashes(logger, src_url, src_obj_metadata, final_file_name,
                    local_hashes)
       DeleteDownloadTrackerFiles(dst_url, api_selector)
     except HashMismatchException:
       DeleteDownloadTrackerFiles(dst_url, api_selector)
       if _RENAME_ON_HASH_MISMATCH:
-        os.rename(file_name, file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
+        os.rename(
+            unzipped_temporary_file_name,
+            unzipped_temporary_file_name + _RENAME_ON_HASH_MISMATCH_SUFFIX)
       else:
-        os.unlink(file_name)
+        os.unlink(unzipped_temporary_file_name)
       raise
 
-  if file_name != final_file_name:
-    # Data is still in a temporary file, so move it to a permanent location.
-    os.rename(file_name, final_file_name)
+  if use_stet:
+    # Decrypt data using STET binary.
+    stet_util.decrypt_download(
+        src_url, dst_url, unzipped_temporary_file_name, logger)
+
+  os.rename(unzipped_temporary_file_name, final_file_name)
   ParseAndSetPOSIXAttributes(final_file_name,
                              src_obj_metadata,
                              is_rsync=is_rsync,
@@ -3824,7 +3840,8 @@ def PerformCopy(logger,
                                    allow_splitting=allow_splitting,
                                    decryption_key=decryption_key,
                                    is_rsync=is_rsync,
-                                   preserve_posix=preserve_posix)
+                                   preserve_posix=preserve_posix,
+                                   use_stet=use_stet)
     elif copy_in_the_cloud:
       PutToQueueWithTimeout(
           gsutil_api.status_queue,
