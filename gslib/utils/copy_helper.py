@@ -107,6 +107,7 @@ from gslib.tracker_file import TrackerFileType
 from gslib.tracker_file import WriteDownloadComponentTrackerFile
 from gslib.tracker_file import WriteJsonDataToTrackerFile
 from gslib.utils import parallelism_framework_util
+from gslib.utils import stet_util
 from gslib.utils import temporary_file_util
 from gslib.utils import text_util
 from gslib.utils.boto_util import GetJsonResumableChunkSize
@@ -3615,7 +3616,8 @@ def PerformCopy(logger,
                 gzip_exts=None,
                 is_rsync=False,
                 preserve_posix=False,
-                gzip_encoded=False):
+                gzip_encoded=False,
+                use_stet=False):
   """Performs copy from src_url to dst_url, handling various special cases.
 
   Args:
@@ -3641,6 +3643,8 @@ def PerformCopy(logger,
     gzip_encoded: Whether to use gzip transport encoding for the upload. Used
         in conjunction with gzip_exts. Streaming files compressed is only
         supported on the JSON GCS API.
+    use_stet: If True, will perform STET encryption or decryption using binary
+        and STET config in boto config or found on system in default locations.
 
   Returns:
     (elapsed_time, bytes_transferred, version-specific dst_url) excluding
@@ -3699,8 +3703,12 @@ def PerformCopy(logger,
         if acl_text:
           AddS3MarkerAclToObjectMetadata(dst_obj_metadata, acl_text)
   else:  # src_url.IsFileUrl()
+    if use_stet:
+      source_stream_url = stet_util.encrypt_upload(src_url, dst_url, logger)
+    else:
+      source_stream_url = src_url
     try:
-      src_obj_filestream = GetStreamFromFileUrl(src_url)
+      src_obj_filestream = GetStreamFromFileUrl(source_stream_url)
     except Exception as e:  # pylint: disable=broad-except
       message = 'Error opening file "%s": %s.' % (src_url, str(e))
       if command_obj.continue_on_error:
@@ -3711,11 +3719,12 @@ def PerformCopy(logger,
         raise CommandException(message)
     if src_url.IsStream() or src_url.IsFifo():
       src_obj_size = None
-    elif src_obj_metadata and src_obj_metadata.size:
+    elif src_obj_metadata and src_obj_metadata.size and not use_stet:
       # Iterator retrieved the file's size, no need to stat it again.
+      # Unless STET changed the file size.
       src_obj_size = src_obj_metadata.size
     else:
-      src_obj_size = os.path.getsize(src_url.object_name)
+      src_obj_size = os.path.getsize(source_stream_url.object_name)
 
   if global_copy_helper_opts.use_manifest:
     # Set the source size in the manifest.
@@ -3854,19 +3863,23 @@ def PerformCopy(logger,
       # The FileMessage for this upload object is inside _UploadFileToObject().
       # This is such because the function may alter src_url, which would prevent
       # us from correctly tracking the new url.
-      return _UploadFileToObject(src_url,
-                                 src_obj_filestream,
-                                 src_obj_size,
-                                 dst_url,
-                                 dst_obj_metadata,
-                                 preconditions,
-                                 gsutil_api,
-                                 logger,
-                                 command_obj,
-                                 copy_exception_handler,
-                                 gzip_exts=gzip_exts,
-                                 allow_splitting=allow_splitting,
-                                 gzip_encoded=gzip_encoded)
+      uploaded_metadata = _UploadFileToObject(src_url,
+                                              src_obj_filestream,
+                                              src_obj_size,
+                                              dst_url,
+                                              dst_obj_metadata,
+                                              preconditions,
+                                              gsutil_api,
+                                              logger,
+                                              command_obj,
+                                              copy_exception_handler,
+                                              gzip_exts=gzip_exts,
+                                              allow_splitting=allow_splitting,
+                                              gzip_encoded=gzip_encoded)
+      if use_stet:
+        # Delete temporary file.
+        os.unlink(src_obj_filestream.name)
+      return uploaded_metadata
     else:  # dst_url.IsFileUrl()
       PutToQueueWithTimeout(
           gsutil_api.status_queue,
