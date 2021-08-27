@@ -124,45 +124,45 @@ OPEN_TO_PATCH = '__builtin__.open' if six.PY2 else 'builtins.open'
 class TestPemFileParser(testcase.GsUtilUnitTestCase):
   """Test PEM-format certificate parsing for mTLS."""
 
-  def testPemFileWithCommentAtBegin(self):
-    sections = context_config._SplitPemIntoSections(
+  def test_pem_file_with_comment_at_beginning(self):
+    sections = context_config._split_pem_into_sections(
         CERT_KEY_WITH_COMMENT_AT_BEGIN, self.logger)
     self.assertEqual(sections['CERTIFICATE'], CERT_SECTION)
     self.assertEqual(sections['ENCRYPTED PRIVATE KEY'], KEY_SECTION)
 
-  def testPemFileWithCommentAtEnd(self):
-    sections = context_config._SplitPemIntoSections(
+  def test_pem_file_with_comment_at_end(self):
+    sections = context_config._split_pem_into_sections(
         CERT_KEY_WITH_COMMENT_AT_END, self.logger)
     self.assertEqual(sections['CERTIFICATE'], CERT_SECTION)
     self.assertEqual(sections['ENCRYPTED PRIVATE KEY'], KEY_SECTION)
 
-  def testPemFileWithCommentInBetween(self):
-    sections = context_config._SplitPemIntoSections(
+  def test_pem_file_with_comment_in_between(self):
+    sections = context_config._split_pem_into_sections(
         CERT_KEY_WITH_COMMENT_IN_BETWEEN, self.logger)
     self.assertEqual(sections['CERTIFICATE'], CERT_SECTION)
     self.assertEqual(sections['ENCRYPTED PRIVATE KEY'], KEY_SECTION)
 
-  def testPemFileWithBadFormatEmbeddedSection(self):
-    sections = context_config._SplitPemIntoSections(
+  def test_pem_file_with_bad_format_embedded_section(self):
+    sections = context_config._split_pem_into_sections(
         BAD_CERT_KEY_EMBEDDED_SECTION, self.logger)
     self.assertIsNone(sections.get('CERTIFICATE'))
     self.assertEqual(sections.get('ENCRYPTED PRIVATE KEY'), KEY_SECTION)
 
-  def testPemFileWithBadFormatMissingEnd(self):
-    sections = context_config._SplitPemIntoSections(BAD_CERT_KEY_MISSING_END,
-                                                    self.logger)
+  def test_pem_file_with_bad_format_missing_ending(self):
+    sections = context_config._split_pem_into_sections(BAD_CERT_KEY_MISSING_END,
+                                                       self.logger)
     self.assertEqual(sections.get('CERTIFICATE'), CERT_SECTION)
     self.assertIsNone(sections.get('ENCRYPTED PRIVATE KEY'))
 
-  def testPemFileWithBadFormatMissingBegin(self):
-    sections = context_config._SplitPemIntoSections(BAD_CERT_KEY_MISSING_BEGIN,
-                                                    self.logger)
+  def test_pem_file_with_bad_format_missing_beginning(self):
+    sections = context_config._split_pem_into_sections(
+        BAD_CERT_KEY_MISSING_BEGIN, self.logger)
     self.assertIsNone(sections.get('CERTIFICATE'))
     self.assertEqual(sections.get('ENCRYPTED PRIVATE KEY'), KEY_SECTION)
 
-  def testPemFileWithBadFormatMismatch(self):
-    sections = context_config._SplitPemIntoSections(BAD_CERT_KEY_MISMATCH,
-                                                    self.logger)
+  def test_pem_file_with_bad_format_section_mismatch(self):
+    sections = context_config._split_pem_into_sections(BAD_CERT_KEY_MISMATCH,
+                                                       self.logger)
     self.assertIsNone(sections.get('CERTIFICATE'))
     self.assertIsNone(sections.get('ENCRYPTED PRIVATE KEY'))
 
@@ -185,7 +185,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
     super(TestContextConfig, self).tearDown()
     context_config._singleton_config = self._old_context_config
 
-  def testContextConfigIsASingleton(self):
+  def test_context_config_is_a_singleton(self):
     first = context_config.create_context_config(self.mock_logger)
 
     with self.assertRaises(
@@ -196,7 +196,8 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
     self.assertEqual(first, second)
 
   @mock.patch.object(subprocess, 'Popen')
-  def testDoesNotProvisionIfUseClientCertificateNotTrue(self, mock_Popen):
+  def test_does_not_provision_if_use_client_certificate_not_true(
+      self, mock_Popen):
     context_config.create_context_config(self.mock_logger)
     mock_Popen.assert_not_called()
 
@@ -204,8 +205,9 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   @mock.patch.object(json, 'load', autospec=True)
   @mock.patch.object(subprocess, 'Popen', autospec=True)
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testExecutesProviderCommandFromDefaultFile(self, mock_open, mock_Popen,
-                                                 mock_json_load):
+  def test_executes_provider_command_from_default_file(self, mock_open,
+                                                       mock_Popen,
+                                                       mock_json_load):
     mock_json_load.side_effect = [DEFAULT_CERT_PROVIDER_FILE_CONTENTS]
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate', 'True')
                               ]):
@@ -222,7 +224,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   @mock.patch.object(json, 'load', autospec=True)
   @mock.patch.object(subprocess, 'Popen', autospec=True)
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testExecutesProviderCommandWithSpaceFromDefaultFile(
+  def test_executes_provider_command_with_space_from_default_file(
       self, mock_open, mock_Popen, mock_json_load):
     mock_json_load.side_effect = [
         DEFAULT_CERT_PROVIDER_FILE_CONTENTS_WITH_SPACE
@@ -242,7 +244,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   @mock.patch('os.path.exists', new=mock.Mock(return_value=True))
   @mock.patch.object(json, 'load', autospec=True)
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testDefaultProviderNoCommandError(self, mock_open, mock_json_load):
+  def test_default_provider_no_command_error(self, mock_open, mock_json_load):
     mock_json_load.return_value = DEFAULT_CERT_PROVIDER_FILE_NO_COMMAND
 
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate',
@@ -256,7 +258,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
           "Client certificate provider command not found.")
 
   @mock.patch('os.path.exists', new=mock.Mock(return_value=False))
-  def testDefaultProviderNotFoundError(self):
+  def test_default_provider_not_found_error(self):
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate',
                                 'True'),
                                ('Credentials', 'cert_provider_command', None)]):
@@ -269,8 +271,8 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   @mock.patch.object(json, 'load', autospec=True)
   @mock.patch('os.path.exists', new=mock.Mock(return_value=True))
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
-  def testRaisesCertProvisionErrorOnJsonLoadError(self, mock_open,
-                                                  mock_json_load):
+  def test_raises_cert_provision_error_on_json_load_error(
+      self, mock_open, mock_json_load):
     mock_json_load.side_effect = ValueError('valueError')
     with SetBotoConfigForTest([('Credentials', 'use_client_certificate',
                                 'True'),
@@ -281,7 +283,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
           'Failed to provision client certificate: valueError')
 
   @mock.patch.object(subprocess, 'Popen', autospec=True)
-  def testExecutesCustomProviderCommandFromBotoConfig(self, mock_Popen):
+  def test_executes_custom_provider_command_from_boto_config(self, mock_Popen):
     with SetBotoConfigForTest([
         ('Credentials', 'use_client_certificate', 'True'),
         ('Credentials', 'cert_provider_command', 'some/path')
@@ -295,7 +297,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
                                            stderr=subprocess.PIPE)
 
   @mock.patch.object(subprocess, 'Popen')
-  def testConvertsAndLogsProvisoningCertProviderUnexpectedExitError(
+  def test_converts_and_logs_provisioning_cert_provider_unexpected_exit_error(
       self, mock_Popen):
     mock_command_process = mock.Mock()
     mock_command_process.communicate.return_value = (None, 'oh no')
@@ -310,7 +312,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
           'Failed to provision client certificate: oh no')
 
   @mock.patch.object(subprocess, 'Popen')
-  def testConvertsAndLogsProvisioningOSError(self, mock_Popen):
+  def test_converts_and_logs_provisioning_os_error(self, mock_Popen):
     mock_Popen.side_effect = OSError('foobar')
 
     with SetBotoConfigForTest([
@@ -322,7 +324,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
           'Failed to provision client certificate: foobar')
 
   @mock.patch.object(subprocess, 'Popen')
-  def testConvertsAndLogsProvisoningKeyError(self, mock_Popen):
+  def test_converts_and_logs_provisioning_key_error(self, mock_Popen):
     # Mocking f.write would make more sense, but mocking Popen earlier in the
     # function results in much less code and tests the same error handling.
     mock_Popen.side_effect = KeyError('foobar')
@@ -340,18 +342,18 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
           unicode_escaped_error_string)
 
   @mock.patch.object(os, 'remove')
-  def testDoesNotUnprovisionIfNoClientCertificate(self, mock_remove):
+  def test_does_not_unprovision_if_no_client_certificate(self, mock_remove):
     context_config.create_context_config(self.mock_logger)
-    context_config._singleton_config._UnprovisionClientCert()
+    context_config._singleton_config._unprovision_client_cert()
     mock_remove.assert_not_called()
 
   @mock.patch.object(os, 'remove')
-  def testHandlesAndLogsUnprovisioningOSError(self, mock_remove):
+  def test_handles_and_logs_unprovisioning_os_error(self, mock_remove):
     mock_remove.side_effect = OSError('no')
 
     context_config.create_context_config(self.mock_logger)
     context_config._singleton_config.client_cert_path = 'some/path'
-    context_config._singleton_config._UnprovisionClientCert()
+    context_config._singleton_config._unprovision_client_cert()
 
     self.mock_logger.error.assert_called_once_with(
         'Failed to remove client certificate: no')
@@ -359,7 +361,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   @mock.patch(OPEN_TO_PATCH, new_callable=mock.mock_open)
   @mock.patch.object(os, 'remove')
   @mock.patch.object(subprocess, 'Popen')
-  def testWritesAndDeletesCertificateFileStoringPasswordToMemory(
+  def test_writes_and_deletes_certificate_file_storing_password_to_memory(
       self, mock_Popen, mock_remove, mock_open):
     mock_command_process = mock.Mock()
     mock_command_process.returncode = 0
@@ -387,5 +389,5 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
       self.assertEqual(context_config._singleton_config.client_cert_password,
                        PASSWORD)
       # Test deletes certificate file.
-      context_config._singleton_config._UnprovisionClientCert()
+      context_config._singleton_config._unprovision_client_cert()
       mock_remove.assert_called_once_with(test_config.client_cert_path)
