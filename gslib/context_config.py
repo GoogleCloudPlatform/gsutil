@@ -48,7 +48,7 @@ class ContextConfigSingletonAlreadyExistsError(Exception):
   pass
 
 
-def _IsPemSectionMarker(line):
+def _is_pem_section_marker(line):
   """Returns (begin:bool, end:bool, name:str)."""
   if line.startswith('-----BEGIN ') and line.endswith('-----'):
     return True, False, line[11:-5]
@@ -58,7 +58,7 @@ def _IsPemSectionMarker(line):
     return False, False, ''
 
 
-def _SplitPemIntoSections(contents, logger):
+def _split_pem_into_sections(contents, logger):
   """Returns dict with {name: section} by parsing contents in PEM format.
 
   A simple parser for PEM file. Please see RFC 7468 for the format of PEM
@@ -83,7 +83,7 @@ def _SplitPemIntoSections(contents, logger):
     if not line:
       continue
 
-    begin, end, name = _IsPemSectionMarker(line)
+    begin, end, name = _is_pem_section_marker(line)
     if begin:
       if pem_section_name:
         logger.warning('Section %s missing end line and will be ignored.' %
@@ -192,16 +192,16 @@ class _ContextConfig(object):
       return
 
     # Generates certificate and deletes it afterwards.
-    atexit.register(self._UnprovisionClientCert)
+    atexit.register(self._unprovision_client_cert)
     self.client_cert_path = os.path.join(gslib.GSUTIL_DIR, 'caa_cert.pem')
     try:
       # Certs provisioned using endpoint verification are stored as a
       # single file holding both the public certificate and the private key.
-      self._ProvisionClientCert(self.client_cert_path)
+      self._provision_client_cert(self.client_cert_path)
     except CertProvisionError as e:
       self.logger.error('Failed to provision client certificate: %s' % e)
 
-  def _ProvisionClientCert(self, cert_path):
+  def _provision_client_cert(self, cert_path):
     """Executes certificate provider to obtain client certificate and keys."""
     cert_command_string = config.get('Credentials', 'cert_provider_command',
                                      None)
@@ -215,7 +215,7 @@ class _ContextConfig(object):
       command_stdout_string, _ = execution_util.ExecuteExternalCommand(
           cert_command)
 
-      sections = _SplitPemIntoSections(command_stdout_string, self.logger)
+      sections = _split_pem_into_sections(command_stdout_string, self.logger)
       with open(cert_path, 'w+') as f:
         f.write(sections['CERTIFICATE'])
         f.write(sections['ENCRYPTED PRIVATE KEY'])
@@ -226,7 +226,7 @@ class _ContextConfig(object):
       raise CertProvisionError(
           'Invalid output format from certificate provider, no %s' % e)
 
-  def _UnprovisionClientCert(self):
+  def _unprovision_client_cert(self):
     """Cleans up any files or resources provisioned during config init."""
     if self.client_cert_path is not None:
       try:
