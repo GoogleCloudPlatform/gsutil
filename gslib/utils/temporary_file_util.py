@@ -28,3 +28,8 @@ def GetTempFileName(storage_url):
 def GetTempZipFileName(storage_url):
   """Returns temporary name for a temporarily compressed file."""
   return '%s_.gztmp' % storage_url.object_name
+
+
+def GetStetTempFileName(storage_url):
+  """Returns temporary file name for result of STET transform."""
+  return '%s_.stet_tmp' % storage_url.object_name
