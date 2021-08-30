@@ -185,12 +185,12 @@ class RpoCommand(Command):
       # Throws a CommandException if the argument is not a bucket.
       bucket_iter = self.GetBucketUrlIterFromArg(url_str)
       for bucket_listing_ref in bucket_iter:
-        # TODO: Remove this check
+        # TODO: Make this more general when adding RPO support for the XML API.
         if self.gsutil_api.GetApiSelector(
             bucket_listing_ref.storage_url.scheme) != ApiSelector.JSON:
           raise CommandException('\n'.join(
               textwrap.wrap(('The "%s" command can only be used for GCS '
-                             'Buckets.') % self.command_name)))
+                             'buckets.') % self.command_name)))
 
         some_matched = True
         subcommand_func(bucket_listing_ref, *subcommand_args)
