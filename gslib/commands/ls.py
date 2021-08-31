@@ -388,14 +388,11 @@ class LsCommand(Command):
       if bucket.iamConfiguration.publicAccessPrevention:
         fields[
             'public_access_prevention'] = bucket.iamConfiguration.publicAccessPrevention
-<<<<<<< HEAD
     if bucket.rpo:
       fields['rpo'] = bucket.rpo
     if bucket.customPlacementConfig:
       fields['custom_placement_locations'] = (
           bucket.customPlacementConfig.dataLocations)
-=======
->>>>>>> 098b94c0 (Add support for CDR in ls command)
     if bucket.satisfiesPZS:
       fields['satisfies_pzs'] = bucket.satisfiesPZS
 
