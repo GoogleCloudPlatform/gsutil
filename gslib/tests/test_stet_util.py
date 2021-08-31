@@ -100,7 +100,7 @@ class TestStetUtil(testcase.GsUtilUnitTestCase):
     os.environ['PATH'] = previous_path
 
   @mock.patch.object(execution_util, 'ExecuteExternalCommand')
-  def test_stet_upload_uses_config_from_default_path_with_correct_settings(
+  def test_stet_upload_uses_no_config_if_not_provided(
       self, mock_execute_external_command):
     mock_execute_external_command.return_value = ('stdout', 'stderr')
     mock_logger = mock.Mock()
@@ -122,8 +122,6 @@ class TestStetUtil(testcase.GsUtilUnitTestCase):
     mock_execute_external_command.assert_called_once_with([
         'fake_binary_path',
         'encrypt',
-        '--config-file={}'.format(
-            os.path.expanduser(stet_util.DEFAULT_STET_CONFIG_PATH)),
         '--blob-id=gs://bucket/obj',
         'in',
         'in_.stet_tmp',
@@ -145,8 +143,8 @@ class TestStetUtil(testcase.GsUtilUnitTestCase):
         ('GSUtil', 'stet_binary_path', 'fake_binary_path'),
         ('GSUtil', 'stet_config_path', fake_config_path),
     ]):
-      stet_util.decrypt_download(
-          source_url, destination_url, temporary_file_name, mock_logger)
+      stet_util.decrypt_download(source_url, destination_url,
+                                 temporary_file_name, mock_logger)
 
     mock_execute_external_command.assert_called_once_with([
         'fake_binary_path', 'decrypt',
@@ -169,19 +167,6 @@ class TestStetUtil(testcase.GsUtilUnitTestCase):
     ]):
       with self.assertRaises(KeyError):
         stet_util.encrypt_upload(source_url, destination_url, None)
-
-  def test_stet_util_errors_if_no_config(self):
-    source_url = storage_url.StorageUrlFromString('in')
-    destination_url = storage_url.StorageUrlFromString('gs://bucket/obj')
-    with util.SetBotoConfigForTest([
-        ('GSUtil', 'stet_binary_path', 'fake_binary_path'),
-        ('GSUtil', 'stet_config_path', None),
-    ]):
-      with mock.patch.object(os.path,
-                             'exists',
-                             new=mock.Mock(return_value=False)):
-        with self.assertRaises(KeyError):
-          stet_util.encrypt_upload(source_url, destination_url, None)
 
   @mock.patch.object(os.path, 'expanduser', autospec=True)
   @mock.patch.object(execution_util,

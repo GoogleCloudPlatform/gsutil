@@ -28,8 +28,6 @@ from gslib.utils import temporary_file_util
 
 from boto import config
 
-DEFAULT_STET_CONFIG_PATH = '~/.config/stet.yaml'
-
 
 class StetSubcommandName(object):
   """Enum class for available STET subcommands."""
@@ -66,18 +64,13 @@ def _stet_transform(subcommand, blob_id, in_file_path, out_file_path, logger):
   if not binary_path:
     raise KeyError('Could not find STET binary in boto config or PATH.')
 
-  config_path = config.get('GSUtil', 'stet_config_path',
-                           DEFAULT_STET_CONFIG_PATH)
-  if not os.path.exists(config_path):
-    raise KeyError(
-        'Could not find STET config in boto config or at default {}'.format(
-            DEFAULT_STET_CONFIG_PATH))
+  command_args = [os.path.expanduser(binary_path), subcommand]
+  config_path = config.get('GSUtil', 'stet_config_path', None)
+  if config_path:
+    command_args.append('--config-file=' + os.path.expanduser(config_path))
+  command_args.extend(['--blob-id=' + blob_id, in_file_path, out_file_path])
 
-  _, stderr = execution_util.ExecuteExternalCommand([
-      os.path.expanduser(binary_path), subcommand,
-      '--config-file=' + os.path.expanduser(config_path),
-      '--blob-id=' + blob_id, in_file_path, out_file_path
-  ])
+  _, stderr = execution_util.ExecuteExternalCommand(command_args)
   logger.debug(stderr)
 
 

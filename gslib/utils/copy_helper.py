@@ -3235,8 +3235,8 @@ def _ValidateAndCompleteDownload(logger,
 
   if use_stet:
     # Decrypt data using STET binary.
-    stet_util.decrypt_download(
-        src_url, dst_url, unzipped_temporary_file_name, logger)
+    stet_util.decrypt_download(src_url, dst_url, unzipped_temporary_file_name,
+                               logger)
 
   os.rename(unzipped_temporary_file_name, final_file_name)
   ParseAndSetPOSIXAttributes(final_file_name,
@@ -3662,8 +3662,8 @@ def PerformCopy(logger,
     gzip_encoded: Whether to use gzip transport encoding for the upload. Used
         in conjunction with gzip_exts. Streaming files compressed is only
         supported on the JSON GCS API.
-    use_stet: If True, will perform STET encryption or decryption using binary
-        and STET config in boto config or found on system in default locations.
+    use_stet: If True, will perform STET encryption or decryption using
+        the binary specified in the boto config or PATH.
 
   Returns:
     (elapsed_time, bytes_transferred, version-specific dst_url) excluding

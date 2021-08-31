@@ -680,9 +680,8 @@ _OPTIONS_TEXT = """
                  as binary data, using this option may result in files taking up
                  more space in the cloud than they would if left uncompressed.
 
-  --stet         If the STET binary can be found in boto or PATH, and STET
-                 config file can be found in boto or default location, cp will
-                 use STET for end-to-end encryption.
+  --stet         If the STET binary can be found in boto or PATH, cp will
+                 use the split-trust encryption tool for end-to-end encryption.
 """
 
 _DETAILED_HELP_TEXT = '\n\n'.join([

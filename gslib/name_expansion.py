@@ -356,8 +356,8 @@ class SeekAheadNameExpansionIterator(object):
     # Count data bytes only will be transferred/rewritten.
     # Note that the rsync command uses a different iterator, thus it is not
     # included here.
-    self.count_data_bytes = (
-        command_name in ('cp', 'mv', 'rewrite') and not file_size_will_change)
+    self.count_data_bytes = (command_name in ('cp', 'mv', 'rewrite') and
+                             not file_size_will_change)
 
     # Only query the file size if we are counting data bytes, as this may
     # result in stat'ing files, which is more expensive.
