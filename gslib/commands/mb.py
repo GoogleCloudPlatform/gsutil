@@ -169,6 +169,8 @@ _DETAILED_HELP_TEXT = ("""
                          Valid values are "enforced" or "unspecified".
                          Default is "unspecified".
 
+  --placement reg1,reg2  Two regions that form the cutom dual region.
+
   --rpo setting          Specifies the replication setting.
                          Valid values are {rpo}. If unspecified,
                          the DEFAULT setting is applied for dual-region and
