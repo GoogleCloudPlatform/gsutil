@@ -96,6 +96,25 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     self.check_n_ary_compose(1)
     self.check_n_ary_compose(2)
 
+  def test_compose_copies_type_and_encoding_from_first_object(self):
+    bucket_uri = self.CreateBucket()
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'1')
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'2')
+    composite = self.StorageUriCloneReplaceName(bucket_uri,
+                                                self.MakeTempName('obj'))
+    self.RunGsUtil([
+        'setmeta', '-h', 'Content-Type:python-x', '-h', 'Content-Encoding:gzip',
+        suri(object_uri1)
+    ])
+    self.RunGsUtil(
+        ['compose',
+         suri(object_uri1),
+         suri(object_uri2),
+         suri(composite)])
+    stdout = self.RunGsUtil(['stat', suri(composite)], return_stdout=True)
+    self.assertRegex(stdout, r'Content-Type:\s+python-x')
+    self.assertRegex(stdout, r'Content-Encoding:\s+gzip')
+
   def test_maximal_compose(self):
     self.check_n_ary_compose(MAX_COMPOSE_ARITY)
 
