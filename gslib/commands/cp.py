@@ -316,7 +316,7 @@ _RETRY_HANDLING_TEXT = """
   the ``cp`` command skips that object and moves on. If any failures were not
   successfully retried by the end of the copy run, the ``cp`` command reports the
   number of failures, and exits with a non-zero status.
-  
+
   For details about gsutil's overall retry handling, see `Retry strategy
   <https://cloud.google.com/storage/docs/retry-strategy#tools>`_.
 """
@@ -679,6 +679,9 @@ _OPTIONS_TEXT = """
                  CAUTION: If some of the source files don't compress well, such
                  as binary data, using this option may result in files taking up
                  more space in the cloud than they would if left uncompressed.
+
+  --stet         If the STET binary can be found in boto or PATH, cp will
+                 use the split-trust encryption tool for end-to-end encryption.
 """
 
 _DETAILED_HELP_TEXT = '\n\n'.join([
@@ -754,7 +757,9 @@ class CpCommand(Command):
       urls_start_arg=0,
       gs_api_support=[ApiSelector.XML, ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
-      supported_private_args=['testcallbackfile='],
+      # Unfortunately, "private" args are the only way to support non-single
+      # character flags.
+      supported_private_args=['stet', 'testcallbackfile='],
       argparse_arguments=[
           CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument(),
       ],
@@ -919,7 +924,8 @@ class CpCommand(Command):
           manifest=self.manifest,
           gzip_encoded=self.gzip_encoded,
           gzip_exts=self.gzip_exts,
-          preserve_posix=preserve_posix)
+          preserve_posix=preserve_posix,
+          use_stet=self.use_stet)
       if copy_helper_opts.use_manifest:
         if md5:
           self.manifest.Set(exp_src_url.url_string, 'md5', md5)
@@ -1030,7 +1036,8 @@ class CpCommand(Command):
                   copy_helper_opts.skip_unsupported_objects,
                   copy_helper_opts.preserve_acl,
                   preserve_posix=self.preserve_posix_attrs,
-                  delete_source=copy_helper_opts.perform_mv)),
+                  delete_source=copy_helper_opts.perform_mv,
+                  file_size_will_change=self.use_stet)),
           DestinationInfo(exp_dst_url, have_existing_dst_container))
 
       self.has_file_dst = self.has_file_dst or exp_dst_url.IsFileUrl()
@@ -1074,7 +1081,6 @@ class CpCommand(Command):
     self.has_file_dst = False
     self.has_cloud_dst = False
     self.provider_types = set()
-
     # Because cp may have multiple source URLs and multiple destinations, we
     # wrap the name expansion iterator in order to collect analytics.
     name_expansion_iterator = CopyObjectsIterator(
@@ -1095,7 +1101,8 @@ class CpCommand(Command):
           self.recursion_requested or copy_helper_opts.perform_mv,
           all_versions=self.all_versions,
           project_id=self.project_id,
-          ignore_symlinks=self.exclude_symlinks)
+          ignore_symlinks=self.exclude_symlinks,
+          file_size_will_change=self.use_stet)
 
     # Use a lock to ensure accurate statistics in the face of
     # multi-threading/multi-processing.
@@ -1192,6 +1199,7 @@ class CpCommand(Command):
 
     test_callback_file = None
     dest_storage_class = None
+    self.use_stet = False
 
     # self.recursion_requested initialized in command.py (so can be checked
     # in parent class for all commands).
@@ -1251,6 +1259,8 @@ class CpCommand(Command):
         elif o == '-Z':
           gzip_local = True
           gzip_arg_all = GZIP_ALL_FILES
+        elif o == '--stet':
+          self.use_stet = True
 
     if preserve_acl and canned_acl:
       raise CommandException(
