@@ -170,6 +170,10 @@ _DETAILED_HELP_TEXT = ("""
                          Default is "unspecified".
 
   --placement reg1,reg2  Two regions that form the cutom dual region.
+                         Only regions within the same continent are or will ever
+                         be valid. Invalid location pairs (such as
+                         mixed-continent, or with unsupported regions)
+                         will return an error.
 
   --rpo setting          Specifies the replication setting.
                          Valid values are {rpo}. If unspecified,
