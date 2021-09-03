@@ -67,7 +67,7 @@ _DETAILED_HELP_TEXT = ("""
   listed provider:
 
     gsutil ls gs://
-    
+
   gsutil currently supports ``gs://`` and ``s3://`` as valid providers
 
   If you specify bucket URLs, gsutil ls lists objects at the top level of
@@ -243,7 +243,7 @@ _DETAILED_HELP_TEXT = ("""
   -l          Prints long listing (owner, length).
 
   -L          Prints even more detail than -l.
-  
+
               Note: If you use this option with the (non-default) XML API it
               generates an additional request per object being listed, which
               makes the -L option run much more slowly and cost more than the
