@@ -264,10 +264,6 @@ def main():
   if not supported:
     raise CommandException(err)
     sys.exit(1)
-  if sys.version_info.major is 2:
-    sys.stderr.write(
-        'Gsutil 5 will drop Python 2 support. Please install Python 3 to '
-        'continue using the latest version of Gsutil. https://goo.gle/py3\n')
 
   boto_util.MonkeyPatchBoto()
   system_util.MonkeyPatchHttp()

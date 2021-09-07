@@ -462,6 +462,12 @@ class CommandRunner(object):
         boto_util.HasUserSpecifiedGsHost() or system_util.InvokedViaCloudSdk()):
       return False
 
+    # Notify the user about Python 2 deprecation.
+    if sys.version_info.major == 2:
+      print_to_fd(
+          'Gsutil 5 will drop Python 2 support. Please install Python 3 to '
+          'continue using the latest version of Gsutil. https://goo.gle/py3\n')
+
     software_update_check_period = boto.config.getint(
         'GSUtil', 'software_update_check_period', 30)
     # Setting software_update_check_period to 0 means periodic software
