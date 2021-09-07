@@ -288,6 +288,11 @@ suggested_sliced_transfers = AtomicDict(
              if CheckMultiprocessingAvailableAndInit().is_available else None))
 suggested_sliced_transfers_lock = parallelism_framework_util.CreateLock()
 
+COMMON_EXTENSION_RULES = {
+    '.md': 'text/markdown',
+    '.tgz': 'application/gzip',
+}
+
 
 class FileConcurrencySkipError(Exception):
   """Raised when skipping a file due to a concurrent, duplicate copy."""
@@ -1612,7 +1617,12 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
               'Encountered OSError running "file -b --mime %s"\n%s' %
               (real_file_path, e))
       else:
-        content_type = mimetypes.guess_type(real_file_path)[0]
+        for extension, extension_content_type in COMMON_EXTENSION_RULES.items():
+          if real_file_path.endswith(extension):
+            content_type = extension_content_type
+            break
+        if not content_type:
+          content_type = mimetypes.guess_type(real_file_path)[0]
     if not content_type:
       content_type = DEFAULT_CONTENT_TYPE
     dst_obj_metadata.contentType = content_type
