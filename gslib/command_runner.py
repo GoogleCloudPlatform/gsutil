@@ -466,18 +466,19 @@ class CommandRunner(object):
       command_name: The name of the command being run.
 
     Returns:
-      True if the user decides to update.
+      True if a prompt was output.
     """
     logger = logging.getLogger()
     if (self.SkipUpdateCheck(command_name) or
-        boto.config.getbool('GSUtil', 'skip_python_update_prompt', False)):
+        boto.config.getbool('GSUtil', 'skip_python_update_prompt', False) or
+        sys.version_info.major != 2):
       return False
 
     # Notify the user about Python 2 deprecation.
-    if sys.version_info.major == 2:
-      print_to_fd(
-          'Gsutil 5 will drop Python 2 support. Please install Python 3 to '
-          'continue using the latest version of Gsutil. https://goo.gle/py3\n')
+    print_to_fd(
+        'Gsutil 5 will drop Python 2 support. Please install Python 3 to '
+        'continue using the latest version of Gsutil. https://goo.gle/py3\n')
+    return True
 
   def MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
     """Checks the last time we checked for an update and offers one if needed.

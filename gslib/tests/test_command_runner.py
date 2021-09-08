@@ -26,6 +26,7 @@ import time
 import six
 from six.moves import input
 import boto
+import sys
 
 import gslib
 from gslib import command_runner
@@ -218,6 +219,44 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   def _IsPackageOrCloudSDKInstall(self):
     # Update should not trigger for package installs or Cloud SDK installs.
     return gslib.IS_PACKAGE_INSTALL or system_util.InvokedViaCloudSdk()
+
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
+  def test_py3_not_interactive(self):
+    """Tests that py3 prompt is not triggered if not running interactively."""
+    with mock.patch.object(sys, 'version_info') as v_info:
+      v_info.major = 2
+      self.running_interactively = False
+      self.assertEqual(
+          False,
+          self.command_runner.MaybePromptForPythonUpdate('ls'))
+
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
+  def test_py3_skipped_in_boto(self):
+    """Tests that py3 prompt is not triggered if not running skipped in boto."""
+    with SetBotoConfigForTest([('GSUtil', 'skip_python_update_prompt', 'True')]):
+      with mock.patch.object(sys, 'version_info') as v_info:
+        v_info.major = 2
+        self.assertEqual(
+            False,
+            self.command_runner.MaybePromptForPythonUpdate('ls'))
+
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
+  def test_py3_prompt_on_py2(self):
+    """Tests that py3 prompt is not triggered if not running skipped in boto."""
+    with mock.patch.object(sys, 'version_info') as v_info:
+      v_info.major = 2
+      self.assertEqual(
+          True,
+          self.command_runner.MaybePromptForPythonUpdate('ls'))
+  
+  @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
+  def test_py3_prompt_on_py3(self):
+    """Tests that py3 prompt is not triggered if on py3."""
+    with mock.patch.object(sys, 'version_info') as v_info:
+      v_info.major = 3
+      self.assertEqual(
+          False,
+          self.command_runner.MaybePromptForPythonUpdate('ls'))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_interactive(self):
