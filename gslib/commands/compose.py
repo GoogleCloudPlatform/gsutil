@@ -152,11 +152,13 @@ class ComposeCommand(Command):
     if not components:
       raise CommandException('"compose" requires at least 1 component object.')
 
-    dst_obj_metadata.contentType = self.gsutil_api.GetObjectMetadata(
+    first_src_obj_metadata = self.gsutil_api.GetObjectMetadata(
         first_src_url.bucket_name,
         first_src_url.object_name,
         provider=first_src_url.scheme,
-        fields=['contentType']).contentType
+        fields=['contentEncoding', 'contentType'])
+    dst_obj_metadata.contentType = first_src_obj_metadata.contentType
+    dst_obj_metadata.contentEncoding = first_src_obj_metadata.contentEncoding
 
     preconditions = PreconditionsFromHeaders(self.headers or {})
 
