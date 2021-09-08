@@ -289,8 +289,8 @@ suggested_sliced_transfers = AtomicDict(
 suggested_sliced_transfers_lock = parallelism_framework_util.CreateLock()
 
 COMMON_EXTENSION_RULES = {
-    '.md': 'text/markdown',
-    '.tgz': 'application/gzip',
+    'md': 'text/markdown',
+    'tgz': 'application/gzip',
 }
 
 
@@ -1617,12 +1617,11 @@ def _SetContentTypeFromFile(src_url, dst_obj_metadata):
               'Encountered OSError running "file -b --mime %s"\n%s' %
               (real_file_path, e))
       else:
-        for extension, extension_content_type in COMMON_EXTENSION_RULES.items():
-          if real_file_path.endswith(extension):
-            content_type = extension_content_type
-            break
-        if not content_type:
-          content_type = mimetypes.guess_type(real_file_path)[0]
+        _, _, extension = real_file_path.rpartition('.')
+        if extension in COMMON_EXTENSION_RULES:
+          content_type = COMMON_EXTENSION_RULES[extension]
+        else:
+          content_type, _ = mimetypes.guess_type(real_file_path)
     if not content_type:
       content_type = DEFAULT_CONTENT_TYPE
     dst_obj_metadata.contentType = content_type
