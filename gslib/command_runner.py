@@ -454,7 +454,7 @@ class CommandRunner(object):
         command_name in ('config', 'update', 'ver', 'version') or
         not logger.isEnabledFor(logging.INFO) or
         boto_util.HasUserSpecifiedGsHost()):
-        return True
+      return True
     return False
 
   def MaybePromptForPythonUpdate(self, command_name):
@@ -468,7 +468,7 @@ class CommandRunner(object):
     """
     logger = logging.getLogger()
     if (self.SkipUpdateCheck(command_name) or
-      boto.config.getbool('GSUtil', 'skip_python_update_prompt', False)):
+        boto.config.getbool('GSUtil', 'skip_python_update_prompt', False)):
       return False
 
     # Notify the user about Python 2 deprecation.
