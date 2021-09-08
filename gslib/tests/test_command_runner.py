@@ -231,7 +231,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_py3_skipped_in_boto(self):
-    """Tests that py3 prompt is not triggered if not running skipped in boto."""
+    """Tests that py3 prompt is not triggered if skipped in boto config."""
     with SetBotoConfigForTest([('GSUtil', 'skip_python_update_prompt', 'True')
                               ]):
       with mock.patch.object(sys, 'version_info') as v_info:
@@ -241,7 +241,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_py3_prompt_on_py2(self):
-    """Tests that py3 prompt is not triggered if not running skipped in boto."""
+    """Tests that py3 prompt is triggered on Python 2."""
     with mock.patch.object(sys, 'version_info') as v_info:
       v_info.major = 2
       self.assertEqual(True,
@@ -249,7 +249,7 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_py3_prompt_on_py3(self):
-    """Tests that py3 prompt is not triggered if on py3."""
+    """Tests that py3 prompt is not triggered on Python 3."""
     with mock.patch.object(sys, 'version_info') as v_info:
       v_info.major = 3
       self.assertEqual(False,
