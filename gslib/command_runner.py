@@ -341,6 +341,8 @@ class CommandRunner(object):
       if system_util.IsRunningInteractively() and collect_analytics:
         metrics.CheckAndMaybePromptForAnalyticsEnabling()
 
+    self.MaybePromptForPythonUpdate(command_name)
+
     if not args:
       args = []
 
@@ -424,6 +426,57 @@ class CommandRunner(object):
           )))
     return return_code
 
+  def SkipUpdateCheck(self, command_name):
+    """Helper function that will determine if update checks should be skipped.
+
+    Args:
+      command_name: The name of the command being run.
+
+    Returns:
+      True if:
+      - gsutil is not connected to a tty (e.g., if being run from cron);
+      - user is running gsutil -q
+      - user is running the config command (which could otherwise attempt to
+        check for an update for a user running behind a proxy, who has not yet
+        configured gsutil to go through the proxy; for such users we need the
+        first connection attempt to be made by the gsutil config command).
+      - user is running the version command (which gets run when using
+        gsutil -D, which would prevent users with proxy config problems from
+        sending us gsutil -D output).
+      - user is running the update command (which could otherwise cause an
+        additional note that an update is available when user is already trying
+        to perform an update);
+      - user specified gs_host (which could be a non-production different
+        service instance, in which case credentials won't work for checking
+        gsutil tarball)."""
+    logger = logging.getLogger()
+    if (not system_util.IsRunningInteractively() or
+        command_name in ('config', 'update', 'ver', 'version') or
+        not logger.isEnabledFor(logging.INFO) or
+        boto_util.HasUserSpecifiedGsHost()):
+        return True
+    return False
+
+  def MaybePromptForPythonUpdate(self, command_name):
+    """Alert the user that they should install Python 3.
+
+    Args:
+      command_name: The name of the command being run.
+
+    Returns:
+      True if the user decides to update.
+    """
+    logger = logging.getLogger()
+    if (self.SkipUpdateCheck(command_name) or
+      boto.config.getbool('GSUtil', 'skip_python_update_prompt', False)):
+      return False
+
+    # Notify the user about Python 2 deprecation.
+    if sys.version_info.major == 2:
+      print_to_fd(
+          'Gsutil 5 will drop Python 2 support. Please install Python 3 to '
+          'continue using the latest version of Gsutil. https://goo.gle/py3\n')
+
   def MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
     """Checks the last time we checked for an update and offers one if needed.
 
@@ -438,35 +491,12 @@ class CommandRunner(object):
       True if the user decides to update.
     """
     # Don't try to interact with user if:
-    # - gsutil is not connected to a tty (e.g., if being run from cron);
-    # - user is running gsutil -q
-    # - user is running the config command (which could otherwise attempt to
-    #   check for an update for a user running behind a proxy, who has not yet
-    #   configured gsutil to go through the proxy; for such users we need the
-    #   first connection attempt to be made by the gsutil config command).
-    # - user is running the version command (which gets run when using
-    #   gsutil -D, which would prevent users with proxy config problems from
-    #   sending us gsutil -D output).
-    # - user is running the update command (which could otherwise cause an
-    #   additional note that an update is available when user is already trying
-    #   to perform an update);
-    # - user specified gs_host (which could be a non-production different
-    #   service instance, in which case credentials won't work for checking
-    #   gsutil tarball).
+    # - SkipUpdateChecks returns True.
     # - user is using a Cloud SDK install (which should only be updated via
     #   gcloud components update)
     logger = logging.getLogger()
-    if (not system_util.IsRunningInteractively() or
-        command_name in ('config', 'update', 'ver', 'version') or
-        not logger.isEnabledFor(logging.INFO) or
-        boto_util.HasUserSpecifiedGsHost() or system_util.InvokedViaCloudSdk()):
+    if (self.SkipUpdateCheck(command_name) or system_util.InvokedViaCloudSdk()):
       return False
-
-    # Notify the user about Python 2 deprecation.
-    if sys.version_info.major == 2:
-      print_to_fd(
-          'Gsutil 5 will drop Python 2 support. Please install Python 3 to '
-          'continue using the latest version of Gsutil. https://goo.gle/py3\n')
 
     software_update_check_period = boto.config.getint(
         'GSUtil', 'software_update_check_period', 30)
