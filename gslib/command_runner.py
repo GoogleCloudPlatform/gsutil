@@ -341,7 +341,8 @@ class CommandRunner(object):
       if system_util.IsRunningInteractively() and collect_analytics:
         metrics.CheckAndMaybePromptForAnalyticsEnabling()
 
-    self.MaybePromptForPythonUpdate(command_name)
+    if not do_shutdown:
+      self.MaybePromptForPythonUpdate(command_name)
 
     if not args:
       args = []
