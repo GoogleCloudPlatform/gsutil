@@ -476,8 +476,8 @@ class CommandRunner(object):
 
     # Notify the user about Python 2 deprecation.
     print_to_fd(
-        'Gsutil 5 will drop Python 2 support. Please install Python 3 to '
-        'continue using the latest version of Gsutil. https://goo.gle/py3\n')
+        'Gsutil 5 drops Python 2 support. Please install Python 3 to continue '
+        'using the latest version of gsutil. https://goo.gle/py3\n')
     return True
 
   def MaybeCheckForAndOfferSoftwareUpdate(self, command_name, debug):
