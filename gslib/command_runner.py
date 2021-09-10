@@ -538,8 +538,7 @@ class CommandRunner(object):
 
       cur_ver = gslib.VERSION
       try:
-        tarball = GsutilPubTarball()
-        cur_ver = LookUpGsutilVersion(gsutil_api, tarball)
+        cur_ver = LookUpGsutilVersion(gsutil_api, GsutilPubTarball())
       except Exception:
         return False
 
