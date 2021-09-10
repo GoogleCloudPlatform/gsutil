@@ -426,7 +426,7 @@ class CommandRunner(object):
           )))
     return return_code
 
-  def SkipUpdateCheck(self, command_name):
+  def SkipUpdateCheck(self):
     """Helper function that will determine if update checks should be skipped.
 
     Args:
@@ -455,11 +455,9 @@ class CommandRunner(object):
     Returns:
       True if a prompt was output.
     """
-    logger = logging.getLogger()
-    if (self.SkipUpdateCheck(command_name) or
+    if (sys.version_info.major != 2 or self.SkipUpdateCheck() or
         command_name not in ('update', 'ver', 'version') or
-        boto.config.getbool('GSUtil', 'skip_python_update_prompt', False) or
-        sys.version_info.major != 2):
+        boto.config.getbool('GSUtil', 'skip_python_update_prompt', False)):
       return False
 
     # Notify the user about Python 2 deprecation.
@@ -496,7 +494,7 @@ class CommandRunner(object):
     # - user is using a Cloud SDK install (which should only be updated via
     #   gcloud components update)
     logger = logging.getLogger()
-    if (self.SkipUpdateCheck(command_name) or
+    if (self.SkipUpdateCheck() or
         command_name in ('config', 'update', 'ver', 'version') or
         system_util.InvokedViaCloudSdk()):
       return False
