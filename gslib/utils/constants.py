@@ -49,6 +49,7 @@ DEFAULT_GCS_JSON_API_VERSION = 'v1'
 DEFAULT_GSUTIL_STATE_DIR = os.path.expanduser(os.path.join('~', '.gsutil'))
 
 GSUTIL_PUB_TARBALL = 'gs://pub/gsutil.tar.gz'
+GSUTIL_PUB_TARBALL_PY2 = 'gs://pub/gsutil4.tar.gz'
 
 IAM_POLICY_VERSION = 3
 

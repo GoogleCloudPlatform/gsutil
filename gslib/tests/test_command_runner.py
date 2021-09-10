@@ -223,37 +223,35 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_py3_not_interactive(self):
     """Tests that py3 prompt is not triggered if not running interactively."""
-    with mock.patch.object(sys, 'version_info') as v_info:
-      v_info.major = 2
+    with mock.patch.object(sys, 'version_info') as version_info:
+      version_info.major = 2
       self.running_interactively = False
-      self.assertEqual(False,
-                       self.command_runner.MaybePromptForPythonUpdate('ls'))
+      self.assertFalse(self.command_runner.MaybePromptForPythonUpdate('ver'))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_py3_skipped_in_boto(self):
     """Tests that py3 prompt is not triggered if skipped in boto config."""
     with SetBotoConfigForTest([('GSUtil', 'skip_python_update_prompt', 'True')
                               ]):
-      with mock.patch.object(sys, 'version_info') as v_info:
-        v_info.major = 2
-        self.assertEqual(False,
-                         self.command_runner.MaybePromptForPythonUpdate('ls'))
+      with mock.patch.object(sys, 'version_info') as version_info:
+        version_info.major = 2
+        self.assertFalse(self.command_runner.MaybePromptForPythonUpdate('ver'))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_py3_prompt_on_py2(self):
     """Tests that py3 prompt is triggered on Python 2."""
-    with mock.patch.object(sys, 'version_info') as v_info:
-      v_info.major = 2
+    with mock.patch.object(sys, 'version_info') as version_info:
+      version_info.major = 2
       self.assertEqual(True,
-                       self.command_runner.MaybePromptForPythonUpdate('ls'))
+                       self.command_runner.MaybePromptForPythonUpdate('ver'))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_py3_prompt_on_py3(self):
     """Tests that py3 prompt is not triggered on Python 3."""
-    with mock.patch.object(sys, 'version_info') as v_info:
-      v_info.major = 3
+    with mock.patch.object(sys, 'version_info') as version_info:
+      version_info.major = 3
       self.assertEqual(False,
-                       self.command_runner.MaybePromptForPythonUpdate('ls'))
+                       self.command_runner.MaybePromptForPythonUpdate('ver'))
 
   @unittest.skipIf(util.HAS_NON_DEFAULT_GS_HOST, SKIP_BECAUSE_RETRIES_ARE_SLOW)
   def test_not_interactive(self):
