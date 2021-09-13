@@ -41,9 +41,6 @@ from boto import storage_uri
 from boto.exception import ResumableTransferDisposition
 from boto.exception import StorageResponseError
 from boto.storage_uri import BucketStorageUri
-
-from gslib import exception
-from gslib import name_expansion
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.cs_api_map import ApiSelector
@@ -115,7 +112,6 @@ from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
-
 import six
 from six.moves import http_client
 from six.moves import range
