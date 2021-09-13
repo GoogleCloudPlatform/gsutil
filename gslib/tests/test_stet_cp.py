@@ -48,6 +48,8 @@ out file: $5" > $5
 
 
 @unittest.skipIf(not system_util.IS_LINUX, 'STET binary supports only Linux.')
+# TODO: Unskip by removing the line below once stet is enabled.
+@unittest.SkipTest
 class TestStetCp(testcase.GsUtilIntegrationTestCase):
   """Integration tests for cp integration with STET binary."""
 

@@ -679,9 +679,6 @@ _OPTIONS_TEXT = """
                  CAUTION: If some of the source files don't compress well, such
                  as binary data, using this option may result in files taking up
                  more space in the cloud than they would if left uncompressed.
-
-  --stet         If the STET binary can be found in boto or PATH, cp will
-                 use the split-trust encryption tool for end-to-end encryption.
 """
 
 _DETAILED_HELP_TEXT = '\n\n'.join([
@@ -759,7 +756,7 @@ class CpCommand(Command):
       gs_default_api=ApiSelector.JSON,
       # Unfortunately, "private" args are the only way to support non-single
       # character flags.
-      supported_private_args=['stet', 'testcallbackfile='],
+      supported_private_args=['testcallbackfile='],
       argparse_arguments=[
           CommandArgument.MakeZeroOrMoreCloudOrFileURLsArgument(),
       ],
@@ -1259,8 +1256,6 @@ class CpCommand(Command):
         elif o == '-Z':
           gzip_local = True
           gzip_arg_all = GZIP_ALL_FILES
-        elif o == '--stet':
-          self.use_stet = True
 
     if preserve_acl and canned_acl:
       raise CommandException(
