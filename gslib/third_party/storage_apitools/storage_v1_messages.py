@@ -30,6 +30,7 @@ class Bucket(_messages.Message):
   r"""A bucket.
 
   Messages:
+    AutoclassValue: The bucket's Autoclass configuration.
     BillingValue: The bucket's billing configuration.
     CorsValueListEntry: A CorsValueListEntry object.
     EncryptionValue: Encryption configuration for a bucket.
@@ -58,6 +59,7 @@ class Bucket(_messages.Message):
 
   Fields:
     acl: Access controls on the bucket.
+    autoclass: The bucket's Autoclass configuration.
     billing: The bucket's billing configuration.
     cors: The bucket's Cross-Origin Resource Sharing (CORS) configuration.
     defaultEventBasedHold: The default value for event-based hold on newly
@@ -121,6 +123,18 @@ class Bucket(_messages.Message):
       behaves when accessing bucket contents as a web site. See the Static
       Website Examples for more information.
   """
+
+  class AutoclassValue(_messages.Message):
+    r"""The bucket's Autoclass configuration.
+
+    Fields:
+      enabled: Whether or not Autoclass is enabled on this bucket
+      toggleTime: A date and time in RFC 3339 format representing the instant
+        at which "enabled" was last toggled.
+    """
+
+    enabled = _messages.BooleanField(1)
+    toggleTime = _message_types.DateTimeField(2)
 
   class BillingValue(_messages.Message):
     r"""The bucket's billing configuration.
@@ -389,32 +403,33 @@ class Bucket(_messages.Message):
     notFoundPage = _messages.StringField(2)
 
   acl = _messages.MessageField('BucketAccessControl', 1, repeated=True)
-  billing = _messages.MessageField('BillingValue', 2)
-  cors = _messages.MessageField('CorsValueListEntry', 3, repeated=True)
-  defaultEventBasedHold = _messages.BooleanField(4)
-  defaultObjectAcl = _messages.MessageField('ObjectAccessControl', 5, repeated=True)
-  encryption = _messages.MessageField('EncryptionValue', 6)
-  etag = _messages.StringField(7)
-  iamConfiguration = _messages.MessageField('IamConfigurationValue', 8)
-  id = _messages.StringField(9)
-  kind = _messages.StringField(10, default=u'storage#bucket')
-  labels = _messages.MessageField('LabelsValue', 11)
-  lifecycle = _messages.MessageField('LifecycleValue', 12)
-  location = _messages.StringField(13)
-  locationType = _messages.StringField(14)
-  logging = _messages.MessageField('LoggingValue', 15)
-  metageneration = _messages.IntegerField(16)
-  name = _messages.StringField(17)
-  owner = _messages.MessageField('OwnerValue', 18)
-  projectNumber = _messages.IntegerField(19, variant=_messages.Variant.UINT64)
-  retentionPolicy = _messages.MessageField('RetentionPolicyValue', 20)
-  satisfiesPZS = _messages.BooleanField(21)
-  selfLink = _messages.StringField(22)
-  storageClass = _messages.StringField(23)
-  timeCreated = _message_types.DateTimeField(24)
-  updated = _message_types.DateTimeField(25)
-  versioning = _messages.MessageField('VersioningValue', 26)
-  website = _messages.MessageField('WebsiteValue', 27)
+  autoclass = _messages.MessageField('AutoclassValue', 2)
+  billing = _messages.MessageField('BillingValue', 3)
+  cors = _messages.MessageField('CorsValueListEntry', 4, repeated=True)
+  defaultEventBasedHold = _messages.BooleanField(5)
+  defaultObjectAcl = _messages.MessageField('ObjectAccessControl', 6, repeated=True)
+  encryption = _messages.MessageField('EncryptionValue', 7)
+  etag = _messages.StringField(8)
+  iamConfiguration = _messages.MessageField('IamConfigurationValue', 9)
+  id = _messages.StringField(10)
+  kind = _messages.StringField(11, default=u'storage#bucket')
+  labels = _messages.MessageField('LabelsValue', 12)
+  lifecycle = _messages.MessageField('LifecycleValue', 13)
+  location = _messages.StringField(14)
+  locationType = _messages.StringField(15)
+  logging = _messages.MessageField('LoggingValue', 16)
+  metageneration = _messages.IntegerField(17)
+  name = _messages.StringField(18)
+  owner = _messages.MessageField('OwnerValue', 19)
+  projectNumber = _messages.IntegerField(20, variant=_messages.Variant.UINT64)
+  retentionPolicy = _messages.MessageField('RetentionPolicyValue', 21)
+  satisfiesPZS = _messages.BooleanField(22)
+  selfLink = _messages.StringField(23)
+  storageClass = _messages.StringField(24)
+  timeCreated = _message_types.DateTimeField(25)
+  updated = _message_types.DateTimeField(26)
+  versioning = _messages.MessageField('VersioningValue', 27)
+  website = _messages.MessageField('WebsiteValue', 28)
 
 
 class BucketAccessControl(_messages.Message):
