@@ -120,6 +120,9 @@ _DETAILED_HELP_TEXT = ("""
   retention policy.
 
 <B>OPTIONS</B>
+  --autoclass            Enables the Autoclass feature that automatically
+                         sets object storage classes.
+
   -b <on|off>            Specifies the uniform bucket-level access setting.
                          When "on", ACLs assigned to objects in the bucket are
                          not evaluated. Consequently, only IAM policies grant
@@ -183,7 +186,9 @@ class MbCommand(Command):
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='b:c:l:p:s:',
-      supported_private_args=['retention=', 'pap=', 'placement=', 'rpo='],
+      supported_private_args=[
+          'autoclass', 'retention=', 'pap=', 'placement=', 'rpo='
+      ],
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -221,6 +226,7 @@ class MbCommand(Command):
 
   def RunCommand(self):
     """Command entry point for the mb command."""
+    autoclass = False
     bucket_policy_only = None
     location = None
     storage_class = None
@@ -231,7 +237,10 @@ class MbCommand(Command):
     placements = None
     if self.sub_opts:
       for o, a in self.sub_opts:
-        if o == '-l':
+        if o == '--autoclass':
+          autoclass = True
+          json_only_flags_in_command.append(o)
+        elif o == '-l':
           location = a
         elif o == '-p':
           # Project IDs are sent as header values when using gs and s3 XML APIs.
@@ -264,8 +273,11 @@ class MbCommand(Command):
           json_only_flags_in_command.append(o)
 
     bucket_metadata = apitools_messages.Bucket(location=location,
-                                               storageClass=storage_class,
-                                               rpo=rpo)
+                                               rpo=rpo,
+                                               storageClass=storage_class)
+    if autoclass:
+      bucket_metadata.autoclass = apitools_messages.Bucket.AutoclassValue(
+          enabled=autoclass)
     if bucket_policy_only or public_access_prevention:
       bucket_metadata.iamConfiguration = IamConfigurationValue()
       iam_config = bucket_metadata.iamConfiguration

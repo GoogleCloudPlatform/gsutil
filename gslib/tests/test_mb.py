@@ -245,12 +245,13 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
     stderr = self.RunGsUtil([
-        'mb', '--pap', 'enabled', '--placement', 'uscentral-1,us-asia1',
-        '--rpo', 'ASYNC_TURBO', '-b', 'on',
+        'mb', '--autoclass', '--pap', 'enabled', '--placement',
+        'uscentral-1,us-asia1', '--rpo', 'ASYNC_TURBO', '-b', 'on',
         suri(bucket_uri)
     ],
                             return_stderr=True,
                             expected_status=1)
     self.assertIn(
-        'CommandException: The --pap, --placement, --rpo, -b option(s) can'
-        ' only be used for GCS Buckets with the JSON API', stderr)
+        'CommandException: The --autoclass, --pap, --placement, --rpo,'
+        ' -b option(s) can only be used for GCS Buckets with the JSON API',
+        stderr)
