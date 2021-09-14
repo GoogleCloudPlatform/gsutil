@@ -653,8 +653,10 @@ def _RunNamedCommandAndHandleExceptions(command_runner,
     _OutputAndExit(message='InvalidUriError: %s.' % e.message, exception=e)
   except gslib.exception.InvalidUrlError as e:
     _OutputAndExit(message='InvalidUrlError: %s.' % e.message, exception=e)
-  except boto.auth_handler.NotReadyToAuthenticate:
+  except boto.auth_handler.NotReadyToAuthenticate as e:
     _OutputAndExit(message='NotReadyToAuthenticate', exception=e)
+  except gslib.exception.ExternalBinaryError as e:
+    _OutputAndExit(message=str(e), exception=e)
   except OSError as e:
     # In Python 3, IOError (next except) is an alias for OSError
     # Sooo... we need the same logic here
