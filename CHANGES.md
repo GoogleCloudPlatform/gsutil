@@ -8,8 +8,8 @@ Bug Fixes
 
 Other Changes
 ------------------
-- Add a message encouraging py3 upgrade (#1322)
-- Update mock library version (#1315)
+- Add a message encouraging py3 upgrade. (#1322)
+- Update mock library version. (#1315)
 - Several documentation updates and clarifications.
 
 Release 4.67 (release date: 2021-08-16)
