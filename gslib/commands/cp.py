@@ -91,6 +91,12 @@ _DESCRIPTION_TEXT = """
   all text files from a bucket to your current directory:
 
     gsutil cp gs://my-bucket/*.txt .
+  
+  You can use the ``-n`` option to prevent overwriting the content of
+  existing files. The following example downloads text files from a bucket
+  without clobbering the data in your directory:
+  
+    gsutil cp -n gs://my-bucket/*.txt .
 
   Use the ``-r`` option to copy an entire directory tree.
   For example, to upload the directory tree ``dir``:
