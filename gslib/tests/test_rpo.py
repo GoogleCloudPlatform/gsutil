@@ -80,10 +80,24 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
 class TestRpo(testcase.GsUtilIntegrationTestCase):
   """Integration tests for rpo command."""
 
+  # TODO: Delete this method once rpo get results are consistent
+  # from the backend, and replace this call with
+  # VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT').
+  # Currently, the rpo results are inconsistent
+  # and None is a valid default value for all the buckets.
+  # See b/197251750#comment19
+  # T
+  def _VerifyGetReturnsDefaultorNone(self, bucket_uri):
+    """Checks if the rpo get command returns default."""
+    try:
+      self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
+    except AssertionError:
+      self.VerifyCommandGet(bucket_uri, 'rpo', 'None')
+
   @SkipForXML('RPO only runs on GCS JSON API')
   def test_get_returns_default_for_dual_region_bucket(self):
     bucket_uri = self.CreateBucket(location='us')
-    self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
+    self._VerifyGetReturnsDefault(bucket_uri)
 
   @SkipForXML('RPO only runs on GCS JSON API')
   def test_get_returns_none_for_regional_bucket(self):
@@ -93,7 +107,7 @@ class TestRpo(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('RPO only runs on GCS JSON API')
   def test_set_and_get_async_turbo(self):
     bucket_uri = self.CreateBucket(location='nam4')
-    self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
+    self._VerifyGetReturnsDefaultorNone(bucket_uri)
     self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO', suri(bucket_uri)])
     self.VerifyCommandGet(bucket_uri, 'rpo', 'ASYNC_TURBO')
 
@@ -103,7 +117,7 @@ class TestRpo(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO', suri(bucket_uri)])
     self.VerifyCommandGet(bucket_uri, 'rpo', 'ASYNC_TURBO')
     self.RunGsUtil(['rpo', 'set', 'DEFAULT', suri(bucket_uri)])
-    self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
+    self._VerifyGetReturnsDefaultorNone(bucket_uri)
 
   @SkipForXML('RPO only runs on GCS JSON API')
   def test_set_async_turbo_fails_for_regional_buckets(self):

@@ -150,7 +150,12 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '-l', 'nam4', suri(bucket_uri)])
-    self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
+    try:
+      self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
+    except:
+      # TODO: Remove the try/except block once we have consistent results
+      # returned from the backend for rpo get.
+      self.VerifyCommandGet(bucket_uri, 'rpo', 'None')
 
   @SkipForXML('Rpo flag only works for GCS JSON API')
   def test_create_with_rpo_async_turbo_fails_for_regional_bucket(self):
