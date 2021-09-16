@@ -162,6 +162,8 @@ _DETAILED_HELP_TEXT = ("""
                          Valid values are "enforced" or "unspecified".
                          Default is "unspecified".
 
+  --atb placeholder
+
 """)
 
 # Regex to disallow buckets violating charset or not [3..255] chars total.
