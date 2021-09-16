@@ -97,7 +97,7 @@ class TestRpo(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('RPO only runs on GCS JSON API')
   def test_get_returns_default_for_dual_region_bucket(self):
     bucket_uri = self.CreateBucket(location='us')
-    self._VerifyGetReturnsDefault(bucket_uri)
+    self._VerifyGetReturnsDefaultorNone(bucket_uri)
 
   @SkipForXML('RPO only runs on GCS JSON API')
   def test_get_returns_none_for_regional_bucket(self):
