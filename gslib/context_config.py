@@ -263,5 +263,4 @@ def get_context_config():
   Returns:
     ContextConfig or None if global singleton doesn't exist.
   """
-  global _singleton_config
   return _singleton_config
