@@ -152,7 +152,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['mb', '-l', 'nam4', suri(bucket_uri)])
     try:
       self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
-    except:
+    except AssertionError:
       # TODO: Remove the try/except block once we have consistent results
       # returned from the backend for rpo get.
       self.VerifyCommandGet(bucket_uri, 'rpo', 'None')
