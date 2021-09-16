@@ -1097,7 +1097,10 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_list_Lb_displays_rpo(self):
     bucket_uri = self.CreateBucket(location='nam4')
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegex(stdout, r'RPO:\t\t\t\tDEFAULT')
+    # TODO: Uncomment this check once we have have consistent behavior from
+    # the backend. Currently, both None and DEFAULT are valid values for
+    # base replication and ls will not display the field if value is None.
+    # self.assertRegex(stdout, r'RPO:\t\t\t\tDEFAULT')
     # Set RPO to ASYNC_TURBO
     self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
