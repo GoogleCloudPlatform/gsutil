@@ -172,9 +172,10 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
   @SkipForGS('Testing S3 only behavior.')
   def test_s3_fails_for_set(self):
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(['rpo', 'set', 'default', suri(bucket_uri)],
-                            return_stderr=True,
-                            expected_status=1)
+    stderr = self.RunGsUtil(
+        ['rpo', 'set', 'default', suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
     self.assertIn('command can only be used for GCS buckets', stderr)
 
   @SkipForGS('Testing S3 only behavior.')
