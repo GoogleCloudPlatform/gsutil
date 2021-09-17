@@ -263,5 +263,5 @@ def get_context_config():
   Returns:
     ContextConfig or None if global singleton doesn't exist.
   """
-  global _singleton_config
+  global _singleton_config  # pylint: disable=global-variable-not-assigned
   return _singleton_config
