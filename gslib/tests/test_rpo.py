@@ -98,19 +98,19 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket(location='us')
     self._verify_get_returns_default_or_none(bucket_uri)
 
-  @SkipForXML('RPO only runs on GCS JSON API')
+  @SkipForXML('RPO only runs on GCS JSON API.')
   def test_get_returns_none_for_regional_bucket(self):
     bucket_uri = self.CreateBucket(location='us-central1')
     self.VerifyCommandGet(bucket_uri, 'rpo', 'None')
 
-  @SkipForXML('RPO only runs on GCS JSON API')
+  @SkipForXML('RPO only runs on GCS JSON API.')
   def test_set_and_get_async_turbo(self):
     bucket_uri = self.CreateBucket(location='nam4')
     self._verify_get_returns_default_or_none(bucket_uri)
     self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO', suri(bucket_uri)])
     self.VerifyCommandGet(bucket_uri, 'rpo', 'ASYNC_TURBO')
 
-  @SkipForXML('RPO only runs on GCS JSON API')
+  @SkipForXML('RPO only runs on GCS JSON API.')
   def test_set_default(self):
     bucket_uri = self.CreateBucket(location='nam4')
     self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO', suri(bucket_uri)])
@@ -118,7 +118,7 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['rpo', 'set', 'DEFAULT', suri(bucket_uri)])
     self._verify_get_returns_default_or_none(bucket_uri)
 
-  @SkipForXML('RPO only runs on GCS JSON API')
+  @SkipForXML('RPO only runs on GCS JSON API.')
   def test_set_async_turbo_fails_for_regional_buckets(self):
     bucket_uri = self.CreateBucket(location='us-central1')
     stderr = self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO',
@@ -127,7 +127,7 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertIn('Invalid argument', stderr)
 
-  @SkipForJSON('Testing XML only behavior')
+  @SkipForJSON('Testing XML only behavior.')
   def test_xml_fails_for_set(self):
     # Use HMAC for force XML API.
     boto_config_hmac_auth_only = [
@@ -148,7 +148,7 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
       self.assertIn('command can only be with the Cloud Storage JSON API',
                     stderr)
 
-  @SkipForJSON('Testing XML only behavior')
+  @SkipForJSON('Testing XML only behavior.')
   def test_xml_fails_for_get(self):
     # Use HMAC for force XML API.
     boto_config_hmac_auth_only = [
@@ -169,7 +169,7 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
       self.assertIn('command can only be with the Cloud Storage JSON API',
                     stderr)
 
-  @SkipForGS('Testing S3 only behavior')
+  @SkipForGS('Testing S3 only behavior.')
   def test_s3_fails_for_set(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(['rpo', 'set', 'default', bucket_uri],
@@ -177,7 +177,7 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn('command can only be used for GCS Buckets', stderr)
 
-  @SkipForGS('Testing S3 only behavior')
+  @SkipForGS('Testing S3 only behavior.')
   def test_s3_fails_for_get(self):
     bucket_uri = self.CreateBucket()
     stderr = self.RunGsUtil(['rpo', 'get', bucket_uri],
