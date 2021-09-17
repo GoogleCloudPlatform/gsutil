@@ -35,7 +35,7 @@ add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
 
-class TestLsUnit(testcase.GsUtilUnitTestCase):
+class TestRpoUnit(testcase.GsUtilUnitTestCase):
 
   def test_get_for_multiple_bucket_calls_api(self):
     bucket_uri1 = self.CreateBucket(bucket_name='rpofoo')
