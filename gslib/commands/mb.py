@@ -170,12 +170,12 @@ _DETAILED_HELP_TEXT = ("""
                          Default is "unspecified".
 
   --rpo setting          Specifies the replication setting.
-                         Valid values are {rpo}. If unspecified,
+                         Valid values are {rpo_values}. If unspecified,
                          the DEFAULT setting is applied for dual-region and
                          multi-region buckets and
                          None for single-region buckets.
 
-""".format(rpo=VALID_RPO_VALUES_STRING))
+""".format(rpo_values=VALID_RPO_VALUES_STRING))
 
 # Regex to disallow buckets violating charset or not [3..255] chars total.
 BUCKET_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$')

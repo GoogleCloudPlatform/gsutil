@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2021 Google Inc. All Rights Reserved.
+# Copyright 2021 Google LLC. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -97,10 +97,10 @@ class RpoCommand(Command):
       gs_api_support=[ApiSelector.JSON],
       gs_default_api=ApiSelector.JSON,
       argparse_arguments={
-          'get': [CommandArgument.MakeNCloudURLsArgument(1),],
+          'get': [CommandArgument.MakeNCloudURLsArgument(1)],
           'set': [
               CommandArgument('mode', choices=list(VALID_RPO_VALUES)),
-              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
+              CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument(),
           ],
       })
   # Help specification. See help_provider.py for documentation.
@@ -133,19 +133,19 @@ class RpoCommand(Command):
     bucket = str(bucket_url).rstrip('/')
     print('%s: %s' % (bucket, rpo))
 
-  def _SetRpo(self, blr, rpo):
+  def _SetRpo(self, blr, rpo_value):
     """Sets the rpo setting for a bucket."""
     bucket_url = blr.storage_url
-    rpo_value = rpo.upper()
-    if rpo_value not in VALID_RPO_VALUES:
+    formatted_rpo_value = rpo_value.upper()
+    if formatted_rpo_value not in VALID_RPO_VALUES:
       raise CommandException(
           'Invalid value for rpo set.'
           ' Should be one of {}'.format(VALID_RPO_VALUES_STRING))
 
-    bucket_metadata = apitools_messages.Bucket(rpo=rpo_value)
+    bucket_metadata = apitools_messages.Bucket(rpo=formatted_rpo_value)
 
     self.logger.info('Setting rpo %s for %s' %
-                     (rpo_value, str(bucket_url).rstrip('/')))
+                     (formatted_rpo_value, str(bucket_url).rstrip('/')))
 
     self.gsutil_api.PatchBucket(bucket_url.bucket_name,
                                 bucket_metadata,
