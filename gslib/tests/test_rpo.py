@@ -129,7 +129,7 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
 
   @SkipForJSON('Testing XML only behavior')
   def test_xml_fails_for_set(self):
-    # use HMAC for force XML API
+    # Use HMAC for force XML API.
     boto_config_hmac_auth_only = [
         # Overwrite other credential types.
         ('Credentials', 'gs_oauth2_refresh_token', None),
