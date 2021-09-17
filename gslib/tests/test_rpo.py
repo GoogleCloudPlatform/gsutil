@@ -77,7 +77,7 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
       self.RunCommand('rpo', ['blah', 'DEFAULT', 'gs://boo*'])
 
 
-class TestRpo(testcase.GsUtilIntegrationTestCase):
+class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
   """Integration tests for rpo command."""
 
   # TODO: Delete this method once rpo get results are consistent
@@ -93,7 +93,7 @@ class TestRpo(testcase.GsUtilIntegrationTestCase):
     except AssertionError:
       self.VerifyCommandGet(bucket_uri, 'rpo', 'None')
 
-  @SkipForXML('RPO only runs on GCS JSON API')
+  @SkipForXML('RPO only runs on GCS JSON API.')
   def test_get_returns_default_for_dual_region_bucket(self):
     bucket_uri = self.CreateBucket(location='us')
     self._verify_get_returns_default_or_none(bucket_uri)
