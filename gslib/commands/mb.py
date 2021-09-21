@@ -25,6 +25,8 @@ import textwrap
 from gslib.cloud_api import BadRequestException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
+from gslib.commands.rpo import VALID_RPO_VALUES
+from gslib.commands.rpo import VALID_RPO_VALUES_STRING
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
@@ -38,8 +40,9 @@ from gslib.utils.text_util import NormalizeStorageClass
 
 _SYNOPSIS = """
   gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
-            [--retention <time>] [--pap <setting>] gs://<bucket_name>...
-"""
+            [--retention <time>] [--pap <setting>]
+            [--rpo {}] gs://<bucket_name>...
+""".format(VALID_RPO_VALUES_STRING)
 
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
@@ -72,6 +75,10 @@ _DETAILED_HELP_TEXT = ("""
 
   The --pap option specifies the public access prevention setting of the bucket.
   When enforced, objects in this bucket cannot be made publicly accessible.
+  
+  The --rpo option specifies the `replication setting
+  <https://cloud.google.com/storage/docs/turbo-replication>`_ of
+  bucket.
 
 <B>BUCKET STORAGE CLASSES</B>
   You can specify one of the `storage classes
@@ -162,7 +169,13 @@ _DETAILED_HELP_TEXT = ("""
                          Valid values are "enforced" or "unspecified".
                          Default is "unspecified".
 
-""")
+  --rpo setting          Specifies the replication setting.
+                         Valid values are {rpo_values}. If unspecified,
+                         the DEFAULT setting is applied for dual-region and
+                         multi-region buckets and
+                         None for single-region buckets.
+
+""".format(rpo_values=VALID_RPO_VALUES_STRING))
 
 # Regex to disallow buckets violating charset or not [3..255] chars total.
 BUCKET_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$')
@@ -184,7 +197,7 @@ class MbCommand(Command):
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='b:c:l:p:s:',
-      supported_private_args=['retention=', 'pap='],
+      supported_private_args=['retention=', 'pap=', 'rpo='],
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -227,6 +240,7 @@ class MbCommand(Command):
     storage_class = None
     seconds = None
     public_access_prevention = None
+    rpo = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
@@ -239,6 +253,12 @@ class MbCommand(Command):
           storage_class = NormalizeStorageClass(a)
         elif o == '--retention':
           seconds = RetentionInSeconds(a)
+        elif o == '--rpo':
+          rpo = a.strip().upper()
+          if rpo not in VALID_RPO_VALUES:
+            raise CommandException(
+                'Invalid value for --rpo. Must be one of: {},'
+                ' provided: {}'.format(VALID_RPO_VALUES_STRING, a))
         elif o == '-b':
           if self.gsutil_api.GetApiSelector('gs') != ApiSelector.JSON:
             raise CommandException('The -b <on|off> option '
@@ -249,7 +269,8 @@ class MbCommand(Command):
           public_access_prevention = a
 
     bucket_metadata = apitools_messages.Bucket(location=location,
-                                               storageClass=storage_class)
+                                               storageClass=storage_class,
+                                               rpo=rpo)
     if bucket_policy_only or public_access_prevention:
       bucket_metadata.iamConfiguration = IamConfigurationValue()
       iam_config = bucket_metadata.iamConfiguration

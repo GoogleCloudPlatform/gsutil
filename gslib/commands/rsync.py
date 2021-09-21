@@ -942,7 +942,6 @@ class _DiffIterator(object):
   """Iterator yielding sequence of RsyncDiffToApply objects."""
 
   def __init__(self, command_obj, base_src_url, base_dst_url):
-    global _tmp_files
     self.command_obj = command_obj
     self.compute_file_checksums = command_obj.compute_file_checksums
     self.delete_extras = command_obj.delete_extras
@@ -1330,7 +1329,6 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
 
     # We're providing an estimate, so avoid computing checksums even though
     # that may cause our estimate to be off.
-    global _tmp_files
     self.compute_file_checksums = False
     self.delete_extras = initialized_diff_iterator.delete_extras
     self.recursion_requested = initialized_diff_iterator.delete_extras
