@@ -135,3 +135,21 @@ class TestPsc(testcase.GsUtilIntegrationTestCase):
     output = stdout + stderr
     self.assertIn(gs_host, output)
     self.assertNotIn('hostname=' + DEFAULT_HOST, output)
+
+  @integration_testcase.SkipForJSON('XML test.')
+  @integration_testcase.SkipForS3('Custom endpoints not available for S3.')
+  def test_persists_custom_endpoint_through_resumable_upload(self):
+    gs_host = config.get('Credentials', 'gs_host', DEFAULT_HOST)
+
+    temporary_file = self.CreateTempFile(contents=b'foo')
+    with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', '1')]):
+      bucket_uri = self.CreateBucket()
+      stdout, stderr = self.RunGsUtil(
+          ['-D', 'cp', temporary_file,
+           ObjectToURI(bucket_uri)],
+          return_stdout=True,
+          return_stderr=True)
+
+    output = stdout + stderr
+    self.assertIn(gs_host, output)
+    self.assertNotIn('hostname=' + DEFAULT_HOST, output)

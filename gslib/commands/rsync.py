@@ -150,7 +150,7 @@ _DETAILED_HELP_TEXT = ("""
   flow through the machine where gsutil is running, doing this can make your
   transfer run significantly faster than running gsutil on your local
   workstation.
-  
+
   Note 3: rsync does not copy empty directory trees, since Cloud Storage uses a
   `flat namespace <https://cloud.google.com/storage/docs/folders>`_.
 
@@ -186,7 +186,7 @@ _DETAILED_HELP_TEXT = ("""
 
   Change detection works if the other Cloud provider is using md5 or CRC32. AWS
   multipart upload has an incompatible checksum.
-  
+
   As mentioned above, using -d can be dangerous because of how quickly data can
   be deleted. For example, if you meant to synchronize a local directory from
   a bucket in the cloud but instead run the command:
