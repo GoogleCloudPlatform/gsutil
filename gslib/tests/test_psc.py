@@ -140,6 +140,8 @@ class TestPsc(testcase.GsUtilIntegrationTestCase):
   @integration_testcase.SkipForS3('Custom endpoints not available for S3.')
   def test_persists_custom_endpoint_through_resumable_upload(self):
     gs_host = config.get('Credentials', 'gs_host', DEFAULT_HOST)
+    if gs_host == DEFAULT_HOST:
+      return
 
     temporary_file = self.CreateTempFile(contents=b'foo')
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', '1')]):
