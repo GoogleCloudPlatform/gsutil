@@ -32,7 +32,6 @@ from gslib.utils.hashing_helper import CalculateMd5FromContents
 from gslib.utils.hashing_helper import GetMd5
 from gslib.utils.hashing_helper import HashingFileUploadWrapper
 
-
 _TEST_FILE = 'test.txt'
 
 
