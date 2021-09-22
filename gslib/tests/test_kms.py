@@ -208,7 +208,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
                 suri(bucket_uri)],
         return_stdout=True)
     self.assertIn('Setting default KMS key for bucket', stdout)
-    mock_patch_bucket.assert_called()
+    self.assertTrue(mock_patch_bucket.called)
 
   @mock.patch(
       'gslib.cloud_api_delegator.CloudApiDelegator.GetProjectServiceAccount')
@@ -228,7 +228,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
                 suri(bucket_uri)],
         return_stdout=True)
     self.assertIn('Setting default KMS key for bucket', stdout)
-    mock_patch_bucket.assert_called()
+    self.assertTrue(mock_patch_bucket.called)
 
   @mock.patch(
       'gslib.cloud_api_delegator.CloudApiDelegator.GetProjectServiceAccount')
