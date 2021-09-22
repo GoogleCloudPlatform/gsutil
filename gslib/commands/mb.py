@@ -254,7 +254,7 @@ class MbCommand(Command):
         elif o == '--retention':
           seconds = RetentionInSeconds(a)
         elif o == '--rpo':
-          rpo = a.strip().upper()
+          rpo = a.strip()
           if rpo not in VALID_RPO_VALUES:
             raise CommandException(
                 'Invalid value for --rpo. Must be one of: {},'

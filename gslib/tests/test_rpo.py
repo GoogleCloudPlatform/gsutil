@@ -71,6 +71,13 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
     ):
       self.RunCommand('rpo', ['set', 'random', 'gs://boo*'])
 
+  def test_set_called_with_lower_case_value_raises_error(self):
+    with self.assertRaisesRegexp(
+        CommandException,
+        r'Invalid value for rpo set. Should be one of \(ASYNC_TURBO\|DEFAULT\)'
+    ):
+      self.RunCommand('rpo', ['set', 'async_turbo', 'gs://boo*'])
+
   def test_invalid_subcommand_raises_error(self):
     with self.assertRaisesRegexp(
         CommandException, 'Invalid subcommand "blah", use get|set instead'):

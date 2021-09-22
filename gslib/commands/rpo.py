@@ -136,7 +136,7 @@ class RpoCommand(Command):
   def _SetRpo(self, blr, rpo_value):
     """Sets the rpo setting for a bucket."""
     bucket_url = blr.storage_url
-    formatted_rpo_value = rpo_value.upper()
+    formatted_rpo_value = rpo_value
     if formatted_rpo_value not in VALID_RPO_VALUES:
       raise CommandException(
           'Invalid value for rpo set.'
