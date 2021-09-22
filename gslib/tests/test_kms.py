@@ -20,8 +20,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from random import randint
-import mock
-import unittest
+from unittest import mock
 
 from gslib.cloud_api import AccessDeniedException
 from gslib.project_id import PopulateProjectId
