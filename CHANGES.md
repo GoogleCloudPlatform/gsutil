@@ -1,9 +1,8 @@
-Release 5.0 (release date: 2021-09-23)
+Release 5.1 (release date: 2021-09-23)
 ======================================
 New Features
 ------------------
 - Add cp support for end-to-end encryption via the split-trust encryption tool (STET). (#1338)
-- Add support for turbo replication through new rpo command. (#1332)
 
 Bug Fixes
 ------------------
