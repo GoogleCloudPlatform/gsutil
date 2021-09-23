@@ -11,7 +11,7 @@ Bug Fixes
 
 Other Changes
 ------------------
-- Dropped support for py2 to patch RSA security issues. (#1339)
+- Dropped support for Python 2 to patch RSA security issues. (#1339)
 - Several documentation updates and clarifications.
 
 Release 4.68 (release date: 2021-09-14)
