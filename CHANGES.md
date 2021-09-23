@@ -1,4 +1,4 @@
-Release 5.1 (release date: 2021-09-23)
+Release 5.2 (release date: 2021-09-23)
 ======================================
 New Features
 ------------------
