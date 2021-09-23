@@ -1091,17 +1091,3 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['pap', 'set', 'enforced', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     self.assertRegex(stdout, r'Public access prevention:\t*enforced')
-
-  @SkipForXML('RPO is not supported for the XML API.')
-  @SkipForS3('RPO is not supported for S3 buckets.')
-  def test_list_Lb_displays_rpo(self):
-    bucket_uri = self.CreateBucket(location='nam4')
-    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    # TODO: Uncomment this check once we have have consistent behavior from
-    # the backend. Currently, both None and DEFAULT are valid values for
-    # default replication and ls will not display the field if value is None.
-    # self.assertRegex(stdout, r'RPO:\t\t\t\tDEFAULT')
-    # Set RPO to ASYNC_TURBO
-    self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO', suri(bucket_uri)])
-    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegex(stdout, r'RPO:\t\t\t\tASYNC_TURBO')
