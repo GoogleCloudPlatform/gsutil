@@ -25,8 +25,6 @@ import textwrap
 from gslib.cloud_api import BadRequestException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
-from gslib.commands.rpo import VALID_RPO_VALUES
-from gslib.commands.rpo import VALID_RPO_VALUES_STRING
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
@@ -41,8 +39,7 @@ from gslib.utils.text_util import NormalizeStorageClass
 _SYNOPSIS = """
   gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
             [--retention <time>] [--pap <setting>]
-            [--rpo {}] gs://<bucket_name>...
-""".format(VALID_RPO_VALUES_STRING)
+"""
 
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
@@ -169,13 +166,7 @@ _DETAILED_HELP_TEXT = ("""
                          Valid values are "enforced" or "unspecified".
                          Default is "unspecified".
 
-  --rpo setting          Specifies the replication setting.
-                         Valid values are {rpo_values}. If unspecified,
-                         the DEFAULT setting is applied for dual-region and
-                         multi-region buckets and
-                         None for single-region buckets.
-
-""".format(rpo_values=VALID_RPO_VALUES_STRING))
+""")
 
 # Regex to disallow buckets violating charset or not [3..255] chars total.
 BUCKET_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$')
@@ -253,12 +244,6 @@ class MbCommand(Command):
           storage_class = NormalizeStorageClass(a)
         elif o == '--retention':
           seconds = RetentionInSeconds(a)
-        elif o == '--rpo':
-          rpo = a.strip()
-          if rpo not in VALID_RPO_VALUES:
-            raise CommandException(
-                'Invalid value for --rpo. Must be one of: {},'
-                ' provided: {}'.format(VALID_RPO_VALUES_STRING, a))
         elif o == '-b':
           if self.gsutil_api.GetApiSelector('gs') != ApiSelector.JSON:
             raise CommandException('The -b <on|off> option '
