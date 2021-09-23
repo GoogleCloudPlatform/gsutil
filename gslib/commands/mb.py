@@ -39,6 +39,7 @@ from gslib.utils.text_util import NormalizeStorageClass
 _SYNOPSIS = """
   gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
             [--retention <time>] [--pap <setting>]
+            gs://<bucket_name>...
 """
 
 _DETAILED_HELP_TEXT = ("""
@@ -72,10 +73,6 @@ _DETAILED_HELP_TEXT = ("""
 
   The --pap option specifies the public access prevention setting of the bucket.
   When enforced, objects in this bucket cannot be made publicly accessible.
-  
-  The --rpo option specifies the `replication setting
-  <https://cloud.google.com/storage/docs/turbo-replication>`_ of
-  bucket.
 
 <B>BUCKET STORAGE CLASSES</B>
   You can specify one of the `storage classes
