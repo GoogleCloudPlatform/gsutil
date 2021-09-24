@@ -446,9 +446,6 @@ class LsCommand(Command):
                                        '{public_access_prevention}\n')
     if 'rpo' in fields:
       rpo_line = ('\tRPO:\t\t\t\t{rpo}\n')
-    if 'custom_placement_locations' in fields:
-      custom_placement_locations_line = (
-          '\tPlacement locations:\t\{custom_placement_locations}\n')
     if 'satisfies_pzs' in fields:
       satisifies_pzs_line = '\tSatisfies PZS:\t\t\t{satisfies_pzs}\n'
 

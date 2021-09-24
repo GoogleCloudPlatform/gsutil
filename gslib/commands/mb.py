@@ -41,6 +41,7 @@ from gslib.utils.text_util import NormalizeStorageClass
 _SYNOPSIS = """
   gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
             [--retention <time>] [--pap <setting>]
+            [--placement <region1>,<region2>]
             [--rpo {}] gs://<bucket_name>...
 """.format(VALID_RPO_VALUES_STRING)
 
