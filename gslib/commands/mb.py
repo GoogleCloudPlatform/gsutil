@@ -37,7 +37,7 @@ from gslib.utils.text_util import InsistOnOrOff
 from gslib.utils.text_util import NormalizeStorageClass
 
 _SYNOPSIS = """
-  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
+  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <project>]
             [--retention <time>] [--pap <setting>]
             gs://<bucket_name>...
 """
@@ -53,9 +53,9 @@ _DETAILED_HELP_TEXT = ("""
   another user. You can, however, carve out parts of the bucket name space
   corresponding to your company's domain name (see "gsutil help naming").
 
-  If you don't specify a project ID using the -p option, the buckets are created
-  using the default project ID specified in your `gsutil configuration file
-  <https://cloud.google.com/storage/docs/boto-gsutil>`_.
+  If you don't specify a project ID or project number using the -p option, the
+  buckets are created using the default project ID specified in your `gsutil
+  configuration file<https://cloud.google.com/storage/docs/boto-gsutil>`_.
 
   The -l option specifies the location for the buckets. Once a bucket is created
   in a given location, it cannot be moved to a different location. Instead, you
@@ -130,7 +130,7 @@ _DETAILED_HELP_TEXT = ("""
                          for a discussion of this distinction. Default is US.
                          Locations are case insensitive.
 
-  -p proj_id             Specifies the project ID or project number to create
+  -p project             Specifies the project ID or project number to create
                          the bucket under.
 
   -s class               Same as -c.
