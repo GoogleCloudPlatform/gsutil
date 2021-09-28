@@ -147,7 +147,7 @@ _DETAILED_HELP_TEXT = ("""
                          "enforced", objects in this bucket cannot be made
                          publicly accessible. Default is "unspecified".
 
-  --rpo setting          Specifies the replication setting <https://cloud.google.com/storage/docs/turbo-replication>_.
+  --rpo setting          Specifies the `replication setting <https://cloud.google.com/storage/docs/turbo-replication>`_.
                          This flag is not valid for single-region buckets,
                          and multi-region buckets only accept a value of
                          DEFAULT. Valid values for dual region buckets
