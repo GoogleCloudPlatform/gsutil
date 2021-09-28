@@ -29,7 +29,9 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 
 TYPES = set([
     'user', 'deleted:user', 'serviceAccount', 'deleted:serviceAccount', 'group',
-    'deleted:group', 'domain', 'principal', 'principalSet', 'principalHierarchy'
+    'deleted:group', 'domain', 'principal', 'principalSet',
+    'principalHierarchy', 'deleted:projectOwner', 'deleted:projectEditor',
+    'deleted:projectViewer'
 ])
 
 DISCOURAGED_TYPES = set([
