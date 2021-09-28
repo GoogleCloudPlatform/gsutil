@@ -207,7 +207,7 @@ class RpoCommand(Command):
     if action_subcommand == 'get' or action_subcommand == 'set':
       metrics.LogCommandParams(sub_opts=self.sub_opts)
       metrics.LogCommandParams(subcommands=[action_subcommand])
-      self._Rpo()
+      return self._Rpo()
     else:
       raise CommandException('Invalid subcommand "%s", use get|set instead.' %
                              action_subcommand)
