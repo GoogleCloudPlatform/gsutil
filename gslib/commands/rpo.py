@@ -37,7 +37,7 @@ _SET_SYNOPSIS = """
 """.format(VALID_RPO_VALUES_STRING)
 
 _GET_SYNOPSIS = """
-  gsutil rpo get bucket_url...
+  gsutil rpo get gs://<bucket_name>...
 """
 
 _SYNOPSIS = _SET_SYNOPSIS + _GET_SYNOPSIS.lstrip('\n')
