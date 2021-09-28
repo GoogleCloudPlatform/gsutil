@@ -29,7 +29,9 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 
 TYPES = set([
     'user', 'deleted:user', 'serviceAccount', 'deleted:serviceAccount', 'group',
-    'deleted:group', 'domain', 'principal', 'principalSet', 'principalHierarchy'
+    'deleted:group', 'domain', 'principal', 'principalSet',
+    'principalHierarchy', 'deleted:projectOwner', 'deleted:projectEditor',
+    'deleted:projectViewer'
 ])
 
 DISCOURAGED_TYPES = set([
@@ -217,37 +219,46 @@ def BindingStringToTuple(is_grant, input_str):
 
   # Allows user specified PUBLIC_MEMBERS and TYPES to be case insensitive.
   tokens = input_str.split(":")
+
   public_members = {s.lower(): s for s in PUBLIC_MEMBERS}
   types = {s.lower(): s for s in TYPES}
+
   possible_public_member_or_type = tokens[0].lower()
   possible_type = '%s:%s' % (tokens[0].lower(), tokens[1].lower())
+
   if possible_public_member_or_type in public_members:
     tokens[0] = public_members[possible_public_member_or_type]
   elif possible_public_member_or_type in types:
     tokens[0] = types[possible_public_member_or_type]
   elif possible_type in types:
     (tokens[0], tokens[1]) = types[possible_type].split(':')
+
   input_str = ":".join(tokens)
 
   if input_str.count(':') == 1:
-    tokens = input_str.split(':')
-
-    if '%s:%s' % (tokens[0], tokens[1]) in TYPES:
+    if (tokens[0] == 'deleted' and tokens[1] in DISCOURAGED_TYPES):
+      # case "deleted:projectOwner"
+      member = 'deleted:%s' % tokens[1]
+      roles = DROP_ALL
+    elif '%s:%s' % (tokens[0], tokens[1]) in TYPES:
       raise CommandException('Incorrect public member type for binding %s' %
                              input_str)
-    if tokens[0] in PUBLIC_MEMBERS:
+    elif tokens[0] in PUBLIC_MEMBERS:
       (member, roles) = tokens
     elif tokens[0] in TYPES:
-      member = ':'.join(tokens)
+      member = input_str
       roles = DROP_ALL
     else:
       raise CommandException('Incorrect public member type for binding %s' %
                              input_str)
   elif input_str.count(':') == 2:
-    tokens = input_str.split(':')
-    if '%s:%s' % (tokens[0], tokens[1]) in TYPES:
+    if (tokens[0] == 'deleted' and tokens[1] in DISCOURAGED_TYPES):
+      # case "deleted:projectOwner:admin"
+      member = 'deleted:%s' % tokens[1]
+      roles = tokens[2]
+    elif '%s:%s' % (tokens[0], tokens[1]) in TYPES:
       # case "deleted:user:foo@bar.com?uid=1234"
-      member = ':'.join(tokens)
+      member = input_str
       roles = DROP_ALL
     else:
       (member_type, member_id, roles) = tokens
