@@ -220,7 +220,6 @@ def BindingStringToTuple(is_grant, input_str):
   # Allows user specified PUBLIC_MEMBERS and TYPES to be case insensitive.
   tokens = input_str.split(":")
 
-  discouraged_types = {s.lower(): s for s in DISCOURAGED_TYPES}
   public_members = {s.lower(): s for s in PUBLIC_MEMBERS}
   types = {s.lower(): s for s in TYPES}
 
