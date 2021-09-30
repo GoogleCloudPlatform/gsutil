@@ -1,3 +1,17 @@
+Release 5.3 (release date: 2021-09-30)
+======================================
+New Features
+------------------
+- Add support for Turbo Replication (RPO). (#1351)
+
+Bug Fixes
+------------------
+- Allow the removal of project convenience groups. (#1350)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 5.2 (release date: 2021-09-23)
 ======================================
 New Features
