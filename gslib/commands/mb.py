@@ -57,7 +57,7 @@ _DETAILED_HELP_TEXT = ("""
 
   If you don't specify a project ID or project number using the -p option, the
   buckets are created using the default project ID specified in your `gsutil
-  configuration file<https://cloud.google.com/storage/docs/boto-gsutil>`_.
+  configuration file <https://cloud.google.com/storage/docs/boto-gsutil>`_.
 
   The -l option specifies the location for the buckets. Once a bucket is created
   in a given location, it cannot be moved to a different location. Instead, you
