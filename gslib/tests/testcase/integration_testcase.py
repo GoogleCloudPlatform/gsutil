@@ -954,7 +954,6 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     """Verifies if <command> get returns the expected value."""
     stdout = self.RunGsUtil([command, 'get', suri(bucket_uri)],
                             return_stdout=True)
-    # self.assertIn('sdfsdfds', suri(bucket_uri))
     output_regex = re.compile('{}: (?P<actual>.+)$'.format(suri(bucket_uri)))
     output_match = re.search(output_regex, stdout)
     actual = output_match.group('actual')

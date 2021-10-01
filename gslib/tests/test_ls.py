@@ -420,6 +420,25 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
       time_updated = time.strptime(time_updated, '%a, %d %b %Y %H:%M:%S %Z')
       self.assertGreater(time_updated, time_created)
 
+  @SkipForS3('Integration test utils only support GCS JSON for versioning.')
+  @SkipForXML('Integration test utils only support GCS JSON for versioning.')
+  def test_one_object_with_generation(self):
+    """Tests listing one object by generation when multiple versions exist."""
+    bucket = self.CreateBucketJson(versioning_enabled=True)
+    object1 = self.CreateObjectJson(bucket_name=bucket.name, contents=b'1')
+    object2 = self.CreateObjectJson(bucket_name=bucket.name,
+                                    object_name=object1.name,
+                                    contents=b'2')
+    object_url_string1 = 'gs://{}/{}#{}'.format(object1.bucket, object1.name,
+                                                object1.generation)
+    object_url_string2 = 'gs://{}/{}#{}'.format(object2.bucket, object2.name,
+                                                object2.generation)
+
+    stdout = self.RunGsUtil(['ls', object_url_string2], return_stdout=True)
+
+    self.assertNotIn(object_url_string1, stdout)
+    self.assertIn(object_url_string2, stdout)
+
   def test_subdir(self):
     """Tests listing a bucket subdirectory."""
     bucket_uri = self.CreateBucket(test_objects=1)
@@ -1073,12 +1092,15 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     self.assertRegex(stdout, r'Public access prevention:\t*enforced')
 
-  @SkipForXML('Rpo is not supported for the XML API.')
-  @SkipForS3('Rpo is not supported for S3 buckets.')
+  @SkipForXML('RPO is not supported for the XML API.')
+  @SkipForS3('RPO is not supported for S3 buckets.')
   def test_list_Lb_displays_rpo(self):
     bucket_uri = self.CreateBucket(location='nam4')
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegex(stdout, r'RPO:\t\t\t\tDEFAULT')
+    # TODO: Uncomment this check once we have have consistent behavior from
+    # the backend. Currently, both None and DEFAULT are valid values for
+    # default replication and ls will not display the field if value is None.
+    # self.assertRegex(stdout, r'RPO:\t\t\t\tDEFAULT')
     # Set RPO to ASYNC_TURBO
     self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)

@@ -23,6 +23,7 @@ import os
 import shutil
 import signal
 import stat
+import sys
 import tarfile
 import tempfile
 import textwrap
@@ -37,11 +38,11 @@ from gslib.sig_handling import RegisterSignalHandler
 from gslib.utils import system_util
 from gslib.utils.boto_util import GetConfigFilePaths
 from gslib.utils.boto_util import CERTIFICATE_VALIDATION_ENABLED
-from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.constants import RELEASE_NOTES_URL
 from gslib.utils.text_util import CompareVersions
 from gslib.utils.update_util import DisallowUpdateIfDataInGsutilDir
 from gslib.utils.update_util import LookUpGsutilVersion
+from gslib.utils.update_util import GsutilPubTarball
 
 _SYNOPSIS = """
   gsutil update [-f] [-n] [url]
@@ -95,7 +96,7 @@ _DETAILED_HELP_TEXT = ("""
 
   -n          Causes update command to run without prompting [Y/n] whether to
               continue if an update is available.
-""" % GSUTIL_PUB_TARBALL)
+""" % GsutilPubTarball())
 
 
 class UpdateCommand(Command):
@@ -336,7 +337,7 @@ class UpdateCommand(Command):
           raise CommandException(
               'Invalid update object URL. Must name a single .tar.gz file.')
     else:
-      update_from_url_str = GSUTIL_PUB_TARBALL
+      update_from_url_str = GsutilPubTarball()
 
     # Try to retrieve version info from tarball metadata; failing that; download
     # the tarball and extract the VERSION file. The version lookup will fail

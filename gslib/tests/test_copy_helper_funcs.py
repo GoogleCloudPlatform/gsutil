@@ -44,6 +44,7 @@ from gslib.tests.util import GSMockBucketStorageUri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils import copy_helper
 from gslib.utils import parallelism_framework_util
 from gslib.utils import posix_util
 from gslib.utils import system_util
@@ -393,12 +394,10 @@ class TestCpFuncs(GsUtilUnitTestCase):
     # Content-type of a symlink should be obtained from the link's target.
     dst_obj_metadata_mock = mock.MagicMock(contentType=None)
     src_url_stub = mock.MagicMock(object_name=temp_dir_path + os.path.sep +
-                                  link_name,
-                                  **{
-                                      'IsFileUrl.return_value': True,
-                                      'IsStream.return_value': False,
-                                      'IsFifo.return_value': False
-                                  })
+                                  link_name)
+    src_url_stub.IsFileUrl.return_value = True
+    src_url_stub.IsStream.return_value = False
+    src_url_stub.IsFifo.return_value = False
 
     # The file command should detect HTML in the real file.
     with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'True')]):
@@ -411,6 +410,19 @@ class TestCpFuncs(GsUtilUnitTestCase):
     with SetBotoConfigForTest([('GSUtil', 'use_magicfile', 'False')]):
       _SetContentTypeFromFile(src_url_stub, dst_obj_metadata_mock)
     self.assertEqual('text/plain', dst_obj_metadata_mock.contentType)
+
+  def testSetsContentTypesForCommonFileExtensionsCorrectly(self):
+    extension_rules = copy_helper.COMMON_EXTENSION_RULES.items()
+    for extension, expected_content_type in extension_rules:
+      dst_obj_metadata_mock = mock.MagicMock(contentType=None)
+      src_url_stub = mock.MagicMock(object_name='file.' + extension)
+      src_url_stub.IsFileUrl.return_value = True
+      src_url_stub.IsStream.return_value = False
+      src_url_stub.IsFifo.return_value = False
+
+      _SetContentTypeFromFile(src_url_stub, dst_obj_metadata_mock)
+
+      self.assertEqual(expected_content_type, dst_obj_metadata_mock.contentType)
 
   _PI_DAY = datetime.datetime(2016, 3, 14, 15, 9, 26)
 
@@ -598,6 +610,11 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertTrue(mock_stream.close.called)
     # Ensure the lock was released.
     self.assertFalse(mock_lock.__exit__.called)
+
+  def testDoesNotGetSizeSourceFieldIfFileSizeWillChange(self):
+    fields = copy_helper.GetSourceFieldsNeededForCopy(
+        True, True, False, file_size_will_change=True)
+    self.assertNotIn('size', fields)
 
 
 class TestExpandUrlToSingleBlr(GsUtilUnitTestCase):

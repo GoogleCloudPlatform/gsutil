@@ -36,3 +36,8 @@ class TestTemporaryUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(
         temporary_file_util.GetTempZipFileName(
             storage_url.StorageUrlFromString('file.txt')), 'file.txt_.gztmp')
+
+  def testGetsStetTemporaryFileName(self):
+    self.assertEqual(
+        temporary_file_util.GetStetTempFileName(
+            storage_url.StorageUrlFromString('file.txt')), 'file.txt_.stet_tmp')

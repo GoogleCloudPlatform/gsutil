@@ -107,7 +107,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.assertRegexpMatches(
         stderr, r'Retention policy can only be specified for GCS buckets.')
 
-  @SkipForXML('Public access prevention only runs on GCS JSON API')
+  @SkipForXML('Public access prevention only runs on GCS JSON API.')
   def test_create_with_pap_enforced(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
@@ -115,7 +115,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['mb', '--pap', 'enforced', suri(bucket_uri)])
     self.VerifyPublicAccessPreventionValue(bucket_uri, 'enforced')
 
-  @SkipForXML('Public access prevention only runs on GCS JSON API')
+  @SkipForXML('Public access prevention only runs on GCS JSON API.')
   def test_create_with_pap_unspecified(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
@@ -123,7 +123,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['mb', '--pap', 'unspecified', suri(bucket_uri)])
     self.VerifyPublicAccessPreventionValue(bucket_uri, 'unspecified')
 
-  @SkipForXML('Public access prevention only runs on GCS JSON API')
+  @SkipForXML('Public access prevention only runs on GCS JSON API.')
   def test_create_with_pap_invalid_arg(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
@@ -134,7 +134,11 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertRegexpMatches(stderr, r'invalid_arg is not a valid value')
 
+<<<<<<< HEAD
   @SkipForXML('Rpo flag only works for GCS JSON API')
+=======
+  @SkipForXML('RPO flag only works for GCS JSON API.')
+>>>>>>> master
   def test_create_with_rpo_async_turbo(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
@@ -144,15 +148,30 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
          suri(bucket_uri)])
     self.VerifyCommandGet(bucket_uri, 'rpo', 'ASYNC_TURBO')
 
+<<<<<<< HEAD
   @SkipForXML('Rpo flag only works for GCS JSON API')
+=======
+  @SkipForXML('RPO flag only works for GCS JSON API.')
+>>>>>>> master
   def test_create_sets_rpo_to_default(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '-l', 'nam4', suri(bucket_uri)])
+<<<<<<< HEAD
     self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
 
   @SkipForXML('Rpo flag only works for GCS JSON API')
+=======
+    try:
+      self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
+    except AssertionError:
+      # TODO: Remove the try/except block once we have consistent results
+      # returned from the backend for rpo get.
+      self.VerifyCommandGet(bucket_uri, 'rpo', 'None')
+
+  @SkipForXML('RPO flag only works for GCS JSON API.')
+>>>>>>> master
   def test_create_with_rpo_async_turbo_fails_for_regional_bucket(self):
     """Turbo replication is only meant for dual-region."""
     bucket_name = self.MakeTempName('bucket')
@@ -165,11 +184,12 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         expected_status=1)
     self.assertIn('Invalid argument', stderr)
 
-  @SkipForXML('Rpo flag only works for GCS JSON API')
+  @SkipForXML('RPO flag only works for GCS JSON API.')
   def test_create_with_rpo_incorrect_value_raises_error(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
+    # Location nam4 is used for dual-region.
     stderr = self.RunGsUtil(
         ['mb', '-l', 'nam4', '--rpo', 'incorrect_value',
          suri(bucket_uri)],
