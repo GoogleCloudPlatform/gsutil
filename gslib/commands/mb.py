@@ -220,7 +220,7 @@ class MbCommand(Command):
     seconds = None
     public_access_prevention = None
     rpo = None
-    json_only_flags = []
+    json_only_flags_in_command = []
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
@@ -239,14 +239,14 @@ class MbCommand(Command):
             raise CommandException(
                 'Invalid value for --rpo. Must be one of: {},'
                 ' provided: {}'.format(VALID_RPO_VALUES_STRING, a))
-          json_only_flags.append(o)
+          json_only_flags_in_command.append(o)
         elif o == '-b':
           InsistOnOrOff(a, 'Only on and off values allowed for -b option')
           bucket_policy_only = (a == 'on')
-          json_only_flags.append(o)
+          json_only_flags_in_command.append(o)
         elif o == '--pap':
           public_access_prevention = a
-          json_only_flags.append(o)
+          json_only_flags_in_command.append(o)
 
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                storageClass=storage_class,
