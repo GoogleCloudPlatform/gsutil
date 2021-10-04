@@ -23,6 +23,7 @@ import boto
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
+from gslib.tests.testcase.integration_testcase import SkipForJSON
 from gslib.tests.util import ObjectToURI as suri
 from gslib.utils.retention_util import SECONDS_IN_DAY
 from gslib.utils.retention_util import SECONDS_IN_MONTH
@@ -184,3 +185,35 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.assertIn(
         'Invalid value for --rpo. Must be one of: (ASYNC_TURBO|DEFAULT),'
         ' provided: incorrect_value', stderr)
+
+  @SkipForJSON('Testing XML only behavior.')
+  def test_single_json_only_flag_raises_error_with_xml_api(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(
+        ['mb', '--rpo', 'ASYNC_TURBO', suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'CommandException: The --rpo option(s) can only be used'
+        ' for GCS Buckets with the JSON API',
+        stderr)
+
+  @SkipForJSON('Testing XML only behavior.')
+  def test_multiple_json_only_flags_raise_error_with_xml_api(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(
+        ['mb',
+        '--pap', 'enabled',
+        '--rpo', 'ASYNC_TURBO',
+        '-b', 'on',
+        suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'CommandException: The --pap, --rpo, -b option(s) can only be used'
+        ' for GCS Buckets with the JSON API',
+        stderr)
