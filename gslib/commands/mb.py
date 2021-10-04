@@ -220,6 +220,7 @@ class MbCommand(Command):
     seconds = None
     public_access_prevention = None
     rpo = None
+    json_only_flags_in_command = []
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
@@ -238,14 +239,14 @@ class MbCommand(Command):
             raise CommandException(
                 'Invalid value for --rpo. Must be one of: {},'
                 ' provided: {}'.format(VALID_RPO_VALUES_STRING, a))
+          json_only_flags_in_command.append(o)
         elif o == '-b':
-          if self.gsutil_api.GetApiSelector('gs') != ApiSelector.JSON:
-            raise CommandException('The -b <on|off> option '
-                                   'can only be used with the JSON API')
           InsistOnOrOff(a, 'Only on and off values allowed for -b option')
           bucket_policy_only = (a == 'on')
+          json_only_flags_in_command.append(o)
         elif o == '--pap':
           public_access_prevention = a
+          json_only_flags_in_command.append(o)
 
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                storageClass=storage_class,
@@ -269,11 +270,12 @@ class MbCommand(Command):
             retentionPeriod=seconds))
         bucket_metadata.retentionPolicy = retention_policy
 
-      if public_access_prevention and self.gsutil_api.GetApiSelector(
+      if json_only_flags_in_command and self.gsutil_api.GetApiSelector(
           bucket_url.scheme) != ApiSelector.JSON:
-        raise CommandException(
-            'The --pap option can only be used for GCS Buckets with the JSON API'
-        )
+        raise CommandException('The {} option(s) can only be used for GCS'
+                               ' Buckets with the JSON API'.format(
+                                   ', '.join(json_only_flags_in_command)))
+
       if not bucket_url.IsBucket():
         raise CommandException('The mb command requires a URL that specifies a '
                                'bucket.\n"%s" is not valid.' % bucket_url)
