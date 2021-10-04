@@ -272,9 +272,9 @@ class MbCommand(Command):
 
       if json_only_flags and self.gsutil_api.GetApiSelector(
           bucket_url.scheme) != ApiSelector.JSON:
-        raise CommandException(
-            'The {} option(s) can only be used for GCS'
-            ' Buckets with the JSON API'.format(', '.join(json_only_flags)))
+        raise CommandException('The {} option(s) can only be used for GCS'
+                               ' Buckets with the JSON API'.format(
+                                   ', '.join(json_only_flags)))
 
       if not bucket_url.IsBucket():
         raise CommandException('The mb command requires a URL that specifies a '
