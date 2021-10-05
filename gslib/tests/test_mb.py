@@ -186,6 +186,46 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         'Invalid value for --rpo. Must be one of: (ASYNC_TURBO|DEFAULT),'
         ' provided: incorrect_value', stderr)
 
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_create_with_placement_flag(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(
+        ['mb', '--placement', 'us-central1,us-east1',
+         suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout,
+                     r"Placement locations:\t\t\['US-CENTRAL1', 'US-EAST1'\]")
+
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_create_with_invalid_placement_flag_raises_error(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(
+        ['mb', '--placement', 'invalid_reg1,invalid_reg2',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'BadRequestException: 400 Invalid custom placement config', stderr)
+
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_create_with_incorrect_number_of_placement_values_raises_error(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    # Location nam4 is used for dual-region.
+    stderr = self.RunGsUtil(
+        ['mb', '--placement', 'val1,val2,val3',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'CommandException: Please specify two regions separated by comma.'
+        ' Specified: val1,val2,val3', stderr)
+
   @SkipForJSON('Testing XML only behavior.')
   def test_single_json_only_flag_raises_error_with_xml_api(self):
     bucket_name = self.MakeTempName('bucket')

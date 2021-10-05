@@ -257,9 +257,10 @@ class MbCommand(Command):
           json_only_flags_in_command.append(o)
         elif o == '--placement':
           placements = a.split(',')
-          if len(placements) > 2:
+          if len(placements) != 2:
             raise CommandException(
-                'More than two regions specified: {}'.format(a))
+                'Please specify two regions separated by comma.'
+                ' Specified: {}'.format(a))
           json_only_flags_in_command.append(o)
 
     bucket_metadata = apitools_messages.Bucket(location=location,
