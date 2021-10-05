@@ -208,8 +208,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
          suri(bucket_uri)],
         return_stderr=True,
         expected_status=1)
-    self.assertIn(
-        'BadRequestException: 400 Invalid custom placement config', stderr)
+    self.assertIn('BadRequestException: 400 Invalid custom placement config',
+                  stderr)
 
   @SkipForXML('The --placement flag only works for GCS JSON API.')
   def test_create_with_incorrect_number_of_placement_values_raises_error(self):
