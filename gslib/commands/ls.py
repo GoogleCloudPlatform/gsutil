@@ -390,9 +390,6 @@ class LsCommand(Command):
             'public_access_prevention'] = bucket.iamConfiguration.publicAccessPrevention
     if bucket.rpo:
       fields['rpo'] = bucket.rpo
-    if bucket.customPlacementConfig:
-      fields['custom_placement_locations'] = (
-          bucket.customPlacementConfig.dataLocations)
     if bucket.satisfiesPZS:
       fields['satisfies_pzs'] = bucket.satisfiesPZS
 

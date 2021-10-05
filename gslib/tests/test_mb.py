@@ -223,8 +223,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1)
     self.assertIn(
-        'CommandException: Please specify two regions separated by comma.'
-        ' Specified: val1,val2,val3', stderr)
+        'CommandException: Please specify two regions separated by comma'
+        ' without space. Specified: val1,val2,val3', stderr)
 
   @SkipForJSON('Testing XML only behavior.')
   def test_single_json_only_flag_raises_error_with_xml_api(self):

@@ -39,7 +39,7 @@ from gslib.utils.text_util import InsistOnOrOff
 from gslib.utils.text_util import NormalizeStorageClass
 
 _SYNOPSIS = """
-  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
+  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <project>]
             [--retention <time>] [--pap <setting>]
             [--placement <region1>,<region2>]
             [--rpo {}] gs://<bucket_name>...
@@ -259,7 +259,7 @@ class MbCommand(Command):
           placements = a.split(',')
           if len(placements) != 2:
             raise CommandException(
-                'Please specify two regions separated by comma.'
+                'Please specify two regions separated by comma without space.'
                 ' Specified: {}'.format(a))
           json_only_flags_in_command.append(o)
 

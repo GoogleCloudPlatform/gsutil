@@ -1123,6 +1123,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     self.assertRegex(stdout, r'RPO:\t\t\t\tASYNC_TURBO')
 
+  @SkipForXML('Custom Dual Region is not supported for the XML API.')
   @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
   def test_list_Lb_displays_custom_dual_region_placement_info(self):
     bucket_name = 'gs://' + self.MakeTempName('bucket')
