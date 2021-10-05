@@ -1129,5 +1129,5 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['mb', '--placement', 'us-central1,us-east1', bucket_name],
                    expected_status=0)
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_name], return_stdout=True)
-    self.assertRegex(
-        stdout, r"Placement locations:\t\t\['US-CENTRAL1', 'US-EAST1'\]")
+    self.assertRegex(stdout,
+                     r"Placement locations:\t\t\['US-CENTRAL1', 'US-EAST1'\]")
