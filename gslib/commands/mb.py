@@ -39,8 +39,9 @@ from gslib.utils.text_util import InsistOnOrOff
 from gslib.utils.text_util import NormalizeStorageClass
 
 _SYNOPSIS = """
-  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <project>]
+  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
             [--retention <time>] [--pap <setting>]
+            [--placement <region1>,<region2>]
             [--rpo {}] gs://<bucket_name>...
 """.format(VALID_RPO_VALUES_STRING)
 
@@ -147,6 +148,12 @@ _DETAILED_HELP_TEXT = ("""
                          "enforced", objects in this bucket cannot be made
                          publicly accessible. Default is "unspecified".
 
+  --placement reg1,reg2  Two regions that form the cutom dual region.
+                         Only regions within the same continent are or will ever
+                         be valid. Invalid location pairs (such as
+                         mixed-continent, or with unsupported regions)
+                         will return an error.
+
   --rpo setting          Specifies the `replication setting <https://cloud.google.com/storage/docs/turbo-replication>`_.
                          This flag is not valid for single-region buckets,
                          and multi-region buckets only accept a value of
@@ -176,7 +183,7 @@ class MbCommand(Command):
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='b:c:l:p:s:',
-      supported_private_args=['retention=', 'pap=', 'rpo='],
+      supported_private_args=['retention=', 'pap=', 'placement=', 'rpo='],
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -221,6 +228,7 @@ class MbCommand(Command):
     public_access_prevention = None
     rpo = None
     json_only_flags_in_command = []
+    placements = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
@@ -247,6 +255,12 @@ class MbCommand(Command):
         elif o == '--pap':
           public_access_prevention = a
           json_only_flags_in_command.append(o)
+        elif o == '--placement':
+          placements = a.split(',')
+          if len(placements) > 2:
+            raise CommandException(
+                'More than two regions specified: {}'.format(a))
+          json_only_flags_in_command.append(o)
 
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                storageClass=storage_class,
@@ -259,6 +273,11 @@ class MbCommand(Command):
         iam_config.bucketPolicyOnly.enabled = bucket_policy_only
       if public_access_prevention:
         iam_config.publicAccessPrevention = public_access_prevention
+
+    if placements:
+      placement_config = apitools_messages.Bucket.CustomPlacementConfigValue()
+      placement_config.dataLocations = placements
+      bucket_metadata.customPlacementConfig = placement_config
 
     for bucket_url_str in self.args:
       bucket_url = StorageUrlFromString(bucket_url_str)
