@@ -148,7 +148,7 @@ _DETAILED_HELP_TEXT = ("""
                          "enforced", objects in this bucket cannot be made
                          publicly accessible. Default is "unspecified".
 
-  --placement reg1,reg2  Two regions that form the cutom dual region.
+  --placement reg1,reg2  Two regions that form the cutom dual-region.
                          Only regions within the same continent are or will ever
                          be valid. Invalid location pairs (such as
                          mixed-continent, or with unsupported regions)
