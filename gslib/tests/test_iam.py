@@ -373,15 +373,6 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     self.assertIn(
         bvle(members=['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
              role='roles/storage.admin2'), bindings)
-    # Project convenience groups should be removeable.
-    (_, bindings) = bstt(False, 'Deleted:projectOwner')
-    self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['deleted:projectOwner'], role=''), bindings)
-    (_, bindings) = bstt(False, 'DELETED:projectOwner:admin')
-    self.assertEquals(len(bindings), 1)
-    self.assertIn(
-        bvle(members=['deleted:projectOwner'], role='roles/storage.admin'),
-        bindings)
 
   def test_duplicate_roles(self):
     """Tests that duplicate roles are ignored."""
