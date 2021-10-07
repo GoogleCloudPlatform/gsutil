@@ -411,6 +411,9 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     self.assertIn(
         bvle(members=['projectViewer:123424'], role='roles/storage.admin'),
         bindings)
+    (_, bindings) = bstt(False, 'projectViewer:123424')
+    self.assertEquals(len(bindings), 1)
+    self.assertIn(bvle(members=['projectViewer:123424'], role=''), bindings)
     with self.assertRaises(CommandException):
       bstt(True, 'projectViewer:123424:admin')
 
