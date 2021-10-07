@@ -404,8 +404,8 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     self.assertEquals(len(bindings), 1)
     self.assertIn(bvle(members=['allUsers'], role='roles/storage.a'), bindings)
 
-  def test_project_convenience_groups(self):
-    """Tests that project convenience roles can be removed but not added."""
+  def test_removing_project_convenience_groups(self):
+    """Tests that project convenience roles can be removed."""
     (_, bindings) = bstt(False, 'projectViewer:123424:admin')
     self.assertEquals(len(bindings), 1)
     self.assertIn(
@@ -414,6 +414,9 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     (_, bindings) = bstt(False, 'projectViewer:123424')
     self.assertEquals(len(bindings), 1)
     self.assertIn(bvle(members=['projectViewer:123424'], role=''), bindings)
+    
+  def test_adding_project_convenience_groups(self):
+    """Tests that project convenience roles cannot be added."""
     with self.assertRaises(CommandException):
       bstt(True, 'projectViewer:123424:admin')
 
