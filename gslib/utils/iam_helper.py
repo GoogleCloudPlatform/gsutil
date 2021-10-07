@@ -238,24 +238,21 @@ def BindingStringToTuple(is_grant, input_str):
   removing_discouraged_type = not is_grant and tokens[0] in DISCOURAGED_TYPES
 
   if input_str.count(':') == 1:
-    tokens = input_str.split(':')
-
     if '%s:%s' % (tokens[0], tokens[1]) in TYPES:
       raise CommandException('Incorrect public member type for binding %s' %
                              input_str)
-    if tokens[0] in PUBLIC_MEMBERS:
+    elif tokens[0] in PUBLIC_MEMBERS:
       (member, roles) = tokens
     elif tokens[0] in TYPES or removing_discouraged_type:
-      member = ':'.join(tokens)
+      member = input_str
       roles = DROP_ALL
     else:
       raise CommandException('Incorrect public member type for binding %s' %
                              input_str)
   elif input_str.count(':') == 2:
-    tokens = input_str.split(':')
     if '%s:%s' % (tokens[0], tokens[1]) in TYPES:
       # case "deleted:user:foo@bar.com?uid=1234"
-      member = ':'.join(tokens)
+      member = input_str
       roles = DROP_ALL
     elif removing_discouraged_type:
       (member_type, project_id, roles) = tokens
