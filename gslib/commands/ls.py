@@ -70,8 +70,10 @@ _DETAILED_HELP_TEXT = ("""
 
   gsutil currently supports ``gs://`` and ``s3://`` as valid providers
 
-  If you specify bucket URLs, gsutil ls lists objects at the top level of
-  each bucket, along with the names of each subdirectory. For example:
+  If you specify bucket URLs, or use `Wildcards
+  <https://cloud.google.com/storage/docs/gsutil/addlhelp/WildcardNames>`_ to
+  capture a set of buckets, gsutil ls lists objects at the top level of each
+  bucket, along with the names of each subdirectory. For example:
 
     gsutil ls gs://bucket
 
