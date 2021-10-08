@@ -414,7 +414,7 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     (_, bindings) = bstt(False, 'projectViewer:123424')
     self.assertEquals(len(bindings), 1)
     self.assertIn(bvle(members=['projectViewer:123424'], role=''), bindings)
-    
+
   def test_adding_project_convenience_groups(self):
     """Tests that project convenience roles cannot be added."""
     with self.assertRaises(CommandException):
