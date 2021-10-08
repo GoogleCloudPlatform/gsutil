@@ -1,3 +1,32 @@
+Release 5.3 (release date: 2021-09-30)
+======================================
+New Features
+------------------
+- Add support for Turbo Replication (RPO). (#1351)
+
+Bug Fixes
+------------------
+- Allow the removal of project convenience groups. (#1350)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
+Release 5.2 (release date: 2021-09-23)
+======================================
+New Features
+------------------
+- Add cp support for end-to-end encryption via the split-trust encryption tool (STET). (#1338)
+
+Bug Fixes
+------------------
+- Use custom endpoints for resumable updloads on the XML API. (#1333)
+
+Other Changes
+------------------
+- Dropped support for Python 2 to patch RSA security issues. (#1339)
+- Several documentation updates and clarifications.
+
 Release 4.68 (release date: 2021-09-14)
 =======================================
 Bug Fixes

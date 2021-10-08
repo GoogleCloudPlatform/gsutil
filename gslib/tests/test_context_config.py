@@ -20,9 +20,9 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import json
-import mock
 import os
 import subprocess
+from unittest import mock
 
 import six
 

@@ -172,6 +172,23 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
                                return_stdout=True)
     self.assertRegex(stdout, 'Satisfies PZS:\t\t\tTrue')
 
+  @mock.patch.object(ls.LsCommand, 'WildcardIterator')
+  def test_placement_locations_not_displayed_for_normal_bucket(
+      self, mock_wildcard):
+    """Non custom dual region buckets should not display placement info."""
+    bucket_uri = self.CreateBucket(bucket_name='foo-non-cdr')
+    bucket_metadata = apitools_messages.Bucket(name='foo-non-cdr')
+    bucket_uri.root_object = bucket_metadata
+    bucket_uri.url_string = 'foo-non-cdr'
+    bucket_uri.storage_url = mock.Mock()
+
+    mock_wildcard.return_value.IterBuckets.return_value = [bucket_uri]
+    # MockKey doesn't support hash_algs, so the MD5 will not match.
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      stdout = self.RunCommand('ls', ['-Lb', suri(bucket_uri)],
+                               return_stdout=True)
+    self.assertNotRegex(stdout, 'Placement locations:')
+
 
 class TestLs(testcase.GsUtilIntegrationTestCase):
   """Integration tests for ls command."""
@@ -1091,3 +1108,27 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['pap', 'set', 'enforced', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     self.assertRegex(stdout, r'Public access prevention:\t*enforced')
+
+  @SkipForXML('RPO is not supported for the XML API.')
+  @SkipForS3('RPO is not supported for S3 buckets.')
+  def test_list_Lb_displays_rpo(self):
+    bucket_uri = self.CreateBucket(location='nam4')
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    # TODO: Uncomment this check once we have have consistent behavior from
+    # the backend. Currently, both None and DEFAULT are valid values for
+    # default replication and ls will not display the field if value is None.
+    # self.assertRegex(stdout, r'RPO:\t\t\t\tDEFAULT')
+    # Set RPO to ASYNC_TURBO
+    self.RunGsUtil(['rpo', 'set', 'ASYNC_TURBO', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r'RPO:\t\t\t\tASYNC_TURBO')
+
+  @SkipForXML('Custom Dual Region is not supported for the XML API.')
+  @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
+  def test_list_Lb_displays_custom_dual_region_placement_info(self):
+    bucket_name = 'gs://' + self.MakeTempName('bucket')
+    self.RunGsUtil(['mb', '--placement', 'us-central1,us-east1', bucket_name],
+                   expected_status=0)
+    stdout = self.RunGsUtil(['ls', '-Lb', bucket_name], return_stdout=True)
+    self.assertRegex(stdout,
+                     r"Placement locations:\t\t\['US-CENTRAL1', 'US-EAST1'\]")

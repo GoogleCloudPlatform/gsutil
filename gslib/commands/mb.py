@@ -25,6 +25,8 @@ import textwrap
 from gslib.cloud_api import BadRequestException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
+from gslib.commands.rpo import VALID_RPO_VALUES
+from gslib.commands.rpo import VALID_RPO_VALUES_STRING
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
@@ -37,9 +39,11 @@ from gslib.utils.text_util import InsistOnOrOff
 from gslib.utils.text_util import NormalizeStorageClass
 
 _SYNOPSIS = """
-  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <proj_id>]
-            [--retention <time>] [--pap <setting>] gs://<bucket_name>...
-"""
+  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <project>]
+            [--retention <time>] [--pap <setting>]
+            [--placement <region1>,<region2>]
+            [--rpo {}] gs://<bucket_name>...
+""".format(VALID_RPO_VALUES_STRING)
 
 _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
@@ -47,31 +51,19 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>DESCRIPTION</B>
-  The mb command creates a new bucket. Google Cloud Storage has a single
-  namespace, so you are not allowed to create a bucket with a name already
-  in use by another user. You can, however, carve out parts of the bucket name
-  space corresponding to your company's domain name (see "gsutil help naming").
+  Create one or more new buckets. Google Cloud Storage has a single namespace,
+  so you are not allowed to create a bucket with a name already in use by
+  another user. You can, however, carve out parts of the bucket name space
+  corresponding to your company's domain name (see "gsutil help naming").
 
-  If you don't specify a project ID using the -p option, the bucket is created
-  using the default project ID specified in your `gsutil configuration file
-  <https://cloud.google.com/storage/docs/boto-gsutil>`_.
+  If you don't specify a project ID or project number using the -p option, the
+  buckets are created using the default project ID specified in your `gsutil
+  configuration file <https://cloud.google.com/storage/docs/boto-gsutil>`_.
 
-  The -c and -l options specify the storage class and location, respectively,
-  for the bucket. Once a bucket is created in a given location and with a
-  given storage class, it cannot be moved to a different location, and the
-  storage class cannot be changed. Instead, you would need to create a new
-  bucket and move the data over and then delete the original bucket.
-
-  The --retention option specifies the retention period for the bucket. For more
-  details about retention policy see "gsutil help retention".
-
-  The -b option specifies the uniform bucket-level access setting of the bucket.
-  ACLs assigned to objects are not evaluated in buckets with uniform bucket-
-  level access enabled. Consequently, only IAM policies grant access to objects
-  in these buckets.
-
-  The --pap option specifies the public access prevention setting of the bucket.
-  When enforced, objects in this bucket cannot be made publicly accessible.
+  The -l option specifies the location for the buckets. Once a bucket is created
+  in a given location, it cannot be moved to a different location. Instead, you
+  need to create a new bucket, move the data over, and then delete the original
+  bucket.
 
 <B>BUCKET STORAGE CLASSES</B>
   You can specify one of the `storage classes
@@ -127,19 +119,11 @@ _DETAILED_HELP_TEXT = ("""
   If you don't specify a --retention option, the bucket is created with no
   retention policy.
 
-<B>UNIFORM BUCKET-LEVEL ACCESS</B>
-  You can enable or disable uniform bucket-level access for a bucket
-  with the -b option.
-
-  Examples:
-
-    gsutil mb -b off gs://bucket-with-acls
-
-    gsutil mb -b on gs://bucket-with-no-acls
-
 <B>OPTIONS</B>
   -b <on|off>            Specifies the uniform bucket-level access setting.
-                         Default is "off"
+                         When "on", ACLs assigned to objects in the bucket are
+                         not evaluated. Consequently, only IAM policies grant
+                         access to objects in these buckets. Default is "off".
 
   -c class               Specifies the default storage class.
                          Default is "Standard".
@@ -149,20 +133,35 @@ _DETAILED_HELP_TEXT = ("""
                          for a discussion of this distinction. Default is US.
                          Locations are case insensitive.
 
-  -p proj_id             Specifies the project ID or project number to create
+  -p project             Specifies the project ID or project number to create
                          the bucket under.
 
   -s class               Same as -c.
 
   --retention time       Specifies the retention policy. Default is no retention
                          policy. This can only be set on gs:// buckets and
-                         requires using the JSON API.
+                         requires using the JSON API. For more details about
+                         retention policy see "gsutil help retention"
 
-  --pap setting          Specifies the public access prevention setting.
-                         Valid values are "enforced" or "unspecified".
-                         Default is "unspecified".
+  --pap setting          Specifies the public access prevention setting. Valid
+                         values are "enforced" or "unspecified". When
+                         "enforced", objects in this bucket cannot be made
+                         publicly accessible. Default is "unspecified".
 
-""")
+  --placement reg1,reg2  Two regions that form the cutom dual-region.
+                         Only regions within the same continent are or will ever
+                         be valid. Invalid location pairs (such as
+                         mixed-continent, or with unsupported regions)
+                         will return an error.
+
+  --rpo setting          Specifies the `replication setting <https://cloud.google.com/storage/docs/turbo-replication>`_.
+                         This flag is not valid for single-region buckets,
+                         and multi-region buckets only accept a value of
+                         DEFAULT. Valid values for dual region buckets
+                         are {rpo_values}. If unspecified, DEFAULT is applied
+                         for dual-region and multi-region buckets.
+
+""".format(rpo_values=VALID_RPO_VALUES_STRING))
 
 # Regex to disallow buckets violating charset or not [3..255] chars total.
 BUCKET_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$')
@@ -184,7 +183,7 @@ class MbCommand(Command):
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='b:c:l:p:s:',
-      supported_private_args=['retention=', 'pap='],
+      supported_private_args=['retention=', 'pap=', 'placement=', 'rpo='],
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -227,6 +226,9 @@ class MbCommand(Command):
     storage_class = None
     seconds = None
     public_access_prevention = None
+    rpo = None
+    json_only_flags_in_command = []
+    placements = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-l':
@@ -239,17 +241,31 @@ class MbCommand(Command):
           storage_class = NormalizeStorageClass(a)
         elif o == '--retention':
           seconds = RetentionInSeconds(a)
+        elif o == '--rpo':
+          rpo = a.strip()
+          if rpo not in VALID_RPO_VALUES:
+            raise CommandException(
+                'Invalid value for --rpo. Must be one of: {},'
+                ' provided: {}'.format(VALID_RPO_VALUES_STRING, a))
+          json_only_flags_in_command.append(o)
         elif o == '-b':
-          if self.gsutil_api.GetApiSelector('gs') != ApiSelector.JSON:
-            raise CommandException('The -b <on|off> option '
-                                   'can only be used with the JSON API')
           InsistOnOrOff(a, 'Only on and off values allowed for -b option')
           bucket_policy_only = (a == 'on')
+          json_only_flags_in_command.append(o)
         elif o == '--pap':
           public_access_prevention = a
+          json_only_flags_in_command.append(o)
+        elif o == '--placement':
+          placements = a.split(',')
+          if len(placements) != 2:
+            raise CommandException(
+                'Please specify two regions separated by comma without space.'
+                ' Specified: {}'.format(a))
+          json_only_flags_in_command.append(o)
 
     bucket_metadata = apitools_messages.Bucket(location=location,
-                                               storageClass=storage_class)
+                                               storageClass=storage_class,
+                                               rpo=rpo)
     if bucket_policy_only or public_access_prevention:
       bucket_metadata.iamConfiguration = IamConfigurationValue()
       iam_config = bucket_metadata.iamConfiguration
@@ -258,6 +274,11 @@ class MbCommand(Command):
         iam_config.bucketPolicyOnly.enabled = bucket_policy_only
       if public_access_prevention:
         iam_config.publicAccessPrevention = public_access_prevention
+
+    if placements:
+      placement_config = apitools_messages.Bucket.CustomPlacementConfigValue()
+      placement_config.dataLocations = placements
+      bucket_metadata.customPlacementConfig = placement_config
 
     for bucket_url_str in self.args:
       bucket_url = StorageUrlFromString(bucket_url_str)
@@ -269,11 +290,12 @@ class MbCommand(Command):
             retentionPeriod=seconds))
         bucket_metadata.retentionPolicy = retention_policy
 
-      if public_access_prevention and self.gsutil_api.GetApiSelector(
+      if json_only_flags_in_command and self.gsutil_api.GetApiSelector(
           bucket_url.scheme) != ApiSelector.JSON:
-        raise CommandException(
-            'The --pap option can only be used for GCS Buckets with the JSON API'
-        )
+        raise CommandException('The {} option(s) can only be used for GCS'
+                               ' Buckets with the JSON API'.format(
+                                   ', '.join(json_only_flags_in_command)))
+
       if not bucket_url.IsBucket():
         raise CommandException('The mb command requires a URL that specifies a '
                                'bucket.\n"%s" is not valid.' % bucket_url)

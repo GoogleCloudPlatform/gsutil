@@ -150,7 +150,7 @@ _DETAILED_HELP_TEXT = ("""
   flow through the machine where gsutil is running, doing this can make your
   transfer run significantly faster than running gsutil on your local
   workstation.
-  
+
   Note 3: rsync does not copy empty directory trees, since Cloud Storage uses a
   `flat namespace <https://cloud.google.com/storage/docs/folders>`_.
 
@@ -186,7 +186,7 @@ _DETAILED_HELP_TEXT = ("""
 
   Change detection works if the other Cloud provider is using md5 or CRC32. AWS
   multipart upload has an incompatible checksum.
-  
+
   As mentioned above, using -d can be dangerous because of how quickly data can
   be deleted. For example, if you meant to synchronize a local directory from
   a bucket in the cloud but instead run the command:
@@ -942,7 +942,6 @@ class _DiffIterator(object):
   """Iterator yielding sequence of RsyncDiffToApply objects."""
 
   def __init__(self, command_obj, base_src_url, base_dst_url):
-    global _tmp_files
     self.command_obj = command_obj
     self.compute_file_checksums = command_obj.compute_file_checksums
     self.delete_extras = command_obj.delete_extras
@@ -1330,7 +1329,6 @@ class _AvoidChecksumAndListingDiffIterator(_DiffIterator):
 
     # We're providing an estimate, so avoid computing checksums even though
     # that may cause our estimate to be off.
-    global _tmp_files
     self.compute_file_checksums = False
     self.delete_extras = initialized_diff_iterator.delete_extras
     self.recursion_requested = initialized_diff_iterator.delete_extras

@@ -23,6 +23,7 @@ import boto
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
+from gslib.tests.testcase.integration_testcase import SkipForJSON
 from gslib.tests.util import ObjectToURI as suri
 from gslib.utils.retention_util import SECONDS_IN_DAY
 from gslib.utils.retention_util import SECONDS_IN_MONTH
@@ -107,7 +108,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.assertRegexpMatches(
         stderr, r'Retention policy can only be specified for GCS buckets.')
 
-  @SkipForXML('Public access prevention only runs on GCS JSON API')
+  @SkipForXML('Public access prevention only runs on GCS JSON API.')
   def test_create_with_pap_enforced(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
@@ -115,7 +116,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['mb', '--pap', 'enforced', suri(bucket_uri)])
     self.VerifyPublicAccessPreventionValue(bucket_uri, 'enforced')
 
-  @SkipForXML('Public access prevention only runs on GCS JSON API')
+  @SkipForXML('Public access prevention only runs on GCS JSON API.')
   def test_create_with_pap_unspecified(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
@@ -123,7 +124,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['mb', '--pap', 'unspecified', suri(bucket_uri)])
     self.VerifyPublicAccessPreventionValue(bucket_uri, 'unspecified')
 
-  @SkipForXML('Public access prevention only runs on GCS JSON API')
+  @SkipForXML('Public access prevention only runs on GCS JSON API.')
   def test_create_with_pap_invalid_arg(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
@@ -133,3 +134,123 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                             expected_status=1,
                             return_stderr=True)
     self.assertRegexpMatches(stderr, r'invalid_arg is not a valid value')
+
+  @SkipForXML('RPO flag only works for GCS JSON API.')
+  def test_create_with_rpo_async_turbo(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(
+        ['mb', '-l', 'nam4', '--rpo', 'ASYNC_TURBO',
+         suri(bucket_uri)])
+    self.VerifyCommandGet(bucket_uri, 'rpo', 'ASYNC_TURBO')
+
+  @SkipForXML('RPO flag only works for GCS JSON API.')
+  def test_create_sets_rpo_to_default(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(['mb', '-l', 'nam4', suri(bucket_uri)])
+    try:
+      self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
+    except AssertionError:
+      # TODO: Remove the try/except block once we have consistent results
+      # returned from the backend for rpo get.
+      self.VerifyCommandGet(bucket_uri, 'rpo', 'None')
+
+  @SkipForXML('RPO flag only works for GCS JSON API.')
+  def test_create_with_rpo_async_turbo_fails_for_regional_bucket(self):
+    """Turbo replication is only meant for dual-region."""
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(
+        ['mb', '-l', 'us-central1', '--rpo', 'ASYNC_TURBO',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('Invalid argument', stderr)
+
+  @SkipForXML('RPO flag only works for GCS JSON API.')
+  def test_create_with_rpo_incorrect_value_raises_error(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    # Location nam4 is used for dual-region.
+    stderr = self.RunGsUtil(
+        ['mb', '-l', 'nam4', '--rpo', 'incorrect_value',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'Invalid value for --rpo. Must be one of: (ASYNC_TURBO|DEFAULT),'
+        ' provided: incorrect_value', stderr)
+
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_create_with_placement_flag(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(
+        ['mb', '--placement', 'us-central1,us-east1',
+         suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout,
+                     r"Placement locations:\t\t\['US-CENTRAL1', 'US-EAST1'\]")
+
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_create_with_invalid_placement_flag_raises_error(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(
+        ['mb', '--placement', 'invalid_reg1,invalid_reg2',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('BadRequestException: 400 Invalid custom placement config',
+                  stderr)
+
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_create_with_incorrect_number_of_placement_values_raises_error(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    # Location nam4 is used for dual-region.
+    stderr = self.RunGsUtil(
+        ['mb', '--placement', 'val1,val2,val3',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'CommandException: Please specify two regions separated by comma'
+        ' without space. Specified: val1,val2,val3', stderr)
+
+  @SkipForJSON('Testing XML only behavior.')
+  def test_single_json_only_flag_raises_error_with_xml_api(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(['mb', '--rpo', 'ASYNC_TURBO',
+                             suri(bucket_uri)],
+                            return_stderr=True,
+                            expected_status=1)
+    self.assertIn(
+        'CommandException: The --rpo option(s) can only be used'
+        ' for GCS Buckets with the JSON API', stderr)
+
+  @SkipForJSON('Testing XML only behavior.')
+  def test_multiple_json_only_flags_raise_error_with_xml_api(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil([
+        'mb', '--pap', 'enabled', '--placement', 'uscentral-1,us-asia1',
+        '--rpo', 'ASYNC_TURBO', '-b', 'on',
+        suri(bucket_uri)
+    ],
+                            return_stderr=True,
+                            expected_status=1)
+    self.assertIn(
+        'CommandException: The --pap, --placement, --rpo, -b option(s) can'
+        ' only be used for GCS Buckets with the JSON API', stderr)
