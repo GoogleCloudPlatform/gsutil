@@ -1,3 +1,20 @@
+Release 5.4 (release date: 2021-10-11)
+======================================
+New Features
+------------------
+- Support for new backend features.
+- Re-implement removal of project convenience groups (#1365)
+- Add suffix to user agent to differentiate between types of rewrite command (#1359)
+- mb command: raise error if json only flags are used for xml API  (#1358)
+- Improve `gsutil rm` and `gsutil rewrite` help pages. (#1355)
+- Link fix and term update in help docs (#1354)
+
+Other Changes
+------------------
+- Improvements to the Wildcard help topic (#1367)
+- Improve `gsutil rm` and `gsutil rewrite` help pages. (#1355)
+- Link fix and term update in help docs (#1354)
+
 Release 5.3 (release date: 2021-09-30)
 ======================================
 New Features
