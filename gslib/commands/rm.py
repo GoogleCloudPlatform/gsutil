@@ -75,7 +75,7 @@ _DETAILED_HELP_TEXT = ("""
   When working with versioning-enabled buckets, note that the -r option removes
   all object versions in the subdirectory. To remove only the live version of
   each object in the subdirectory, use the `** wildcard
-  <https://cloud.google.com//storage/docs/gsutil/addlhelp/WildcardNames>`_.
+  <https://cloud.google.com/storage/docs/gsutil/addlhelp/WildcardNames>`_.
 
   The following command removes all versions of all objects in a bucket, and
   then deletes the bucket:
@@ -129,7 +129,7 @@ _DETAILED_HELP_TEXT = ("""
               gsutil deletes the bucket. This option implies the -a option and
               deletes all object versions. If you only want to delete live
               object versions, use the `** wildcard
-              <https://cloud.google.com//storage/docs/gsutil/addlhelp/WildcardNames>`_
+              <https://cloud.google.com/storage/docs/gsutil/addlhelp/WildcardNames>`_
               instead of -r.
 
   -a          Delete all versions of an object.
