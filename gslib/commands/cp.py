@@ -95,7 +95,7 @@ _DESCRIPTION_TEXT = """
   You can use the ``-n`` option to prevent overwriting the content of
   existing files. The following example downloads text files from a bucket
   without clobbering the data in your directory:
-  
+
     gsutil cp -n gs://my-bucket/*.txt .
 
   Use the ``-r`` option to copy an entire directory tree.
@@ -407,13 +407,10 @@ _SLICED_OBJECT_DOWNLOADS_TEXT = """
   of slices is set small to avoid this problem, you can disable sliced object
   download if necessary by setting the "sliced_object_download_threshold"
   variable in the ``.boto`` config file to 0.
-
-
 """
 
 _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
 <B>PARALLEL COMPOSITE UPLOADS</B>
-
   gsutil can automatically use
   `object composition <https://cloud.google.com/storage/docs/composite-objects>`_
   to perform uploads in parallel for large, local files being uploaded to
