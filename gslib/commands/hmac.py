@@ -81,9 +81,9 @@ _DELETE_DESCRIPTION = """
   deleted.
 
 <B>DELETE OPTIONS</B>
-  The "delete" sub-command has the following option
+  The ``delete`` sub-command has the following option
 
-  -p <project>.               Specify the ID or number of the project from which to
+  -p <project>                Specify the ID or number of the project from which to
                               delete a key.
 """
 
@@ -144,7 +144,7 @@ _UPDATE_DESCRIPTION = """
                               if the specified etag matches the etag of the
                               stored key.
 
-  -p <project>                Specify ther ID or number of the project in
+  -p <project>                Specify the ID or number of the project in
                               which to update a key.
 """
 
