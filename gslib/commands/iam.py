@@ -83,9 +83,9 @@ _CH_SYNOPSIS = """
   conditions to a policy or to change the policy of a resource that already
   contains conditions. See additional details below.
 
-  NOTE: The "gsutil iam" command does not allow using project convenience groups
-  (projectOwner, projectEditor, projectViewer) as the first segment of a binding
-  because these groups go against the principle of least privilege.
+  NOTE: The "gsutil iam" command does not allow you to add convenience values
+  (projectOwner, projectEditor, projectViewer), but you can remove existing
+  ones.
 
 """
 
