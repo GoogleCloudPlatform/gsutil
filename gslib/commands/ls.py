@@ -369,6 +369,9 @@ class LsCommand(Command):
       fields['default_kms_key'] = 'None'
     fields['encryption_config'] = 'Present' if bucket.encryption else 'None'
     # Fields not available in all APIs (e.g. the XML API)
+    if bucket.autoclass and bucket.autoclass.enabled:
+      fields['autoclass_enabled_date'] = (
+          bucket.autoclass.toggleTime.strftime('%a, %d %b %Y'))
     if bucket.locationType:
       fields['location_type'] = bucket.locationType
     if bucket.customPlacementConfig:
@@ -410,6 +413,7 @@ class LsCommand(Command):
 
     # Only display certain properties if the given API returned them (JSON API
     # returns many fields that the XML API does not).
+    autoclass_line = ''
     location_type_line = ''
     custom_placement_locations_line = ''
     metageneration_line = ''
@@ -421,6 +425,8 @@ class LsCommand(Command):
     public_access_prevention_line = ''
     rpo_line = ''
     satisifies_pzs_line = ''
+    if 'autoclass_enabled_date' in fields:
+      autoclass_line = '\tAutoclass:\t\t\tEnabled on {autoclass_enabled_date}\n'
     if 'location_type' in fields:
       location_type_line = '\tLocation type:\t\t\t{location_type}\n'
     if 'custom_placement_locations' in fields:
@@ -463,8 +469,9 @@ class LsCommand(Command):
          '\tLabels:\t\t\t\t{labels}\n' +
          '\tDefault KMS key:\t\t{default_kms_key}\n' + time_created_line +
          time_updated_line + metageneration_line +
-         bucket_policy_only_enabled_line + public_access_prevention_line +
-         rpo_line + satisifies_pzs_line + '\tACL:\t\t\t\t{acl}\n'
+         bucket_policy_only_enabled_line + autoclass_line +
+         public_access_prevention_line + rpo_line + satisifies_pzs_line +
+         '\tACL:\t\t\t\t{acl}\n'
          '\tDefault ACL:\t\t\t{default_acl}').format(**fields))
     if bucket_blr.storage_url.scheme == 's3':
       text_util.print_to_fd(
@@ -568,6 +575,7 @@ class LsCommand(Command):
       elif listing_style == ListingStyle.LONG_LONG:
         bucket_fields = [
             'acl',
+            'autoclass',
             'billing',
             'cors',
             'customPlacementConfig',

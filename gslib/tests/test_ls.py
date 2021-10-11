@@ -1132,3 +1132,14 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_name], return_stdout=True)
     self.assertRegex(stdout,
                      r"Placement locations:\t\t\['US-CENTRAL1', 'US-EAST1'\]")
+
+  @SkipForXML('Autoclass is not supported for the XML API.')
+  @SkipForS3('Autoclass is not supported for S3 buckets.')
+  def test_list_autoclass(self):
+    bucket_uri = self.CreateBucket()
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertNotIn('Autoclass', stdout)
+    # Enforce Autoclass.
+    self.RunGsUtil(['autoclass', 'set', 'on', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r'Autoclass:\t*Enabled on .+')
