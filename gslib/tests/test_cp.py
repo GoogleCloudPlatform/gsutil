@@ -2353,7 +2353,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
       stderr = self.RunGsUtil(
-          ['-h', 'Content-MD5: invalid-md5',  'cp', fpath1, suri(bucket_uri)],
+          ['-h', 'Content-MD5: invalid-md5', 'cp', fpath1,
+           suri(bucket_uri)],
           return_stderr=True)
       self.assertIn('Copying file:', stderr)
     self.AssertNObjectsInBucket(bucket_uri, 1)
