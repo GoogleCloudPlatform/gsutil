@@ -3830,6 +3830,11 @@ def PerformCopy(logger,
   if global_copy_helper_opts.dest_storage_class:
     dst_obj_metadata.storageClass = global_copy_helper_opts.dest_storage_class
 
+  if config.get('GSUtil', 'check_hashes') == CHECK_HASH_NEVER:
+    # GCS server will perform MD5 validation if the md5 hash is present.
+    # Remove md5_hash if check_hashes=never.
+    dst_obj_metadata.md5Hash = None
+
   _LogCopyOperation(logger, src_url, dst_url, dst_obj_metadata)
 
   if src_url.IsCloudUrl():
