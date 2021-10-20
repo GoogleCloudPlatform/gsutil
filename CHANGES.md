@@ -2784,7 +2784,7 @@ Release 2.0 (release-date: 2012-01-13)
 New Features
 ------------
 
-- Support for for two new installation modes: enterprise and RPM.
+- Support for two new installation modes: enterprise and RPM.
   Customers can now install gsutil one of three ways:
   - Individual user mode (previously the only available mode): unpacking from
     a gzipped tarball (gs://pub/gsutil.tar.gz) or zip file
