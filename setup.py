@@ -108,7 +108,7 @@ setup(
     download_url='https://cloud.google.com/storage/docs/gsutil_install',
     license='Apache 2.0',
     author='Google Inc.',
-    author_email='gs-team@google.com',
+    author_email='buganizer-system+187143@google.com',
     description=('A command line tool for interacting with cloud storage '
                  'services.'),
     long_description=long_desc,
