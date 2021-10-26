@@ -108,7 +108,7 @@ _DETAILED_HELP_TEXT = ("""
 <B>PROVIDING DIAGNOSTIC OUTPUT TO GOOGLE CLOUD STORAGE TEAM</B>
   If the Google Cloud Storage Team asks you to run a performance diagnostic
   please use the following command, and email the output file (output.json)
-  to gs-team@google.com:
+  to the @google.com address provided by the Cloud Storage team.
 
     gsutil perfdiag -o output.json gs://your-bucket
 
