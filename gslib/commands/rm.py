@@ -66,7 +66,7 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil rm gs://bucket/kitten.png
 
-  Use the -r option to specify recursive object deletion. For example, the.    
+  Use the -r option to specify recursive object deletion. For example, the.
   following command removes gs://bucket/subdir and all objects and
   subdirectories under it:
 
@@ -334,7 +334,7 @@ class RmCommand(Command):
       for url_str in url_strs:
         url = StorageUrlFromString(url_str)
         if url.IsObject():
-          folder_object_wildcards.append('%s**_$folder$' % url_str)
+          folder_object_wildcards.append(url_str.rstrip('*') + '*_$folder$')
       if folder_object_wildcards:
         self.continue_on_error = True
         try:
