@@ -557,9 +557,10 @@ def _ConstructAccountProblemHelp(reason):
         % default_project_id)
   acct_help += (
       "If the above doesn't resolve your AccountProblem, please send mail to "
-      "gs-team@google.com requesting assistance, noting the exact command you "
-      "ran, the fact that you received a 403 AccountProblem error, and your "
-      "project ID. Please do not post your project ID on StackOverflow. "
+      "buganizer-system+187143@google.com requesting assistance, noting the "
+      "exact command you ran, the fact that you received a 403 AccountProblem "
+      "error, and your project ID. Please do not post your project ID on "
+      "StackOverflow. "
       "Note: It's possible to use Google Cloud Storage without enabling "
       "billing if you're only listing or reading objects for which you're "
       "authorized, or if you're uploading objects to a bucket billed to a "
