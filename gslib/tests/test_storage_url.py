@@ -81,13 +81,13 @@ class TestStorageUrl(base.GsUtilTestCase):
     storage_url.StorageUrlFromString('**')
     storage_url.StorageUrlFromString('gs://bucket/**')
 
-    storage_url.StorageUrlFromString('**/')
+    storage_url.StorageUrlFromString('**' + os.sep)
     storage_url.StorageUrlFromString('gs://bucket/**/')
 
-    storage_url.StorageUrlFromString('/**')
+    storage_url.StorageUrlFromString(os.sep + '**')
     storage_url.StorageUrlFromString('gs://bucket//**')
 
-    storage_url.StorageUrlFromString('/**/')
+    storage_url.StorageUrlFromString(os.sep + '**' + os.sep)
 
     mock_stderr.assert_not_called()
 
@@ -99,19 +99,19 @@ class TestStorageUrl(base.GsUtilTestCase):
     storage_url.StorageUrlFromString('**abc')
     storage_url.StorageUrlFromString('gs://bucket/**object')
 
-    storage_url.StorageUrlFromString('abc**/')
+    storage_url.StorageUrlFromString('abc**' + os.sep)
     storage_url.StorageUrlFromString('gs://bucket/object**/')
 
-    storage_url.StorageUrlFromString('/**abc')
+    storage_url.StorageUrlFromString(os.sep + '**abc')
     storage_url.StorageUrlFromString('gs://bucket//**object')
 
-    storage_url.StorageUrlFromString('/**/abc**')
+    storage_url.StorageUrlFromString(os.sep + '**' + os.sep + 'abc**')
     storage_url.StorageUrlFromString('gs://bucket/**/abc**')
 
-    storage_url.StorageUrlFromString('abc**/abc')
+    storage_url.StorageUrlFromString('abc**' + os.sep + 'abc')
     storage_url.StorageUrlFromString('gs://bucket/abc**/abc')
 
-    storage_url.StorageUrlFromString('/abc**/**')
+    storage_url.StorageUrlFromString(os.sep + 'abc**' + os.sep + '**')
     storage_url.StorageUrlFromString('gs://bucket/abc**/**')
 
     storage_url.StorageUrlFromString('gs://b**')

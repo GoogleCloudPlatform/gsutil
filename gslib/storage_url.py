@@ -109,10 +109,9 @@ class StorageUrl(object):
     # - ^**/
     # - /**$
     # - /**/
-    url_string = self.object_name
-    if not self.url_string:
+    if not self.object_name:
       return
-    delimiter_bounded_url = self.delim + self.url_string + self.delim
+    delimiter_bounded_url = self.delim + self.object_name + self.delim
     split_url = delimiter_bounded_url.split(
         '{delim}**{delim}'.format(delim=self.delim))
     removed_correct_double_wildcards_url_string = ''.join(split_url)
