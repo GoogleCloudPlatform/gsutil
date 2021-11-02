@@ -132,7 +132,7 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
                              suri(bucket_uri)],
                             expected_status=1,
                             return_stderr=True)
-    self.assertIn('Invalid argument', stderr)
+    self.assertIn('ASYNC_TURBO cannot be enabled on REGION bucket', stderr)
 
   @SkipForJSON('Testing XML only behavior.')
   def test_xml_fails_for_set(self):
