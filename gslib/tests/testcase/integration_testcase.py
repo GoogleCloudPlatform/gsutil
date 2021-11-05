@@ -115,9 +115,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
   GROUP_TEST_ADDRESS = 'gs-discussion@googlegroups.com'
   GROUP_TEST_ID = (
       '00b4903a97d097895ab58ef505d535916a712215b79c3e54932c2eb502ad97f5')
-  USER_TEST_ADDRESS = 'gsutiltestuser@gmail.com'
+  USER_TEST_ADDRESS = 'gsutiltesting123@gmail.com'
+  # This is the legacy CanonicalID for the above email.
   USER_TEST_ID = (
-      '00b4903a97b201e40d2a5a3ddfe044bb1ab79c75b2e817cbe350297eccc81c84')
+      '00b4903a97f0baa2680740f5adb90b2dcf9c8b878abd84ba1bdba653de949619')
   DOMAIN_TEST = 'google.com'
   # No one can create this bucket without owning the gmail.com domain, and we
   # won't create this bucket, so it shouldn't exist.
