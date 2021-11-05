@@ -169,7 +169,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
          suri(bucket_uri)],
         return_stderr=True,
         expected_status=1)
-    self.assertIn('Invalid argument', stderr)
+    self.assertIn('ASYNC_TURBO cannot be enabled on REGION bucket', stderr)
 
   @SkipForXML('RPO flag only works for GCS JSON API.')
   def test_create_with_rpo_incorrect_value_raises_error(self):
