@@ -1,3 +1,17 @@
+Release 5.5 (release date: 2021-11-11)
+======================================
+Bug Fixes
+------------------
+- Close upload stream before we try to unlink temp file (#1144)
+- Do not perform hash validation if check_hashes=never even if Content-MD5 is set (#1382)
+
+Other Changes
+------------------
+- Add warning for unsupported double wildcard use. (#1386)
+- Changing test email and user references to safer values. (#1396)
+- Several documentation updates and clarifications.
+
+
 Release 5.4 (release date: 2021-10-11)
 ======================================
 New Features
