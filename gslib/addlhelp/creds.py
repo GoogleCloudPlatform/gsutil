@@ -151,7 +151,7 @@ _DETAILED_HELP_TEXT = ("""
 
     You can specify which service account to use for impersonation by running
     "gsutil -i", "gsutil config" and editing the boto configuration file, or
-    "gcloud config set auth/impersonate_service_account".
+    "gcloud config set auth/impersonate_service_account [service_account_email_address]".
 
     In order to impersonate, your original credentials need to be granted
     roles/iam.serviceAccountTokenCreator on the target service account.
