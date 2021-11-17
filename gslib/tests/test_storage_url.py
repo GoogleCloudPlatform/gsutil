@@ -26,7 +26,7 @@ from gslib import storage_url
 from gslib.exception import InvalidUrlError
 from gslib.tests.testcase import base
 
-import mock
+from unittest import mock
 
 _UNSUPPORTED_DOUBLE_WILDCARD_WARNING_TEXT = (
     '** behavior is undefined if directly preceeded or followed by'
