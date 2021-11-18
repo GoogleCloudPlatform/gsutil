@@ -766,7 +766,7 @@ class Command(HelpProvider):
         # call this method with update_sub_opts_and_args=False and it
         # does not set set check_args to True.
         raise TypeError(
-          'Cannot check arguments if sub_opts and args are not updated.')
+            'Cannot check arguments if sub_opts and args are not updated.')
       return parsed_sub_opts, parsed_args
 
   def CheckArguments(self, args=None):
@@ -2007,6 +2007,7 @@ class Command(HelpProvider):
     """
     return self._GetGcloudStorageArgs(self.sub_opts, self.args,
                                       self.gcloud_storage_map)
+
 
 # Below here lie classes and functions related to controlling the flow of tasks
 # between various threads and processes.
