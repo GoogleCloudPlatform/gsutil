@@ -122,12 +122,14 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '--pap', 'unspecified', suri(bucket_uri)])
-    # TODO(b/201683262) Change this to only check for inherited we have
-    # consitent behavior from the backend
-    try:
-      self.VerifyPublicAccessPreventionValue(bucket_uri, 'unspecified')
-    except AssertionError:
-      self.VerifyPublicAccessPreventionValue(bucket_uri, 'inherited')
+    # TODO(b/201683262) Replace all calls to this method
+    # with self.VerifyPublicAccessPreventionValue(bucket_uri, 'inherited')
+    # once the backend rollout is completed.
+    stdout = self.RunGsUtil(['publicaccessprevention', 'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
+    self.assertRegex(stdout,
+                     r'%s:\s+(unspecified|inherited)' % suri(bucket_uri))
 
   @SkipForXML('Public access prevention only runs on GCS JSON API.')
   def test_create_with_pap_invalid_arg(self):
