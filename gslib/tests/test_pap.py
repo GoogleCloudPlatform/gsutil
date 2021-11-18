@@ -31,14 +31,14 @@ class TestPublicAccessPrevention(testcase.GsUtilIntegrationTestCase):
   _get_pap_cmd = ['pap', 'get']
 
   def _verify_public_access_prevention_unspecified(self, bucket_uri):
-    # TODO(b/201683262) Remove this one backend rollout is completed.
-    try:
-      self.VerifyPublicAccessPreventionValue(bucket_uri, 'unspecified')
-    except AssertionError:
-      # For a brief period, the backend might support either unspecified
-      # or inherited. Until the full rollout is done, we will have to
-      # check for both the value.
-      self.VerifyPublicAccessPreventionValue(bucket_uri, 'inherited')
+    # TODO(b/201683262) Replace all calls to this method
+    # with self.VerifyPublicAccessPreventionValue(bucket_uri, 'inherited')
+    # once the backend rollout is completed.
+    stdout = self.RunGsUtil(['publicaccessprevention', 'get',
+                             suri(bucket_uri)],
+                            return_stdout=True)
+    self.assertRegex(stdout,
+                     r'%s:\s+(unspecified|inherited)' % suri(bucket_uri))
 
   @SkipForXML('Public access prevention only runs on GCS JSON API')
   def test_off_on_default_buckets(self):
