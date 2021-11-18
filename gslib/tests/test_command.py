@@ -18,8 +18,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
-from multiprocessing import Value
 
+import random
+import string
 import unittest
 from unittest import mock
 
@@ -31,7 +32,7 @@ from gslib.utils import constants
 from gslib.utils import shim_util
 
 
-class FakeCommand(command.Command):
+class FakeCommandWithGcloudStorageMap(command.Command):
   """Implementation of a fake gsutil command."""
   command_spec = command.Command.CreateCommandSpec('fake',
                                                    min_args=1,
@@ -44,9 +45,17 @@ class FakeCommand(command.Command):
           '-r': shim_util.GcloudStorageFlag(gcloud_flag='-x'),
           '-z': shim_util.GcloudStorageFlag(gcloud_flag='--zip'),
       })
+  help_spec = command.Command.HelpSpec(
+      help_name='fake_command',
+      help_name_aliases=[],
+      help_type='command_help',
+      help_one_line_summary='Fake one line summary for the command.',
+      help_text='Help text for fake command.',
+      subcommand_help_text={},
+  )
 
 
-class FakeCommandWithSubCommand(command.Command):
+class FakeCommandWithSubCommandWithGcloudStorageMap(command.Command):
   """Implementation of a fake gsutil command."""
   command_spec = command.Command.CreateCommandSpec(
       'fake_with_sub',
@@ -76,6 +85,14 @@ class FakeCommandWithSubCommand(command.Command):
                                      flag_map={})
   },
                                                   flag_map={})
+  help_spec = command.Command.HelpSpec(
+      help_name='fake_with_sub',
+      help_name_aliases=[],
+      help_type='command_help',
+      help_one_line_summary='Fake one line summary for the command.',
+      help_text='Help text for fake command with sub commands.',
+      subcommand_help_text={},
+  )
 
 
 class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
@@ -83,7 +100,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
 
   def setUp(self):
     super().setUp()
-    self._fake_command = FakeCommand(
+    self._fake_command = FakeCommandWithGcloudStorageMap(
         command_runner=mock.ANY,
         args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
         headers=mock.ANY,
@@ -100,7 +117,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
                      ['objects fake', '--zip', 'opt1', '-x', 'arg1', 'arg2'])
 
   def test_get_gcloud_storage_args_parses_subcommands(self):
-    fake_with_subcommand = FakeCommandWithSubCommand(
+    fake_with_subcommand = FakeCommandWithSubCommandWithGcloudStorageMap(
         command_runner=mock.ANY,
         args=['set', '-y', 'opt1', '-a', 'arg1', 'arg2'],
         headers=mock.ANY,
@@ -141,7 +158,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
       self._fake_command.GetGcloudStorageArgs()
 
   def test_raises_error_if_sub_command_mapping_is_missing(self):
-    fake_with_subcommand = FakeCommandWithSubCommand(
+    fake_with_subcommand = FakeCommandWithSubCommandWithGcloudStorageMap(
         command_runner=mock.ANY,
         args=['set', '-y', 'opt1', '-a', 'arg1', 'arg2'],
         headers=mock.ANY,
@@ -168,7 +185,7 @@ class TestParseSubOpts(testcase.GsUtilUnitTestCase):
 
   def setUp(self):
     super().setUp()
-    self._fake_command = FakeCommand(
+    self._fake_command = FakeCommandWithGcloudStorageMap(
         command_runner=mock.ANY,
         args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
         headers=mock.ANY,
