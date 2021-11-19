@@ -112,7 +112,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
 
   def test_get_gcloud_storage_args_parses_command_and_flags(self):
 
-    gcloud_args = self._fake_command.GetGcloudStorageArgs()
+    gcloud_args = self._fake_command.get_gcloud_storage_args()
     self.assertEqual(gcloud_args,
                      ['objects', 'fake', '--zip', 'opt1', '-x', 'arg1', 'arg2'])
 
@@ -126,7 +126,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
         parallel_operations=mock.ANY,
         bucket_storage_uri_class=mock.ANY,
         gsutil_api_class_map_factory=mock.MagicMock())
-    gcloud_args = fake_with_subcommand.GetGcloudStorageArgs()
+    gcloud_args = fake_with_subcommand.get_gcloud_storage_args()
     self.assertEqual(
         gcloud_args,
         ['buckets', 'update', '--yyy', 'opt1', '-x', 'arg1', 'arg2'])
@@ -137,14 +137,14 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
         exception.GcloudStorageTranslationError,
         'Command "fake" cannot be translated to gcloud storage'
         ' because the translation mapping is missing'):
-      self._fake_command.GetGcloudStorageArgs()
+      self._fake_command.get_gcloud_storage_args()
 
   def test_raises_error_if_gcloud_command_is_of_incorrect_type(self):
     self._fake_command.gcloud_storage_map = shim_util.GcloudStorageMap(
         gcloud_command=['incorrect', 'command'], flag_map={})
     with self.assertRaisesRegex(ValueError,
                                 'Incorrect mapping found for "fake" command'):
-      self._fake_command.GetGcloudStorageArgs()
+      self._fake_command.get_gcloud_storage_args()
 
   def test_raises_error_if_command_option_mapping_is_missing(self):
     self._fake_command.gcloud_storage_map = shim_util.GcloudStorageMap(
@@ -156,7 +156,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
     with self.assertRaisesRegex(
         exception.GcloudStorageTranslationError,
         'Command option "-r" cannot be translated to gcloud storage'):
-      self._fake_command.GetGcloudStorageArgs()
+      self._fake_command.get_gcloud_storage_args()
 
   def test_raises_error_if_sub_command_mapping_is_missing(self):
     fake_with_subcommand = FakeCommandWithSubCommandWithGcloudStorageMap(
@@ -175,7 +175,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
         exception.GcloudStorageTranslationError,
         'Command "fake_with_sub" cannot be translated to gcloud storage'
         ' because the translation mapping is missing.'):
-      fake_with_subcommand.GetGcloudStorageArgs()
+      fake_with_subcommand.get_gcloud_storage_args()
 
 
 class TestParseSubOpts(testcase.GsUtilUnitTestCase):
