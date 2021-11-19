@@ -114,7 +114,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
 
     gcloud_args = self._fake_command.GetGcloudStorageArgs()
     self.assertEqual(gcloud_args,
-                     ['objects fake', '--zip', 'opt1', '-x', 'arg1', 'arg2'])
+                     ['objects', 'fake', '--zip', 'opt1', '-x', 'arg1', 'arg2'])
 
   def test_get_gcloud_storage_args_parses_subcommands(self):
     fake_with_subcommand = FakeCommandWithSubCommandWithGcloudStorageMap(
@@ -127,8 +127,9 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
         bucket_storage_uri_class=mock.ANY,
         gsutil_api_class_map_factory=mock.MagicMock())
     gcloud_args = fake_with_subcommand.GetGcloudStorageArgs()
-    self.assertEqual(gcloud_args,
-                     ['buckets update', '--yyy', 'opt1', '-x', 'arg1', 'arg2'])
+    self.assertEqual(
+        gcloud_args,
+        ['buckets', 'update', '--yyy', 'opt1', '-x', 'arg1', 'arg2'])
 
   def test_raises_error_if_gcloud_storage_map_is_missing(self):
     self._fake_command.gcloud_storage_map = None
