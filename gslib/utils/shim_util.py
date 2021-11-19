@@ -19,6 +19,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+from gslib.exception import GcloudStorageTranslationError
+
 
 class GcloudStorageFlag(object):
 
@@ -55,3 +57,69 @@ class GcloudStorageMap(object):
     self.gcloud_command = gcloud_command
     self.flag_map = flag_map
     self.supports_output_translation = supports_output_translation
+
+
+def _get_gcloud_storage_args(sub_opts, gsutil_args, gcloud_storage_map,
+                             gsutil_command_instance):
+  if gcloud_storage_map is None:
+    raise GcloudStorageTranslationError(
+        'Command "{}" cannot be translated to gcloud storage because the'
+        ' translation mapping is missing.'.format(
+            gsutil_command_instance.command_name))
+  args = []
+  if isinstance(gcloud_storage_map.gcloud_command, str):
+    args.append(gcloud_storage_map.gcloud_command)
+  elif isinstance(gcloud_storage_map.gcloud_command, dict):
+    # If a command has sub-commands, e.g gsutil pap set, gsutil pap get.
+    # All the flags mapping must be present in the subcommand's map
+    # because gsutil does not have command specific flags
+    # if sub-commands are present.
+    if gcloud_storage_map.flag_map:
+      raise ValueError(
+          'Flags mapping found at command level for the command: {}.'.format(
+              gsutil_command_instance.command_name))
+    sub_command = gsutil_args[0]
+    sub_opts, parsed_args = gsutil_command_instance.ParseSubOpts(
+        args=gsutil_args[1:], should_update_sub_opts_and_args=False)
+    return _get_gcloud_storage_args(
+        sub_opts, parsed_args,
+        gcloud_storage_map.gcloud_command.get(sub_command),
+        gsutil_command_instance)
+  else:
+    raise ValueError('Incorrect mapping found for "{}" command'.format(
+        gsutil_command_instance.command_name))
+
+  if sub_opts:
+    for option, value in sub_opts:
+      if option not in gcloud_storage_map.flag_map:
+        raise GcloudStorageTranslationError(
+            'Command option "{}" cannot be translated to'
+            ' gcloud storage'.format(option))
+      args.append(gcloud_storage_map.flag_map[option].gcloud_flag)
+      if value != '':
+        args.append(value)
+  return args + gsutil_args
+
+
+def get_gcloud_storage_args(gsutil_command_instance):
+  """Translates the gsutil command flags to gcloud storage flags.
+
+  It uses the command_spec.gcloud_storage_map field that provides the
+  translation mapping for all the flags.
+
+  Args:
+    gsutil_command_instance (Command): A Command instance.
+  
+  Returns:
+    A list of all the options and arguments that can be used with the
+      equivalent gcloud storage command.
+  Raises:
+    GcloudStorageTranslationError: If a flag or command cannot be translated.
+    ValueError: If there is any issue with the mapping provided by
+      GcloudStorageMap.
+  """
+
+  return _get_gcloud_storage_args(gsutil_command_instance.sub_opts,
+                                  gsutil_command_instance.args,
+                                  gsutil_command_instance.gcloud_storage_map,
+                                  gsutil_command_instance)
