@@ -1086,7 +1086,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_list_public_access_prevention(self):
     bucket_uri = self.CreateBucket()
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegex(stdout, r'Public access prevention:\t*unspecified')
+    self.assertRegex(stdout,
+                     r'Public access prevention:\t*(unspecified|inherited)')
     # Enforce public access prevention.
     self.RunGsUtil(['pap', 'set', 'enforced', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)

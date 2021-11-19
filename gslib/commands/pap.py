@@ -100,7 +100,8 @@ class PapCommand(Command):
       argparse_arguments={
           'get': [CommandArgument.MakeNCloudURLsArgument(1),],
           'set': [
-              CommandArgument('mode', choices=['enforced', 'unspecified']),
+              CommandArgument('mode',
+                              choices=['enforced', 'unspecified', 'inherited']),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
       })
