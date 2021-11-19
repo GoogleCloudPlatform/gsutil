@@ -50,6 +50,7 @@ from gslib.cloud_api_delegator import CloudApiDelegator
 from gslib.cs_api_map import ApiSelector
 from gslib.cs_api_map import GsutilApiMapFactory
 from gslib.exception import CommandException
+from gslib.exception import GcloudStorageTranslationError
 from gslib.help_provider import HelpProvider
 from gslib.metrics import CaptureThreadStatException
 from gslib.metrics import LogPerformanceSummaryParams
@@ -1952,6 +1953,61 @@ class Command(HelpProvider):
         # No tasks remain; since no work was dispatched to a thread, don't
         # block the semaphore on a WorkerThread completion.
         worker_semaphore.release()
+
+  def _GetGcloudStorageArgs(self, sub_opts, gsutil_args, gcloud_storage_map):
+    if gcloud_storage_map is None:
+      raise GcloudStorageTranslationError(
+          'Command "{}" cannot be translated to gcloud storage because the'
+          ' translation mapping is missing.'.format(self.command_name))
+    args = []
+    if isinstance(gcloud_storage_map.gcloud_command, str):
+      args.append(gcloud_storage_map.gcloud_command)
+    elif isinstance(gcloud_storage_map.gcloud_command, dict):
+      # If a command has sub-commands, e.g gsutil pap set, gsutil pap get.
+      # All the flags mapping must be present in the subcommand's map
+      # because gsutil does not have command specific flags
+      # if sub-commands are present.
+      if gcloud_storage_map.flag_map:
+        raise ValueError(
+            'Flags mapping found at command level for the command: {}.'.format(
+                self.command_name))
+      sub_command = gsutil_args[0]
+      sub_opts, parsed_args = self.ParseSubOpts(
+          args=gsutil_args[1:], should_update_sub_opts_and_args=False)
+      return self._GetGcloudStorageArgs(
+          sub_opts, parsed_args,
+          gcloud_storage_map.gcloud_command.get(sub_command))
+    else:
+      raise ValueError('Incorrect mapping found for "{}" command'.format(
+          self.command_name))
+
+    if sub_opts:
+      for option, value in sub_opts:
+        if option not in gcloud_storage_map.flag_map:
+          raise GcloudStorageTranslationError(
+              'Command option "{}" cannot be translated to'
+              ' gcloud storage'.format(option))
+        args.append(gcloud_storage_map.flag_map[option].gcloud_flag)
+        if value != '':
+          args.append(value)
+    return args + gsutil_args
+
+  def GetGcloudStorageArgs(self):
+    """Translates the gsutil command flags to gcloud storage flags.
+
+    It uses the command_spec.gcloud_storage_map field that provides the
+    translation mapping for all the flags.
+    
+    Returns:
+      A list of all the options and arguments that can be used with the
+        equivalent gcloud storage command.
+    Raises:
+      GcloudStorageTranslationError: If a flag or command cannot be translated.
+      ValueError: If there is any issue with the mapping provided by
+        GcloudStorageMap.
+    """
+    return self._GetGcloudStorageArgs(self.sub_opts, self.args,
+                                      self.gcloud_storage_map)
 
 
 # Below here lie classes and functions related to controlling the flow of tasks
