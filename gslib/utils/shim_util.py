@@ -66,9 +66,8 @@ def _get_gcloud_storage_args(sub_opts, gsutil_args, gcloud_storage_map,
         'Command "{}" cannot be translated to gcloud storage because the'
         ' translation mapping is missing.'.format(
             gsutil_command_instance.command_name))
-  args = []
   if isinstance(gcloud_storage_map.gcloud_command, str):
-    args.append(gcloud_storage_map.gcloud_command)
+    args = gcloud_storage_map.gcloud_command.split()
   elif isinstance(gcloud_storage_map.gcloud_command, dict):
     # If a command has sub-commands, e.g gsutil pap set, gsutil pap get.
     # All the flags mapping must be present in the subcommand's map
