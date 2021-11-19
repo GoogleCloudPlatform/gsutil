@@ -732,19 +732,20 @@ class Command(HelpProvider):
   def ParseSubOpts(self,
                    check_args=False,
                    args=None,
-                   update_sub_opts_and_args=True):
+                   should_update_sub_opts_and_args=True):
     """Parses sub-opt args.
 
     Args:
       check_args: True to have CheckArguments() called after parsing.
       args: List of args. If None, self.args will be used.
-      update_sub_opts_and_args: True if self.sub_opts and self.args should
-        be updated with the values returned after parsing. Else return a 
+      should_update_sub_opts_and_args: True if self.sub_opts and self.args
+        should be updated with the values returned after parsing. Else return a 
         tuple of sub_opts, args returned by getopt.getopt. This is done
         to allow this method to be called from GetGcloudStorageArgs in which
         case we do not want to update self.sub_opts and self.args.
 
-    Raises: RaiseInvalidArgumentException if invalid args specified.
+    Raises:
+      RaiseInvalidArgumentException: Invalid args specified.
     """
     if args is None:
       unparsed_args = self.args
@@ -756,20 +757,20 @@ class Command(HelpProvider):
           self.command_spec.supported_private_args or [])
     except getopt.GetoptError:
       self.RaiseInvalidArgumentException()
-    if update_sub_opts_and_args:
+    if should_update_sub_opts_and_args:
       self.sub_opts, self.args = parsed_sub_opts, parsed_args
       if check_args:
         self.CheckArguments()
     else:
       if check_args:
         # This is just for sanity check. Only GetGcloudStorageArgs will
-        # call this method with update_sub_opts_and_args=False and it
-        # does not set set check_args to True.
-        raise TypeError(
-            'Cannot check arguments if sub_opts and args are not updated.')
+        # call this method with should_update_sub_opts_and_args=False, and it
+        # does not set check_args to True.
+        raise TypeError('Requested to check arguments'
+                        ' but sub_opts and args have not been updated.')
       return parsed_sub_opts, parsed_args
 
-  def CheckArguments(self, args=None):
+  def CheckArguments(self):
     """Checks that command line arguments match the command_spec.
 
     Any commands in self._commands_with_subcommands_and_subopts are responsible
@@ -1962,17 +1963,17 @@ class Command(HelpProvider):
     if isinstance(gcloud_storage_map.gcloud_command, str):
       args.append(gcloud_storage_map.gcloud_command)
     elif isinstance(gcloud_storage_map.gcloud_command, dict):
-      # If a command has sub-commands, e.g pap set, pap get.
+      # If a command has sub-commands, e.g gsutil pap set, gsutil pap get.
       # All the flags mapping must be present in the subcommand's map
       # because gsutil does not have command specific flags
       # if sub-commands are present.
       if gcloud_storage_map.flag_map:
         raise ValueError(
-            'Flags mapping found at command lavel for the command: {}.'.format(
+            'Flags mapping found at command level for the command: {}.'.format(
                 self.command_name))
       sub_command = gsutil_args[0]
-      sub_opts, parsed_args = self.ParseSubOpts(args=gsutil_args[1:],
-                                                update_sub_opts_and_args=False)
+      sub_opts, parsed_args = self.ParseSubOpts(
+          args=gsutil_args[1:], should_update_sub_opts_and_args=False)
       return self._GetGcloudStorageArgs(
           sub_opts, parsed_args,
           gcloud_storage_map.gcloud_command.get(sub_command))
@@ -1994,7 +1995,7 @@ class Command(HelpProvider):
   def GetGcloudStorageArgs(self):
     """Translates the gsutil command flags to gcloud storage flags.
 
-    It uses the command_spec.gcloud_storage_map field which provides the
+    It uses the command_spec.gcloud_storage_map field that provides the
     translation mapping for all the flags.
     
     Returns:

@@ -198,14 +198,14 @@ class TestParseSubOpts(testcase.GsUtilUnitTestCase):
   def test_raises_error_with_check_args_set_and_update_sub_opts_and_args_unset(
       self):
     with self.assertRaisesRegex(
-        TypeError,
-        'Cannot check arguments if sub_opts and args are not updated.'):
+        TypeError, 'Requested to check arguments but sub_opts and args have'
+        ' not been updated.'):
       self._fake_command.ParseSubOpts(check_args=True,
-                                      update_sub_opts_and_args=False)
+                                      should_update_sub_opts_and_args=False)
 
   def test_uses_self_args_if_args_passed_is_None(self):
     args_list = ['fake', 'args']
     self._fake_command.args = args_list
     _, parsed_args = self._fake_command.ParseSubOpts(
-        update_sub_opts_and_args=False)
+        should_update_sub_opts_and_args=False)
     self.assertEqual(parsed_args, args_list)
