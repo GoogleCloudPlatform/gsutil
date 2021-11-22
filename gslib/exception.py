@@ -91,6 +91,11 @@ class ControlCException(Exception):
   pass
 
 
+class GcloudStorageTranslationError(Exception):
+  """Exception raised when a gsutil command can't be translated to gcloud."""
+  pass
+
+
 class HashMismatchException(Exception):
   """Exception raised when data integrity validation fails."""
   pass
