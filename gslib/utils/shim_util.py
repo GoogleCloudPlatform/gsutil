@@ -19,6 +19,11 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import collections
+import os
+import subprocess
+
+from boto import config
 from gslib import exception
 
 
@@ -59,6 +64,19 @@ class GcloudStorageMap(object):
     self.supports_output_translation = supports_output_translation
 
 
+def _get_gcloud_binary_path():
+  cloudsdk_root = os.environ.get('CLOUDSDK_ROOT_DIR')
+  if cloudsdk_root is None:
+    raise exception.GcloudStorageTranslationError(
+        'Gcloud binary path cannot be found.')
+  return cloudsdk_root
+
+
+def _run_gcloud_storage_command(command_args, env_vars):
+  process = subprocess.run(command_args, env=env_vars)
+  return process.returncode
+
+
 class GcloudStorageCommandMixin(object):
   """Provides gcloud storage translation functionality.
   
@@ -67,6 +85,10 @@ class GcloudStorageCommandMixin(object):
   """
   # Mapping for translating gsutil command to gcloud storage.
   gcloud_storage_map = None
+
+  def __init__(self):
+    self._translated_gcloud_storage_command = None
+    self._translated_boto_config_to_env_vars = None
 
   def _get_gcloud_storage_args(self, sub_opts, gsutil_args, gcloud_storage_map):
     if gcloud_storage_map is None:
@@ -122,3 +144,44 @@ class GcloudStorageCommandMixin(object):
     """
     return self._get_gcloud_storage_args(self.sub_opts, self.args,
                                          self.gcloud_storage_map)
+
+  def can_run_gcloud_storage(self):
+    """Returns True if equivalent gcloud storage command can be executed."""
+    use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
+    if use_gcloud_storage != 'never':
+      try:
+        # TODO Get top level flags
+        top_level_flags = []
+
+        gcloud_storage_command = (_get_gcloud_binary_path() +
+                                  self.get_gcloud_storage_args() +
+                                  top_level_flags)
+        # TODO: Translate boto config to Gcloud env
+        translated_boto_config_to_env_vars = {}
+        if use_gcloud_storage == 'dry_run':
+          print('Gcloud Storage Command: {}'.format(
+              ' '.join(gcloud_storage_command)))
+          print('Enviornment variables for Gcloud Storage: {}'.format(
+              translated_boto_config_to_env_vars))
+        elif not os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL'):
+          raise exception.GcloudStorageTranslationError(
+              'Gsutil is not using the same credentials as gcloud. '
+              ' pass_credentials_to_gsutil setting by running')
+        else:
+          self._translated_gcloud_storage_command = gcloud_storage_command
+          self._translated_boto_config_to_env_vars = (
+              translated_boto_config_to_env_vars)
+          return True
+      except exception.GcloudStorageTranslationError as e:
+        if use_gcloud_storage == 'always':
+          raise
+        # For all other cases, we want to run gsutil.
+        self.logger.error(
+            'Cannot translate gsutil command to gcloud storage.'
+            ' Going to run gsutil command. Error: %s', e)
+    return False
+
+  def run_gcloud_storage(self):
+    process = subprocess.run(self._translated_gcloud_storage_command,
+                             env=self._translated_boto_config_to_env_vars)
+    return process.returncode
