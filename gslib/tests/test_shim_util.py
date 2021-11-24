@@ -201,7 +201,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                              autospec=True) as mock_get_gcloud_storage_args:
         self.assertFalse(
             self._fake_command.translate_to_gcloud_storage_if_requested())
-        mock_get_gcloud_storage_args.assert_not_called()
+        self.assertFalse(mock_get_gcloud_storage_args.called)
 
   def test_returns_true_with_valid_gcloud_storage_map(self):
     """Should return True and perform the translation."""
