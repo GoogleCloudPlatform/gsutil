@@ -217,9 +217,10 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         self.assertTrue(
             self._fake_command.translate_to_gcloud_storage_if_requested())
         # Verify translation.
+        expected_gcloud_path = os.path.join('fake_dir', 'bin', 'gcloud')
         self.assertEqual(self._fake_command._translated_gcloud_storage_command,
                          [
-                             'fake_dir/bin/gcloud', 'objects', 'fake', '--zip',
+                             expected_gcloud_path, 'objects', 'fake', '--zip',
                              'opt1', '-x', 'arg1', 'arg2'
                          ])
         # TODO(b/206149936) Verify translated boto config.
@@ -253,7 +254,8 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             exception.CommandException,
             'CommandException: Gsutil is not using the same credentials as'
             ' gcloud. You can make gsutil use the same credentials by running:'
-            '\nfake_dir/bin/gcloud config set pass_credentials_to_gsutil True'):
+            '\n{} config set pass_credentials_to_gsutil True'.format(
+                os.path.join('fake_dir', 'bin', 'gcloud'))):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
   def test_raises_error_if_gcloud_storage_map_missing(self):
@@ -298,9 +300,10 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
       with util.SetEnvironmentForTest({'CLOUDSDK_ROOT_DIR': 'fake_dir'}):
         stdout = self.RunCommand('fake', args=['arg1'], return_stdout=True)
         self.assertIn(
-            'Gcloud Storage Command: fake_dir/bin/gcloud objects fake arg1'
-            '\nEnviornment variables for Gcloud Storage: {}\n'
-            'FakeCommandWithGcloudStorageMap called', stdout)
+            'Gcloud Storage Command: {} objects fake arg1'
+            '\nEnviornment variables for Gcloud Storage: {{}}\n'
+            'FakeCommandWithGcloudStorageMap called'.format(
+                os.path.join('fake_dir', 'bin', 'gcloud')), stdout)
 
 
 class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):
