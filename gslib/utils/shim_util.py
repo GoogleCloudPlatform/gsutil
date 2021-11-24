@@ -195,7 +195,6 @@ class GcloudStorageCommandMixin(object):
     return False
 
   def run_gcloud_storage(self):
-    print('command is: ', self._translated_gcloud_storage_command)
     subprocess_envs = os.environ.copy()
     subprocess_envs.update(self._translated_boto_config_to_env_vars)
     process = subprocess.run(self._translated_gcloud_storage_command,
