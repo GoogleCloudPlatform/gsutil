@@ -612,6 +612,7 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
     because it will make changing the __init__ interface more painful.
     """
     # Save class values from constructor params.
+    super().__init__()
     self.command_runner = command_runner
     self.unparsed_args = args
     self.headers = headers

@@ -145,8 +145,17 @@ class GcloudStorageCommandMixin(object):
     return self._get_gcloud_storage_args(self.sub_opts, self.args,
                                          self.gcloud_storage_map)
 
-  def can_run_gcloud_storage(self):
-    """Returns True if equivalent gcloud storage command can be executed."""
+  def translate_to_gcloud_storage_if_requested(self):
+    """Translates the gsutil command to gcloud storage equivalent.
+
+    The translated commands get stored at
+    self._translated_gcloud_storage_command.
+    This command also translate the boto config, which gets stored as a dict
+    at self._translated_gcloud_storage_command
+    
+    Returns:
+      True if the command was successfully translated, else False.
+    """
     use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
     if use_gcloud_storage != 'never':
       try:
@@ -165,10 +174,11 @@ class GcloudStorageCommandMixin(object):
           print('Enviornment variables for Gcloud Storage: {}'.format(
               translated_boto_config_to_env_vars))
         elif not os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL'):
+          print('here')
           raise exception.GcloudStorageTranslationError(
               'Gsutil is not using the same credentials as gcloud.'
               ' You can make gsutil use the same credentials by running:\n'
-              ' {} config set pass_credentials_to_gsutil True'.format(
+              '{} config set pass_credentials_to_gsutil True'.format(
                   gcloud_binary_path))
         else:
           self._translated_gcloud_storage_command = gcloud_storage_command
