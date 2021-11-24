@@ -54,6 +54,9 @@ class FakeCommandWithGcloudStorageMap(command.Command):
       subcommand_help_text={},
   )
 
+  def RunCommand(self):
+    print('FakeCommandWithGcloudStorageMap called')
+
 
 class FakeCommandWithSubCommandWithGcloudStorageMap(command.Command):
   """Implementation of a fake gsutil command."""
@@ -257,11 +260,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             ' gcloud storage because the translation mapping is missing.'):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
-  @mock.patch.object(FakeCommandWithGcloudStorageMap,
-                     'RunCommand',
-                     autospec=True)
-  def test_use_gcloud_storage_set_to_if_available_else_skip(
-      self, mock_gsutil_run_command):
+  def test_use_gcloud_storage_set_to_if_available_else_skip(self):
     """Should not raise error."""
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage',
                                      'if_available_else_skip')]):
@@ -271,35 +270,27 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
       }):
         # return_stderr does not work here. Probably because we have
         # defined the FakeCommand in the same module.
-        mock_log_handler = self.RunCommand('fake',
-                                           args=['-i', 'arg1'],
-                                           return_log_handler=True)
+        stdout, mock_log_handler = self.RunCommand('fake',
+                                                   args=['-i', 'arg1'],
+                                                   return_stdout=True,
+                                                   return_log_handler=True)
         self.assertIn(
             'Cannot translate gsutil command to gcloud storage.'
             ' Going to run gsutil command. Error: Command option "-i"'
             ' cannot be translated to gcloud storage',
             mock_log_handler.messages['error'])
-        mock_gsutil_run_command.assert_called_once_with(
-            mock.ANY  # The command instance.
-        )
+        self.assertIn('FakeCommandWithGcloudStorageMap called', stdout)
 
-  @mock.patch.object(FakeCommandWithGcloudStorageMap,
-                     'RunCommand',
-                     autospec=True)
-  def test_dry_run_mode_prints_translated_commands(self,
-                                                   mock_gsutil_run_command):
+  def test_dry_run_mode_prints_translated_commands(self):
     """Should print the gcloud command and run gsutil."""
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'dry_run')
                                    ]):
       with util.SetEnvironmentForTest({'CLOUDSDK_ROOT_DIR': 'fake_dir'}):
         stdout = self.RunCommand('fake', args=['arg1'], return_stdout=True)
         self.assertIn(
-            stdout,
             'Gcloud Storage Command: fake_dir/bin/gcloud objects fake arg1'
-            '\nEnviornment variables for Gcloud Storage: {}\n')
-        mock_gsutil_run_command.assert_called_once_with(
-            mock.ANY  # The command instance.
-        )
+            '\nEnviornment variables for Gcloud Storage: {}\n'
+            'FakeCommandWithGcloudStorageMap called', stdout)
 
 
 class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):
