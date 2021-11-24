@@ -159,14 +159,14 @@ class GcloudStorageCommandMixin(object):
     use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
     if use_gcloud_storage != 'never':
       try:
-        # TODO Get top level flags
+        # TODO(b/206143429) Get top level flags.
         top_level_flags = []
 
         gcloud_binary_path = _get_gcloud_binary_path()
         gcloud_storage_command = ([gcloud_binary_path] +
                                   self.get_gcloud_storage_args() +
                                   top_level_flags)
-        # TODO: Translate boto config to Gcloud env
+        # TODO(b/206149936): Translate boto config to CLOUDSDK envs.
         translated_boto_config_to_env_vars = {}
         if use_gcloud_storage == 'dry_run':
           print('Gcloud Storage Command: {}'.format(
