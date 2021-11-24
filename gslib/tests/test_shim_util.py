@@ -254,7 +254,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             exception.CommandException,
             'CommandException: Gsutil is not using the same credentials as'
             ' gcloud. You can make gsutil use the same credentials by running:'
-            '\n{} config set pass_credentials_to_gsutil True'.format(
+            '[\r\n]+{} config set pass_credentials_to_gsutil True'.format(
                 os.path.join('fake_dir', 'bin', 'gcloud'))):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
