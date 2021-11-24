@@ -26,6 +26,13 @@ import subprocess
 from boto import config
 from gslib import exception
 
+VALID_USE_GCLOUD_STORAGE_VALUES = (
+    'never',
+    'if_available_else_skip',
+    'always',
+    'dry_run',
+)
+
 
 class GcloudStorageFlag(object):
 
@@ -157,6 +164,11 @@ class GcloudStorageCommandMixin(object):
       True if the command was successfully translated, else False.
     """
     use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
+    if use_gcloud_storage not in VALID_USE_GCLOUD_STORAGE_VALUES:
+      raise exception.CommandException(
+          'Invalid option specified for'
+          ' GSUtil:use_gcloud_storage config setting. Should be one of: {}'.
+          format(' | '.join(VALID_USE_GCLOUD_STORAGE_VALUES)))
     if use_gcloud_storage != 'never':
       try:
         # TODO(b/206143429) Get top level flags.

@@ -224,6 +224,16 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                          ])
         # TODO(b/206149936) Verify translated boto config.
 
+  def test_raises_error_if_invalid_use_gcloud_storage_value(self):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'invalid')
+                                   ]):
+      with self.assertRaisesRegex(
+          exception.CommandException,
+          'CommandException: Invalid option specified for'
+          ' GSUtil:use_gcloud_storage config setting. Should be one of:'
+          ' never | if_available_else_skip | always | dry_run'):
+        self._fake_command.translate_to_gcloud_storage_if_requested()
+
   def test_raises_error_if_cloudsdk_root_dir_is_none(self):
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
                                    ]):
