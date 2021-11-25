@@ -34,7 +34,7 @@ from gslib.tests import util
 
 class FakeCommandWithGcloudStorageMap(command.Command):
   """Implementation of a fake gsutil command."""
-  command_spec = command.Command.CreateCommandSpec('fake',
+  command_spec = command.Command.CreateCommandSpec('fake_shim',
                                                    min_args=1,
                                                    max_args=constants.NO_MAX,
                                                    supported_sub_args='irz:',
@@ -46,7 +46,7 @@ class FakeCommandWithGcloudStorageMap(command.Command):
           '-z': shim_util.GcloudStorageFlag(gcloud_flag='--zip'),
       })
   help_spec = command.Command.HelpSpec(
-      help_name='fake_command',
+      help_name='fake_shim',
       help_name_aliases=[],
       help_type='command_help',
       help_one_line_summary='Fake one line summary for the command.',
@@ -138,15 +138,15 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
     self._fake_command.gcloud_storage_map = None
     with self.assertRaisesRegex(
         exception.GcloudStorageTranslationError,
-        'Command "fake" cannot be translated to gcloud storage'
+        'Command "fake_shim" cannot be translated to gcloud storage'
         ' because the translation mapping is missing'):
       self._fake_command.get_gcloud_storage_args()
 
   def test_raises_error_if_gcloud_command_is_of_incorrect_type(self):
     self._fake_command.gcloud_storage_map = shim_util.GcloudStorageMap(
         gcloud_command=['incorrect', 'command'], flag_map={})
-    with self.assertRaisesRegex(ValueError,
-                                'Incorrect mapping found for "fake" command'):
+    with self.assertRaisesRegex(
+        ValueError, 'Incorrect mapping found for "fake_shim" command'):
       self._fake_command.get_gcloud_storage_args()
 
   def test_raises_error_if_command_option_mapping_is_missing(self):
@@ -268,7 +268,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
       }):
         with self.assertRaisesRegex(
             exception.CommandException,
-            'CommandException: Command "fake" cannot be translated to'
+            'CommandException: Command "fake_shim" cannot be translated to'
             ' gcloud storage because the translation mapping is missing.'):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
@@ -282,7 +282,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
       }):
         # return_stderr does not work here. Probably because we have
         # defined the FakeCommand in the same module.
-        stdout, mock_log_handler = self.RunCommand('fake',
+        stdout, mock_log_handler = self.RunCommand('fake_shim',
                                                    args=['-i', 'arg1'],
                                                    return_stdout=True,
                                                    return_log_handler=True)
@@ -298,7 +298,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'dry_run')
                                    ]):
       with util.SetEnvironmentForTest({'CLOUDSDK_ROOT_DIR': 'fake_dir'}):
-        stdout = self.RunCommand('fake', args=['arg1'], return_stdout=True)
+        stdout = self.RunCommand('fake_shim', args=['arg1'], return_stdout=True)
         self.assertIn(
             'Gcloud Storage Command: {} objects fake arg1'
             '\nEnviornment variables for Gcloud Storage: {{}}\n'
