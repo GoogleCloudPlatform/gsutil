@@ -250,10 +250,9 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>NOTE</B>
-  The ``perfdiag`` command collects system information, such as the following
-  items: 
+  The ``perfdiag`` command collects system information, such as the following: 
   
-  + the requester's IP address
+  + requester's IP address
   + executes DNS queries to Google servers and collects the results
   + network statistics information from the output of ``netstat -s`` and
     evaluates the BIOS product name string
