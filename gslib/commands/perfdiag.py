@@ -103,12 +103,12 @@ _DETAILED_HELP_TEXT = ("""
   following:
   
    + CPU speed
-   + available memory
-   + the access path to the local disk
-   + network bandwidth
-   + contention and error rates along the path between gsutil and Google servers
-   + operating system buffering configuration
-   + firewalls and other network elements
+   + Available memory
+   + The access path to the local disk
+   + Network bandwidth
+   + Contention and error rates along the path between gsutil and Google servers
+   + Operating system buffering configuration
+   + Firewalls and other network elements
   
   The `perfdiag` command is provided so that customers can run a known
   measurement suite when troubleshooting performance problems.
@@ -250,15 +250,16 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>NOTE</B>
-  The ``perfdiag`` command collects system information, such as the following: 
+  The ``perfdiag`` command runs a series of tests and collects system information,
+  such as the following: 
   
-  + requester's IP address
-  + executes DNS queries to Google servers and collects the results
-  + network statistics information from the output of ``netstat -s`` and
-    evaluates the BIOS product name string
+  + Records requester's IP address.
+  + Executes DNS queries to Google servers and collects the results.
+  + Collects network statistics information from the output of ``netstat -s`` and
+    evaluates the BIOS product name string.
   + If configured, attempts to connect to the requester's proxy server
     to look up the location and storage class of the bucket being used for
-    performance testing
+    performance testing.
   
   None of this information will be sent to Google unless you choose to send it.
 """)
