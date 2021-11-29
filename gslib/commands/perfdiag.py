@@ -106,7 +106,7 @@ _DETAILED_HELP_TEXT = ("""
    + available memory
    + the access path to the local disk
    + network bandwidth
-   + contention and error rates along the path between gsutil and Google
+   + contention and error rates along the path between gsutil and Google servers
    + operating system buffering configuration
    + firewalls and other network elements
   
@@ -137,7 +137,7 @@ _DETAILED_HELP_TEXT = ("""
 
               NOTE: All specified threads and processes will be created, but may
               not by saturated with work if too few objects (specified with ``-n``)
-              and too few components (specified with -y) are specified.
+              and too few components (specified with ``-y``) are specified.
 
   -p          Sets the type of `parallelism
               <https://en.wikipedia.org/wiki/Parallel_computing>`_ to be used
