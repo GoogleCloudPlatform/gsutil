@@ -158,7 +158,7 @@ class GcloudStorageCommandMixin(object):
     The translated commands get stored at
     self._translated_gcloud_storage_command.
     This command also translate the boto config, which gets stored as a dict
-    at self._translated_gcloud_storage_command
+    at self._translated_env_variables
     
     Returns:
       True if the command was successfully translated, else False.
@@ -179,12 +179,12 @@ class GcloudStorageCommandMixin(object):
                                   self.get_gcloud_storage_args() +
                                   top_level_flags)
         # TODO(b/206149936): Translate boto config to CLOUDSDK envs.
-        translated_boto_config_to_env_vars = {}
+        env_variables = {}
         if use_gcloud_storage == 'dry_run':
           print('Gcloud Storage Command: {}'.format(
               ' '.join(gcloud_storage_command)))
           print('Enviornment variables for Gcloud Storage: {}'.format(
-              translated_boto_config_to_env_vars))
+              env_variables))
         elif not os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL'):
           print('here')
           raise exception.GcloudStorageTranslationError(
@@ -194,8 +194,7 @@ class GcloudStorageCommandMixin(object):
                   gcloud_binary_path))
         else:
           self._translated_gcloud_storage_command = gcloud_storage_command
-          self._translated_boto_config_to_env_vars = (
-              translated_boto_config_to_env_vars)
+          self._translated_env_variables = env_variables
           return True
       except exception.GcloudStorageTranslationError as e:
         if use_gcloud_storage == 'always':
@@ -208,7 +207,7 @@ class GcloudStorageCommandMixin(object):
 
   def run_gcloud_storage(self):
     subprocess_envs = os.environ.copy()
-    subprocess_envs.update(self._translated_boto_config_to_env_vars)
+    subprocess_envs.update(self._translated_env_variables)
     process = subprocess.run(self._translated_gcloud_storage_command,
                              env=subprocess_envs)
     return process.returncode

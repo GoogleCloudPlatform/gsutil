@@ -328,7 +328,7 @@ class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
-        command_instance._translated_boto_config_to_env_vars = {
+        command_instance._translated_env_variables = {
             'new_key': 'new_value',
         }
         command_instance._translated_gcloud_storage_command = ['gcloud', 'foo']
