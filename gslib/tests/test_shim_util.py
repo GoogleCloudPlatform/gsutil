@@ -393,6 +393,69 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                 'CLOUDSDK_STORAGE_THREAD_COUNT': '1',
             })
 
+  def test_paralle_operations_true_does_not_add_process_count_env_vars(self):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self._fake_command.parallel_operations = True
+        self._fake_command.translate_to_gcloud_storage_if_requested()
+        self.assertEqual(self._fake_command._translated_env_variables, {})
+
+  def test_debug_value_4_adds_log_http_flag(self):
+    # Debug level 4 represents the -DD option.
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self._fake_command.debug = 4
+        self._fake_command.translate_to_gcloud_storage_if_requested()
+        self.assertEqual(self._fake_command._translated_gcloud_storage_command,
+                         [
+                             os.path.join('fake_dir', 'bin', 'gcloud'),
+                             'objects', 'fake', '--zip', 'opt1', '-x', 'arg1',
+                             'arg2', '--verbosity', 'debug', '--log-http'
+                         ])
+
+  @mock.patch.object(constants,
+                     'IMPERSONATE_SERVICE_ACCOUNT',
+                     new='fake_service_account')
+  def test_impersonate_service_account_translation(self):
+    """Should add the --impersonate-service-account flag."""
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self._fake_command.translate_to_gcloud_storage_if_requested()
+        self.assertEqual(
+            self._fake_command._translated_gcloud_storage_command, [
+                os.path.join('fake_dir', 'bin', 'gcloud'), 'objects', 'fake',
+                '--zip', 'opt1', '-x', 'arg1', 'arg2',
+                '--impersonate-service-account', 'fake_service_account'
+            ])
+
+  def test_quiet_mode_translation_adds_no_user_output_enabled_flag(self):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self._fake_command.quiet_mode = True
+        self._fake_command.translate_to_gcloud_storage_if_requested()
+        self.assertEqual(self._fake_command._translated_gcloud_storage_command,
+                         [
+                             os.path.join('fake_dir', 'bin', 'gcloud'),
+                             'objects', 'fake', '--zip', 'opt1', '-x', 'arg1',
+                             'arg2', '--no-user-output-enabled'
+                         ])
+
 
 class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):
   """Test Command.run_gcloud_storage method."""
