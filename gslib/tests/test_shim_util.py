@@ -360,6 +360,39 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
       ]
       self.assertEqual(mock_logger.info.mock_calls, expected_calls)
 
+  def test_top_level_flags_get_translated(self):
+    """Should return True and perform the translation."""
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        fake_command = FakeCommandWithGcloudStorageMap(
+            command_runner=mock.ANY,
+            args=['arg1', 'arg2'],
+            headers=mock.ANY,  # Headers will be tested separately.
+            debug=3,  # -D option
+            trace_token='fake_trace_token',
+            user_project='fake_user_project',
+            parallel_operations=False,  # Without the -m option.
+            bucket_storage_uri_class=mock.ANY,
+            gsutil_api_class_map_factory=mock.MagicMock())
+
+        self.assertTrue(fake_command.translate_to_gcloud_storage_if_requested())
+        # Verify translation.
+        expected_gcloud_path = os.path.join('fake_dir', 'bin', 'gcloud')
+        self.assertEqual(fake_command._translated_gcloud_storage_command, [
+            expected_gcloud_path, 'objects', 'fake', 'arg1', 'arg2',
+            '--verbosity', 'debug', '--billing-project', 'fake_user_project',
+            '--trace-token', 'fake_trace_token'
+        ])
+        self.assertEqual(
+            fake_command._translated_env_variables, {
+                'CLOUDSDK_STORAGE_PROCESS_COUNT': '1',
+                'CLOUDSDK_STORAGE_THREAD_COUNT': '1',
+            })
+
 
 class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):
   """Test Command.run_gcloud_storage method."""
