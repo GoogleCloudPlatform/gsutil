@@ -26,6 +26,7 @@ import subprocess
 
 from boto import config
 from gslib import exception
+from gslib.utils import constants
 
 
 class USE_GCLOUD_STORAGE_VALUE(enum.Enum):
@@ -133,6 +134,41 @@ class GcloudStorageCommandMixin(object):
           args.append(value)
     return args + gsutil_args
 
+  def _translate_top_level_flags(self):
+    """Translates gsutil's top level flags.
+
+    Gsutil specifies the headers (-h) and boto config (-o) as top level flags
+    as well, but we handle those separately.
+
+    Returns:
+      A tuple. The first item is a list of top level flags that can be appended
+        to the gcloud storage command. The second item is a dict of environment
+        variables that can be set for the gcloud storage command execution.
+    """
+    top_level_flags = []
+    env_variables = {}
+    print('################### ', self.debug)
+    if self.debug >= 3:
+      top_level_flags.extend(['--verbosity', 'debug'])
+    if self.debug == 4:
+      top_level_flags.append('--log-http')
+    if self.quiet_mode:
+      top_level_flags.append('--no-user-output-enabled')
+    if self.user_project:
+      top_level_flags.extend(['--billing-project', self.user_project])
+    if self.trace_token:
+      top_level_flags.extend(['--trace-token', self.trace_token])
+    if constants.IMPERSONATE_SERVICE_ACCOUNT:
+      top_level_flags.extend([
+          '--impersonate-service-account', constants.IMPERSONATE_SERVICE_ACCOUNT
+      ])
+    # TODO(b/208294509) Add --perf-trace-token translation.
+    if not self.parallel_operations:
+      # TODO(b/208301084) Set the --sequential flag instead.
+      env_variables['CLOUDSDK_STORAGE_THREAD_COUNT'] = '1'
+      env_variables['CLOUDSDK_STORAGE_PROCESS_COUNT'] = '1'
+    return top_level_flags, env_variables
+
   def get_gcloud_storage_args(self):
     """Translates the gsutil command flags to gcloud storage flags.
 
@@ -172,6 +208,11 @@ class GcloudStorageCommandMixin(object):
     Returns:
       True if the command was successfully translated, else False.
     """
+    if self.command_name == 'version':
+      # Running any command in debug mode will lead to calling gsutil version
+      # command. We don't want to translate the version command as this
+      # should always reflect the version that gsutil is using.
+      return False
     try:
       use_gcloud_storage = USE_GCLOUD_STORAGE_VALUE(
           config.get('GSUtil', 'use_gcloud_storage', 'never'))
@@ -182,8 +223,7 @@ class GcloudStorageCommandMixin(object):
           format(' | '.join([x.value for x in USE_GCLOUD_STORAGE_VALUE])))
     if use_gcloud_storage != USE_GCLOUD_STORAGE_VALUE.NEVER:
       try:
-        # TODO(b/206143429) Get top level flags.
-        top_level_flags = []
+        top_level_flags, env_variables = self._translate_top_level_flags()
 
         gcloud_binary_path = _get_gcloud_binary_path()
         gcloud_storage_command = ([gcloud_binary_path] +
