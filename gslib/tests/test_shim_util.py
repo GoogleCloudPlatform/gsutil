@@ -330,16 +330,11 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
     with mock.patch.object(self._fake_command, 'logger',
                            autospec=True) as mock_logger:
       self._fake_command._print_gcloud_storage_command_info(
-          ['fake', 'gcloud', 'command'], {
-              'fake_env_var1': 'val1',
-              'fake_env_var2': 'val2',
-          },
-          dry_run=True)
+          ['fake', 'gcloud', 'command'], {'fake_env_var': 'val'}, dry_run=True)
       expected_calls = [
           mock.call('Gcloud Storage Command: fake gcloud command'),
           mock.call('Enviornment variables for Gcloud Storage:'),
-          mock.call('%s=%s', 'fake_env_var1', 'val1'),
-          mock.call('%s=%s', 'fake_env_var2', 'val2'),
+          mock.call('%s=%s', 'fake_env_var', 'val'),
       ]
       self.assertEqual(mock_logger.info.mock_calls, expected_calls)
 
