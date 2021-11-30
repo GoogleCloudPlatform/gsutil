@@ -293,17 +293,55 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             mock_log_handler.messages['error'])
         self.assertIn('FakeCommandWithGcloudStorageMap called', stdout)
 
-  def test_dry_run_mode_prints_translated_commands(self):
+  def test_dry_run_mode_prints_translated_command(self):
     """Should print the gcloud command and run gsutil."""
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'dry_run')
                                    ]):
       with util.SetEnvironmentForTest({'CLOUDSDK_ROOT_DIR': 'fake_dir'}):
-        stdout = self.RunCommand('fake_shim', args=['arg1'], return_stdout=True)
+        stdout, mock_log_handler = self.RunCommand('fake_shim',
+                                                   args=['arg1'],
+                                                   return_stdout=True,
+                                                   return_log_handler=True)
         self.assertIn(
-            'Gcloud Storage Command: {} objects fake arg1'
-            '\nEnviornment variables for Gcloud Storage: {{}}\n'
+            'Gcloud Storage Command: {} objects fake arg1'.format(
+                os.path.join('fake_dir', 'bin', 'gcloud')),
+            mock_log_handler.messages['info'])
+        self.assertIn(
             'FakeCommandWithGcloudStorageMap called'.format(
                 os.path.join('fake_dir', 'bin', 'gcloud')), stdout)
+
+  def test_non_dry_mode_logs_translated_command_to_debug_logs(self):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with mock.patch.object(self._fake_command, 'logger',
+                               autospec=True) as mock_logger:
+          self._fake_command.translate_to_gcloud_storage_if_requested()
+          # Verify translation.
+          mock_logger.debug.assert_called_once_with(
+              'Gcloud Storage Command: fake_dir/bin/gcloud objects'
+              ' fake --zip opt1 -x arg1 arg2')
+
+  def test_print_gcloud_storage_env_vars_in_dry_run_mode(self):
+    """Should log the command and env vars to logger.info"""
+    with mock.patch.object(self._fake_command, 'logger',
+                           autospec=True) as mock_logger:
+      self._fake_command._print_gcloud_storage_command_info(
+          ['fake', 'gcloud', 'command'], {
+              'fake_env_var1': 'val1',
+              'fake_env_var2': 'val2',
+          },
+          dry_run=True)
+      expected_calls = [
+          mock.call('Gcloud Storage Command: fake gcloud command'),
+          mock.call('Enviornment variables for Gcloud Storage:'),
+          mock.call('%s=%s', 'fake_env_var1', 'val1'),
+          mock.call('%s=%s', 'fake_env_var2', 'val2'),
+      ]
+      self.assertEqual(mock_logger.info.mock_calls, expected_calls)
 
 
 class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):
