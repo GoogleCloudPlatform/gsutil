@@ -147,7 +147,6 @@ class GcloudStorageCommandMixin(object):
     """
     top_level_flags = []
     env_variables = {}
-    print('################### ', self.debug)
     if self.debug >= 3:
       top_level_flags.extend(['--verbosity', 'debug'])
     if self.debug == 4:

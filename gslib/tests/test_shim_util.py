@@ -107,7 +107,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
         command_runner=mock.ANY,
         args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
         headers=mock.ANY,
-        debug=mock.ANY,
+        debug=1,
         trace_token=mock.ANY,
         parallel_operations=mock.ANY,
         bucket_storage_uri_class=mock.ANY,
@@ -207,9 +207,9 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         command_runner=mock.ANY,
         args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
         headers=mock.ANY,
-        debug=mock.ANY,
-        trace_token=mock.ANY,
-        parallel_operations=mock.ANY,
+        debug=0,
+        trace_token=None,
+        parallel_operations=True,
         bucket_storage_uri_class=mock.ANY,
         gsutil_api_class_map_factory=mock.MagicMock())
 
