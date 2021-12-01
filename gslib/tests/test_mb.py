@@ -48,22 +48,20 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         PopulateProjectId(None),
         testcase.KmsTestingResources.KEYRING_NAME,
         location=testcase.KmsTestingResources.KEYRING_LOCATION)
+    key_name = testcase.KmsTestingResources.CONSTANT_KEY_NAME_DO_NOT_AUTHORIZE
     if mutable:
       # Randomly pick 1 of 1000 key names.
       key_name = testcase.KmsTestingResources.MUTABLE_KEY_NAME_TEMPLATE % (
           randint(0, 9), randint(0, 9), randint(0, 9))
-    else:
-      key_name = testcase.KmsTestingResources.CONSTANT_KEY_NAME_DO_NOT_AUTHORIZE
     # Make sure the key with that name has been created.
     key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
     # The key may have already been created and used in a previous test
     # invocation; make sure it doesn't contain the IAM policy binding that
     # allows our project to encrypt/decrypt with it.
     key_policy = self.kms_api.GetKeyIamPolicy(key_fqn)
-    while key_policy.bindings:
-      key_policy.bindings.pop()
-    self.kms_api.SetKeyIamPolicy(key_fqn, key_policy)
-
+    if key_policy.bindings:
+      key_policy.bindings = []
+      self.kms_api.SetKeyIamPolicy(key_fqn, key_policy)
     return key_fqn
 
   @SkipForS3('S3 returns success when bucket already exists.')
