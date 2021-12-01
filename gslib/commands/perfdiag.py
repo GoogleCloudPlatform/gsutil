@@ -251,13 +251,13 @@ _DETAILED_HELP_TEXT = ("""
   The ``perfdiag`` command runs a series of tests that collects system information,
   such as the following: 
   
-  + Records requester's IP address.
+  + Retrieves requester's IP address.
   + Executes DNS queries to Google servers and collects the results.
   + Collects network statistics information from the output of ``netstat -s`` and
     evaluates the BIOS product name string.
-  + If one is configured, attempts to connect to the requester's proxy server
-    to look up the location and storage class of the bucket being used for
-    performance testing.
+  + If a proxy server is configured, attempts to connect to it to retrieve
+    the location and storage class of the bucket being used for performance
+    testing.
   
   None of this information will be sent to Google unless you proactively choose to
   send it.
