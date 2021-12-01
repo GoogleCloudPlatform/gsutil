@@ -1297,6 +1297,7 @@ class KmsTestingResources(object):
   # Used by tests where we don't need to alter the state of a cryptoKey and/or
   # its IAM policy bindings once it's initialized the first time.
   CONSTANT_KEY_NAME = 'key-for-gsutil-integration-tests'
+  # This key should not be authorized so it can be used for failure cases.
   CONSTANT_KEY_NAME2 = 'key-for-gsutil-integration-tests2'
   # Pattern used for keys that should only be operated on by one tester at a
   # time. Because multiple integration test invocations can run at the same
