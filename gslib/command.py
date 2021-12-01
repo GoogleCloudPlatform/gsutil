@@ -92,6 +92,7 @@ from gslib.utils.parallelism_framework_util import ShouldProhibitMultiprocessing
 from gslib.utils.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
 from gslib.utils.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.utils.rsync_util import RsyncDiffToApply
+from gslib.utils.shim_util import GcloudStorageCommandMixin
 from gslib.utils.system_util import GetTermLines
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.translation_helper import AclTranslation
@@ -490,7 +491,7 @@ CommandSpec = namedtuple(
     ])
 
 
-class Command(HelpProvider):
+class Command(HelpProvider, GcloudStorageCommandMixin):
   """Base class for all gsutil commands."""
 
   # Each subclass must override this with an instance of CommandSpec.
@@ -725,25 +726,46 @@ class Command(HelpProvider):
                (self.command_spec.usage_synopsis, self.command_name))
     raise CommandException(message)
 
-  def ParseSubOpts(self, check_args=False):
+  def ParseSubOpts(self,
+                   check_args=False,
+                   args=None,
+                   should_update_sub_opts_and_args=True):
     """Parses sub-opt args.
 
     Args:
       check_args: True to have CheckArguments() called after parsing.
+      args: List of args. If None, self.args will be used.
+      should_update_sub_opts_and_args: True if self.sub_opts and self.args
+        should be updated with the values returned after parsing. Else return a 
+        tuple of sub_opts, args returned by getopt.getopt. This is done
+        to allow this method to be called from get_gcloud_storage_args in which
+        case we do not want to update self.sub_opts and self.args.
 
-    Populates:
-      (self.sub_opts, self.args) from parsing.
-
-    Raises: RaiseInvalidArgumentException if invalid args specified.
+    Raises:
+      RaiseInvalidArgumentException: Invalid args specified.
     """
+    if args is None:
+      unparsed_args = self.args
+    else:
+      unparsed_args = args
     try:
-      self.sub_opts, self.args = getopt.getopt(
-          self.args, self.command_spec.supported_sub_args,
+      parsed_sub_opts, parsed_args = getopt.getopt(
+          unparsed_args, self.command_spec.supported_sub_args,
           self.command_spec.supported_private_args or [])
     except getopt.GetoptError:
       self.RaiseInvalidArgumentException()
-    if check_args:
-      self.CheckArguments()
+    if should_update_sub_opts_and_args:
+      self.sub_opts, self.args = parsed_sub_opts, parsed_args
+      if check_args:
+        self.CheckArguments()
+    else:
+      if check_args:
+        # This is just for sanity check. Only get_gcloud_storage_args will
+        # call this method with should_update_sub_opts_and_args=False, and it
+        # does not set check_args to True.
+        raise TypeError('Requested to check arguments'
+                        ' but sub_opts and args have not been updated.')
+      return parsed_sub_opts, parsed_args
 
   def CheckArguments(self):
     """Checks that command line arguments match the command_spec.

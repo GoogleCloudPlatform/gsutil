@@ -1,3 +1,77 @@
+Release 5.5 (release date: 2021-11-11)
+======================================
+Bug Fixes
+------------------
+- Close upload stream before we try to unlink temp file (#1144)
+- Do not perform hash validation if check_hashes=never even if Content-MD5 is set (#1382)
+
+Other Changes
+------------------
+- Add warning for unsupported double wildcard use. (#1386)
+- Changing test email and user references to safer values. (#1396)
+- Several documentation updates and clarifications.
+
+
+Release 5.4 (release date: 2021-10-11)
+======================================
+New Features
+------------------
+- Support for new backend features.
+- Re-implement removal of project convenience groups (#1365)
+- Add suffix to user agent to differentiate between types of rewrite command (#1359)
+- mb command: raise error if json only flags are used for xml API  (#1358)
+- Improve `gsutil rm` and `gsutil rewrite` help pages. (#1355)
+- Link fix and term update in help docs (#1354)
+
+Other Changes
+------------------
+- Improvements to the Wildcard help topic (#1367)
+- Improve `gsutil rm` and `gsutil rewrite` help pages. (#1355)
+- Link fix and term update in help docs (#1354)
+
+Release 5.3 (release date: 2021-09-30)
+======================================
+New Features
+------------------
+- Add support for Turbo Replication (RPO). (#1351)
+
+Bug Fixes
+------------------
+- Allow the removal of project convenience groups. (#1350)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
+Release 5.2 (release date: 2021-09-23)
+======================================
+New Features
+------------------
+- Add cp support for end-to-end encryption via the split-trust encryption tool (STET). (#1338)
+
+Bug Fixes
+------------------
+- Use custom endpoints for resumable updloads on the XML API. (#1333)
+
+Other Changes
+------------------
+- Dropped support for Python 2 to patch RSA security issues. (#1339)
+- Several documentation updates and clarifications.
+
+Release 4.68 (release date: 2021-09-14)
+=======================================
+Bug Fixes
+------------------
+- Improve content type inference for some common extensions. (#1321)
+- Copy Content-Encoding from first object in compose command. (#1320)
+- Support generation querying for ls command. (#1319)
+
+Other Changes
+------------------
+- Add a message encouraging py3 upgrade. (#1322)
+- Update mock library version. (#1315)
+- Several documentation updates and clarifications.
+
 Release 4.67 (release date: 2021-08-16)
 =======================================
 Bug Fixes
