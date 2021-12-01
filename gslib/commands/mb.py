@@ -132,6 +132,10 @@ _DETAILED_HELP_TEXT = ("""
   -c class               Specifies the default storage class.
                          Default is "Standard".
 
+  -k <key>               Set the default KMS key using the full path to the key,
+                         which has the following form:
+                         ``projects/[project-id]/locations/[location]/keyRings/[key-ring]/cryptoKeys/[my-key]``
+
   -l location            Can be any supported location. See
                          https://cloud.google.com/storage/docs/locations
                          for a discussion of this distinction. Default is US.
