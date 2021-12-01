@@ -139,11 +139,9 @@ _DETAILED_HELP_TEXT = ("""
               not by saturated with work if too few objects (specified with ``-n``)
               and too few components (specified with ``-y``) are specified.
 
-  -p          Sets the type of `parallelism
-              <https://en.wikipedia.org/wiki/Parallel_computing>`_ to be used
-              (only applicable when threads or processes are specified and
-              threads * processes > 1). The default is to use ``fan``. Must be
-              one of the following:
+  -p          Sets the type of `parallelism to be used (only applicable when
+              threads or processes are specified and threads * processes > 1). The
+              default is to use ``fan``. Must be one of the following:
 
               fan
                  Use one thread per object. This is akin to using gsutil ``-m cp``,
@@ -160,7 +158,7 @@ _DETAILED_HELP_TEXT = ("""
                  Use Y (specified with ``-y``) threads for each object, transferring
                  multiple objects at a time. This is akin to simultaneously
                  using sliced object download / parallel composite upload and
-                 ``gsutil -m cp``. Sliced uploads not supported for s3.
+                 ``gsutil -m cp``. Parallel composite uploads not supported for s3.
 
   -y          Sets the number of slices to divide each file/object into while
               transferring data. Only applicable with the slice (or both)
@@ -250,18 +248,19 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>NOTE</B>
-  The ``perfdiag`` command runs a series of tests and collects system information,
+  The ``perfdiag`` command runs a series of tests that collects system information,
   such as the following: 
   
-  + Records requester's IP address.
+  + Retrieves requester's IP address.
   + Executes DNS queries to Google servers and collects the results.
   + Collects network statistics information from the output of ``netstat -s`` and
     evaluates the BIOS product name string.
-  + If configured, attempts to connect to the requester's proxy server
-    to look up the location and storage class of the bucket being used for
-    performance testing.
+  + If a proxy server is configured, attempts to connect to it to retrieve
+    the location and storage class of the bucket being used for performance
+    testing.
   
-  None of this information will be sent to Google unless you choose to send it.
+  None of this information will be sent to Google unless you proactively choose to
+  send it.
 """)
 
 FileDataTuple = namedtuple('FileDataTuple', 'size md5 data')
