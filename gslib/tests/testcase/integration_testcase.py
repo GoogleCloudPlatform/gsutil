@@ -1298,6 +1298,8 @@ class KmsTestingResources(object):
   # its IAM policy bindings once it's initialized the first time.
   CONSTANT_KEY_NAME = 'key-for-gsutil-integration-tests'
   CONSTANT_KEY_NAME2 = 'key-for-gsutil-integration-tests2'
+  # This key should not be authorized so it can be used for failure cases.
+  CONSTANT_KEY_NAME_DO_NOT_AUTHORIZE = 'key-for-gsutil-no-auth'
   # Pattern used for keys that should only be operated on by one tester at a
   # time. Because multiple integration test invocations can run at the same
   # time, we want to minimize the risk of them operating on each other's key,

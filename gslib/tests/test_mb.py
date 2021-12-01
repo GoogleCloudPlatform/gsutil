@@ -19,8 +19,11 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+from random import randint
+
 import boto
 import gslib.tests.testcase as testcase
+from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.testcase.integration_testcase import SkipForJSON
@@ -28,13 +31,38 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.utils.retention_util import SECONDS_IN_DAY
 from gslib.utils.retention_util import SECONDS_IN_MONTH
 from gslib.utils.retention_util import SECONDS_IN_YEAR
+from gslib.utils.retry_util import Retry
 
 BUCKET_LOCK_SKIP_MSG = ('gsutil does not support bucket lock operations for '
                         'S3 buckets.')
+KMS_SKIP_MSG = 'gsutil KMS operations only run on GCS JSON API.'
 
 
 class TestMb(testcase.GsUtilIntegrationTestCase):
   """Integration tests for mb command."""
+
+  def GetKey(self, mutable=False):
+    # Make sure our keyRing exists (only needs to be done once, but subsequent
+    # attempts will receive a 409 and be treated as a success).
+    keyring_fqn = self.kms_api.CreateKeyRing(
+        PopulateProjectId(None),
+        testcase.KmsTestingResources.KEYRING_NAME,
+        location=testcase.KmsTestingResources.KEYRING_LOCATION)
+    key_name = testcase.KmsTestingResources.CONSTANT_KEY_NAME_DO_NOT_AUTHORIZE
+    if mutable:
+      # Randomly pick 1 of 1000 key names.
+      key_name = testcase.KmsTestingResources.MUTABLE_KEY_NAME_TEMPLATE % (
+          randint(0, 9), randint(0, 9), randint(0, 9))
+    # Make sure the key with that name has been created.
+    key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
+    # The key may have already been created and used in a previous test
+    # invocation; make sure it doesn't contain the IAM policy binding that
+    # allows our project to encrypt/decrypt with it.
+    key_policy = self.kms_api.GetKeyIamPolicy(key_fqn)
+    if key_policy.bindings:
+      key_policy.bindings = []
+      self.kms_api.SetKeyIamPolicy(key_fqn, key_policy)
+    return key_fqn
 
   @SkipForS3('S3 returns success when bucket already exists.')
   def test_mb_bucket_exists(self):
@@ -192,6 +220,55 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.assertIn(
         'Invalid value for --rpo. Must be one of: (ASYNC_TURBO|DEFAULT),'
         ' provided: incorrect_value', stderr)
+
+  @SkipForXML(KMS_SKIP_MSG)
+  @SkipForS3(KMS_SKIP_MSG)
+  def test_create_with_k_flag_not_authorized(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    key = self.GetKey()
+    stderr = self.RunGsUtil([
+        'mb', '-l', testcase.KmsTestingResources.KEYRING_LOCATION, '-k', key,
+        suri(bucket_uri)
+    ],
+                            return_stderr=True,
+                            expected_status=1)
+    self.assertIn('To authorize, run:', stderr)
+    self.assertIn('-k %s' % key, stderr)
+
+  @SkipForXML(KMS_SKIP_MSG)
+  @SkipForS3(KMS_SKIP_MSG)
+  def test_create_with_k_flag_p_flag_not_authorized(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    key = self.GetKey()
+    stderr = self.RunGsUtil([
+        'mb', '-l', testcase.KmsTestingResources.KEYRING_LOCATION, '-k', key,
+        '-p',
+        PopulateProjectId(),
+        suri(bucket_uri)
+    ],
+                            return_stderr=True,
+                            expected_status=1)
+    self.assertIn('To authorize, run:', stderr)
+    self.assertIn('-p %s' % PopulateProjectId(), stderr)
+
+  @SkipForXML(KMS_SKIP_MSG)
+  @SkipForS3(KMS_SKIP_MSG)
+  @Retry(AssertionError, tries=3, timeout_secs=1)
+  def test_create_with_k_flag_authorized(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    key = self.GetKey(mutable=True)
+    self.RunGsUtil(['kms', 'authorize', '-k', key])
+    self.RunGsUtil([
+        'mb', '-l', testcase.KmsTestingResources.KEYRING_LOCATION, '-k', key,
+        suri(bucket_uri)
+    ],
+                   expected_status=0)
 
   @SkipForXML('The --placement flag only works for GCS JSON API.')
   def test_create_with_placement_flag(self):
