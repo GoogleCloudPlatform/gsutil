@@ -334,8 +334,9 @@ _DETAILED_HELP_TEXT = ("""
 
   Note that by default, the gsutil rsync command does not copy the ACLs of
   objects being synchronized and instead will use the default bucket ACL (see
-  "gsutil help defacl"). You can override this behavior with the -p option (see
-  OPTIONS below).
+  "gsutil help defacl"). You can override this behavior with the -p option. See the
+  <a href="https://cloud.google.com/storage/docs/gsutil/commands/rsync#options">Options section</a>
+  to learn how.
 
 
 <B>SLOW CHECKSUMS</B>
@@ -480,7 +481,7 @@ _DETAILED_HELP_TEXT = ("""
                  copied.  With this feature enabled, gsutil rsync will copy
                  fields provided by stat. These are the user ID of the owner,
                  the group ID of the owning group, the mode (permissions) of the
-                 file, and the access/modification time of the file. For
+                 file, and the access/modification timestamps of the file. For
                  downloads, these attributes will only be set if the source
                  objects were uploaded with this flag enabled.
 
