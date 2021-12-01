@@ -31,7 +31,7 @@ _DETAILED_HELP_TEXT = ("""
     gsutil -m cp -p file gs://bucket/obj
 
   the -m option applies to gsutil, while the -p option applies to the cp
-  sub-command. Test
+  sub-command. Test test
 
 
 <B>OPTIONS</B>
