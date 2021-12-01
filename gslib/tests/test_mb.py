@@ -53,7 +53,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
       key_name = testcase.KmsTestingResources.MUTABLE_KEY_NAME_TEMPLATE % (
           randint(0, 9), randint(0, 9), randint(0, 9))
     else:
-      key_name = testcase.KmsTestingResources.CONSTANT_KEY_NAME2
+      key_name = testcase.KmsTestingResources.CONSTANT_KEY_NAME_DO_NOT_AUTHORIZE
     # Make sure the key with that name has been created.
     key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
     # The key may have already been created and used in a previous test
