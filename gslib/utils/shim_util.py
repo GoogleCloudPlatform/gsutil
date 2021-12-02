@@ -35,6 +35,78 @@ class USE_GCLOUD_STORAGE_VALUE(enum.Enum):
   ALWAYS = 'always'
   DRY_RUN = 'dry_run'
 
+# Required for headers translation.
+DATA_TRANSFER_COMMANDS = frozenset(['cp', 'mv', 'rsync'])
+PRECONDITONS_ONLY_SUPPORTED_COMMANDS = frozenset(
+    ['compose', 'rewrite', 'rm', 'retention'])
+DATA_TRANSFER_HEADERS = frozenset([
+    'cache-control',
+    'content-disposition',
+    'content-encoding',
+    'content-md5',
+    'content-language',
+    'content-type',
+    'custom-time',
+])
+PRECONDITIONS_HEADERS = frozenset(
+    ['x-goog-if-generation-match', 'x-goog-if-metageneration-match'])
+
+
+def get_flag_from_header(header_key_raw, header_value, unset=False):
+  """Returns the gcloud storage flag for the given gsutil header.
+  
+  Args:
+    header_key_raw: The header key.
+    header_value: The header value
+    unset: If True, the equivalent clear/remove flag is returned instead of the
+      setter flag. This only applies to setmeta.
+
+  Returns:
+    A string representing the equivalent gcloud storage flag and value, if
+      translation is possible, else returns None.
+    
+  Examples:
+    >> get_flag_from_header('Cache-Control', 'val')
+    --cache-control=val
+
+    >> get_flag_from_header('x-goog-meta-foo', 'val')
+    --add-custom-metadata=foo=val
+
+    >> get_flag_from_header('x-goog-meta-foo', 'val', unset=True)
+    --remove-custom-metadata=foo
+
+  """
+  header = header_key_raw.lower()
+  if header in PRECONDITIONS_HEADERS:
+    flag_name = header.lstrip('x-goog-')
+  elif header in DATA_TRANSFER_HEADERS:
+    flag_name = header
+  else:
+    flag_name = None
+
+  if flag_name is not None:
+    if unset:
+      return '--clear' + flag_name
+    else:
+      return '--{}={}'.format(flag_name, header_value)
+
+  for header_prefix in ('x-goog-meta-', 'x-amz-meta-'):
+    if header.startswith(header_prefix):
+      metadata_key = header.lstrip(header_prefix)
+      if unset:
+        return '--remove-custom-metadata=' + metadata_key
+      else:
+        return '--add-custom-metadata={}={}'.format(metadata_key, header_value)
+
+  if header.startswith('x-amz-'):
+    # Send the entire header as it is.
+    if unset:
+      return '--remove-custom-headers=' + header
+    else:
+      return '--add-custom-headers={}={}'.format(header, header_value)
+
+  return None
+
 
 class GcloudStorageFlag(object):
 
@@ -154,19 +226,40 @@ class GcloudStorageCommandMixin(object):
     if self.quiet_mode:
       top_level_flags.append('--no-user-output-enabled')
     if self.user_project:
-      top_level_flags.extend(['--billing-project', self.user_project])
+      top_level_flags.append('--billing-project=' + self.user_project)
     if self.trace_token:
-      top_level_flags.extend(['--trace-token', self.trace_token])
+      top_level_flags.append('--trace-token=' + self.trace_token)
     if constants.IMPERSONATE_SERVICE_ACCOUNT:
-      top_level_flags.extend([
-          '--impersonate-service-account', constants.IMPERSONATE_SERVICE_ACCOUNT
-      ])
+      top_level_flags.append('--impersonate-service-account=' +
+                             constants.IMPERSONATE_SERVICE_ACCOUNT)
     # TODO(b/208294509) Add --perf-trace-token translation.
     if not self.parallel_operations:
       # TODO(b/208301084) Set the --sequential flag instead.
       env_variables['CLOUDSDK_STORAGE_THREAD_COUNT'] = '1'
       env_variables['CLOUDSDK_STORAGE_PROCESS_COUNT'] = '1'
     return top_level_flags, env_variables
+
+  def _translate_headers(self):
+    """Translates gsutil headers to equivalent gcloud storage flags."""
+    flags = []
+    for header_key_raw, header_value in self.headers.items():
+      header_key = header_key_raw.lower()
+      if header_key == 'x-goog-api-version':
+        # Gsutil adds this header. We don't have to translate it for gcloud.
+        continue
+      flag = get_flag_from_header(header_key, header_value)
+      if self.command_name in DATA_TRANSFER_COMMANDS:
+        if flag is None:
+          raise exception.GcloudStorageTranslationError(
+              'Header cannot be translated to a gcloud storage equivalent'
+              ' flag. Invalid header: {}:{}'.format(header_key, header_value))
+        else:
+          flags.append(flag)
+      elif (self.command_name in PRECONDITONS_ONLY_SUPPORTED_COMMANDS and
+            header_key in PRECONDITONS_ONLY_SUPPORTED_COMMANDS):
+        flags.append(flag)
+      # We ignore the headers for all other cases, so does gsutil.
+    return flags
 
   def get_gcloud_storage_args(self):
     """Translates the gsutil command flags to gcloud storage flags.
@@ -223,11 +316,12 @@ class GcloudStorageCommandMixin(object):
     if use_gcloud_storage != USE_GCLOUD_STORAGE_VALUE.NEVER:
       try:
         top_level_flags, env_variables = self._translate_top_level_flags()
+        header_flags = self._translate_headers()
 
         gcloud_binary_path = _get_gcloud_binary_path()
         gcloud_storage_command = ([gcloud_binary_path] +
                                   self.get_gcloud_storage_args() +
-                                  top_level_flags)
+                                  top_level_flags + header_flags)
         # TODO(b/206149936): Translate boto config to CLOUDSDK envs.
         env_variables = {}
         if use_gcloud_storage == USE_GCLOUD_STORAGE_VALUE.DRY_RUN:

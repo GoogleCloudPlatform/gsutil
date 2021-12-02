@@ -106,7 +106,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
     self._fake_command = FakeCommandWithGcloudStorageMap(
         command_runner=mock.ANY,
         args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
-        headers=mock.ANY,
+        headers={},
         debug=1,
         trace_token=mock.ANY,
         parallel_operations=mock.ANY,
@@ -206,7 +206,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
     self._fake_command = FakeCommandWithGcloudStorageMap(
         command_runner=mock.ANY,
         args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
-        headers=mock.ANY,
+        headers={},
         debug=0,
         trace_token=None,
         parallel_operations=True,
@@ -371,7 +371,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         fake_command = FakeCommandWithGcloudStorageMap(
             command_runner=mock.ANY,
             args=['arg1', 'arg2'],
-            headers=mock.ANY,  # Headers will be tested separately.
+            headers={},  # Headers will be tested separately.
             debug=3,  # -D option
             trace_token='fake_trace_token',
             user_project='fake_user_project',
@@ -384,8 +384,8 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         expected_gcloud_path = os.path.join('fake_dir', 'bin', 'gcloud')
         self.assertEqual(fake_command._translated_gcloud_storage_command, [
             expected_gcloud_path, 'objects', 'fake', 'arg1', 'arg2',
-            '--verbosity', 'debug', '--billing-project', 'fake_user_project',
-            '--trace-token', 'fake_trace_token'
+            '--verbosity', 'debug', '--billing-project=fake_user_project',
+            '--trace-token=fake_trace_token'
         ])
         self.assertEqual(
             fake_command._translated_env_variables, {
@@ -437,7 +437,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             self._fake_command._translated_gcloud_storage_command, [
                 os.path.join('fake_dir', 'bin', 'gcloud'), 'objects', 'fake',
                 '--zip', 'opt1', '-x', 'arg1', 'arg2',
-                '--impersonate-service-account', 'fake_service_account'
+                '--impersonate-service-account=fake_service_account'
             ])
 
   def test_quiet_mode_translation_adds_no_user_output_enabled_flag(self):
@@ -455,6 +455,92 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                              'objects', 'fake', '--zip', 'opt1', '-x', 'arg1',
                              'arg2', '--no-user-output-enabled'
                          ])
+
+
+class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
+  """Test gsutil header  translation."""
+
+  def setUp(self):
+    super().setUp()
+    self._fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
+        headers={},
+        debug=0,
+        trace_token=None,
+        parallel_operations=True,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+
+  @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
+  def test_translated_headers_get_added_to_final_command(self):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        fake_command = FakeCommandWithGcloudStorageMap(
+            command_runner=mock.ANY,
+            args=['arg1', 'arg2'],
+            headers={'Content-Type': 'fake_val'},
+            debug=1,
+            trace_token=None,
+            parallel_operations=mock.ANY,
+            bucket_storage_uri_class=mock.ANY,
+            gsutil_api_class_map_factory=mock.MagicMock())
+
+        self.assertTrue(fake_command.translate_to_gcloud_storage_if_requested())
+        self.assertEqual(fake_command._translated_gcloud_storage_command, [
+            os.path.join('fake_dir', 'bin', 'gcloud'), 'objects', 'fake',
+            'arg1', 'arg2', '--content-type=fake_val'
+        ])
+
+  @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
+  def test_translate_headers_returns_correct_flags_for_data_transfer_command(
+      self):
+    self._fake_command.headers = {
+        # Data tranfer related headers.
+        'Cache-Control': 'fake_cache_cantrol',
+        'Content-Encoding': 'fake_Content-Encoding',
+        'Content-Encoding': 'fake_Content-Encoding',
+        'Content-Language': 'fake_Content-Language',
+        'Content-Type': 'fake_Content-Type',
+        'Content-MD5': 'fake_Content-MD5',
+        'custom-time': 'fake_time',
+        # Precondition headers
+        'x-goog-if-generation-match': 'fake_gen_match',
+        'x-goog-if-metageneration-match': 'fake_gen_match',
+        # Custom metadata.
+        'x-goog-meta-foo': 'fake_goog_meta',
+        'x-amz-meta-foo': 'fake_amz_meta',
+        'x-amz-foo': 'fake_amz_custom_header',
+    }
+    flags = self._fake_command._translate_headers()
+    self.assertEqual(flags, [
+        '--cache-control=fake_cache_cantrol',
+        '--content-encoding=fake_Content-Encoding',
+        '--content-language=fake_Content-Language',
+        '--content-type=fake_Content-Type',
+        '--content-md5=fake_Content-MD5',
+        '--custom-time=fake_time',
+        '--if-generation-match=fake_gen_match',
+        '--if-metageneration-match=fake_gen_match',
+        '--add-custom-metadata=foo=fake_goog_meta',
+        '--add-custom-metadata=foo=fake_amz_meta',
+        '--add-custom-headers=x-amz-foo=fake_amz_custom_header',
+    ])
+
+  @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
+  def test_translate_headers_for_data_transfer_command_with_invalid_header(
+      self):
+    """Should raise error."""
+    self._fake_command.headers = {'invalid': 'value'}
+    with self.assertRaisesRegex(
+        exception.GcloudStorageTranslationError,
+        'Header cannot be translated to a gcloud storage equivalent flag.'
+        ' Invalid header: invalid:value'):
+      self._fake_command._translate_headers()
 
 
 class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):
