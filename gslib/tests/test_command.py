@@ -28,7 +28,7 @@ from gslib.utils import constants
 
 class FakeGsutilCommand(command.Command):
   """Implementation of a fake gsutil command."""
-  command_spec = command.Command.CreateCommandSpec('fake',
+  command_spec = command.Command.CreateCommandSpec('fake_gsutil',
                                                    min_args=1,
                                                    max_args=constants.NO_MAX,
                                                    supported_sub_args='rz:',
