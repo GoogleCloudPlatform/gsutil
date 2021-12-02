@@ -502,7 +502,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
     self._fake_command.headers = {
         # Data tranfer related headers.
         'Cache-Control': 'fake_cache_cantrol',
-        'Content-Encoding': 'fake_Content-Encoding',
+        'Content-Disposition': 'fake_Content-Disposition',
         'Content-Encoding': 'fake_Content-Encoding',
         'Content-Language': 'fake_Content-Language',
         'Content-Type': 'fake_Content-Type',
@@ -519,6 +519,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
     flags = self._fake_command._translate_headers()
     self.assertEqual(flags, [
         '--cache-control=fake_cache_cantrol',
+        '--content-disposition=fake_Content-Disposition',
         '--content-encoding=fake_Content-Encoding',
         '--content-language=fake_Content-Language',
         '--content-type=fake_Content-Type',
@@ -541,6 +542,118 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
         'Header cannot be translated to a gcloud storage equivalent flag.'
         ' Invalid header: invalid:value'):
       self._fake_command._translate_headers()
+
+  @mock.patch.object(shim_util,
+                     'PRECONDITONS_ONLY_SUPPORTED_COMMANDS',
+                     new={'fake_shim'})
+  def test_translate_headers_for_precondition_supported_command_with_valid_header(
+      self):
+    self._fake_command.headers = {
+        'x-goog-if-generation-match': 'fake_gen_match',
+        'x-goog-if-metageneration-match': 'fake_gen_match',
+        # Custom metadata. These should be ignored.
+        'x-goog-meta-foo': 'fake_goog_meta',
+    }
+    flags = self._fake_command._translate_headers()
+    self.assertEqual(flags, [
+        '--if-generation-match=fake_gen_match',
+        '--if-metageneration-match=fake_gen_match',
+    ])
+
+  @mock.patch.object(shim_util,
+                     'PRECONDITONS_ONLY_SUPPORTED_COMMANDS',
+                     new={'fake_shim'})
+  def test_translate_headers_for_precondition_supported_command_with_invalid_header(
+      self):
+    """Should be ignored and not raise any error."""
+    self._fake_command.headers = {'invalid': 'value'}
+    self.assertEqual(self._fake_command._translate_headers(), [])
+
+  def test_translate_headers_ignores_headers_for_commands_not_in_allowlist(
+      self):
+    # Allowlist is defined by the shim_util.DATA_TRANSFER_COMMANDS and
+    # the shim_util.PRECONDITONS_ONLY_SUPPORTED_COMMANDS list.
+    # The fake_shim command defined by self._fake_command is not part of
+    # either of the list, and hence the headers must be ignored.
+    self._fake_command.headers = {
+        # Header from the DATA_TRANSFER_HEADERS list.
+        'Cache-Control': 'fake_cache_cantrol',
+        # Header from the PRECONDITIONS_HEADERS list.
+        'x-goog-if-generation-match': 'fake_gen_match',
+        # Custom metadata. These should be ignored.
+        'x-goog-meta-foo': 'fake_goog_meta',
+    }
+    self.assertEqual(self._fake_command._translate_headers(), [])
+
+  @mock.patch.object(shim_util,
+                     'PRECONDITONS_ONLY_SUPPORTED_COMMANDS',
+                     new={'fake_shim'})
+  def test_translate_headers_ignores_x_goog_api_version_header(self):
+    self._fake_command.headers = {
+        'x-goog-if-generation-match': 'fake_gen_match',
+        'x-goog-api-version': '2',  # Should be ignored.
+    }
+    self.assertEqual(self._fake_command._translate_headers(),
+                     ['--if-generation-match=fake_gen_match'])
+
+
+class TestGetFlagFromHeader(testcase.GsUtilUnitTestCase):
+  """Test Command.get_flag_from_header function.
+  
+  We only test the unset functionality, because rest of the workflows have been
+  already tested indirectly in TestHeaderTranslation.
+  """
+
+  def test_get_flag_from_header_with_unset_true_for_data_transfer_headers(self):
+    # Ideally we should use parameterized, but avoiding adding a new dependency
+    # just for the shim.
+    headers_to_expected_flag_map = {
+        'Cache-Control': '--clear-cache-control',
+        'Content-Disposition': '--clear-content-disposition',
+        'Content-Encoding': '--clear-content-encoding',
+        'Content-Language': '--clear-content-language',
+        'Content-Type': '--clear-content-type',
+        'custom-time': '--clear-custom-time',
+    }
+    for header, expected_flag in headers_to_expected_flag_map.items():
+      result = shim_util.get_flag_from_header(header, 'fake_val', unset=True)
+      self.assertEqual(result, expected_flag)
+
+  def test_get_flag_from_header_with_unset_true_for_precondition_headers(self):
+    """Should return None."""
+    # Ideally we should use parameterized, but avoiding adding a new dependency
+    # just for the shim.
+    for header in [
+        'x-goog-if-generation-match',
+        'x-goog-if-metageneration-match',
+    ]:
+      result = shim_util.get_flag_from_header(header, 'fake_val', unset=True)
+      self.assertIsNone(result)
+
+  def test_get_flag_from_header_with_unset_true_for_content_md5(self):
+    """Should return None."""
+    result = shim_util.get_flag_from_header('Content-MD5',
+                                            'fake_val',
+                                            unset=True)
+    self.assertIsNone(result)
+
+  def test_get_flag_from_header_with_unset_true_for_invalid_header(self):
+    """Should return None."""
+    result = shim_util.get_flag_from_header('invalid_header',
+                                            'fake_val',
+                                            unset=True)
+    self.assertIsNone(result)
+
+  def test_get_flag_from_header_with_unset_true_for_metadata_headers(self):
+    """Should return --remove-custom-metadata flag."""
+    headers_to_expected_flag_map = {
+        'x-goog-meta-foo': '--remove-custom-metadata=foo',
+        'x-amz-meta-foo': '--remove-custom-metadata=foo',
+        'x-amz-foo': '--remove-custom-headers=x-amz-foo',
+    }
+    for header, expected_flag in headers_to_expected_flag_map.items():
+      result = shim_util.get_flag_from_header(header, 'fake_val', unset=True)
+      self.assertEqual(result, expected_flag)
 
 
 class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):

@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 import collections
 import enum
 import os
+from posixpath import expanduser
 import subprocess
 
 from boto import config
@@ -86,9 +87,12 @@ def get_flag_from_header(header_key_raw, header_value, unset=False):
 
   if flag_name is not None:
     if unset:
-      return '--clear' + flag_name
-    else:
-      return '--{}={}'.format(flag_name, header_value)
+      if header in PRECONDITIONS_HEADERS or header == 'content-md5':
+        # Precondition headers and content-md5 cannot be cleared.
+        return None
+      else:
+        return '--clear-' + flag_name
+    return '--{}={}'.format(flag_name, header_value)
 
   for header_prefix in ('x-goog-meta-', 'x-amz-meta-'):
     if header.startswith(header_prefix):
@@ -256,7 +260,7 @@ class GcloudStorageCommandMixin(object):
         else:
           flags.append(flag)
       elif (self.command_name in PRECONDITONS_ONLY_SUPPORTED_COMMANDS and
-            header_key in PRECONDITONS_ONLY_SUPPORTED_COMMANDS):
+            header_key in PRECONDITIONS_HEADERS):
         flags.append(flag)
       # We ignore the headers for all other cases, so does gsutil.
     return flags
