@@ -517,7 +517,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
         'x-amz-foo': 'fake_amz_custom_header',
     }
     flags = self._fake_command._translate_headers()
-    self.assertEqual(flags, [
+    self.assertCountEqual(flags, [
         '--cache-control=fake_cache_cantrol',
         '--content-disposition=fake_Content-Disposition',
         '--content-encoding=fake_Content-Encoding',
@@ -555,7 +555,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
         'x-goog-meta-foo': 'fake_goog_meta',
     }
     flags = self._fake_command._translate_headers()
-    self.assertEqual(flags, [
+    self.assertCountEqual(flags, [
         '--if-generation-match=fake_gen_match',
         '--if-metageneration-match=fake_gen_match',
     ])
