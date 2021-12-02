@@ -322,8 +322,9 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
           self._fake_command.translate_to_gcloud_storage_if_requested()
           # Verify translation.
           mock_logger.debug.assert_called_once_with(
-              'Gcloud Storage Command: fake_dir/bin/gcloud objects'
-              ' fake --zip opt1 -x arg1 arg2')
+              'Gcloud Storage Command: {} objects'
+              ' fake --zip opt1 -x arg1 arg2'.format(
+                  os.path.join('fake_dir', 'bin', 'gcloud')))
 
   def test_print_gcloud_storage_env_vars_in_dry_run_mode(self):
     """Should log the command and env vars to logger.info"""
