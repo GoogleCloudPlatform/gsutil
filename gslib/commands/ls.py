@@ -55,15 +55,19 @@ _DETAILED_HELP_TEXT = ("""
 <B>SYNOPSIS</B>
 """ + _SYNOPSIS + """
 
+<B>DESCRIPTION</B>
+Retrieves a list of providers, buckets, or objects matching the criteria,
+ordered in the list lexicographically by name.
+
 
 <B>LISTING PROVIDERS, BUCKETS, SUBDIRECTORIES, AND OBJECTS</B>
-  If you run gsutil ls without URLs, it lists all of the Google Cloud Storage
+  If you run ``gsutil ls`` without URLs, it lists all of the Google Cloud Storage
   buckets under your default project ID (or all of the Cloud Storage buckets
-  under the project you specify with the -p flag):
+  under the project you specify with the ``-p`` flag):
 
     gsutil ls
 
-  If you specify one or more provider URLs, gsutil ls lists buckets at each
+  If you specify one or more provider URLs, ``gsutil ls`` lists buckets at each
   listed provider:
 
     gsutil ls gs://
@@ -72,7 +76,7 @@ _DETAILED_HELP_TEXT = ("""
 
   If you specify bucket URLs, or use `Wildcards
   <https://cloud.google.com/storage/docs/gsutil/addlhelp/WildcardNames>`_ to
-  capture a set of buckets, gsutil ls lists objects at the top level of each
+  capture a set of buckets, ``gsutil ls`` lists objects at the top level of each
   bucket, along with the names of each subdirectory. For example:
 
     gsutil ls gs://bucket
@@ -89,7 +93,7 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil ls gs://bucket/images*
 
-  If you specify object URLs, gsutil ls lists the specified objects. For
+  If you specify object URLs, ``gsutil ls`` lists the specified objects. For
   example:
 
     gsutil ls gs://bucket/*.txt
