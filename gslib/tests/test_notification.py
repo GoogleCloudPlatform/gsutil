@@ -24,8 +24,8 @@ import time
 import uuid
 
 import boto
-from gslib.cloud_api_delegator import CloudApiDelegator
 
+from gslib.cloud_api_delegator import CloudApiDelegator
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import unittest
