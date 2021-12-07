@@ -44,6 +44,12 @@ from gslib.utils.version_check import check_python_version_support
 from gslib.utils.arg_helper import GetArgumentsAndOptions
 from gslib.utils.user_agent_helper import GetUserAgent
 
+# This module is actually used by gslib/command.py, but we noticed that certain
+# tests timeout in Python 3.5 because the multiprocessing manager process gets
+# stuck. We do not know the root cause here, but we believe that this might
+# be because of the import lock and loading the module before the
+# multiprocessing Manager instance is create seems to resolve the issue.
+# See b/208418444#comment7
 from gslib.utils.shim_util import GcloudStorageCommandMixin
 
 # Load the gsutil version number and append it to boto.UserAgent so the value is
