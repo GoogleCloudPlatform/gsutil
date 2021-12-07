@@ -44,6 +44,8 @@ from gslib.utils.version_check import check_python_version_support
 from gslib.utils.arg_helper import GetArgumentsAndOptions
 from gslib.utils.user_agent_helper import GetUserAgent
 
+from gslib.utils.shim_util import GcloudStorageCommandMixin
+
 # Load the gsutil version number and append it to boto.UserAgent so the value is
 # set before anything instantiates boto. This has to run after THIRD_PARTY_DIR
 # is modified (done in gsutil.py) but before any calls are made that would cause
