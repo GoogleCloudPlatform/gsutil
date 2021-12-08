@@ -59,7 +59,6 @@ _DETAILED_HELP_TEXT = ("""
 Retrieves a list of providers, buckets, or objects matching the criteria,
 ordered in the list lexicographically by name.
 
-
 <B>LISTING PROVIDERS, BUCKETS, SUBDIRECTORIES, AND OBJECTS</B>
   If you run ``gsutil ls`` without URLs, it lists all of the Google Cloud Storage
   buckets under your default project ID (or all of the Cloud Storage buckets
@@ -194,6 +193,21 @@ ordered in the list lexicographically by name.
 
   See also "gsutil help acl" for getting a more readable version of the ACL.
 
+  <B>LIST ORDER</B>
+    List results are ordered lexicographically by name. While sorting
+    capabilities are not available for the ``gsutil ls`` command, Linux users
+    can use the Linux ``sort`` option and gsutil ``-l`` option to sort results
+    by object timestamp. For example:
+
+      gsutil ls -l gs://bucket | sort -k 2
+  
+    prints something like:
+
+        132999  2021-01-26T02:50:35Z  gs://bucket/obj1.png
+        132999  2021-12-03T22:30:58Z  gs://bucket/obj2.png
+        132999  2021-12-03T22:35:13Z  gs://bucket/zen-obj1.png
+        132999  2021-12-03T23:03:22Z  gs://bucket/yang-obj1.png
+      TOTAL: 4 objects, 664535 bytes (648.96 KiB)
 
 <B>LISTING BUCKET DETAILS</B>
   If you want to see information about the bucket itself, use the -b
