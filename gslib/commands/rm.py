@@ -66,7 +66,7 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil rm gs://bucket/kitten.png
 
-  Use the -r option to specify recursive object deletion. For example, the.
+  Use the -r option to specify recursive object deletion. For example, the
   following command removes gs://bucket/subdir and all objects and
   subdirectories under it:
 
