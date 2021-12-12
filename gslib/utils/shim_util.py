@@ -56,7 +56,7 @@ PRECONDITIONS_HEADERS = frozenset(
 _BOTO_CONFIG_MAP = {
     'Credentials': {
         'aws_access_key_id': 'AWS_ACCESS_KEY_ID',
-        'aws_access_key_id': 'AWS_SECRET_ACCESS_KEY',
+        'aws_secret_access_key': 'AWS_SECRET_ACCESS_KEY',
     },
     'Boto': {
         'proxy': 'CLOUDSDK_PROXY_ADDRESS',
@@ -76,7 +76,6 @@ _BOTO_CONFIG_MAP = {
         'default_project_id': 'CLOUDSDK_CORE_PROJECT',
         'disable_analytics_prompt': 'CLOUDSDK_CORE_DISABLE_USAGE_REPORTING',
         'use_magicfile': 'CLOUDSDK_STORAGE_USE_MAGICFILE',
-        'stet_config_path': 'CLOUDSDK_CONTEXT_AWARE_AUTO_DISCOVERY_FILE_PATH',
     },
     'OAuth2': {
         'client_id': 'CLOUDSDK_AUTH_CLIENT_ID',
@@ -330,7 +329,6 @@ class GcloudStorageCommandMixin(object):
       a dict representing the env variables that can be set to set the
       gcloud storage properties.
     """
-    config.dump()
     flags = []
     env_vars = {}
     # Handle gs_json_host and gs_json_port
@@ -346,7 +344,7 @@ class GcloudStorageCommandMixin(object):
       for key, value in section.items():
         # TODO(b/206151619) Handle encryption_key and decryption_key.
         if key == 'content_language':
-          flags.append('--content-encoding=' + value)
+          flags.append('--content-language=' + value)
         if key in _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED:
           self.logger.error('The boto config field {}:{} cannot be translated'
                             ' to gcloud storage equivalent.'.format(

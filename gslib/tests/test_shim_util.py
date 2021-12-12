@@ -19,9 +19,12 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+from contextlib import contextmanager
 import os
 import subprocess
 from unittest import mock
+
+from boto import config
 
 from gslib import command
 from gslib import command_argument
@@ -30,6 +33,37 @@ from gslib.tests import testcase
 from gslib.utils import constants
 from gslib.utils import shim_util
 from gslib.tests import util
+
+
+@contextmanager
+def _mock_boto_config(boto_config_dict):
+  """"Mock boto config replacing any exiting config.
+  
+  The util.SetBotoConfigForTest has a use_existing_config flag that can be
+  set to False, but it does not work if the config has been already loaded
+  which is the case for all unit tests that call do not use RunCommand method.
+
+  Args:
+    boto_config_dict. A dict where the key is the section name and the value
+    is a dict of boto field name and the value for that field.
+  """
+
+  def _config_get_side_effect(section, key, default_value=None):
+    return boto_config_dict.get(section, {}).get(key, default_value)
+
+  try:
+    get_patcher = mock.patch.object(config, 'get', autospec=True)
+    mock_get = get_patcher.start()
+    mock_get.side_effect = _config_get_side_effect
+
+    items_patcher = mock.patch.object(config, 'items', autospec=True)
+    mock_items = items_patcher.start()
+    mock_items.return_value = boto_config_dict.items()
+
+    yield
+  finally:
+    items_patcher.stop()
+    get_patcher.stop()
 
 
 class FakeCommandWithGcloudStorageMap(command.Command):
@@ -225,8 +259,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
 
   def test_returns_true_with_valid_gcloud_storage_map(self):
     """Should return True and perform the translation."""
-    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
-                                   ]):
+    with _mock_boto_config({'GSUtil': {'use_gcloud_storage': 'always'}}):
       with util.SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -240,7 +273,6 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                              expected_gcloud_path, 'objects', 'fake', '--zip',
                              'opt1', '-x', 'arg1', 'arg2'
                          ])
-        # TODO(b/206149936) Verify translated boto config.
 
   def test_raises_error_if_invalid_use_gcloud_storage_value(self):
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'invalid')
@@ -316,8 +348,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
 
   def test_dry_run_mode_prints_translated_command(self):
     """Should print the gcloud command and run gsutil."""
-    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'dry_run')
-                                   ]):
+    with _mock_boto_config({'GSUtil': {'use_gcloud_storage': 'dry_run'}}):
       with util.SetEnvironmentForTest({'CLOUDSDK_ROOT_DIR': 'fake_dir'}):
         stdout, mock_log_handler = self.RunCommand('fake_shim',
                                                    args=['arg1'],
@@ -332,8 +363,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                 os.path.join('fake_dir', 'bin', 'gcloud')), stdout)
 
   def test_non_dry_mode_logs_translated_command_to_debug_logs(self):
-    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
-                                   ]):
+    with _mock_boto_config({'GSUtil': {'use_gcloud_storage': 'always'}}):
       with util.SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -362,8 +392,8 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
 
   def test_top_level_flags_get_translated(self):
     """Should return True and perform the translation."""
-    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
-                                   ]):
+    boto_config = {'GSUtil': {'use_gcloud_storage': 'always'}}
+    with _mock_boto_config(boto_config):
       with util.SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -406,8 +436,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
 
   def test_debug_value_4_adds_log_http_flag(self):
     # Debug level 4 represents the -DD option.
-    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
-                                   ]):
+    with _mock_boto_config({'GSUtil': {'use_gcloud_storage': 'always'}}):
       with util.SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -426,8 +455,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                      new='fake_service_account')
   def test_impersonate_service_account_translation(self):
     """Should add the --impersonate-service-account flag."""
-    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
-                                   ]):
+    with _mock_boto_config({'GSUtil': {'use_gcloud_storage': 'always'}}):
       with util.SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -441,8 +469,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             ])
 
   def test_quiet_mode_translation_adds_no_user_output_enabled_flag(self):
-    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
-                                   ]):
+    with _mock_boto_config({'GSUtil': {'use_gcloud_storage': 'always'}}):
       with util.SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -474,8 +501,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
 
   @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
   def test_translated_headers_get_added_to_final_command(self):
-    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
-                                   ]):
+    with _mock_boto_config({'GSUtil': {'use_gcloud_storage': 'always'}}):
       with util.SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -654,6 +680,175 @@ class TestGetFlagFromHeader(testcase.GsUtilUnitTestCase):
     for header, expected_flag in headers_to_expected_flag_map.items():
       result = shim_util.get_flag_from_header(header, 'fake_val', unset=True)
       self.assertEqual(result, expected_flag)
+
+
+class TestBotoTranslation(testcase.GsUtilUnitTestCase):
+  """Test gsutil header  translation."""
+
+  def setUp(self):
+    super().setUp()
+    self._fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
+        headers={},
+        debug=0,
+        trace_token=None,
+        parallel_operations=True,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+
+  def test_translated_boto_config_gets_added(self):
+    """Should add translated env vars as well flagsx."""
+    with _mock_boto_config({
+        'GSUtil': {
+            'use_gcloud_storage': 'always',
+            'content_language': 'foo',
+            'default_project_id': 'fake_project'
+        }
+    }):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.assertTrue(
+            self._fake_command.translate_to_gcloud_storage_if_requested())
+        # Verify translation.
+        expected_gcloud_path = os.path.join('fake_dir', 'bin', 'gcloud')
+        self.assertEqual(
+            self._fake_command._translated_gcloud_storage_command, [
+                expected_gcloud_path, 'objects', 'fake', '--zip', 'opt1', '-x',
+                'arg1', 'arg2', '--content-language=foo'
+            ])
+        self.assertEqual(self._fake_command._translated_env_variables,
+                         {'CLOUDSDK_CORE_PROJECT': 'fake_project'})
+
+  def test_gcs_json_endpoint_translation(self):
+    with _mock_boto_config({
+        'Credentials': {
+            'gs_json_host': 'foo_host',
+            'gs_json_port': '1234',
+            'json_api_version': 'v2'
+        }
+    }):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, [])
+      self.assertEqual(
+          env_vars, {
+              'CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE':
+                  'https://foo_host:1234/storage/v2'
+          })
+
+  def test_gcs_json_endpoint_translation_usees_default_version_v1(self):
+    with _mock_boto_config(
+        {'Credentials': {
+            'gs_json_host': 'foo_host',
+            'gs_json_port': '1234',
+        }}):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, [])
+      self.assertEqual(
+          env_vars, {
+              'CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE':
+                  'https://foo_host:1234/storage/v1'
+          })
+
+  def test_s3_endpoint_translation(self):
+    with _mock_boto_config(
+        {'Credentials': {
+            's3_host': 's3_host',
+            's3_port': '1234',
+        }}):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, [])
+      self.assertEqual(
+          env_vars,
+          {'CLOUDSDK_STORAGE_S3_ENDPOINT_URL': 'https://s3_host:1234'})
+
+  def test_boto_config_translation_for_supported_fields(self):
+    with _mock_boto_config({
+        'Credentials': {
+            'aws_access_key_id': 'AWS_ACCESS_KEY_ID_value',
+            'aws_secret_access_key': 'AWS_SECRET_ACCESS_KEY_value',
+        },
+        'Boto': {
+            'proxy': 'CLOUDSDK_PROXY_ADDRESS_value',
+            'proxy_type': 'CLOUDSDK_PROXY_TYPE_value',
+            'proxy_port': 'CLOUDSDK_PROXY_PORT_value',
+            'proxy_user': 'CLOUDSDK_PROXY_USERNAME_value',
+            'proxy_pass': 'CLOUDSDK_PROXY_PASSWORD_value',
+            'proxy_rdns': 'CLOUDSDK_PROXY_RDNS_value',
+            'http_socket_timeout': 'HTTP_TIMEOUT_value',
+            'ca_certificates_file': 'CA_CERTS_FILE_value',
+            'https_validate_certificates': 'SSL_VALIDATION_value',
+            'max_retry_delay': 'BASE_RETRY_DELAY_value',
+            'num_retries': 'MAX_RETRIES_value',
+        },
+        'GSUtil': {
+            'check_hashes': 'CHECK_HASHES_value',
+            'default_project_id': 'CLOUDSDK_CORE_PROJECT_value',
+            'disable_analytics_prompt': 'USAGE_REPORTING_value',
+            'use_magicfile': 'USE_MAGICFILE_value',
+        },
+        'OAuth2': {
+            'client_id': 'CLOUDSDK_AUTH_CLIENT_ID_value',
+            'client_secret': 'AUTH_CLIENT_SECRET_value',
+            'provider_authorization_uri': 'CLOUDSDK_AUTH_AUTH_HOST_value',
+            'provider_token_uri': 'CLOUDSDK_AUTH_TOKEN_HOST_value',
+        },
+    }):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, [])
+      self.maxDiff = None
+      self.assertDictEqual(
+          env_vars, {
+              'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_value',
+              'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_value',
+              'CLOUDSDK_PROXY_ADDRESS': 'CLOUDSDK_PROXY_ADDRESS_value',
+              'CLOUDSDK_PROXY_ADDRESS': 'CLOUDSDK_PROXY_ADDRESS_value',
+              'CLOUDSDK_PROXY_TYPE': 'CLOUDSDK_PROXY_TYPE_value',
+              'CLOUDSDK_PROXY_PORT': 'CLOUDSDK_PROXY_PORT_value',
+              'CLOUDSDK_PROXY_USERNAME': 'CLOUDSDK_PROXY_USERNAME_value',
+              'CLOUDSDK_PROXY_PASSWORD': 'CLOUDSDK_PROXY_PASSWORD_value',
+              'CLOUDSDK_PROXY_RDNS': 'CLOUDSDK_PROXY_RDNS_value',
+              'CLOUDSDK_CORE_HTTP_TIMEOUT': 'HTTP_TIMEOUT_value',
+              'CLOUDSDK_CORE_CUSTOM_CA_CERTS_FILE': 'CA_CERTS_FILE_value',
+              'CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION': 'SSL_VALIDATION_value',
+              'CLOUDSDK_STORAGE_BASE_RETRY_DELAY': 'BASE_RETRY_DELAY_value',
+              'CLOUDSDK_STORAGE_MAX_RETRIES': 'MAX_RETRIES_value',
+              'CLOUDSDK_STORAGE_CHECK_HASHES': 'CHECK_HASHES_value',
+              'CLOUDSDK_CORE_PROJECT': 'CLOUDSDK_CORE_PROJECT_value',
+              'CLOUDSDK_CORE_DISABLE_USAGE_REPORTING': 'USAGE_REPORTING_value',
+              'CLOUDSDK_STORAGE_USE_MAGICFILE': 'USE_MAGICFILE_value',
+              'CLOUDSDK_AUTH_CLIENT_ID': 'CLOUDSDK_AUTH_CLIENT_ID_value',
+              'CLOUDSDK_AUTH_CLIENT_SECRET': 'AUTH_CLIENT_SECRET_value',
+              'CLOUDSDK_AUTH_AUTH_HOST': 'CLOUDSDK_AUTH_AUTH_HOST_value',
+              'CLOUDSDK_AUTH_TOKEN_HOST': 'CLOUDSDK_AUTH_TOKEN_HOST_value'
+          })
+
+  def test_missing_mappging_gets_ignored(self):
+    with _mock_boto_config({'GSUtil': {'unsupported_field': 'foo'}}):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, [])
+      self.assertEqual(env_vars, {})
+
+  def test_missing_required_fields_log_error(self):
+    with _mock_boto_config({
+        'GSUtil': {
+            'stet_binary_path': 'foo_bin',
+            'stet_config_path': 'foo_config'
+        }
+    }):
+      with mock.patch.object(self._fake_command.logger, 'error',
+                             autospec=True) as mock_logger:
+        flags, env_vars = self._fake_command._translate_boto_config()
+        self.assertEqual(flags, [])
+        self.assertEqual(env_vars, {})
+        self.assertEqual(mock_logger.mock_calls, [
+            mock.call('The boto config field GSUtil:stet_binary_path cannot be'
+                      ' translated to gcloud storage equivalent.'),
+            mock.call('The boto config field GSUtil:stet_config_path cannot be'
+                      ' translated to gcloud storage equivalent.')
+        ])
 
 
 class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):
