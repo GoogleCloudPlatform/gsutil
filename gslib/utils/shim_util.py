@@ -67,7 +67,6 @@ _BOTO_CONFIG_MAP = {
         'proxy_rdns': 'CLOUDSDK_PROXY_RDNS',
         'http_socket_timeout': 'CLOUDSDK_CORE_HTTP_TIMEOUT',
         'ca_certificates_file': 'CLOUDSDK_CORE_CUSTOM_CA_CERTS_FILE',
-        'https_validate_certificates': 'CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION',
         'max_retry_delay': 'CLOUDSDK_STORAGE_BASE_RETRY_DELAY',
         'num_retries': 'CLOUDSDK_STORAGE_MAX_RETRIES',
     },
@@ -346,14 +345,17 @@ class GcloudStorageCommandMixin(object):
         if (key == 'content_language' and
             self.command_name in DATA_TRANSFER_COMMANDS):
           flags.append('--content-language=' + value)
-        if key in _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED:
+        elif key in _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED:
           self.logger.error('The boto config field {}:{} cannot be translated'
                             ' to gcloud storage equivalent.'.format(
                                 section_name, key))
           continue
-        env_var = _BOTO_CONFIG_MAP.get(section_name, {}).get(key, None)
-        if env_var is not None:
-          env_vars[env_var] = value
+        elif key == 'https_validate_certificates' and not value:
+          env_vars['CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION'] = True
+        else:
+          env_var = _BOTO_CONFIG_MAP.get(section_name, {}).get(key, None)
+          if env_var is not None:
+            env_vars[env_var] = value
     return flags, env_vars
 
   def get_gcloud_storage_args(self):

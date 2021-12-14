@@ -780,7 +780,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
             'proxy_rdns': 'CLOUDSDK_PROXY_RDNS_value',
             'http_socket_timeout': 'HTTP_TIMEOUT_value',
             'ca_certificates_file': 'CA_CERTS_FILE_value',
-            'https_validate_certificates': 'SSL_VALIDATION_value',
+            'https_validate_certificates': False,
             'max_retry_delay': 'BASE_RETRY_DELAY_value',
             'num_retries': 'MAX_RETRIES_value',
         },
@@ -813,7 +813,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
               'CLOUDSDK_PROXY_RDNS': 'CLOUDSDK_PROXY_RDNS_value',
               'CLOUDSDK_CORE_HTTP_TIMEOUT': 'HTTP_TIMEOUT_value',
               'CLOUDSDK_CORE_CUSTOM_CA_CERTS_FILE': 'CA_CERTS_FILE_value',
-              'CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION': 'SSL_VALIDATION_value',
+              'CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION': True,
               'CLOUDSDK_STORAGE_BASE_RETRY_DELAY': 'BASE_RETRY_DELAY_value',
               'CLOUDSDK_STORAGE_MAX_RETRIES': 'MAX_RETRIES_value',
               'CLOUDSDK_STORAGE_CHECK_HASHES': 'CHECK_HASHES_value',
@@ -828,6 +828,13 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
 
   def test_missing_mappging_gets_ignored(self):
     with _mock_boto_config({'GSUtil': {'unsupported_field': 'foo'}}):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, [])
+      self.assertEqual(env_vars, {})
+
+  def test_truthy_https_validate_certificates(self):
+    """Should not set CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION"""
+    with _mock_boto_config({'GSUtil': {'https_validate_certificates': True}}):
       flags, env_vars = self._fake_command._translate_boto_config()
       self.assertEqual(flags, [])
       self.assertEqual(env_vars, {})
