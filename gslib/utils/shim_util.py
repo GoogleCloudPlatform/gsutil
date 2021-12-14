@@ -343,7 +343,8 @@ class GcloudStorageCommandMixin(object):
     for section_name, section in config.items():
       for key, value in section.items():
         # TODO(b/206151619) Handle encryption_key and decryption_key.
-        if key == 'content_language':
+        if (key == 'content_language' and
+            self.command_name in DATA_TRANSFER_COMMANDS):
           flags.append('--content-language=' + value)
         if key in _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED:
           self.logger.error('The boto config field {}:{} cannot be translated'

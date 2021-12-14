@@ -697,6 +697,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
         bucket_storage_uri_class=mock.ANY,
         gsutil_api_class_map_factory=mock.MagicMock())
 
+  @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
   def test_translated_boto_config_gets_added(self):
     """Should add translated env vars as well flagsx."""
     with _mock_boto_config({
