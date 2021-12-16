@@ -989,10 +989,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       If only one return_* value was specified, that value is returned directly
       rather than being returned within a 1-tuple.
     """
+    use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
+    gcloud_storage_setting = [
+        '-o', 'GSUtil:use_gcloud_storage={}'.format(use_gcloud_storage)
+    ]
     cmd = [
         gslib.GSUTIL_PATH, '--testexceptiontraces', '-o',
         'GSUtil:default_project_id=' + PopulateProjectId()
-    ] + cmd
+    ] + gcloud_storage_setting + cmd
     if stdin is not None:
       if six.PY3:
         if not isinstance(stdin, bytes):
