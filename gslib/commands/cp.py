@@ -759,6 +759,7 @@ class CpCommand(Command):
       flag_map={
           '-r': GcloudStorageFlag('-r'),
           '-R': GcloudStorageFlag('-r'),
+          '-e': GcloudStorageFlag('--ignore-symlinks')
       },
   )
 

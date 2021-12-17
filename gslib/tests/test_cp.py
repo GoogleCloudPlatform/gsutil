@@ -632,7 +632,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
                               expected_status=1,
                               return_stderr=True)
-      self.assertIn('does not exist', stderr)
+      if self._use_gcloud_storage:
+        self.assertIn('not found: 404', stderr)
+      else:
+        self.assertIn('does not exist', stderr)
 
     _Check()
 
@@ -1130,7 +1133,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['cp', fpath, k2_uri.uri],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('cannot be the destination for gsutil cp', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'destination argument of the cp command cannot'
+          ' be a version-specific URL', stderr)
+    else:
+      self.assertIn('cannot be the destination for gsutil cp', stderr)
 
   def test_versioning_no_parallelism(self):
     """Tests that copy all-versions errors when parallelism is enabled."""
@@ -2428,13 +2436,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # no valid (non-symlinked) files could be found at that path; we don't want
     # the command to terminate if that's the first file we attempt to copy.
     stderr = self.RunGsUtil([
-        'cp', '-e', '-c',
+        '-m', 'cp', '-e',
         '%s%s*' % (fpath_dir, os.path.sep),
         suri(bucket_uri, 'files')
     ],
                             return_stderr=True)
     self.assertIn('Copying file', stderr)
-    self.assertIn('Skipping symbolic link', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('Skipping symlink', stderr)
+    else:
+      self.assertIn('Skipping symbolic link', stderr)
 
     # Ensure that top-level arguments are ignored if they are symlinks. The file
     # at fpath1 should be successfully copied, then copying the symlink at
@@ -2445,8 +2456,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1)
     self.assertIn('Copying file', stderr)
-    self.assertIn('Skipping symbolic link', stderr)
-    self.assertIn('CommandException: No URLs matched: %s' % fpath2, stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('Skipping symlink', stderr)
+      self.assertIn('URL matched no objects or files: %s' % fpath2, stderr)
+    else:
+      self.assertIn('Skipping symbolic link', stderr)
+      self.assertIn('CommandException: No URLs matched: %s' % fpath2, stderr)
 
   def test_cp_multithreaded_wildcard(self):
     """Tests that cp -m works with a wildcard."""

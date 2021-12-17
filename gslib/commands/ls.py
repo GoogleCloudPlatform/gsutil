@@ -336,6 +336,8 @@ class LsCommand(Command):
       flag_map={
           '-r': GcloudStorageFlag('-r'),
           '-R': GcloudStorageFlag('-r'),
+          '-l': GcloudStorageFlag('-l'),
+          '-L': GcloudStorageFlag('-L'),
       },
   )
 

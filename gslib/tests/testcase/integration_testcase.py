@@ -144,6 +144,10 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     self.multiregional_buckets = util.USE_MULTIREGIONAL_BUCKETS
 
+    use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
+    self._use_gcloud_storage = use_gcloud_storage in ('always',
+                                                      'if_available_else_skip')
+
     if util.RUN_S3_TESTS:
       self.nonexistent_bucket_name = (
           'nonexistentbucket-asf801rj3r9as90mfnnkjxpo02')
@@ -1180,7 +1184,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       # variables.
       with SetEnvironmentForTest({
           'DEVSHELL_CLIENT_PORT': None,
-          'AWS_SECRET_ACCESS_KEY': '_'
+          'AWS_SECRET_ACCESS_KEY': '_',
+          'AWS_ACCESS_KEY_ID': '_',
+          'CLOUDSDK_AUTH_DISABLE_CREDENTIALS': 'True',
       }):
         yield
 
