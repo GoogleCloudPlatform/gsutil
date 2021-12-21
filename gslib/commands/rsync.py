@@ -527,6 +527,58 @@ _DETAILED_HELP_TEXT = ("""
                  use ^ as an escape character instead of \\ and escape the |
                  character. When using Windows PowerShell, use ' instead of "
                  and surround the | character with ".
+
+  -z <ext,...>   Applies gzip content-encoding to any file upload whose
+                 extension matches the ``-z`` extension list. This is useful when
+                 uploading files with compressible content such as .js, .css,
+                 or .html files, because it reduces network bandwidth and storage
+                 sizes. This can both improve performance and reduce costs.
+
+                 When you specify the ``-z`` option, the data from your files is
+                 compressed before it is uploaded, but your actual files are
+                 left uncompressed on the local disk. The uploaded objects
+                 retain the ``Content-Type`` and name of the original files, but
+                 have their ``Content-Encoding`` metadata set to ``gzip`` to
+                 indicate that the object data stored are compressed on the
+                 Cloud Storage servers and have their ``Cache-Control`` metadata
+                 set to ``no-transform``.
+
+                 For example, suppose the directory ``cattypes`` contains the
+                 following files:
+
+                 - ``cattypes.html``
+                 - ``tabby.jpeg`
+
+                 The following command:
+
+                   gsutil rsync -z html cattypes/ gs://mycats
+
+                 does the following:
+
+                 - The ``rsync`` command uploads the directory `cattypes`
+                   to the bucket ``gs://mycats``.
+                 - Based on the file extensions, gsutil sets the ``Content-Type``
+                   of ``cattypes.html`` to ``text/html`` and ``tabby.jpeg`` to
+                   ``image/jpeg``.
+                 - The ``-z`` option compresses the data in the file ``cattypes.html``.
+                 - The ``-z`` option also sets the ``Content-Encoding`` for
+                   ``cattypes.html`` to ``gzip`` and the ``Cache-Control`` for
+                   ``cattypes.html`` to ``no-transform``.
+
+                 Because the ``-z/-Z`` options compress data prior to upload, they
+                 are not subject to the same compression buffer bottleneck that
+                 can affect the ``-j/-J`` options.
+
+                 Note that if you download an object with ``Content-Encoding:gzip``,
+                 gsutil decompresses the content before writing the local file.
+
+  -Z             Applies gzip content-encoding to file uploads. This option
+                 works like the ``-z`` option described above, but it applies to
+                 all uploaded files, regardless of extension.
+
+                 CAUTION: If some of the source files don't compress well, such
+                 as binary data, using this option may result in files taking up
+                 more space in the cloud than they would if left uncompressed.
 """)
 # pylint: enable=anomalous-backslash-in-string
 
@@ -1580,7 +1632,7 @@ class RsyncCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
-      supported_sub_args='a:cCdenpPriRuUx:j:J',
+      supported_sub_args='a:cCdenpPriRuUx:z:Zj:J',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -1732,6 +1784,7 @@ class RsyncCommand(Command):
     # The gzip_encoded flag marks if the files should be compressed during
     # the upload.
     gzip_encoded = False
+    gzip_local = False
     gzip_arg_exts = None
     gzip_arg_all = None
     if self.sub_opts:
@@ -1779,10 +1832,19 @@ class RsyncCommand(Command):
             self.exclude_pattern = re.compile(a)
           except re.error:
             raise CommandException('Invalid exclude filter (%s)' % a)
+        elif o == '-z':
+          gzip_local = True
+          gzip_arg_exts = [x.strip() for x in a.split(',')]
+        elif o == '-Z':
+          gzip_local = True
+          gzip_arg_all = GZIP_ALL_FILES
 
     if self.preserve_acl and canned_acl:
       raise CommandException(
           'Specifying both the -p and -a options together is invalid.')
+    if gzip_encoded and gzip_local:
+      raise CommandException(
+          'Specifying both the -j/-J and -z/-Z options together is invalid.')
     if gzip_arg_exts and gzip_arg_all:
       raise CommandException(
           'Specifying both the -j and -J options together is invalid.')
