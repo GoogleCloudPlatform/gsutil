@@ -411,14 +411,7 @@ class CommandRunner(object):
                                sub_opts=command_inst.sub_opts,
                                command_alias=command_name)
 
-    if command_inst.translate_to_gcloud_storage_if_requested():
-      # This does not mean that the gcloud storage command worked.
-      # It only means that we succesfully attempted running gcloud storage.
-      # The command itself might have failed.
-      return_code = command_inst.run_gcloud_storage()
-    else:
-      # Run gsutil.
-      return_code = command_inst.RunCommand()
+    return_code = command_inst.RunCommand()
 
     if CheckMultiprocessingAvailableAndInit().is_available and do_shutdown:
       ShutDownGsutil()

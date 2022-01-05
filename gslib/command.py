@@ -92,7 +92,6 @@ from gslib.utils.parallelism_framework_util import ShouldProhibitMultiprocessing
 from gslib.utils.parallelism_framework_util import UI_THREAD_JOIN_TIMEOUT
 from gslib.utils.parallelism_framework_util import ZERO_TASKS_TO_DO_ARGUMENT
 from gslib.utils.rsync_util import RsyncDiffToApply
-from gslib.utils.shim_util import GcloudStorageCommandMixin
 from gslib.utils.system_util import GetTermLines
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.translation_helper import AclTranslation
@@ -491,7 +490,7 @@ CommandSpec = namedtuple(
     ])
 
 
-class Command(HelpProvider, GcloudStorageCommandMixin):
+class Command(HelpProvider):
   """Base class for all gsutil commands."""
 
   # Each subclass must override this with an instance of CommandSpec.
