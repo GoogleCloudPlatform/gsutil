@@ -1588,7 +1588,9 @@ class PerfDiagCommand(Command):
     # it's routing to.
     cmd = ['nslookup', '-type=CNAME', self.XML_API_HOST]
     try:
-      nslookup_cname_output = self._Exec(cmd, return_output=True)
+      nslookup_cname_output = self._Exec(cmd,
+                                         return_output=True,
+                                         mute_stderr=True)
       m = re.search(r' = (?P<googserv>[^.]+)\.', nslookup_cname_output)
       sysinfo['googserv_route'] = m.group('googserv') if m else None
     except (CommandException, OSError):
@@ -1656,7 +1658,9 @@ class PerfDiagCommand(Command):
     # Query o-o to find out what the Google DNS thinks is the user's IP.
     try:
       cmd = ['nslookup', '-type=TXT', 'o-o.myaddr.google.com.']
-      nslookup_txt_output = self._Exec(cmd, return_output=True)
+      nslookup_txt_output = self._Exec(cmd,
+                                       return_output=True,
+                                       mute_stderr=True)
       m = re.search(r'text\s+=\s+"(?P<dnsip>[\.\d]+)"', nslookup_txt_output)
       sysinfo['dns_o-o_ip'] = m.group('dnsip') if m else None
     except (CommandException, OSError):
