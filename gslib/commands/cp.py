@@ -60,8 +60,6 @@ from gslib.utils.posix_util import InitializeUserGroups
 from gslib.utils.posix_util import POSIXAttributes
 from gslib.utils.posix_util import SerializeFileAttributesToObjectMetadata
 from gslib.utils.posix_util import ValidateFilePermissionAccess
-from gslib.utils.shim_util import GcloudStorageFlag
-from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.system_util import GetStreamFromFileUrl
 from gslib.utils.system_util import StdinIterator
 from gslib.utils.system_util import StdinIteratorCls
@@ -751,15 +749,6 @@ class CpCommand(Command):
       help_one_line_summary='Copy files and objects',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
-  )
-
-  # TODO(b/206151615) Add mappings for remaining flags.
-  gcloud_storage_map = GcloudStorageMap(
-      gcloud_command='alpha storage cp',
-      flag_map={
-          '-r': GcloudStorageFlag('-r'),
-          '-R': GcloudStorageFlag('-r'),
-      },
   )
 
   # pylint: disable=too-many-statements
