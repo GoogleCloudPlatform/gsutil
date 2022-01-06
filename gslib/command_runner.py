@@ -50,7 +50,6 @@ from gslib.gcs_json_api import GcsJsonApi
 from gslib.no_op_credentials import NoOpCredentials
 from gslib.tab_complete import MakeCompleter
 from gslib.utils import boto_util
-from gslib.utils import shim_util
 from gslib.utils import system_util
 from gslib.utils.constants import RELEASE_NOTES_URL
 from gslib.utils.constants import UTF8
