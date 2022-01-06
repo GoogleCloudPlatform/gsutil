@@ -249,7 +249,10 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
   def test_raises_error_if_pass_credentials_to_gsutil_is_missing(self):
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
                                    ]):
-      with util.SetEnvironmentForTest({'CLOUDSDK_ROOT_DIR': 'fake_dir'}):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': None
+      }):
         with self.assertRaisesRegex(
             exception.CommandException,
             'CommandException: Gsutil is not using the same credentials as'
