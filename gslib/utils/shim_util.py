@@ -127,6 +127,8 @@ class GcloudStorageCommandMixin(object):
               ' gcloud storage'.format(option))
         args.append(gcloud_storage_map.flag_map[option].gcloud_flag)
         if value != '':
+          # Empty string represents that the user did not passed in a value
+          # for the flag.
           args.append(value)
     return args + gsutil_args
 
