@@ -26,11 +26,15 @@ import subprocess
 from boto import config
 from gslib import exception
 
+_NEVER = 'never'
+_IF_AVAILABLE_ELSE_SKIP = 'if_available_else_skip'
+_ALWAYS = 'always'
+_DRY_RUN = 'dry_run'
 VALID_USE_GCLOUD_STORAGE_VALUES = (
-    'never',
-    'if_available_else_skip',
-    'always',
-    'dry_run',
+    _NEVER,
+    _IF_AVAILABLE_ELSE_SKIP,
+    _ALWAYS,
+    _DRY_RUN,
 )
 
 
@@ -171,13 +175,13 @@ class GcloudStorageCommandMixin(object):
     Returns:
       True if the command was successfully translated, else False.
     """
-    use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
+    use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', _NEVER)
     if use_gcloud_storage not in VALID_USE_GCLOUD_STORAGE_VALUES:
       raise exception.CommandException(
           'Invalid option specified for'
           ' GSUtil:use_gcloud_storage config setting. Should be one of: {}'.
           format(' | '.join(VALID_USE_GCLOUD_STORAGE_VALUES)))
-    if use_gcloud_storage != 'never':
+    if use_gcloud_storage != _NEVER:
       try:
         # TODO(b/206143429) Get top level flags.
         top_level_flags = []
@@ -188,7 +192,7 @@ class GcloudStorageCommandMixin(object):
                                   top_level_flags)
         # TODO(b/206149936): Translate boto config to CLOUDSDK envs.
         env_variables = {}
-        if use_gcloud_storage == 'dry_run':
+        if use_gcloud_storage == _DRY_RUN:
           self._print_gcloud_storage_command_info(gcloud_storage_command,
                                                   env_variables,
                                                   dry_run=True)
@@ -206,7 +210,7 @@ class GcloudStorageCommandMixin(object):
           self._translated_env_variables = env_variables
           return True
       except exception.GcloudStorageTranslationError as e:
-        if use_gcloud_storage == 'always':
+        if use_gcloud_storage == _ALWAYS:
           raise exception.CommandException(e)
         # For all other cases, we want to run gsutil.
         self.logger.error(
