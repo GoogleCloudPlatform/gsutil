@@ -334,9 +334,10 @@ _DETAILED_HELP_TEXT = ("""
 
   Note that by default, the gsutil rsync command does not copy the ACLs of
   objects being synchronized and instead will use the default bucket ACL (see
-  "gsutil help defacl"). You can override this behavior with the -p option. See the
-  <a href="https://cloud.google.com/storage/docs/gsutil/commands/rsync#options">Options section</a>
-  to learn how.
+  "gsutil help defacl"). You can override this behavior with the -p option. See
+  the `Options section
+  <https://cloud.google.com/storage/docs/gsutil/commands/rsync#options>`_ to
+  learn how.
 
 
 <B>SLOW CHECKSUMS</B>
