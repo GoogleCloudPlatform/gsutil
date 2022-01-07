@@ -107,8 +107,8 @@ class GcloudStorageCommandMixin(object):
       # if sub-commands are present.
       if gcloud_storage_map.flag_map:
         raise ValueError(
-            'Flags mapping found at command level for the command: {}.'.format(
-                self.command_name))
+            'Flags mapping should not be present at the top-level command if '
+            'a sub-command is used. Command: {}.'.format(self.command_name))
       sub_command = gsutil_args[0]
       sub_opts, parsed_args = self.ParseSubOpts(
           args=gsutil_args[1:], should_update_sub_opts_and_args=False)
@@ -154,7 +154,7 @@ class GcloudStorageCommandMixin(object):
     logger_func = self.logger.info if dry_run else self.logger.debug
     logger_func('Gcloud Storage Command: {}'.format(' '.join(gcloud_command)))
     if env_variables:
-      logger_func('Enviornment variables for Gcloud Storage:')
+      logger_func('Environment variables for Gcloud Storage:')
       for k, v in env_variables.items():
         logger_func('%s=%s', k, v)
 
@@ -192,7 +192,8 @@ class GcloudStorageCommandMixin(object):
                                                   dry_run=True)
         elif not os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL'):
           raise exception.GcloudStorageTranslationError(
-              'Gsutil is not using the same credentials as gcloud.'
+              'Requested to use "gcloud storage" but gsutil is not using the'
+              ' same credentials as gcloud.'
               ' You can make gsutil use the same credentials by running:\n'
               '{} config set pass_credentials_to_gsutil True'.format(
                   gcloud_binary_path))

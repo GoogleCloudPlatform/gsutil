@@ -180,6 +180,23 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
         ' because the translation mapping is missing.'):
       fake_with_subcommand.get_gcloud_storage_args()
 
+  def test_raises_error_if_flags_mapping_at_top_level_for_subcommand(self):
+    fake_with_subcommand = FakeCommandWithSubCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=['set', '-y', 'opt1', '-a', 'arg1', 'arg2'],
+        headers=mock.ANY,
+        debug=mock.ANY,
+        trace_token=mock.ANY,
+        parallel_operations=mock.ANY,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    fake_with_subcommand.gcloud_storage_map.flag_map = {'a': 'b'}
+    with self.assertRaisesRegex(
+        ValueError,
+        'Flags mapping should not be present at the top-level command'
+        ' if a sub-command is used. Command: fake_with_sub'):
+      fake_with_subcommand.get_gcloud_storage_args()
+
 
 class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
   """Test Command.translate_to_gcloud_storage_if_requested method."""
@@ -255,7 +272,8 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
       }):
         with self.assertRaisesRegex(
             exception.CommandException,
-            'CommandException: Gsutil is not using the same credentials as'
+            'CommandException: Requested to use "gcloud storage" but gsutil'
+            ' is not using the same credentials as'
             ' gcloud. You can make gsutil use the same credentials'
             ' by running:\n'
             'fake_dir.bin.gcloud config set pass_credentials_to_gsutil True'):
@@ -337,7 +355,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
           ['fake', 'gcloud', 'command'], {'fake_env_var': 'val'}, dry_run=True)
       expected_calls = [
           mock.call('Gcloud Storage Command: fake gcloud command'),
-          mock.call('Enviornment variables for Gcloud Storage:'),
+          mock.call('Environment variables for Gcloud Storage:'),
           mock.call('%s=%s', 'fake_env_var', 'val'),
       ]
       self.assertEqual(mock_logger.info.mock_calls, expected_calls)
