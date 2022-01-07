@@ -252,10 +252,7 @@ _WATCHBUCKET_DESCRIPTION = """
   A service account must be used when running this command.
 
   The app_url parameter must be an HTTPS URL to an application that will be
-  notified of changes to any object in the bucket. The URL endpoint must be
-  a verified domain on your project. See `Notification Authorization
-  <https://cloud.google.com/storage/docs/object-change-notification#_Authorization>`_
-  for details.
+  notified of changes to any object in the bucket.
 
   The optional id parameter can be used to assign a unique identifier to the
   created notification channel. If not provided, a random UUID string is
