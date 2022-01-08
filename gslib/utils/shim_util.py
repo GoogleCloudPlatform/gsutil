@@ -20,22 +20,19 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import collections
+import enum
 import os
 import subprocess
 
 from boto import config
 from gslib import exception
 
-_NEVER = 'never'
-_IF_AVAILABLE_ELSE_SKIP = 'if_available_else_skip'
-_ALWAYS = 'always'
-_DRY_RUN = 'dry_run'
-VALID_USE_GCLOUD_STORAGE_VALUES = (
-    _NEVER,
-    _IF_AVAILABLE_ELSE_SKIP,
-    _ALWAYS,
-    _DRY_RUN,
-)
+
+class USE_GCLOUD_STORAGE_VALUE(enum.Enum):
+  NEVER = 'never'
+  IF_AVAILABLE_ELSE_SKIP = 'if_available_else_skip'
+  ALWAYS = 'always'
+  DRY_RUN = 'dry_run'
 
 
 class GcloudStorageFlag(object):
@@ -175,13 +172,15 @@ class GcloudStorageCommandMixin(object):
     Returns:
       True if the command was successfully translated, else False.
     """
-    use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', _NEVER)
-    if use_gcloud_storage not in VALID_USE_GCLOUD_STORAGE_VALUES:
+    try:
+      use_gcloud_storage = USE_GCLOUD_STORAGE_VALUE(
+          config.get('GSUtil', 'use_gcloud_storage', 'never'))
+    except ValueError:
       raise exception.CommandException(
           'Invalid option specified for'
           ' GSUtil:use_gcloud_storage config setting. Should be one of: {}'.
-          format(' | '.join(VALID_USE_GCLOUD_STORAGE_VALUES)))
-    if use_gcloud_storage != _NEVER:
+          format(' | '.join([x.value for x in USE_GCLOUD_STORAGE_VALUE])))
+    if use_gcloud_storage != USE_GCLOUD_STORAGE_VALUE.NEVER:
       try:
         # TODO(b/206143429) Get top level flags.
         top_level_flags = []
@@ -192,7 +191,7 @@ class GcloudStorageCommandMixin(object):
                                   top_level_flags)
         # TODO(b/206149936): Translate boto config to CLOUDSDK envs.
         env_variables = {}
-        if use_gcloud_storage == _DRY_RUN:
+        if use_gcloud_storage == USE_GCLOUD_STORAGE_VALUE.DRY_RUN:
           self._print_gcloud_storage_command_info(gcloud_storage_command,
                                                   env_variables,
                                                   dry_run=True)
@@ -210,7 +209,7 @@ class GcloudStorageCommandMixin(object):
           self._translated_env_variables = env_variables
           return True
       except exception.GcloudStorageTranslationError as e:
-        if use_gcloud_storage == _ALWAYS:
+        if use_gcloud_storage == USE_GCLOUD_STORAGE_VALUE.ALWAYS:
           raise exception.CommandException(e)
         # For all other cases, we want to run gsutil.
         self.logger.error(
