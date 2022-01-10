@@ -851,7 +851,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
         flags, env_vars = self._fake_command._translate_boto_config()
         self.assertEqual(flags, [])
         self.assertEqual(env_vars, {})
-        self.assertEqual(mock_logger.mock_calls, [
+        self.assertCountEqual(mock_logger.mock_calls, [
             mock.call('The boto config field GSUtil:stet_binary_path cannot be'
                       ' translated to gcloud storage equivalent.'),
             mock.call('The boto config field GSUtil:stet_config_path cannot be'
