@@ -387,7 +387,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             '--verbosity', 'debug', '--billing-project=fake_user_project',
             '--trace-token=fake_trace_token'
         ])
-        self.assertEqual(
+        self.assertCountEqual(
             fake_command._translated_env_variables, {
                 'CLOUDSDK_STORAGE_PROCESS_COUNT': '1',
                 'CLOUDSDK_STORAGE_THREAD_COUNT': '1',

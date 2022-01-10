@@ -36,6 +36,7 @@ class USE_GCLOUD_STORAGE_VALUE(enum.Enum):
   ALWAYS = 'always'
   DRY_RUN = 'dry_run'
 
+
 # Required for headers translation.
 DATA_TRANSFER_COMMANDS = frozenset(['cp', 'mv', 'rsync'])
 PRECONDITONS_ONLY_SUPPORTED_COMMANDS = frozenset(
@@ -327,7 +328,6 @@ class GcloudStorageCommandMixin(object):
                                   self.get_gcloud_storage_args() +
                                   top_level_flags + header_flags)
         # TODO(b/206149936): Translate boto config to CLOUDSDK envs.
-        env_variables = {}
         if use_gcloud_storage == USE_GCLOUD_STORAGE_VALUE.DRY_RUN:
           self._print_gcloud_storage_command_info(gcloud_storage_command,
                                                   env_variables,
