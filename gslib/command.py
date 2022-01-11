@@ -643,8 +643,8 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
       raise CommandException('"%s" command implementation is missing a '
                              'command_spec definition.' % self.command_name)
 
-    quiet_mode = not self.logger.isEnabledFor(logging.INFO)
-    ui_controller = UIController(quiet_mode=quiet_mode,
+    self.quiet_mode = not self.logger.isEnabledFor(logging.INFO)
+    ui_controller = UIController(quiet_mode=self.quiet_mode,
                                  dump_status_messages_file=boto.config.get(
                                      'GSUtil', 'dump_status_messages_file',
                                      None))
