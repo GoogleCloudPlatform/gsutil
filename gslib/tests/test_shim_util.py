@@ -393,7 +393,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                 'CLOUDSDK_STORAGE_THREAD_COUNT': '1',
             })
 
-  def test_paralle_operations_true_does_not_add_process_count_env_vars(self):
+  def test_parallel_operations_true_does_not_add_process_count_env_vars(self):
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
                                    ]):
       with util.SetEnvironmentForTest({
@@ -501,16 +501,16 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
       self):
     self._fake_command.headers = {
         # Data tranfer related headers.
-        'Cache-Control': 'fake_cache_cantrol',
+        'Cache-Control': 'fake_Cache_Control',
         'Content-Disposition': 'fake_Content-Disposition',
         'Content-Encoding': 'fake_Content-Encoding',
         'Content-Language': 'fake_Content-Language',
         'Content-Type': 'fake_Content-Type',
         'Content-MD5': 'fake_Content-MD5',
         'custom-time': 'fake_time',
-        # Precondition headers
+        # Precondition headers.
         'x-goog-if-generation-match': 'fake_gen_match',
-        'x-goog-if-metageneration-match': 'fake_gen_match',
+        'x-goog-if-metageneration-match': 'fake_metagen_match',
         # Custom metadata.
         'x-goog-meta-foo': 'fake_goog_meta',
         'x-amz-meta-foo': 'fake_amz_meta',
@@ -518,7 +518,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
     }
     flags = self._fake_command._translate_headers()
     self.assertCountEqual(flags, [
-        '--cache-control=fake_cache_cantrol',
+        '--cache-control=fake_Cache_Control',
         '--content-disposition=fake_Content-Disposition',
         '--content-encoding=fake_Content-Encoding',
         '--content-language=fake_Content-Language',
@@ -526,7 +526,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
         '--content-md5=fake_Content-MD5',
         '--custom-time=fake_time',
         '--if-generation-match=fake_gen_match',
-        '--if-metageneration-match=fake_gen_match',
+        '--if-metageneration-match=fake_metagen_match',
         '--add-custom-metadata=foo=fake_goog_meta',
         '--add-custom-metadata=foo=fake_amz_meta',
         '--add-custom-headers=x-amz-foo=fake_amz_custom_header',
@@ -550,14 +550,14 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
       self):
     self._fake_command.headers = {
         'x-goog-if-generation-match': 'fake_gen_match',
-        'x-goog-if-metageneration-match': 'fake_gen_match',
+        'x-goog-if-metageneration-match': 'fake_metagen_match',
         # Custom metadata. These should be ignored.
         'x-goog-meta-foo': 'fake_goog_meta',
     }
     flags = self._fake_command._translate_headers()
     self.assertCountEqual(flags, [
         '--if-generation-match=fake_gen_match',
-        '--if-metageneration-match=fake_gen_match',
+        '--if-metageneration-match=fake_metagen_match',
     ])
 
   @mock.patch.object(shim_util,
@@ -577,7 +577,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
     # either of the list, and hence the headers must be ignored.
     self._fake_command.headers = {
         # Header from the DATA_TRANSFER_HEADERS list.
-        'Cache-Control': 'fake_cache_cantrol',
+        'Cache-Control': 'fake_Cache_Control',
         # Header from the PRECONDITIONS_HEADERS list.
         'x-goog-if-generation-match': 'fake_gen_match',
         # Custom metadata. These should be ignored.
@@ -600,7 +600,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
 class TestGetFlagFromHeader(testcase.GsUtilUnitTestCase):
   """Test Command.get_flag_from_header function.
   
-  We only test the unset functionality, because rest of the workflows have been
+  We only test the unset functionality because rest of the workflows have been
   already tested indirectly in TestHeaderTranslation.
   """
 
