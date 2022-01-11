@@ -1,6 +1,6 @@
 [submodule "third_party/httplib2"]
 	path = third_party/httplib2
-	url = git://github.com/httplib2/httplib2.git
+	url = https://github.com/httplib2/httplib2.git
 [submodule "third_party/crcmod"]
 	path = third_party/crcmod
 	url = https://github.com/gsutil-mirrors/crcmod.git
@@ -18,7 +18,7 @@
 	url = https://github.com/gsutil-mirrors/six.git
 [submodule "third_party/apitools"]
 	path = third_party/apitools
-	url = git://github.com/google/apitools.git
+	url = https://github.com/google/apitools.git
 [submodule "third_party/rsa"]
 	path = third_party/rsa
 	url = https://github.com/gsutil-mirrors/rsa.git
@@ -30,28 +30,28 @@
 	url = https://github.com/gsutil-mirrors/pyasn1-modules.git
 [submodule "third_party/mock"]
 	path = third_party/mock
-	url = git://github.com/gsutil-mirrors/mock.git
+	url = https://github.com/gsutil-mirrors/mock.git
 [submodule "third_party/funcsigs"]
 	path = third_party/funcsigs
-	url = git://github.com/testing-cabal/funcsigs.git
+	url = https://github.com/testing-cabal/funcsigs.git
 [submodule "third_party/argcomplete"]
 	path = third_party/argcomplete
 	url = https://github.com/kislyuk/argcomplete.git
 [submodule "third_party/fasteners"]
 	path = third_party/fasteners
-	url = git://github.com/gsutil-mirrors/fasteners.git
+	url = https://github.com/gsutil-mirrors/fasteners.git
 [submodule "third_party/monotonic"]
 	path = third_party/monotonic
-	url = git://github.com/gsutil-mirrors/monotonic.git
+	url = https://github.com/gsutil-mirrors/monotonic.git
 [submodule "third_party/google-reauth-python"]
 	path = third_party/google-reauth-python
-	url = git://github.com/google/google-reauth-python
+	url = https://github.com/google/google-reauth-python
 [submodule "third_party/pyu2f"]
 	path = third_party/pyu2f
-	url = git://github.com/google/pyu2f
+	url = https://github.com/google/pyu2f
 [submodule "gslib/vendored/boto"]
 	path = gslib/vendored/boto
-	url = git://github.com/gsutil-mirrors/boto.git
+	url = https://github.com/gsutil-mirrors/boto.git
 [submodule "gslib/vendored/oauth2client"]
 	path = gslib/vendored/oauth2client
 	url = https://github.com/gsutil-mirrors/oauth2client.git
