@@ -139,7 +139,7 @@ _DETAILED_HELP_TEXT = ("""
               not by saturated with work if too few objects (specified with ``-n``)
               and too few components (specified with ``-y``) are specified.
 
-  -p          Sets the type of `parallelism to be used (only applicable when
+  -p          Sets the type of parallelism to be used (only applicable when
               threads or processes are specified and threads * processes > 1). The
               default is to use ``fan``. Must be one of the following:
 
