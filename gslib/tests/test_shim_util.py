@@ -723,7 +723,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
         'Credentials': {
             'gs_json_host': 'foo_host',
             'gs_json_port': '1234',
-            'json_api_version': 'v2'
+            'json_api_version': 'v2',
         }
     }):
       flags, env_vars = self._fake_command._translate_boto_config()
@@ -818,7 +818,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
               'CLOUDSDK_AUTH_CLIENT_ID': 'CLOUDSDK_AUTH_CLIENT_ID_value',
               'CLOUDSDK_AUTH_CLIENT_SECRET': 'AUTH_CLIENT_SECRET_value',
               'CLOUDSDK_AUTH_AUTH_HOST': 'CLOUDSDK_AUTH_AUTH_HOST_value',
-              'CLOUDSDK_AUTH_TOKEN_HOST': 'CLOUDSDK_AUTH_TOKEN_HOST_value'
+              'CLOUDSDK_AUTH_TOKEN_HOST': 'CLOUDSDK_AUTH_TOKEN_HOST_value',
           })
 
   def test_missing_mappging_gets_ignored(self):
