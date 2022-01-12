@@ -51,19 +51,11 @@ def _mock_boto_config(boto_config_dict):
   def _config_get_side_effect(section, key, default_value=None):
     return boto_config_dict.get(section, {}).get(key, default_value)
 
-  try:
-    get_patcher = mock.patch.object(config, 'get', autospec=True)
-    mock_get = get_patcher.start()
-    mock_get.side_effect = _config_get_side_effect
-
-    items_patcher = mock.patch.object(config, 'items', autospec=True)
-    mock_items = items_patcher.start()
-    mock_items.return_value = boto_config_dict.items()
-
-    yield
-  finally:
-    items_patcher.stop()
-    get_patcher.stop()
+  with mock.patch.object(config, 'get', autospec=True) as mock_get:
+    with mock.patch.object(config, 'items', autospec=True) as mock_items:
+      mock_get.side_effect = _config_get_side_effect
+      mock_items.return_value = boto_config_dict.items()
+      yield
 
 
 class FakeCommandWithGcloudStorageMap(command.Command):
@@ -707,7 +699,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
         'GSUtil': {
             'use_gcloud_storage': 'always',
             'content_language': 'foo',
-            'default_project_id': 'fake_project'
+            'default_project_id': 'fake_project',
         }
     }):
       with util.SetEnvironmentForTest({
@@ -739,7 +731,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       self.assertEqual(
           env_vars, {
               'CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE':
-                  'https://foo_host:1234/storage/v2'
+                  'https://foo_host:1234/storage/v2',
           })
 
   def test_gcs_json_endpoint_translation_usees_default_version_v1(self):
