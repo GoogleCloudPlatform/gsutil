@@ -53,6 +53,12 @@ DATA_TRANSFER_HEADERS = frozenset([
 PRECONDITIONS_HEADERS = frozenset(
     ['x-goog-if-generation-match', 'x-goog-if-metageneration-match'])
 
+# The format for _BOTO_CONFIG_MAP is as follows:
+# {
+#   'Boto section name': {
+#     'boto field name': 'correspnding env variable name in Cloud SDK'
+#   }
+# }
 _BOTO_CONFIG_MAP = {
     'Credentials': {
         'aws_access_key_id': 'AWS_ACCESS_KEY_ID',
@@ -85,6 +91,8 @@ _BOTO_CONFIG_MAP = {
 }
 
 _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED = frozenset(
+    # TOTO(b/214245419) Remove this once STET is support and add equivalent
+    # mapping above.
     ['stet_binary_path', 'stet_config_path'])
 
 
@@ -330,11 +338,11 @@ class GcloudStorageCommandMixin(object):
     """
     flags = []
     env_vars = {}
-    # Handle gs_json_host and gs_json_port
+    # Handle gs_json_host and gs_json_port.
     gcs_json_endpoint = _get_gcs_json_endpoint_from_boto_config(config)
     if gcs_json_endpoint:
       env_vars['CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE'] = gcs_json_endpoint
-    # Handle s3_host and s3_port
+    # Handle s3_host and s3_port.
     s3_endpoint = _get_s3_endpoint_from_boto_config(config)
     if s3_endpoint:
       env_vars['CLOUDSDK_STORAGE_S3_ENDPOINT_URL'] = s3_endpoint

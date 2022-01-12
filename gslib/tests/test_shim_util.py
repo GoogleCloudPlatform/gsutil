@@ -40,12 +40,12 @@ def _mock_boto_config(boto_config_dict):
   """"Mock boto config replacing any exiting config.
   
   The util.SetBotoConfigForTest has a use_existing_config flag that can be
-  set to False, but it does not work if the config has been already loaded
-  which is the case for all unit tests that call do not use RunCommand method.
+  set to False, but it does not work if the config has been already loaded,
+  which is the case for all unit tests that do not use RunCommand method.
 
   Args:
-    boto_config_dict. A dict where the key is the section name and the value
-    is a dict of boto field name and the value for that field.
+    boto_config_dict. A dict with key=<boto section name> and value=<a dict
+      of boto field name and the value for that field>.
   """
 
   def _config_get_side_effect(section, key, default_value=None):
@@ -702,7 +702,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
 
   @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
   def test_translated_boto_config_gets_added(self):
-    """Should add translated env vars as well flagsx."""
+    """Should add translated env vars as well flags."""
     with _mock_boto_config({
         'GSUtil': {
             'use_gcloud_storage': 'always',
