@@ -53,6 +53,48 @@ DATA_TRANSFER_HEADERS = frozenset([
 PRECONDITIONS_HEADERS = frozenset(
     ['x-goog-if-generation-match', 'x-goog-if-metageneration-match'])
 
+# The format for _BOTO_CONFIG_MAP is as follows:
+# {
+#   'Boto section name': {
+#     'boto field name': 'correspnding env variable name in Cloud SDK'
+#   }
+# }
+_BOTO_CONFIG_MAP = {
+    'Credentials': {
+        'aws_access_key_id': 'AWS_ACCESS_KEY_ID',
+        'aws_secret_access_key': 'AWS_SECRET_ACCESS_KEY',
+    },
+    'Boto': {
+        'proxy': 'CLOUDSDK_PROXY_ADDRESS',
+        'proxy_type': 'CLOUDSDK_PROXY_TYPE',
+        'proxy_port': 'CLOUDSDK_PROXY_PORT',
+        'proxy_user': 'CLOUDSDK_PROXY_USERNAME',
+        'proxy_pass': 'CLOUDSDK_PROXY_PASSWORD',
+        'proxy_rdns': 'CLOUDSDK_PROXY_RDNS',
+        'http_socket_timeout': 'CLOUDSDK_CORE_HTTP_TIMEOUT',
+        'ca_certificates_file': 'CLOUDSDK_CORE_CUSTOM_CA_CERTS_FILE',
+        'max_retry_delay': 'CLOUDSDK_STORAGE_BASE_RETRY_DELAY',
+        'num_retries': 'CLOUDSDK_STORAGE_MAX_RETRIES',
+    },
+    'GSUtil': {
+        'check_hashes': 'CLOUDSDK_STORAGE_CHECK_HASHES',
+        'default_project_id': 'CLOUDSDK_CORE_PROJECT',
+        'disable_analytics_prompt': 'CLOUDSDK_CORE_DISABLE_USAGE_REPORTING',
+        'use_magicfile': 'CLOUDSDK_STORAGE_USE_MAGICFILE',
+    },
+    'OAuth2': {
+        'client_id': 'CLOUDSDK_AUTH_CLIENT_ID',
+        'client_secret': 'CLOUDSDK_AUTH_CLIENT_SECRET',
+        'provider_authorization_uri': 'CLOUDSDK_AUTH_AUTH_HOST',
+        'provider_token_uri': 'CLOUDSDK_AUTH_TOKEN_HOST',
+    },
+}
+
+_REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED = frozenset(
+    # TOTO(b/214245419) Remove this once STET is support and add equivalent
+    # mapping above.
+    ['stet_binary_path', 'stet_config_path'])
+
 
 def get_flag_from_header(header_key_raw, header_value, unset=False):
   """Returns the gcloud storage flag for the given gsutil header.
@@ -156,6 +198,26 @@ def _get_gcloud_binary_path():
     raise exception.GcloudStorageTranslationError(
         'Gcloud binary path cannot be found.')
   return os.path.join(cloudsdk_root, 'bin', 'gcloud')
+
+
+def _get_gcs_json_endpoint_from_boto_config(config):
+  gs_json_host = config.get('Credentials', 'gs_json_host')
+  if gs_json_host:
+    gs_json_port = config.get('Credentials', 'gs_json_port')
+    port = ':' + gs_json_port if gs_json_port else ''
+    json_api_version = config.get('Credentials', 'json_api_version', 'v1')
+    return 'https://{}{}/storage/{}'.format(gs_json_host, port,
+                                            json_api_version)
+  return None
+
+
+def _get_s3_endpoint_from_boto_config(config):
+  s3_host = config.get('Credentials', 's3_host')
+  if s3_host:
+    s3_port = config.get('Credentials', 's3_port')
+    port = ':' + s3_port if s3_port else ''
+    return 'https://{}{}'.format(s3_host, port)
+  return None
 
 
 class GcloudStorageCommandMixin(object):
@@ -266,6 +328,44 @@ class GcloudStorageCommandMixin(object):
       # We ignore the headers for all other cases, so does gsutil.
     return flags
 
+  def _translate_boto_config(self):
+    """Translates boto config options to gcloud storage properties.
+    
+    Returns:
+      A tuple where first element is a list of flags and the second element is
+      a dict representing the env variables that can be set to set the
+      gcloud storage properties.
+    """
+    flags = []
+    env_vars = {}
+    # Handle gs_json_host and gs_json_port.
+    gcs_json_endpoint = _get_gcs_json_endpoint_from_boto_config(config)
+    if gcs_json_endpoint:
+      env_vars['CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE'] = gcs_json_endpoint
+    # Handle s3_host and s3_port.
+    s3_endpoint = _get_s3_endpoint_from_boto_config(config)
+    if s3_endpoint:
+      env_vars['CLOUDSDK_STORAGE_S3_ENDPOINT_URL'] = s3_endpoint
+
+    for section_name, section in config.items():
+      for key, value in section.items():
+        # TODO(b/206151619) Handle encryption_key and decryption_key.
+        if (key == 'content_language' and
+            self.command_name in DATA_TRANSFER_COMMANDS):
+          flags.append('--content-language=' + value)
+        elif key in _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED:
+          self.logger.error('The boto config field {}:{} cannot be translated'
+                            ' to gcloud storage equivalent.'.format(
+                                section_name, key))
+          continue
+        elif key == 'https_validate_certificates' and not value:
+          env_vars['CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION'] = True
+        else:
+          env_var = _BOTO_CONFIG_MAP.get(section_name, {}).get(key, None)
+          if env_var is not None:
+            env_vars[env_var] = value
+    return flags, env_vars
+
   def get_gcloud_storage_args(self):
     """Translates the gsutil command flags to gcloud storage flags.
 
@@ -323,11 +423,14 @@ class GcloudStorageCommandMixin(object):
         top_level_flags, env_variables = self._translate_top_level_flags()
         header_flags = self._translate_headers()
 
+        flags_from_boto, env_vars_from_boto = self._translate_boto_config()
+        env_variables.update(env_vars_from_boto)
+
         gcloud_binary_path = _get_gcloud_binary_path()
         gcloud_storage_command = ([gcloud_binary_path] +
                                   self.get_gcloud_storage_args() +
-                                  top_level_flags + header_flags)
-        # TODO(b/206149936): Translate boto config to CLOUDSDK envs.
+                                  top_level_flags + header_flags +
+                                  flags_from_boto)
         if use_gcloud_storage == USE_GCLOUD_STORAGE_VALUE.DRY_RUN:
           self._print_gcloud_storage_command_info(gcloud_storage_command,
                                                   env_variables,
