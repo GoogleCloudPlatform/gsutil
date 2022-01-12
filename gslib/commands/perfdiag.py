@@ -230,8 +230,8 @@ _DETAILED_HELP_TEXT = ("""
               between 0 and 100 (inclusive), with 0 generating a file with
               uniform data, and 100 generating random data. When you specify
               the ``-j`` option, files being uploaded are compressed in-memory and
-              on-the-wire only. See ``cp -j
-              <https://cloud.google.com/storage/docs/gsutil/commands/cp#options>``_
+              on-the-wire only. See `cp -j
+              <https://cloud.google.com/storage/docs/gsutil/commands/cp#options>`_
               for specific semantics.
 
 
