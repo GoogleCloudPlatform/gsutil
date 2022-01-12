@@ -40,7 +40,7 @@ from gslib.utils.text_util import NormalizeStorageClass
 from gslib.utils.encryption_helper import ValidateCMEK
 
 _SYNOPSIS = """
-  gsutil mb [-b (on|off)] [-c <class>] [-l <location>] [-p <project>]
+  gsutil mb [-b (on|off)] [-c <class>] [-k <key>] [-l <location>] [-p <project>]
             [--autoclass] [--retention <time>] [--pap <setting>]
             [--placement <region1>,<region2>]
             [--rpo {}] gs://<bucket_name>...
