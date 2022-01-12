@@ -30,7 +30,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils.constants import NO_MAX
 
 _SET_SYNOPSIS = """
-  gsutil pap set (enforced|unspecified) gs://<bucket_name>...
+  gsutil pap set (enforced|inherited) gs://<bucket_name>...
 """
 
 _GET_SYNOPSIS = """
@@ -43,10 +43,10 @@ _SET_DESCRIPTION = """
 <B>SET</B>
   The ``pap set`` command configures public access prevention
   for Cloud Storage buckets. If you set a bucket to be
-  ``unspecified``, it uses public access prevention only if
+  ``inherited``, it uses public access prevention only if
   the bucket is subject to the `public access prevention
   <https://cloud.google.com/storage/docs/org-policy-constraints#public-access-prevention>`_
-  organization policy.
+  organization policy constraint.
 
 <B>SET EXAMPLES</B>
   Configure ``redbucket`` and ``bluebucket`` to use public
