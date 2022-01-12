@@ -432,7 +432,10 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
       }):
         self._fake_command.parallel_operations = True
         self._fake_command.translate_to_gcloud_storage_if_requested()
-        self.assertEqual(self._fake_command._translated_env_variables, {})
+        self.assertNotIn('CLOUDSDK_STORAGE_PROCESS_COUNT',
+                         self._fake_command._translated_env_variables)
+        self.assertNotIn('CLOUDSDK_STORAGE_THREAD_COUNT',
+                         self._fake_command._translated_env_variables)
 
   def test_debug_value_4_adds_log_http_flag(self):
     # Debug level 4 represents the -DD option.
