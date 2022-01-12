@@ -29,6 +29,7 @@ from boto import config
 from gslib import command
 from gslib import command_argument
 from gslib import exception
+from gslib.commands import version
 from gslib.tests import testcase
 from gslib.utils import constants
 from gslib.utils import shim_util
@@ -478,6 +479,23 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                              'arg2', '--no-user-output-enabled'
                          ])
 
+  def test_returns_false_for_version_command(self):
+    command = version.VersionCommand(
+        command_runner=mock.ANY,
+        args=[],
+        headers={},
+        debug=0,
+        trace_token=None,
+        parallel_operations=True,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with mock.patch.object(command, 'get_gcloud_storage_args',
+                             autospec=True) as mock_get_gcloud_storage_args:
+        self.assertFalse(command.translate_to_gcloud_storage_if_requested())
+        self.assertFalse(mock_get_gcloud_storage_args.called)
+
 
 class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
   """Test gsutil header  translation."""
@@ -734,6 +752,20 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
                   'https://foo_host:1234/storage/v2',
           })
 
+  def test_gcs_json_endpoint_translation_with_missing_port(self):
+    with _mock_boto_config({
+        'Credentials': {
+            'gs_json_host': 'foo_host',
+            'json_api_version': 'v2',
+        }
+    }):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, [])
+      self.assertEqual(env_vars, {
+          'CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE':
+              'https://foo_host/storage/v2',
+      })
+
   def test_gcs_json_endpoint_translation_usees_default_version_v1(self):
     with _mock_boto_config(
         {'Credentials': {
@@ -759,6 +791,13 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       self.assertEqual(
           env_vars,
           {'CLOUDSDK_STORAGE_S3_ENDPOINT_URL': 'https://s3_host:1234'})
+
+  def test_s3_endpoint_translation_with_missing_port(self):
+    with _mock_boto_config({'Credentials': {'s3_host': 's3_host',}}):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, [])
+      self.assertEqual(env_vars,
+                       {'CLOUDSDK_STORAGE_S3_ENDPOINT_URL': 'https://s3_host'})
 
   def test_boto_config_translation_for_supported_fields(self):
     with _mock_boto_config({
