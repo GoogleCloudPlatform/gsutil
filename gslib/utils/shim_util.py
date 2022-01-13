@@ -19,10 +19,9 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-import collections
 import enum
 import os
-from posixpath import expanduser
+import re
 import subprocess
 
 from boto import config
@@ -37,8 +36,11 @@ class USE_GCLOUD_STORAGE_VALUE(enum.Enum):
   DRY_RUN = 'dry_run'
 
 
-# Required for headers translation.
+DECRYPTION_KEY_REGEX = re.compile(r'^decryption_key([1-9]$|[1-9][0-9]$|(100)$)')
+
+# Required for headers translation and boto config translation.
 DATA_TRANSFER_COMMANDS = frozenset(['cp', 'mv', 'rsync'])
+ENCRYPTION_SUPPORTED_COMMANDS = DATA_TRANSFER_COMMANDS | frozenset(['ls'])
 PRECONDITONS_ONLY_SUPPORTED_COMMANDS = frozenset(
     ['compose', 'rewrite', 'rm', 'retention'])
 DATA_TRANSFER_HEADERS = frozenset([
@@ -353,23 +355,32 @@ class GcloudStorageCommandMixin(object):
     if s3_endpoint:
       env_vars['CLOUDSDK_STORAGE_S3_ENDPOINT_URL'] = s3_endpoint
 
+    decryption_keys = []
     for section_name, section in config.items():
       for key, value in section.items():
-        # TODO(b/206151619) Handle encryption_key and decryption_key.
-        if (key == 'content_language' and
-            self.command_name in DATA_TRANSFER_COMMANDS):
+        if (key == 'encryption_key' and
+            self.command_name in ENCRYPTION_SUPPORTED_COMMANDS):
+          flags.append('--encryption-key=' + value)
+        # Boto config can have decryption keys in the form of
+        # decryption_key1..100.
+        elif (DECRYPTION_KEY_REGEX.match(key) and
+              self.command_name in ENCRYPTION_SUPPORTED_COMMANDS):
+          decryption_keys.append(value)
+        elif (key == 'content_language' and
+              self.command_name in DATA_TRANSFER_COMMANDS):
           flags.append('--content-language=' + value)
         elif key in _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED:
           self.logger.error('The boto config field {}:{} cannot be translated'
                             ' to gcloud storage equivalent.'.format(
                                 section_name, key))
-          continue
         elif key == 'https_validate_certificates' and not value:
           env_vars['CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION'] = True
         else:
           env_var = _BOTO_CONFIG_MAP.get(section_name, {}).get(key, None)
           if env_var is not None:
             env_vars[env_var] = value
+    if decryption_keys:
+      flags.append('--decryption-keys=' + ','.join(decryption_keys))
     return flags, env_vars
 
   def get_gcloud_storage_args(self):

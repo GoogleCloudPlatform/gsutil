@@ -823,6 +823,28 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       self.assertEqual(env_vars,
                        {'CLOUDSDK_STORAGE_S3_ENDPOINT_URL': 'https://s3_host'})
 
+  @mock.patch.object(shim_util,
+                     'ENCRYPTION_SUPPORTED_COMMANDS',
+                     new={'fake_shim'})
+  def test_encryption_key_gets_converted_to_flag(self):
+    with _mock_boto_config({'GSUtil': {'encryption_key': 'fake_key'}}):
+      flags, _ = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, ['--encryption-key=fake_key'])
+
+  @mock.patch.object(shim_util,
+                     'ENCRYPTION_SUPPORTED_COMMANDS',
+                     new={'fake_shim'})
+  def test_decryption_key_gets_converted_to_flag(self):
+    with _mock_boto_config({
+        'GSUtil': {
+            'decryption_key1': 'key1',
+            'decryption_key12': 'key12',
+            'decryption_key100': 'key100',
+        }
+    }):
+      flags, _ = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, ['--decryption-keys=key1,key12,key100'])
+
   def test_boto_config_translation_for_supported_fields(self):
     with _mock_boto_config({
         'Credentials': {
