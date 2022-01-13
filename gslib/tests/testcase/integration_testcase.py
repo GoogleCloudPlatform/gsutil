@@ -1186,6 +1186,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
           'DEVSHELL_CLIENT_PORT': None,
           'AWS_SECRET_ACCESS_KEY': '_',
           'AWS_ACCESS_KEY_ID': '_',
+          # If shim is used, gcloud might attempt to load credentials.
           'CLOUDSDK_AUTH_DISABLE_CREDENTIALS': 'True',
       }):
         yield

@@ -944,3 +944,21 @@ class TestRunGcloudStorage(testcase.GsUtilUnitTestCase):
                                          })
         mock_environ_copy.assert_called_once_with()
         self.assertEqual(actual_return_code, mock_run.return_value.returncode)
+
+
+class TestShimE2E(testcase.GsUtilIntegrationTestCase):
+
+  def test_runs_gcloud_storage_if_use_gcloud_storage_true(self):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': None,
+      }):
+        stderr = self.RunGsUtil(['-D', 'ls'],
+                                return_stderr=True,
+                                expected_status=1)
+
+        # This is a proxy to ensure that the test attempted to call
+        # gcloud binary.
+        self.assertIn('Gcloud binary path cannot be found', stderr)
