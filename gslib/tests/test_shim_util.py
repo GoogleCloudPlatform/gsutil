@@ -30,6 +30,7 @@ from gslib import command
 from gslib import command_argument
 from gslib import exception
 from gslib.commands import version
+from gslib.commands import test
 from gslib.tests import testcase
 from gslib.utils import constants
 from gslib.utils import shim_util
@@ -489,6 +490,22 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         parallel_operations=True,
         bucket_storage_uri_class=mock.ANY,
         gsutil_api_class_map_factory=mock.MagicMock())
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
+                                   ]):
+      with mock.patch.object(command, 'get_gcloud_storage_args',
+                             autospec=True) as mock_get_gcloud_storage_args:
+        self.assertFalse(command.translate_to_gcloud_storage_if_requested())
+        self.assertFalse(mock_get_gcloud_storage_args.called)
+
+  def test_returns_false_for_test_command(self):
+    command = test.TestCommand(command_runner=mock.ANY,
+                               args=[],
+                               headers={},
+                               debug=0,
+                               trace_token=None,
+                               parallel_operations=True,
+                               bucket_storage_uri_class=mock.ANY,
+                               gsutil_api_class_map_factory=mock.MagicMock())
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'always')
                                    ]):
       with mock.patch.object(command, 'get_gcloud_storage_args',

@@ -405,10 +405,12 @@ class GcloudStorageCommandMixin(object):
     Returns:
       True if the command was successfully translated, else False.
     """
-    if self.command_name == 'version':
+    if self.command_name == 'version' or self.command_name == 'test':
       # Running any command in debug mode will lead to calling gsutil version
       # command. We don't want to translate the version command as this
       # should always reflect the version that gsutil is using.
+
+      # We don't want to run any translation for the "test" command.
       return False
     try:
       use_gcloud_storage = USE_GCLOUD_STORAGE_VALUE(
