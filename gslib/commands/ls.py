@@ -342,6 +342,7 @@ class LsCommand(Command):
           '-e': GcloudStorageFlag('-e'),
           '-a': GcloudStorageFlag('-a'),
           '-h': GcloudStorageFlag('--readable-sizes'),
+          '-p': GcloudStorageFlag('--project'),
       },
   )
 
