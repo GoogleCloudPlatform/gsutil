@@ -593,7 +593,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.assertRegex(stdout, r'Labels:\s+None')
 
     # Add a label and check that it shows up.
-    self.RunGsUtil(['label', 'ch', '-l', 'labelkey:labelvalue', bucket_suri])
+    self.RunGsUtil(['label', 'ch', '-l', 'labelkey:labelvalue', bucket_suri],
+                   force_gsutil=True)
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
     label_regex = re.compile(r'Labels:\s+\{\s+"labelkey":\s+"labelvalue"\s+\}',
                              re.MULTILINE)
@@ -911,7 +912,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                                    object_name='permitted',
                                    contents=b'foo')
     # Set this object to be publicly readable.
-    self.RunGsUtil(['acl', 'set', 'public-read', suri(object_uri)])
+    self.RunGsUtil(['acl', 'set', 'public-read',
+                    suri(object_uri)],
+                   force_gsutil=True)
     # Drop credentials.
     with self.SetAnonymousBotoCreds():
       stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)],
