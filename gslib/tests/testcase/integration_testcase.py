@@ -971,7 +971,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                 return_stderr=False,
                 expected_status=0,
                 stdin=None,
-                env_vars=None):
+                env_vars=None,
+                force_gsutil=False):
     """Runs the gsutil command.
 
     Args:
@@ -985,6 +986,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       stdin: A string of data to pipe to the process as standard input.
       env_vars: A dictionary of variables to extend the subprocess's os.environ
                 with.
+      force_gsutil: If True, will always run the command using gsutil,
+        irrespective of the value provided for use_gcloud_storage.
 
     Returns:
       If multiple return_* values were specified, this method returns a tuple
@@ -993,7 +996,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       If only one return_* value was specified, that value is returned directly
       rather than being returned within a 1-tuple.
     """
-    use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
+    # TODO(b/203250512) Remove this once all the commands are supported
+    # via gcloud storage.
+    if force_gsutil:
+      use_gcloud_storage = 'never'
+    else:
+      use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
     gcloud_storage_setting = [
         '-o', 'GSUtil:use_gcloud_storage={}'.format(use_gcloud_storage)
     ]

@@ -2030,12 +2030,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', '1')]):
       # fpath_bytes = fpath.encode(UTF8)
       self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
-      stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
+      stdout = self.RunGsUtil(['cat', suri(key_uri)],
+                              return_stdout=True,
+                              force_gsutil=True)
       self.assertEquals(stdout.encode('ascii'), file_contents)
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
                                 str(START_CALLBACK_PER_BYTES * 3))]):
       self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
-      stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
+      stdout = self.RunGsUtil(['cat', suri(key_uri)],
+                              return_stdout=True,
+                              force_gsutil=True)
       self.assertEquals(stdout.encode('ascii'), file_contents)
 
   # Note: We originally one time implemented a test
@@ -4083,7 +4087,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         suri(bucket_uri) + '/dir/'
     ],
                    expected_status=1)
-    self.RunGsUtil(['stat', '%s/dir/foo' % suri(bucket_uri)])
+    self.RunGsUtil(['stat', '%s/dir/foo' % suri(bucket_uri)], force_gsutil=True)
 
   def test_rewrite_cp(self):
     """Tests the JSON Rewrite API."""
