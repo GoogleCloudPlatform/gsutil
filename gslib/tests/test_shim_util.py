@@ -286,7 +286,14 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
       }):
         with self.assertRaisesRegex(
             exception.CommandException,
-            'CommandException: Gcloud binary path cannot be found'):
+            'CommandException: Requested to use "gcloud storage" but the '
+            'gcloud binary path cannot be found. This might happen if you'
+            ' attempt to use gsutil that was not installed via Cloud SDK.'
+            ' You can manually set the `CLOUDSDK_ROOT_DIR` environment variable'
+            ' to point to the google-cloud-sdk installation directory to'
+            ' resolve the issue. Alternatively, you can set'
+            ' `use_gcloud_storage=never` to disable running the command'
+            ' using gcloud storage.'):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
   def test_raises_error_if_pass_credentials_to_gsutil_is_missing(self):
@@ -961,4 +968,4 @@ class TestShimE2E(testcase.GsUtilIntegrationTestCase):
 
         # This is a proxy to ensure that the test attempted to call
         # gcloud binary.
-        self.assertIn('Gcloud binary path cannot be found', stderr)
+        self.assertIn('gcloud binary path cannot be found', stderr)

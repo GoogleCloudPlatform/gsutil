@@ -196,7 +196,13 @@ def _get_gcloud_binary_path():
   cloudsdk_root = os.environ.get('CLOUDSDK_ROOT_DIR')
   if cloudsdk_root is None:
     raise exception.GcloudStorageTranslationError(
-        'Gcloud binary path cannot be found.')
+        'Requested to use "gcloud storage" but the gcloud binary path cannot'
+        ' be found. This might happen if you attempt to use gsutil that was'
+        ' not installed via Cloud SDK. You can manually set the'
+        ' `CLOUDSDK_ROOT_DIR` environment variable to point to the'
+        ' google-cloud-sdk installation directory to resolve the issue.'
+        ' Alternatively, you can set `use_gcloud_storage=never` to disable'
+        ' running the command using gcloud storage.')
   return os.path.join(cloudsdk_root, 'bin', 'gcloud')
 
 
