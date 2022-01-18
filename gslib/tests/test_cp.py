@@ -78,6 +78,7 @@ from gslib.tests.util import POSIX_MODE_ERROR
 from gslib.tests.util import POSIX_UID_ERROR
 from gslib.tests.util import SequentialAndParallelTransfer
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import TailSet
 from gslib.tests.util import TEST_ENCRYPTION_KEY1
 from gslib.tests.util import TEST_ENCRYPTION_KEY1_SHA256_B64
@@ -632,7 +633,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['cp', fpath, invalid_bucket_uri],
                               expected_status=1,
                               return_stderr=True)
-      self.assertIn('does not exist', stderr)
+      if self._use_gcloud_storage:
+        self.assertIn('not found: 404', stderr)
+      else:
+        self.assertIn('does not exist', stderr)
 
     _Check()
 
@@ -1130,7 +1134,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['cp', fpath, k2_uri.uri],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('cannot be the destination for gsutil cp', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'destination argument of the cp command cannot'
+          ' be a version-specific URL', stderr)
+    else:
+      self.assertIn('cannot be the destination for gsutil cp', stderr)
 
   def test_versioning_no_parallelism(self):
     """Tests that copy all-versions errors when parallelism is enabled."""
@@ -2021,12 +2030,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold', '1')]):
       # fpath_bytes = fpath.encode(UTF8)
       self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
-      stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
+      stdout = self.RunGsUtil(['cat', suri(key_uri)],
+                              return_stdout=True,
+                              force_gsutil=True)
       self.assertEquals(stdout.encode('ascii'), file_contents)
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
                                 str(START_CALLBACK_PER_BYTES * 3))]):
       self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
-      stdout = self.RunGsUtil(['cat', suri(key_uri)], return_stdout=True)
+      stdout = self.RunGsUtil(['cat', suri(key_uri)],
+                              return_stdout=True,
+                              force_gsutil=True)
       self.assertEquals(stdout.encode('ascii'), file_contents)
 
   # Note: We originally one time implemented a test
@@ -2428,13 +2441,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # no valid (non-symlinked) files could be found at that path; we don't want
     # the command to terminate if that's the first file we attempt to copy.
     stderr = self.RunGsUtil([
-        'cp', '-e', '-c',
+        '-m', 'cp', '-e',
         '%s%s*' % (fpath_dir, os.path.sep),
         suri(bucket_uri, 'files')
     ],
                             return_stderr=True)
     self.assertIn('Copying file', stderr)
-    self.assertIn('Skipping symbolic link', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('Skipping symlink', stderr)
+    else:
+      self.assertIn('Skipping symbolic link', stderr)
 
     # Ensure that top-level arguments are ignored if they are symlinks. The file
     # at fpath1 should be successfully copied, then copying the symlink at
@@ -2445,8 +2461,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1)
     self.assertIn('Copying file', stderr)
-    self.assertIn('Skipping symbolic link', stderr)
-    self.assertIn('CommandException: No URLs matched: %s' % fpath2, stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('Skipping symlink', stderr)
+      self.assertIn('URL matched no objects or files: %s' % fpath2, stderr)
+    else:
+      self.assertIn('Skipping symbolic link', stderr)
+      self.assertIn('CommandException: No URLs matched: %s' % fpath2, stderr)
 
   def test_cp_multithreaded_wildcard(self):
     """Tests that cp -m works with a wildcard."""
@@ -4067,7 +4087,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         suri(bucket_uri) + '/dir/'
     ],
                    expected_status=1)
-    self.RunGsUtil(['stat', '%s/dir/foo' % suri(bucket_uri)])
+    self.RunGsUtil(['stat', '%s/dir/foo' % suri(bucket_uri)], force_gsutil=True)
 
   def test_rewrite_cp(self):
     """Tests the JSON Rewrite API."""
@@ -4651,3 +4671,21 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     self.assertEquals(1, len(warning_messages))
     self.assertIn('Found no hashes to validate object upload',
                   warning_messages[0])
+
+  def test_shim_translates_flags(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=b'abcd')
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'cp',
+            ['-r', '-R', '-e', fpath, suri(bucket_uri)],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            'Gcloud Storage Command: fake_dir/bin/gcloud alpha storage cp'
+            ' -r -r --ignore-symlinks {} {}'.format(fpath, suri(bucket_uri)),
+            info_lines)

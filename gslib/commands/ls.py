@@ -36,6 +36,8 @@ from gslib.utils.ls_helper import ENCRYPTED_FIELDS
 from gslib.utils.ls_helper import LsHelper
 from gslib.utils.ls_helper import PrintFullInfoAboutObject
 from gslib.utils.ls_helper import UNENCRYPTED_FULL_LISTING_FIELDS
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.text_util import InsistAscii
 from gslib.utils import text_util
 from gslib.utils.translation_helper import AclTranslation
@@ -326,6 +328,22 @@ class LsCommand(Command):
       help_one_line_summary='List providers, buckets, or objects',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
+  )
+
+  # TODO(b/206151616) Add mappings for remaining flags.
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command='alpha storage ls',
+      flag_map={
+          '-r': GcloudStorageFlag('-r'),
+          '-R': GcloudStorageFlag('-r'),
+          '-l': GcloudStorageFlag('-l'),
+          '-L': GcloudStorageFlag('-L'),
+          '-b': GcloudStorageFlag('-b'),
+          '-e': GcloudStorageFlag('-e'),
+          '-a': GcloudStorageFlag('-a'),
+          '-h': GcloudStorageFlag('--readable-sizes'),
+          '-p': GcloudStorageFlag('--project'),
+      },
   )
 
   def _PrintBucketInfo(self, bucket_blr, listing_style):

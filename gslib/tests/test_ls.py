@@ -40,6 +40,7 @@ from gslib.tests.util import CaptureStdout
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1_CRC32C
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1_MD5
@@ -188,6 +189,19 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
       stdout = self.RunCommand('ls', ['-Lb', suri(bucket_uri)],
                                return_stdout=True)
     self.assertNotRegex(stdout, 'Placement locations:')
+
+  def test_shim_translates_flags(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('ls', ['-rRlLbeah', '-p foo'],
+                                           return_log_handler=True)
+        self.assertIn(
+            'Gcloud Storage Command: fake_dir/bin/gcloud alpha storage ls'
+            ' -r -r -l -L -b -e -a --readable-sizes --project  foo',
+            mock_log_handler.messages['info'])
 
 
 class TestLs(testcase.GsUtilIntegrationTestCase):
@@ -579,7 +593,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     self.assertRegex(stdout, r'Labels:\s+None')
 
     # Add a label and check that it shows up.
-    self.RunGsUtil(['label', 'ch', '-l', 'labelkey:labelvalue', bucket_suri])
+    self.RunGsUtil(['label', 'ch', '-l', 'labelkey:labelvalue', bucket_suri],
+                   force_gsutil=True)
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
     label_regex = re.compile(r'Labels:\s+\{\s+"labelkey":\s+"labelvalue"\s+\}',
                              re.MULTILINE)
@@ -897,7 +912,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                                    object_name='permitted',
                                    contents=b'foo')
     # Set this object to be publicly readable.
-    self.RunGsUtil(['acl', 'set', 'public-read', suri(object_uri)])
+    self.RunGsUtil(['acl', 'set', 'public-read',
+                    suri(object_uri)],
+                   force_gsutil=True)
     # Drop credentials.
     with self.SetAnonymousBotoCreds():
       stdout = self.RunGsUtil(['ls', '-L', suri(object_uri)],
