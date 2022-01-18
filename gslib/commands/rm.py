@@ -81,6 +81,11 @@ _DETAILED_HELP_TEXT = ("""
   then deletes the bucket:
 
     gsutil rm -r gs://bucket
+    
+  To remove all objects and their versions from a bucket without deleting the
+  bucket, use the ``-a`` option:
+   
+    gsutil rm -a gs://bucket/**
 
   If you have a large number of objects to remove, use the ``gsutil -m`` option,
   which enables multi-threading/multi-processing:
