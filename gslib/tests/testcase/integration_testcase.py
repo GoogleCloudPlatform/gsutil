@@ -404,7 +404,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       encryption_key: expected CSEK key.
     """
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
-      stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
+      stdout = self.RunGsUtil(['stat', object_uri_str],
+                              return_stdout=True,
+                              force_gsutil=True)
     self.assertIn(
         Base64Sha256FromBase64EncryptionKey(encryption_key).decode('ascii'),
         stdout, 'Object %s did not use expected encryption key with hash %s. '
@@ -423,7 +425,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       encryption_key: expected CMEK key.
     """
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
-      stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
+      stdout = self.RunGsUtil(['stat', object_uri_str],
+                              return_stdout=True,
+                              force_gsutil=True)
     self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % encryption_key)
 
   def AssertObjectUnencrypted(self, object_uri_str):
@@ -436,7 +440,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       object_uri_str: uri for the object.
     """
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
-      stdout = self.RunGsUtil(['stat', object_uri_str], return_stdout=True)
+      stdout = self.RunGsUtil(['stat', object_uri_str],
+                              return_stdout=True,
+                              force_gsutil=True)
     self.assertNotIn('Encryption key SHA256', stdout)
     self.assertNotIn('KMS key', stdout)
 

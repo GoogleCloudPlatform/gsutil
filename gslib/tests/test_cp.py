@@ -4464,7 +4464,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
     # Make sure that the service account for our default project is authorized
     # to use our test KMS key.
-    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn])
+    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
     return key_fqn
 
   @SkipForS3('Test uses gs-specific KMS encryption')
