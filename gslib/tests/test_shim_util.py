@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import collections
 from contextlib import contextmanager
 import os
 import subprocess
@@ -836,11 +837,12 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
                      new={'fake_shim'})
   def test_decryption_key_gets_converted_to_flag(self):
     with _mock_boto_config({
-        'GSUtil': {
-            'decryption_key1': 'key1',
-            'decryption_key12': 'key12',
-            'decryption_key100': 'key100',
-        }
+        'GSUtil':
+            collections.OrderedDict([
+                ('decryption_key1', 'key1'),
+                ('decryption_key12', 'key12'),
+                ('decryption_key100', 'key100'),
+            ])
     }):
       flags, _ = self._fake_command._translate_boto_config()
       self.assertEqual(flags, ['--decryption-keys=key1,key12,key100'])
