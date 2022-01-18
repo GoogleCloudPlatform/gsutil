@@ -36,7 +36,7 @@ class USE_GCLOUD_STORAGE_VALUE(enum.Enum):
   DRY_RUN = 'dry_run'
 
 
-DECRYPTION_KEY_REGEX = re.compile(r'^decryption_key([1-9]$|[1-9][0-9]$|(100)$)')
+DECRYPTION_KEY_REGEX = re.compile(r'^decryption_key([1-9]$|[1-9][0-9]$|100$)')
 
 # Required for headers translation and boto config translation.
 DATA_TRANSFER_COMMANDS = frozenset(['cp', 'mv', 'rsync'])
