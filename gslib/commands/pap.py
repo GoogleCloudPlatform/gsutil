@@ -100,8 +100,7 @@ class PapCommand(Command):
       argparse_arguments={
           'get': [CommandArgument.MakeNCloudURLsArgument(1),],
           'set': [
-              CommandArgument('mode',
-                              choices=['enforced', 'unspecified', 'inherited']),
+              CommandArgument('mode', choices=['enforced', 'inherited']),
               CommandArgument.MakeZeroOrMoreCloudBucketURLsArgument()
           ],
       })
@@ -132,12 +131,12 @@ class PapCommand(Command):
                                                 fields=['iamConfiguration'],
                                                 provider=bucket_url.scheme)
     iam_config = bucket_metadata.iamConfiguration
-    public_access_prevention = iam_config.publicAccessPrevention or 'unspecified'
+    public_access_prevention = iam_config.publicAccessPrevention or 'inherited'
     bucket = str(bucket_url).rstrip('/')
     print('%s: %s' % (bucket, public_access_prevention))
 
   def _SetPublicAccessPrevention(self, blr, setting_arg):
-    """Sets the Public Access Prevention setting for a bucket enforced or unspecified."""
+    """Sets the Public Access Prevention setting for a bucket enforced or inherited."""
     bucket_url = blr.storage_url
 
     iam_config = IamConfigurationValue()
