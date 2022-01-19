@@ -63,8 +63,12 @@ PRECONDITIONS_HEADERS = frozenset(
 # }
 _BOTO_CONFIG_MAP = {
     'Credentials': {
-        'aws_access_key_id': 'AWS_ACCESS_KEY_ID',
-        'aws_secret_access_key': 'AWS_SECRET_ACCESS_KEY',
+        'aws_access_key_id':
+            'AWS_ACCESS_KEY_ID',
+        'aws_secret_access_key':
+            'AWS_SECRET_ACCESS_KEY',
+        'use_client_certificate':
+            'CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE',
     },
     'Boto': {
         'proxy': 'CLOUDSDK_PROXY_ADDRESS',
@@ -79,10 +83,16 @@ _BOTO_CONFIG_MAP = {
         'num_retries': 'CLOUDSDK_STORAGE_MAX_RETRIES',
     },
     'GSUtil': {
-        'check_hashes': 'CLOUDSDK_STORAGE_CHECK_HASHES',
-        'default_project_id': 'CLOUDSDK_CORE_PROJECT',
-        'disable_analytics_prompt': 'CLOUDSDK_CORE_DISABLE_USAGE_REPORTING',
-        'use_magicfile': 'CLOUDSDK_STORAGE_USE_MAGICFILE',
+        'check_hashes':
+            'CLOUDSDK_STORAGE_CHECK_HASHES',
+        'default_project_id':
+            'CLOUDSDK_CORE_PROJECT',
+        'disable_analytics_prompt':
+            'CLOUDSDK_CORE_DISABLE_USAGE_REPORTING',
+        'use_magicfile':
+            'CLOUDSDK_STORAGE_USE_MAGICFILE',
+        'parallel_composite_upload_threshold':
+            'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD'
     },
     'OAuth2': {
         'client_id': 'CLOUDSDK_AUTH_CLIENT_ID',

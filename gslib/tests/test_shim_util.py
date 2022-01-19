@@ -852,6 +852,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
         'Credentials': {
             'aws_access_key_id': 'AWS_ACCESS_KEY_ID_value',
             'aws_secret_access_key': 'AWS_SECRET_ACCESS_KEY_value',
+            'use_client_certificate': True,
         },
         'Boto': {
             'proxy': 'CLOUDSDK_PROXY_ADDRESS_value',
@@ -871,6 +872,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
             'default_project_id': 'CLOUDSDK_CORE_PROJECT_value',
             'disable_analytics_prompt': 'USAGE_REPORTING_value',
             'use_magicfile': 'USE_MAGICFILE_value',
+            'parallel_composite_upload_threshold': '100M',
         },
         'OAuth2': {
             'client_id': 'CLOUDSDK_AUTH_CLIENT_ID_value',
@@ -886,6 +888,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
           env_vars, {
               'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_value',
               'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_value',
+              'CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE': True,
               'CLOUDSDK_PROXY_ADDRESS': 'CLOUDSDK_PROXY_ADDRESS_value',
               'CLOUDSDK_PROXY_ADDRESS': 'CLOUDSDK_PROXY_ADDRESS_value',
               'CLOUDSDK_PROXY_TYPE': 'CLOUDSDK_PROXY_TYPE_value',
@@ -902,6 +905,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
               'CLOUDSDK_CORE_PROJECT': 'CLOUDSDK_CORE_PROJECT_value',
               'CLOUDSDK_CORE_DISABLE_USAGE_REPORTING': 'USAGE_REPORTING_value',
               'CLOUDSDK_STORAGE_USE_MAGICFILE': 'USE_MAGICFILE_value',
+              'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD': '100M',
               'CLOUDSDK_AUTH_CLIENT_ID': 'CLOUDSDK_AUTH_CLIENT_ID_value',
               'CLOUDSDK_AUTH_CLIENT_SECRET': 'AUTH_CLIENT_SECRET_value',
               'CLOUDSDK_AUTH_AUTH_HOST': 'CLOUDSDK_AUTH_AUTH_HOST_value',
