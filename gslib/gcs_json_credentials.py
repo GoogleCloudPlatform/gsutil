@@ -47,6 +47,7 @@ from gslib.utils.boto_util import GetCredentialStoreFilename
 from gslib.utils.boto_util import GetGceCredentialCacheFilename
 from gslib.utils.boto_util import GetGcsJsonApiVersion
 from gslib.utils.constants import UTF8
+from gslib.utils.wrapped_credentials import WrappedCredentials
 import oauth2client
 from oauth2client.client import HAS_CRYPTO
 from oauth2client.contrib import devshell
@@ -210,12 +211,14 @@ def _CheckAndGetCredentials(logger):
     user_creds = _GetOauth2UserAccountCredentials()
     failed_cred_type = CredTypes.OAUTH2_SERVICE_ACCOUNT
     service_account_creds = _GetOauth2ServiceAccountCredentials()
+    failed_cred_type = CredTypes.EXTERNAL_ACCOUNT
+    external_account_creds = _GetExternalAccountCredentials()
     failed_cred_type = CredTypes.GCE
     gce_creds = _GetGceCreds()
     failed_cred_type = CredTypes.DEVSHELL
     devshell_creds = _GetDevshellCreds()
 
-    creds = user_creds or service_account_creds or gce_creds or devshell_creds
+    creds = user_creds or service_account_creds or gce_creds or devshell_creds or external_account_creds
 
     # Use one of the above credential types to impersonate, if configured.
     if _HasImpersonateServiceAccount() and creds:
@@ -228,18 +231,18 @@ def _CheckAndGetCredentials(logger):
     # If we didn't actually try to authenticate because there were multiple
     # types of configured credentials, don't emit this warning.
     if failed_cred_type:
-      if logger.isEnabledFor(logging.DEBUG):
+      if logger and logger.isEnabledFor(logging.DEBUG):
         logger.debug(traceback.format_exc())
       # If impersonation fails, show the user the actual error, since we handle
       # errors in iamcredentials_api.
       if failed_cred_type == CredTypes.IMPERSONATION:
         raise e
       elif system_util.InvokedViaCloudSdk():
-        logger.warn(
+        logger and logger.warn(
             'Your "%s" credentials are invalid. Please run\n'
             '  $ gcloud auth login', failed_cred_type)
       else:
-        logger.warn(
+        logger and logger.warn(
             'Your "%s" credentials are invalid. For more help, see '
             '"gsutil help creds", or re-run the gsutil config command (see '
             '"gsutil help config").', failed_cred_type)
@@ -270,6 +273,20 @@ def _HasGceCreds():
 
 def _HasImpersonateServiceAccount():
   return _GetImpersonateServiceAccount() not in (None, '')
+
+
+def _HasExternalAccountCreds():
+  return config.has_option('Credentials', 'gs_external_account_file')
+
+
+def _GetExternalAccountCredentials():
+  if not _HasExternalAccountCreds():
+    return
+
+  external_account_filename = config.get('Credentials',
+                                         'gs_external_account_file', '')
+
+  return WrappedCredentials.for_external_account(external_account_filename)
 
 
 def _GetImpersonateServiceAccount():

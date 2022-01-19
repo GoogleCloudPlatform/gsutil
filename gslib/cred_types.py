@@ -27,3 +27,4 @@ class CredTypes(object):
   OAUTH2_USER_ACCOUNT = "Oauth 2.0 User Account"
   GCE = "GCE"
   DEVSHELL = "Google Developer Shell"
+  EXTERNAL_ACCOUNT = "External Account"
