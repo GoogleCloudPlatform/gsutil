@@ -40,6 +40,8 @@ from gslib.utils import constants
 from gslib.utils import parallelism_framework_util
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.retry_util import Retry
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.system_util import StdinIterator
 from gslib.utils.translation_helper import PreconditionsFromHeaders
 
@@ -219,6 +221,19 @@ class RmCommand(Command):
       help_one_line_summary='Remove objects',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
+  )
+
+  # TODO(b/b/188092601) Add -f after continue-on-error is supported in
+  # gcloud storage.
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command='alpha storage rm',
+      flag_map={
+          '-r': GcloudStorageFlag('-r'),
+          '-R': GcloudStorageFlag('-r'),
+          '-a': GcloudStorageFlag('-a'),
+          '-I': GcloudStorageFlag('-I'),
+          '-f': GcloudStorageFlag('--continue-on-error'),
+      },
   )
 
   def RunCommand(self):

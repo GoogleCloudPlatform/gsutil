@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
 import re
 
 from gslib.exception import NO_URLS_MATCHED_PREFIX
@@ -51,6 +52,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     Returns:
       The cumulative stderr output without the expected UI output.
     """
+    if self._use_gcloud_storage:
+      return self._CleanOutputLinesForGcloudStorage(stderr)
     ui_output_pattern = '[^\n\r]*objects][^\n\r]*[\n\r]'
     final_message_pattern = 'Operation completed over[^\n]*'
     ui_spinner_list = ['\\\r', '|\r', '/\r', '-\r']
@@ -59,7 +62,23 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                      ui_spinner_list)
     for ui_line in ui_lines_list:
       stderr = stderr.replace(ui_line, '')
-    return stderr
+    return set(stderr.splitlines())
+
+  def _CleanOutputLinesForGcloudStorage(self, stderr):
+    """Remove irrelevant lines from the output lines."""
+    stderr_lines = stderr.splitlines()
+    valid_lines = []
+    strings_to_remove = set(['Removing objects:', 'Removing Buckets:', '  '])
+    for line in stderr_lines:
+      if line in strings_to_remove:
+        continue
+      # Gcloud storage logs a '.' for each resource in non-interactive mode.
+      # This might get added to the start of a valid line.
+      # e.g. .Removing gs://bucket/obj
+      cleaned_line = line.lstrip('.')
+      if cleaned_line:
+        valid_lines.append(cleaned_line)
+    return os.linesep.join(valid_lines)
 
   def _RunRemoveCommandAndCheck(self,
                                 command_and_args,
@@ -103,7 +122,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                               stdin=stdin)
       num_objects = len(object_strings)
       # Asserting for operation completion
-      if '-q' not in command_and_args:
+      if '-q' not in command_and_args and not self._use_gcloud_storage:
         if '-m' in command_and_args:
           self.assertIn('[%d/%d objects]' % (num_objects, num_objects), stderr)
         else:
@@ -140,6 +159,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         # case we will never see all of the expected "Removing object..."
         # messages. Since this is still a successful outcome, just return
         # successfully.
+        if self._use_gcloud_storage:
+          bucket_not_found_string = 'not found'
+        else:
+          bucket_not_found_string = 'bucket does not exist'
         if '-r' in command_and_args and 'bucket does not exist' in stderr:
           for bucket_to_remove in buckets_to_remove:
             matching_bucket = re.match(
@@ -217,7 +240,11 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         ['rm', '-a', '%s' % suri(bucket_uri, 'foo')],
         return_stderr=True,
         expected_status=1)
-    self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'foo'), stderr)
+    if self._use_gcloud_storage:
+      no_url_matched_target = 'URL matched no objects or files: %s'
+    else:
+      no_url_matched_target = NO_URLS_MATCHED_TARGET
+    self.assertIn(no_url_matched_target % suri(bucket_uri, 'foo'), stderr)
 
   def test_remove_recursive_prefix(self):
     bucket_uri = self.CreateBucket()
@@ -264,7 +291,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(['ls', '-a', suri(bucket_uri)],
                               return_stderr=True,
                               expected_status=1)
-      self.assertIn('bucket does not exist', stderr)
+      if self._use_gcloud_storage:
+        self.assertIn('not found', stderr)
+      else:
+        self.assertIn('bucket does not exist', stderr)
 
     _Check()
 
@@ -319,10 +349,13 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                                    contents=b'foo')
     if self.multiregional_buckets:
       self.AssertNObjectsInBucket(bucket_uri, 1)
-    self.RunGsUtil(
-        ['rm', '%s' % suri(bucket_uri, 'missing'),
-         suri(object_uri)],
-        expected_status=1)
+    if not self._use_gcloud_storage:
+      # Gcloud storage continues on missing objects by default.
+      # So we will skip running this for gcloud storage.
+      self.RunGsUtil(
+          ['rm', '%s' % suri(bucket_uri, 'missing'),
+           suri(object_uri)],
+          expected_status=1)
     stderr = self.RunGsUtil(
         ['rm', '-f',
          '%s' % suri(bucket_uri, 'missing'),
@@ -346,7 +379,13 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1)
     self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
-    self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'missing'), stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'URL matched no objects or files: %s' % suri(bucket_uri, 'missing'),
+          stderr)
+    else:
+      self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'missing'),
+                    stderr)
 
   def test_some_missing_force(self):
     """Test that 'rm -af' succeeds despite hidden first uri."""
@@ -631,7 +670,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
          suri(object_uri)],
         return_stderr=True,
         expected_status=1)
-    self.assertRegex(stderr, r'PreconditionException: 412')
+    if self._use_gcloud_storage:
+      self.assertRegex(stderr, r'pre-conditions you specified did not hold')
+    else:
+      self.assertRegex(stderr, r'PreconditionException: 412')
 
   def test_stdin_args(self):
     """Tests rm with the -I option."""
@@ -672,7 +714,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     ],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('Encountered non-existent bucket', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('%s not found: 404' % self.nonexistent_bucket_name, stderr)
+    else:
+      self.assertIn('Encountered non-existent bucket', stderr)
 
   def test_rm_multiple_nonexistent_objects(self):
     bucket_uri = self.CreateBucket()
@@ -682,4 +727,12 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         ['rm', '-rf', nonexistent_object1, nonexistent_object2],
         return_stderr=True,
         expected_status=1)
-    self.assertIn('2 files/objects could not be removed.', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'WARNING: URL matched no objects or files: %s' % nonexistent_object1,
+          stderr)
+      self.assertIn(
+          'WARNING: URL matched no objects or files: %s' % nonexistent_object2,
+          stderr)
+    else:
+      self.assertIn('2 files/objects could not be removed.', stderr)
