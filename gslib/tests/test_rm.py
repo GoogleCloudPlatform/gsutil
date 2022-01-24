@@ -488,7 +488,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       # Bucket should be deleted.
       stderr = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
                               return_stderr=True,
-                              expected_status=1)
+                              expected_status=1,
+                              force_gsutil=True)
       self.assertIn('bucket does not exist', stderr)
 
     _Check1()
@@ -506,7 +507,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
 
     stderr = self.RunGsUtil(['rb', suri(bucket_uri)],
                             return_stderr=True,
-                            expected_status=1)
+                            expected_status=1,
+                            force_gsutil=True)
     self.assertIn('Bucket is not empty', stderr)
 
     # Now try with rm -r.
@@ -516,7 +518,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       # Bucket should be deleted.
       stderr = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)],
                               return_stderr=True,
-                              expected_status=1)
+                              expected_status=1,
+                              force_gsutil=True)
       self.assertIn('bucket does not exist', stderr)
 
     _Check2()
