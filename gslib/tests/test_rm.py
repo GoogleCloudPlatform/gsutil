@@ -62,7 +62,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                      ui_spinner_list)
     for ui_line in ui_lines_list:
       stderr = stderr.replace(ui_line, '')
-    return set(stderr.splitlines())
+    return stderr
 
   def _CleanOutputLinesForGcloudStorage(self, stderr):
     """Remove irrelevant lines from the output lines."""
