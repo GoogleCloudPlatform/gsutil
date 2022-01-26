@@ -4686,6 +4686,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            'Gcloud Storage Command: fake_dir/bin/gcloud alpha storage cp'
-            ' -r -r --ignore-symlinks {} {}'.format(fpath, suri(bucket_uri)),
-            info_lines)
+            'Gcloud Storage Command: {} alpha storage cp'
+            ' -r -r --ignore-symlinks {} {}'.format(
+                os.path.join('fake_dir', 'bin', 'gcloud'), fpath,
+                suri(bucket_uri)), info_lines)
