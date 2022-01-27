@@ -275,16 +275,11 @@ def _HasImpersonateServiceAccount():
   return _GetImpersonateServiceAccount() not in (None, '')
 
 
-def _HasExternalAccountCreds():
-  return config.has_option('Credentials', 'gs_external_account_file')
-
-
 def _GetExternalAccountCredentials():
-  if not _HasExternalAccountCreds():
-    return
-
   external_account_filename = config.get('Credentials',
-                                         'gs_external_account_file', '')
+                                         'gs_external_account_file', None)
+  if not external_account_filename:
+    return None
 
   return WrappedCredentials.for_external_account(external_account_filename)
 

@@ -104,7 +104,6 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
     tmpfile = self.CreateTempFile(contents=contents)
     with SetBotoConfigForTest(
         self.botoCredentialsSet(external_account_creds=tmpfile)):
-      self.assertTrue(gcs_json_credentials._HasExternalAccountCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials, WrappedCredentials)
 

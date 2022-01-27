@@ -1,10 +1,25 @@
+# -*- coding: utf-8 -*-
+# Copyright 2022 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Classes and functions to allow google.auth credentials to be used within oauth2client."""
+
 import copy
 import datetime
+import io
 import json
 
-import google.auth.aws
-import google.auth.credentials
-import google.auth.identity_pool
+from google.auth import aws, credentials, identity_pool
 
 import oauth2client
 from google.auth.transport import requests
@@ -25,11 +40,16 @@ DEFAULT_SCOPES = [
 class WrappedCredentials(oauth2client.client.OAuth2Credentials):
 
   def __init__(self, base):
-    if not isinstance(base, google.auth.credentials.Credentials):
+    if not isinstance(base, credentials.Credentials):
       raise TypeError("Invalid Credentials")
     self._base = base
-    super(WrappedCredentials, self).__init__(None, base._audience, None, None,
-                                             None, None, None)
+    super(WrappedCredentials, self).__init__(access_token=None,
+                                             client_id=None,
+                                             client_secret=None,
+                                             refresh_token=None,
+                                             token_expiry=None,
+                                             token_uri=None,
+                                             user_agent=None)
 
   def _do_refresh_request(self, http):
     self._base.refresh(requests.Request())
@@ -66,29 +86,11 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
         string, a JSON representation of this instance, suitable to pass to
         from_json().
     """
-    curr_type = self.__class__
-    if to_serialize is None:
-      to_serialize = copy.copy(self.__dict__)
-    else:
-      # Assumes it is a str->str dictionary, so we don't deep copy.
-      to_serialize = copy.copy(to_serialize)
-    for member in strip:
-      if member in to_serialize:
-        del to_serialize[member]
-    # Add in information we will need later to reconstitute this instance.
-    to_serialize['_class'] = curr_type.__name__
-    to_serialize['_module'] = curr_type.__module__
-    # Make base serializable.
-    to_serialize['_base'] = copy.copy(self._base.info)
-    # Serialize token and expiration.
-    to_serialize['access_token'] = self._base.token
-    to_serialize['token_expiry'] = _parse_expiry(self.token_expiry)
-    for key, val in to_serialize.items():
-      if isinstance(val, bytes):
-        to_serialize[key] = val.decode('utf-8')
-      if isinstance(val, set):
-        to_serialize[key] = list(val)
-    return json.dumps(to_serialize)
+
+    serialized_data = super()._to_json(strip=strip, to_serialize=to_serialize)
+    deserialized_data = json.loads(serialized_data)
+    deserialized_data['_base'] = copy.copy(self._base.info)
+    return json.dumps(deserialized_data)
 
   @classmethod
   def for_external_account(cls, filename):
@@ -129,35 +131,22 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
 def _get_external_account_credentials_from_info(info):
   try:
     # Check if configuration corresponds to an AWS credentials.
-    creds = google.auth.aws.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
+    creds = aws.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
   except Exception as e:
     try:
       # Check if configuration corresponds to an Identity Pool credentials.
-      creds = google.auth.identity_pool.Credentials.from_info(
-          info, scopes=DEFAULT_SCOPES)
+      creds = identity_pool.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
     except Exception as e:
       # If the configuration is invalid or does not correspond to any
-      # supported external_account credentials, raise an error.
+      # supported external_account credentials, no credentials are found.
       return None
   return creds
 
 
 def _get_external_account_credentials_from_file(filename):
-  try:
-    # Check if configuration corresponds to an AWS credentials.
-    creds = google.auth.aws.Credentials.from_file(filename,
-                                                  scopes=DEFAULT_SCOPES)
-  except Exception as e:
-    try:
-      # Check if configuration corresponds to an Identity Pool credentials.
-      creds = google.auth.identity_pool.Credentials.from_file(
-          filename, scopes=DEFAULT_SCOPES)
-    except Exception as e:
-      # If the configuration is invalid or does not correspond to any
-      # supported external_account credentials, raise an error.
-      return None
-  return creds
-
+  with io.open(filename, "r", encoding="utf-8") as json_file:
+    data = json.load(json_file)
+    return _get_external_account_credentials_from_info(data)
 
 def _parse_expiry(expiry):
   if expiry and isinstance(expiry, datetime.datetime):
