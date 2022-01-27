@@ -205,6 +205,13 @@ class GcloudStorageMap(object):
 
 
 def _get_gcloud_binary_path():
+  # GCLOUD_BINARY_PATH is used for testing purpose only.
+  # It helps to run the parity_check.py script directly without having
+  # to build gcloud.
+  gcloud_binary_path = os.environ.get('GCLOUD_BINARY_PATH')
+  if gcloud_binary_path:
+    return gcloud_binary_path
+
   cloudsdk_root = os.environ.get('CLOUDSDK_ROOT_DIR')
   if cloudsdk_root is None:
     raise exception.GcloudStorageTranslationError(
