@@ -77,7 +77,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         continue
       # Gcloud storage logs a '.' for each resource in non-interactive mode.
       # This might get added to the start of a valid line.
-      # e.g. .Removing gs://bucket/obj
+      # e.g. ".Removing gs://bucket/obj"
       cleaned_line = line.lstrip('.')
       if cleaned_line:
         valid_lines.append(cleaned_line)

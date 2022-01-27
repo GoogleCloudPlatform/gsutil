@@ -223,8 +223,6 @@ class RmCommand(Command):
       subcommand_help_text={},
   )
 
-  # TODO(b/b/188092601) Add -f after continue-on-error is supported in
-  # gcloud storage.
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command='alpha storage rm',
       flag_map={
