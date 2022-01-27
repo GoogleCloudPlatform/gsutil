@@ -269,6 +269,24 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                              'opt1', '-x', 'arg1', 'arg2'
                          ])
 
+  def test_with_cloudsdk_root_dir_unset_and_gcloud_binary_path_set(self):
+    """Should return True and perform the translation."""
+    gcloud_path = os.path.join('fake_dir', 'bin', 'gcloud')
+    with _mock_boto_config({'GSUtil': {'use_gcloud_storage': 'always'}}):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': None,
+          'GCLOUD_BINARY_PATH': gcloud_path,
+      }):
+        self.assertTrue(
+            self._fake_command.translate_to_gcloud_storage_if_requested())
+        # Verify translation.
+        self.assertEqual(self._fake_command._translated_gcloud_storage_command,
+                         [
+                             gcloud_path, 'objects', 'fake', '--zip', 'opt1',
+                             '-x', 'arg1', 'arg2'
+                         ])
+
   def test_raises_error_if_invalid_use_gcloud_storage_value(self):
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'invalid')
                                    ]):
