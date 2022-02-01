@@ -19,7 +19,9 @@ import datetime
 import io
 import json
 
-from google.auth import aws, credentials, identity_pool
+from google.auth import aws
+from google.auth import credentials
+from google.auth import identity_pool
 
 import oauth2client
 from google.auth.transport import requests
@@ -38,13 +40,16 @@ DEFAULT_SCOPES = [
 
 
 class WrappedCredentials(oauth2client.client.OAuth2Credentials):
+  NON_SERIALIZED_MEMBERS = frozenset(
+      list(oauth2client.client.OAuth2Credentials.NON_SERIALIZED_MEMBERS) +
+      ['_base'])
 
   def __init__(self, base):
     if not isinstance(base, credentials.Credentials):
       raise TypeError("Invalid Credentials")
     self._base = base
     super(WrappedCredentials, self).__init__(access_token=None,
-                                             client_id=None,
+                                             client_id=base._audience,
                                              client_secret=None,
                                              refresh_token=None,
                                              token_expiry=None,
@@ -72,7 +77,7 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
   def token_expiry(self, value):
     self._base.expiry = value
 
-  def _to_json(self, strip, to_serialize=None):
+  def to_json(self):
     """Utility function that creates JSON repr. of a Credentials object.
 
     Args:
@@ -87,9 +92,10 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
         from_json().
     """
 
-    serialized_data = super()._to_json(strip=strip, to_serialize=to_serialize)
+    serialized_data = super().to_json()
     deserialized_data = json.loads(serialized_data)
     deserialized_data['_base'] = copy.copy(self._base.info)
+    deserialized_data['access_token'] = self._base.token
     return json.dumps(deserialized_data)
 
   @classmethod
@@ -147,6 +153,7 @@ def _get_external_account_credentials_from_file(filename):
   with io.open(filename, "r", encoding="utf-8") as json_file:
     data = json.load(json_file)
     return _get_external_account_credentials_from_info(data)
+
 
 def _parse_expiry(expiry):
   if expiry and isinstance(expiry, datetime.datetime):

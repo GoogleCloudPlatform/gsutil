@@ -231,18 +231,18 @@ def _CheckAndGetCredentials(logger):
     # If we didn't actually try to authenticate because there were multiple
     # types of configured credentials, don't emit this warning.
     if failed_cred_type:
-      if logger and logger.isEnabledFor(logging.DEBUG):
+      if logger.isEnabledFor(logging.DEBUG):
         logger.debug(traceback.format_exc())
       # If impersonation fails, show the user the actual error, since we handle
       # errors in iamcredentials_api.
       if failed_cred_type == CredTypes.IMPERSONATION:
         raise e
       elif system_util.InvokedViaCloudSdk():
-        logger and logger.warn(
+        logger.warn(
             'Your "%s" credentials are invalid. Please run\n'
             '  $ gcloud auth login', failed_cred_type)
       else:
-        logger and logger.warn(
+        logger.warn(
             'Your "%s" credentials are invalid. For more help, see '
             '"gsutil help creds", or re-run the gsutil config command (see '
             '"gsutil help config").', failed_cred_type)
