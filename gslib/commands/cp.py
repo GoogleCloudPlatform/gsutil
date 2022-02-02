@@ -90,7 +90,7 @@ _DESCRIPTION_TEXT = """
     gsutil cp *.txt gs://my-bucket
 
   You can also download data from a bucket. The following command downloads
-  all text files from a bucket to your current directory:
+  all text files from the top-level of a bucket to your current directory:
 
     gsutil cp gs://my-bucket/*.txt .
   
