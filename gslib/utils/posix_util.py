@@ -451,7 +451,8 @@ def ParseAndSetPOSIXAttributes(path,
       # Windows doesn't use POSIX uid/gid/mode unlike other systems. So there's
       # no point continuing.
       return
-    if found_uid:
+    # Only root can change ownership.
+    if found_uid and os.geteuid() == 0:
       uid = int(uid)
     if found_gid:
       gid = int(gid)
