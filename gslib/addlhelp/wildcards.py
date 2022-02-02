@@ -36,8 +36,12 @@ _DETAILED_HELP_TEXT = ("""
 
   *
     Match any number of characters within the current directory level. For
-    example, ``gs://my-bucket/abc/d*`` matches the object ``abc/def.txt``
-    but not the object ``abc/def/g.txt``.
+    example, ``gsutil cp gs://my-bucket/abc/d* .`` matches the object
+    ``abc/def.txt`` but not the object ``abc/def/g.txt``. In the case of
+    ``gsutil ls``, if a trailing ``*`` matches a sub-directory in the
+    current directory level, the contents of the sub-directory are also
+    listed.
+
 
   **
     Match any number of characters across directory boundaries. When used
