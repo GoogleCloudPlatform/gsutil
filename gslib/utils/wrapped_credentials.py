@@ -23,12 +23,12 @@ from google.auth import aws
 from google.auth import credentials
 from google.auth import identity_pool
 
-import oauth2client
 from google.auth.transport import requests
 from gslib.utils import constants
+import oauth2client
 
 # Expiry is stored in RFC3339 UTC format
-EXPIRY_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
+EXPIRY_FORMAT = oauth2client.client.EXPIRY_FORMAT
 
 DEFAULT_SCOPES = [
     constants.Scopes.CLOUD_PLATFORM,
@@ -48,11 +48,11 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
     if not isinstance(base, credentials.Credentials):
       raise TypeError("Invalid Credentials")
     self._base = base
-    super(WrappedCredentials, self).__init__(access_token=None,
+    super(WrappedCredentials, self).__init__(access_token=base.token,
                                              client_id=base._audience,
                                              client_secret=None,
                                              refresh_token=None,
-                                             token_expiry=None,
+                                             token_expiry=base.expiry,
                                              token_uri=None,
                                              user_agent=None)
 
@@ -80,13 +80,6 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
   def to_json(self):
     """Utility function that creates JSON repr. of a Credentials object.
 
-    Args:
-        strip: array, An array of names of members to exclude from the
-                JSON.
-        to_serialize: dict, (Optional) The properties for this object
-                      that will be serialized. This allows callers to
-                      modify before serializing.
-
     Returns:
         string, a JSON representation of this instance, suitable to pass to
         from_json().
@@ -96,6 +89,7 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
     deserialized_data = json.loads(serialized_data)
     deserialized_data['_base'] = copy.copy(self._base.info)
     deserialized_data['access_token'] = self._base.token
+    deserialized_data['token_expiry'] = _parse_expiry(self.token_expiry)
     return json.dumps(deserialized_data)
 
   @classmethod

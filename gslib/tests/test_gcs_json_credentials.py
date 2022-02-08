@@ -23,10 +23,12 @@ from apitools.base.py import GceAssertionCredentials
 from google_reauth import reauth_creds
 from gslib import gcs_json_api
 from gslib import gcs_json_credentials
+from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
 from gslib.tests import testcase
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.utils.wrapped_credentials import WrappedCredentials
+import logging
 from oauth2client.service_account import ServiceAccountCredentials
 import pkgutil
 
@@ -34,6 +36,8 @@ from six import add_move, MovedModule
 
 add_move(MovedModule("mock", "mock", "unittest.mock"))
 from six.moves import mock
+
+ERROR_MESSAGE = "This is the error message"
 
 
 class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
@@ -74,12 +78,40 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
       creds = gcs_json_credentials._CheckAndGetCredentials(None)
       self.assertIsInstance(creds, ServiceAccountCredentials)
 
+  @mock.patch.object(ServiceAccountCredentials,
+                     "__init__",
+                     side_effect=ValueError(ERROR_MESSAGE))
+  def testOauth2ServiceAccountFailure(self, _):
+    contents = pkgutil.get_data("gslib", "tests/test_data/test.p12")
+    tmpfile = self.CreateTempFile(contents=contents)
+    with SetBotoConfigForTest(
+        self.botoCredentialsSet(service_account_creds={
+            "keyfile": tmpfile,
+            "client_id": "?"
+        })):
+      with self.assertLogs() as logger:
+        with self.assertRaises(Exception) as exc:
+          gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+        self.assertIn(ERROR_MESSAGE, str(exc.exception))
+        self.assertIn(CredTypes.OAUTH2_SERVICE_ACCOUNT, logger.output[0])
+
   def testOauth2UserCredential(self):
     with SetBotoConfigForTest(self.botoCredentialsSet(user_account_creds="?")):
       self.assertTrue(gcs_json_credentials._HasOauth2UserAccountCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials,
                             reauth_creds.Oauth2WithReauthCredentials)
+
+  @mock.patch.object(reauth_creds.Oauth2WithReauthCredentials,
+                     "__init__",
+                     side_effect=ValueError(ERROR_MESSAGE))
+  def testOauth2UserFailure(self, _):
+    with SetBotoConfigForTest(self.botoCredentialsSet(user_account_creds="?")):
+      with self.assertLogs() as logger:
+        with self.assertRaises(Exception) as exc:
+          gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+        self.assertIn(ERROR_MESSAGE, str(exc.exception))
+        self.assertIn(CredTypes.OAUTH2_USER_ACCOUNT, logger.output[0])
 
   @mock.patch(
       "gslib.gcs_json_credentials.credentials_lib.GceAssertionCredentials",
@@ -97,6 +129,19 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
       self.assertTrue(gcs_json_credentials._HasGceCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials, GceAssertionCredentials)
+      self.assertEquals(client.credentials.refresh_token, "rEfrEshtOkEn")
+      self.assertIs(client.credentials.client_id, None)
+
+  @mock.patch.object(GceAssertionCredentials,
+                     "__init__",
+                     side_effect=ValueError(ERROR_MESSAGE))
+  def testGCECredential(self, _):
+    with SetBotoConfigForTest(self.botoCredentialsSet(gce_creds="?")):
+      with self.assertLogs() as logger:
+        with self.assertRaises(Exception) as exc:
+          gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+        self.assertIn(ERROR_MESSAGE, str(exc.exception))
+        self.assertIn(CredTypes.GCE, logger.output[0])
 
   def testExternalAccountCredential(self):
     contents = pkgutil.get_data("gslib",
@@ -106,6 +151,21 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
         self.botoCredentialsSet(external_account_creds=tmpfile)):
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials, WrappedCredentials)
+
+  @mock.patch.object(WrappedCredentials,
+                     "__init__",
+                     side_effect=ValueError(ERROR_MESSAGE))
+  def testExternalAccountFailure(self, _):
+    contents = pkgutil.get_data("gslib",
+                                "tests/test_data/test_credentials.json")
+    tmpfile = self.CreateTempFile(contents=contents)
+    with SetBotoConfigForTest(
+        self.botoCredentialsSet(external_account_creds=tmpfile)):
+      with self.assertLogs() as logger:
+        with self.assertRaises(Exception) as exc:
+          gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+        self.assertIn(ERROR_MESSAGE, str(exc.exception))
+        self.assertIn(CredTypes.EXTERNAL_ACCOUNT, logger.output[0])
 
   def testOauth2ServiceAccountAndOauth2UserCredential(self):
     with SetBotoConfigForTest(
