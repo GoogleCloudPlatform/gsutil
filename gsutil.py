@@ -85,6 +85,7 @@ THIRD_PARTY_LIBS = [
     ('retry-decorator', ''),
     ('six', ''),  # Python 2 / 3 compatibility dependency
     ('google-auth-library-python', ''),
+    ('cachetools', ''),
 ]
 
 # The wrapper script adds all third_party libraries to the Python path, since

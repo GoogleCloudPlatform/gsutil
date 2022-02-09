@@ -58,3 +58,6 @@
 [submodule "third_party/google-auth-library-python"]
 	path = third_party/google-auth-library-python
 	url = https://github.com/googleapis/google-auth-library-python
+[submodule "third_party/cachetools"]
+	path = third_party/cachetools
+	url = https://github.com/tkem/cachetools
