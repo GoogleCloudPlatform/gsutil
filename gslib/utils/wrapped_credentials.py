@@ -12,20 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Classes and functions to allow google.auth credentials to be used within oauth2client."""
+"""
+Classes and functions to allow google.auth credentials to be used within oauth2client.
+
+In particular, the External Account credentials don't have an equivalent in
+oauth2client, so we create helper methods to allow variants of this particular
+class to be used in oauth2client workflows.
+"""
 
 import copy
 import datetime
 import io
 import json
+import oauth2client
 
 from google.auth import aws
 from google.auth import credentials
 from google.auth import identity_pool
-
 from google.auth.transport import requests
 from gslib.utils import constants
-import oauth2client
 
 # Expiry is stored in RFC3339 UTC format
 EXPIRY_FORMAT = oauth2client.client.EXPIRY_FORMAT
@@ -40,11 +45,18 @@ DEFAULT_SCOPES = [
 
 
 class WrappedCredentials(oauth2client.client.OAuth2Credentials):
+  """A utility class to use Google Auth credentials in place of oauth2client credentials.
+  """
   NON_SERIALIZED_MEMBERS = frozenset(
       list(oauth2client.client.OAuth2Credentials.NON_SERIALIZED_MEMBERS) +
       ['_base'])
 
   def __init__(self, base):
+    """Initializes oauth2client credentials based on underlying Google Auth credentials.
+
+    Args:
+      base: subclass of google.auth.credentials.Credentials
+    """
     if not isinstance(base, credentials.Credentials):
       raise TypeError("Invalid Credentials")
     self._base = base
@@ -132,11 +144,11 @@ def _get_external_account_credentials_from_info(info):
   try:
     # Check if configuration corresponds to an AWS credentials.
     creds = aws.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
-  except Exception as e:
+  except (ValueError, google.auth.exceptions.RefreshError):
     try:
       # Check if configuration corresponds to an Identity Pool credentials.
       creds = identity_pool.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
-    except Exception as e:
+    except ValueError:
       # If the configuration is invalid or does not correspond to any
       # supported external_account credentials, no credentials are found.
       return None
