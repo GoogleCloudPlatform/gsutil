@@ -14,6 +14,7 @@
 # limitations under the License.
 """Tests for wrapped_credentials.py."""
 
+import datetime
 import json
 import httplib2
 
@@ -38,12 +39,12 @@ RESPONSE = httplib2.Response({
 })
 
 
-class MockCredentials(credentials.Credentials):
+class MockCredentials(external_account.Credentials):
   refresh = mock.Mock()
-  _audience = None
 
   def __init__(self, token=None, expiry=None, *args, **kwargs):
-    super(*args, **kwargs)
+    super().__init__(*args, **kwargs)
+    self._audience = None
     self.expiry = expiry
     self.token = None
 
@@ -52,9 +53,8 @@ class MockCredentials(credentials.Credentials):
 
     self.refresh.side_effect = side_effect
 
-  @property
-  def info(self):
-    return {}
+  def retrieve_subject_token():
+    pass
 
 
 class HeadersWithAuth(dict):
@@ -67,61 +67,26 @@ class HeadersWithAuth(dict):
     return headers[b"Authorization"] == bytes("Bearer " + self.token, "utf-8")
 
 
-class TestStorage(oauth2client.client.Storage):
-  """Store and retrieve one set of credentials."""
-
-  def __init__(self):
-    super(TestStorage, self).__init__()
-    self._str = None
-
-  def locked_get(self):
-    if self._str is None:
-      return None
-
-    credentials = oauth2client.client.Credentials.new_from_json(self._str)
-    credentials.set_store(self)
-
-    return credentials
-
-  def locked_put(self, credentials):
-    self._str = credentials.to_json()
-
-  def locked_delete(self):
-    self._str = None
-
-
-def initialize_mock_creds(credentials, token):
-
-  def side_effect(arg):
-    credentials.token = token
-
-  credentials.token = None
-  credentials.expiry = None
-  credentials._audience = "foo"
-  credentials.refresh.side_effect = side_effect
-
-
 class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
   """Test logic for interacting with Wrapped Credentials the way we intend to use them."""
 
-  @mock.patch.object(external_account, "Credentials", autospec=True)
   @mock.patch.object(httplib2, "Http", autospec=True)
-  def testWrappedCredentialUsage(self, http, ea_creds):
+  def testWrappedCredentialUsage(self, http):
     http.return_value.request.return_value = (RESPONSE, CONTENT)
     req = http.return_value.request
-    initialize_mock_creds(ea_creds.return_value, ACCESS_TOKEN)
 
     creds = WrappedCredentials(
-        external_account.Credentials(audience="foo",
-                                     subject_token_type="bar",
-                                     token_url="baz",
-                                     credential_source="qux"))
+        MockCredentials(token=ACCESS_TOKEN,
+                        audience="foo",
+                        subject_token_type="bar",
+                        token_url="baz",
+                        credential_source="qux"))
 
     http = oauth2client.transport.get_http_object()
     creds.authorize(http)
     response, content = http.request(uri="www.google.com")
     self.assertEquals(content, CONTENT)
-    ea_creds.return_value.refresh.assert_called_once()
+    MockCredentials.refresh.assert_called_once()
 
     # Make sure the default request gets called with the correct token
     req.assert_called_once_with("www.google.com",
@@ -138,9 +103,13 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
                                   subject_token_type="bar",
                                   token_url="baz",
                                   credential_source={"url": "www.google.com"}))
+    creds.access_token = ACCESS_TOKEN
+    creds.token_expiry = datetime.datetime(2001, 12, 5, 0, 0)
     creds_json = creds.to_json()
     json_values = json.loads(creds_json)
     self.assertEquals(json_values["client_id"], "foo")
+    self.assertEquals(json_values['access_token'], ACCESS_TOKEN)
+    self.assertEquals(json_values['token_expiry'], "2001-12-05T00:00:00Z")
     self.assertEquals(json_values["_base"]["audience"], "foo")
     self.assertEquals(json_values["_base"]["subject_token_type"], "bar")
     self.assertEquals(json_values["_base"]["token_url"], "baz")
@@ -151,3 +120,5 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     self.assertIsInstance(creds2, WrappedCredentials)
     self.assertIsInstance(creds2._base, identity_pool.Credentials)
     self.assertEquals(creds2.client_id, "foo")
+    self.assertEquals(creds2.access_token, ACCESS_TOKEN)
+    self.assertEquals(creds2.token_expiry, creds.token_expiry)
