@@ -24,16 +24,15 @@ import copy
 import datetime
 import io
 import json
-import oauth2client
 
 from google.auth import aws
 from google.auth import credentials
+from google.auth import exceptions
+from google.auth import external_account
 from google.auth import identity_pool
 from google.auth.transport import requests
 from gslib.utils import constants
-
-# Expiry is stored in RFC3339 UTC format
-EXPIRY_FORMAT = oauth2client.client.EXPIRY_FORMAT
+import oauth2client
 
 DEFAULT_SCOPES = [
     constants.Scopes.CLOUD_PLATFORM,
@@ -51,20 +50,20 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
       list(oauth2client.client.OAuth2Credentials.NON_SERIALIZED_MEMBERS) +
       ['_base'])
 
-  def __init__(self, base):
+  def __init__(self, external_account_creds):
     """Initializes oauth2client credentials based on underlying Google Auth credentials.
 
     Args:
-      base: subclass of google.auth.credentials.Credentials
+      external_account_creds: subclass of google.auth.external_account.Credentials
     """
-    if not isinstance(base, credentials.Credentials):
+    if not isinstance(external_account_creds, credentials.Credentials):
       raise TypeError("Invalid Credentials")
-    self._base = base
-    super(WrappedCredentials, self).__init__(access_token=base.token,
-                                             client_id=base._audience,
+    self._base = external_account_creds
+    super(WrappedCredentials, self).__init__(access_token=self._base.token,
+                                             client_id=self._base._audience,
                                              client_secret=None,
                                              refresh_token=None,
-                                             token_expiry=base.expiry,
+                                             token_expiry=self._base.expiry,
                                              token_uri=None,
                                              user_agent=None)
 
@@ -133,7 +132,7 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
         not isinstance(data['token_expiry'], datetime.datetime)):
       try:
         data['token_expiry'] = datetime.datetime.strptime(
-            data['token_expiry'], EXPIRY_FORMAT)
+            data['token_expiry'], oauth2client.client.EXPIRY_FORMAT)
       except ValueError:
         data['token_expiry'] = None
     creds.token_expiry = data.get("token_expiry")
@@ -144,7 +143,7 @@ def _get_external_account_credentials_from_info(info):
   try:
     # Check if configuration corresponds to an AWS credentials.
     creds = aws.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
-  except (ValueError, google.auth.exceptions.RefreshError):
+  except (ValueError, exceptions.RefreshError):
     try:
       # Check if configuration corresponds to an Identity Pool credentials.
       creds = identity_pool.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
@@ -163,6 +162,6 @@ def _get_external_account_credentials_from_file(filename):
 
 def _parse_expiry(expiry):
   if expiry and isinstance(expiry, datetime.datetime):
-    return expiry.strftime(EXPIRY_FORMAT)
+    return expiry.strftime(oauth2client.client.EXPIRY_FORMAT)
   else:
     return None

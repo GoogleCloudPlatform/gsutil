@@ -14,12 +14,15 @@
 # limitations under the License.
 """Tests for wrapped_credentials.py."""
 
+import json
+import httplib2
+
 from google.auth import credentials
+from google.auth import external_account
+from google.auth import identity_pool
 from gslib.tests import testcase
 from gslib.utils.wrapped_credentials import WrappedCredentials
-import httplib2
 import oauth2client
-from oauth2client.contrib import dictionary_storage
 
 from six import add_move, MovedModule
 
@@ -42,37 +45,109 @@ class MockCredentials(credentials.Credentials):
   def __init__(self, token=None, expiry=None, *args, **kwargs):
     super(*args, **kwargs)
     self.expiry = expiry
-    self.token = token
+    self.token = None
+
+    def side_effect(*args, **kwargs):
+      self.token = token
+
+    self.refresh.side_effect = side_effect
 
   @property
   def info(self):
     return {}
 
 
+class HeadersWithAuth(dict):
+  """A utility class to use to make sure a set of headers includes specific authentication"""
+
+  def __init__(self, token):
+    self.token = token or ""
+
+  def __eq__(self, headers):
+    return headers[b"Authorization"] == bytes("Bearer " + self.token, "utf-8")
+
+
+class TestStorage(oauth2client.client.Storage):
+  """Store and retrieve one set of credentials."""
+
+  def __init__(self):
+    super(TestStorage, self).__init__()
+    self._str = None
+
+  def locked_get(self):
+    if self._str is None:
+      return None
+
+    credentials = oauth2client.client.Credentials.new_from_json(self._str)
+    credentials.set_store(self)
+
+    return credentials
+
+  def locked_put(self, credentials):
+    self._str = credentials.to_json()
+
+  def locked_delete(self):
+    self._str = None
+
+
+def initialize_mock_creds(credentials, token):
+
+  def side_effect(arg):
+    credentials.token = token
+
+  credentials.token = None
+  credentials.expiry = None
+  credentials._audience = "foo"
+  credentials.refresh.side_effect = side_effect
+
+
 class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
-  """Test logic for interacting with Wrapped Credentials."""
+  """Test logic for interacting with Wrapped Credentials the way we intend to use them."""
 
-  @mock.patch("oauth2client.transport.httplib2.Http", autospec=True)
-  def testWrappedCredentialUsage(self, http):
+  @mock.patch.object(external_account, "Credentials", autospec=True)
+  @mock.patch.object(httplib2, "Http", autospec=True)
+  def testWrappedCredentialUsage(self, http, ea_creds):
     http.return_value.request.return_value = (RESPONSE, CONTENT)
+    req = http.return_value.request
+    initialize_mock_creds(ea_creds.return_value, ACCESS_TOKEN)
 
-    creds = WrappedCredentials(MockCredentials(token=ACCESS_TOKEN))
+    creds = WrappedCredentials(
+        external_account.Credentials(audience="foo",
+                                     subject_token_type="bar",
+                                     token_url="baz",
+                                     credential_source="qux"))
 
     http = oauth2client.transport.get_http_object()
     creds.authorize(http)
     response, content = http.request(uri="www.google.com")
     self.assertEquals(content, CONTENT)
+    ea_creds.return_value.refresh.assert_called_once()
 
-  @mock.patch("oauth2client.transport.httplib2.Http", autospec=True)
-  def testWrappedCredentialUsageFromCache(self, http):
-    http.return_value.request.return_value = (RESPONSE, CONTENT)
+    # Make sure the default request gets called with the correct token
+    req.assert_called_once_with("www.google.com",
+                                method="GET",
+                                headers=HeadersWithAuth(ACCESS_TOKEN),
+                                body=None,
+                                connection_type=mock.ANY,
+                                redirections=mock.ANY)
 
-    base_creds = WrappedCredentials(MockCredentials(token=ACCESS_TOKEN))
-    storage = dictionary_storage.DictionaryStorage({}, "")
-    storage.put(base_creds)
-    creds = storage.get()
+  def testWrappedCredentialSerialization(self):
+    """Test logic for converting Wrapped Credentials to and from JSON for serialization."""
+    creds = WrappedCredentials(
+        identity_pool.Credentials(audience="foo",
+                                  subject_token_type="bar",
+                                  token_url="baz",
+                                  credential_source={"url": "www.google.com"}))
+    creds_json = creds.to_json()
+    json_values = json.loads(creds_json)
+    self.assertEquals(json_values["client_id"], "foo")
+    self.assertEquals(json_values["_base"]["audience"], "foo")
+    self.assertEquals(json_values["_base"]["subject_token_type"], "bar")
+    self.assertEquals(json_values["_base"]["token_url"], "baz")
+    self.assertEquals(json_values["_base"]["credential_source"]["url"],
+                      "www.google.com")
 
-    http = oauth2client.transport.get_http_object()
-    creds.authorize(http)
-    response, content = http.request(uri="www.google.com")
-    self.assertEquals(content, CONTENT)
+    creds2 = WrappedCredentials.from_json(creds_json)
+    self.assertIsInstance(creds2, WrappedCredentials)
+    self.assertIsInstance(creds2._base, identity_pool.Credentials)
+    self.assertEquals(creds2.client_id, "foo")
