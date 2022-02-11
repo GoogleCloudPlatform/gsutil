@@ -56,7 +56,7 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
     Args:
       external_account_creds: subclass of google.auth.external_account.Credentials
     """
-    if not isinstance(external_account_creds, credentials.Credentials):
+    if not isinstance(external_account_creds, external_account.Credentials):
       raise TypeError("Invalid Credentials")
     self._base = external_account_creds
     super(WrappedCredentials, self).__init__(access_token=self._base.token,
