@@ -87,6 +87,7 @@ from gslib.parallel_tracker_file import WriteParallelUploadTrackerFile
 from gslib.progress_callback import FileProgressCallbackHandler
 from gslib.progress_callback import ProgressCallbackWithTimeout
 from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
+from gslib import storage_url
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import GenerationFromUrlAndString
 from gslib.storage_url import IsCloudSubdirPlaceholder
@@ -557,10 +558,51 @@ def _ShouldTreatDstUrlAsSingleton(src_url_names_container, have_multiple_srcs,
             dst_url.IsObject())
 
 
+def _IsUrlValidParentDir(url):
+  """Returns True if not FileUrl ending in  relative path symbols.
+
+  A URL is invalid if it is a FileUrl and the parent directory of the file is a
+  relative path symbol. Unix will not allow a file itself to be named with a
+  relative path symbol, but one can be the parent. Notably, "../obj" can lead
+  to unexpected behavior at the copy destination. We examine the pre-recursion
+  "url", which might point to "..", to see if the parent is valid.
+
+  If the user does a recursive copy from a URL, it may not end up
+  the final parent of the copied object. For example, see: "dir/nested_dir/obj".
+
+  If you ran "cp -r dir gs://bucket" from the parent of "dir", then the "url"
+  arg would be "dir", but "nested_dir" would be the parent of "obj".
+  This actually doesn't matter since recursion won't add relative path symbols
+  to the path. However, we still return if "url" is valid because
+  there are cases where we need to copy every parent directory up to
+  "dir" to prevent file name conflicts.
+
+  Args:
+    url: StorageUrl before recursion.
+
+  Returns:
+    Boolean indicating if the "url" is valid as a parent directory.
+  """
+  if not url.IsFileUrl():
+    return True
+
+  url_string_minus_trailing_delimiter = url.versionless_url_string.rstrip(
+      url.delim)
+  _, _, after_last_delimiter = (url_string_minus_trailing_delimiter.rpartition(
+      url.delim))
+
+  return after_last_delimiter not in storage_url.RELATIVE_PATH_SYMBOLS and (
+      after_last_delimiter not in [
+          url.scheme + '://' + symbol
+          for symbol in storage_url.RELATIVE_PATH_SYMBOLS
+      ])
+
+
 def ConstructDstUrl(src_url,
                     exp_src_url,
                     src_url_names_container,
                     have_multiple_srcs,
+                    has_multiple_top_level_srcs,
                     exp_dst_url,
                     have_existing_dest_subdir,
                     recursion_requested,
@@ -578,6 +620,8 @@ def ConstructDstUrl(src_url,
     have_multiple_srcs: True if this is a multi-source request. This can be
         true if src_url wildcard-expanded to multiple URLs or if there were
         multiple source URLs in the request.
+    has_multiple_top_level_srcs: Same as have_multiple_srcs but measured
+        before recursion.
     exp_dst_url: the expanded StorageUrl requested for the cp destination.
         Final written path is constructed from this plus a context-dependent
         variant of src_url.
@@ -635,26 +679,23 @@ def ConstructDstUrl(src_url,
     exp_dst_url = StorageUrlFromString(
         '%s%s' % (exp_dst_url.url_string, exp_dst_url.delim))
 
+  src_url_is_valid_parent = _IsUrlValidParentDir(src_url)
+  if not src_url_is_valid_parent and has_multiple_top_level_srcs:
+    # To avoid top-level name conflicts, we need to copy the parent dir.
+    # However, that cannot be done because the parent dir has an invalid name.
+    raise InvalidUrlError(
+        'Presence of multiple top-level sources and invalid expanded URL'
+        ' make file name conflicts possible for URL: {}'.format(src_url))
+
   # Making naming behavior match how things work with local Linux cp and mv
   # operations depends on many factors, including whether the destination is a
-  # container, the plurality of the source(s), and whether the mv command is
-  # being used:
-  # 1. For the "mv" command that specifies a non-existent destination subdir,
-  #    renaming should occur at the level of the src subdir, vs appending that
-  #    subdir beneath the dst subdir like is done for copying. For example:
-  #      gsutil rm -r gs://bucket
-  #      gsutil cp -r dir1 gs://bucket
-  #      gsutil cp -r dir2 gs://bucket/subdir1
-  #      gsutil mv gs://bucket/subdir1 gs://bucket/subdir2
-  #    would (if using cp naming behavior) end up with paths like:
-  #      gs://bucket/subdir2/subdir1/dir2/.svn/all-wcprops
-  #    whereas mv naming behavior should result in:
-  #      gs://bucket/subdir2/dir2/.svn/all-wcprops
-  # 2. Copying from directories, buckets, or bucket subdirs should result in
-  #    objects/files mirroring the source directory hierarchy. For example:
-  #      gsutil cp dir1/dir2 gs://bucket
+  # container, and the plurality of the source(s).
+  # 1. Recursively copying from directories, buckets, or bucket subdirs should
+  #    result in objects/files mirroring the source hierarchy. For example:
+  #      gsutil cp -r dir1/dir2 gs://bucket
   #    should create the object gs://bucket/dir2/file2, assuming dir1/dir2
   #    contains file2).
+  #
   #    To be consistent with Linux cp behavior, there's one more wrinkle when
   #    working with subdirs: The resulting object names depend on whether the
   #    destination subdirectory exists. For example, if gs://bucket/subdir
@@ -663,58 +704,53 @@ def ConstructDstUrl(src_url,
   #    should create objects named like gs://bucket/subdir/dir2/a/b/c. In
   #    contrast, if gs://bucket/subdir does not exist, this same command
   #    should create objects named like gs://bucket/subdir/a/b/c.
-  # 3. Copying individual files or objects to dirs, buckets or bucket subdirs
+  #
+  #    If there are multiple top-level source items, preserve source parent
+  #    dirs. This is similar to when the destination dir already exists and
+  #    avoids conflicts such as "dir1/f.txt" and "dir2/f.txt" both getting
+  #    copied to "gs://bucket/f.txt". Linux normally errors on these conflicts,
+  #    but we cannot do that because we need to give users the ability to create
+  #    dirs as they copy to the cloud.
+  #
+  #    Note: "mv" is similar to running "cp -r" followed by source deletion.
+  #
+  # 2. Copying individual files or objects to dirs, buckets or bucket subdirs
   #    should result in objects/files named by the final source file name
   #    component. Example:
   #      gsutil cp dir1/*.txt gs://bucket
   #    should create the objects gs://bucket/f1.txt and gs://bucket/f2.txt,
   #    assuming dir1 contains f1.txt and f2.txt.
 
-  recursive_move_to_new_subdir = False
-  if (global_copy_helper_opts.perform_mv and recursion_requested and
-      src_url_names_container and not have_existing_dest_subdir):
-    # Case 1. Handle naming rules for bucket subdir mv. Here we want to
-    # line up the src_url against its expansion, to find the base to build
-    # the new name. For example, running the command:
-    #   gsutil mv gs://bucket/abcd gs://bucket/xyz
-    # when processing exp_src_url=gs://bucket/abcd/123
-    # exp_src_url_tail should become /123
-    # Note: mv.py code disallows wildcard specification of source URL.
-    recursive_move_to_new_subdir = True
-    exp_src_url_tail = (exp_src_url.url_string[len(src_url.url_string):])
-    dst_key_name = '%s/%s' % (exp_dst_url.object_name.rstrip('/'),
-                              exp_src_url_tail.strip('/'))
-
-  elif src_url_names_container and (exp_dst_url.IsCloudUrl() or
-                                    exp_dst_url.IsDirectory()):
-    # Case 2.  Container copy to a destination other than a file.
+  # Ignore the "multiple top-level sources" rule if using double wildcard **
+  # because that treats all files as top-level, in which case the user doesn't
+  # want to preserve directories.
+  preserve_src_top_level_dirs = ('**' not in src_url.versionless_url_string and
+                                 src_url_is_valid_parent and
+                                 (has_multiple_top_level_srcs or
+                                  have_existing_dest_subdir))
+  if preserve_src_top_level_dirs or (src_url_names_container and
+                                     (exp_dst_url.IsCloudUrl() or
+                                      exp_dst_url.IsDirectory())):
+    # Case 1.  Container copy to a destination other than a file.
     # Build dst_key_name from subpath of exp_src_url past
     # where src_url ends. For example, for src_url=gs://bucket/ and
     # exp_src_url=gs://bucket/src_subdir/obj, dst_key_name should be
     # src_subdir/obj.
     src_url_path_sans_final_dir = GetPathBeforeFinalDir(src_url, exp_src_url)
-
     dst_key_name = exp_src_url.versionless_url_string[
         len(src_url_path_sans_final_dir):].lstrip(src_url.delim)
-    # Handle case where dst_url is a non-existent subdir.
-    if not have_existing_dest_subdir:
+
+    if not preserve_src_top_level_dirs:
+      # Only copy file name, not parent dir.
       dst_key_name = dst_key_name.partition(src_url.delim)[-1]
-    # Handle special case where src_url was a directory named with '.' or
-    # './', so that running a command like:
-    #   gsutil cp -r . gs://dest
-    # will produce obj names of the form gs://dest/abc instead of
-    # gs://dest/./abc.
-    if dst_key_name.startswith('.%s' % os.sep):
-      dst_key_name = dst_key_name[2:]
 
   else:
-    # Case 3.
+    # Case 2.
     dst_key_name = exp_src_url.object_name.rpartition(src_url.delim)[-1]
 
-  if (not recursive_move_to_new_subdir and
-      (exp_dst_url.IsFileUrl() or _ShouldTreatDstUrlAsBucketSubDir(
-          have_multiple_srcs, exp_dst_url, have_existing_dest_subdir,
-          src_url_names_container, recursion_requested))):
+  if (exp_dst_url.IsFileUrl() or _ShouldTreatDstUrlAsBucketSubDir(
+      have_multiple_srcs, exp_dst_url, have_existing_dest_subdir,
+      src_url_names_container, recursion_requested)):
     if exp_dst_url.object_name and exp_dst_url.object_name.endswith(
         exp_dst_url.delim):
       dst_key_name = '%s%s%s' % (exp_dst_url.object_name.rstrip(

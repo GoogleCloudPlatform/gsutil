@@ -1220,8 +1220,14 @@ class _DiffIterator(object):
           src_url_str_to_check = _EncodeUrl(
               src_url_str[base_src_url_len:].replace('\\', '/'))
           dst_url_str_would_copy_to = copy_helper.ConstructDstUrl(
-              self.base_src_url, StorageUrlFromString(src_url_str), True, True,
-              self.base_dst_url, False, self.recursion_requested).url_string
+              src_url=self.base_src_url,
+              exp_src_url=StorageUrlFromString(src_url_str),
+              src_url_names_container=True,
+              have_multiple_srcs=True,
+              has_multiple_top_level_srcs=False,
+              exp_dst_url=self.base_dst_url,
+              have_existing_dest_subdir=False,
+              recursion_requested=self.recursion_requested).url_string
       if dst_url_str is None:
         if not self.sorted_dst_urls_it.IsEmpty():
           # We don't need time created at the destination.

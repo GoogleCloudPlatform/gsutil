@@ -1703,6 +1703,56 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     _CopyAndCheck()
 
+  def test_copy_duplicate_nested_object_names_to_new_cloud_dir(self):
+    """Tests copying from bucket to same bucket preserves file structure."""
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='dir1/file.txt',
+                      contents=b'data')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='dir2/file.txt',
+                      contents=b'data')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _CopyAndCheck():
+      self.RunGsUtil(
+          ['cp', '-R',
+           suri(bucket_uri) + '/*',
+           suri(bucket_uri) + '/dst'])
+      stdout = self.RunGsUtil(['ls', '-R', bucket_uri.uri], return_stdout=True)
+      self.assertIn(suri(bucket_uri) + '/dst/dir1/file.txt', stdout)
+      self.assertIn(suri(bucket_uri) + '/dst/dir2/file.txt', stdout)
+
+    _CopyAndCheck()
+
+  def test_copy_duplicate_nested_object_names_to_existing_cloud_dir(self):
+    """Tests copying from bucket to same bucket preserves file structure."""
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='dir1/file.txt',
+                      contents=b'data')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='dir2/file.txt',
+                      contents=b'data')
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='dst/existing_file.txt',
+                      contents=b'data')
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _CopyAndCheck():
+      self.RunGsUtil(
+          ['cp', '-R',
+           suri(bucket_uri) + '/*',
+           suri(bucket_uri) + '/dst'])
+      stdout = self.RunGsUtil(['ls', '-R', bucket_uri.uri], return_stdout=True)
+      self.assertIn(suri(bucket_uri) + '/dst/dir1/file.txt', stdout)
+      self.assertIn(suri(bucket_uri) + '/dst/dir2/file.txt', stdout)
+      self.assertIn(suri(bucket_uri) + '/dst/existing_file.txt', stdout)
+
+    _CopyAndCheck()
+
   @SkipForGS('Only s3 V4 signatures error on location mismatches.')
   def test_copy_bucket_to_bucket_with_location_redirect(self):
     # cp uses a sender function that raises an exception on location mismatches,

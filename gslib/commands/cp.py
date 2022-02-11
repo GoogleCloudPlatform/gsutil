@@ -93,7 +93,7 @@ _DESCRIPTION_TEXT = """
   all text files from the top-level of a bucket to your current directory:
 
     gsutil cp gs://my-bucket/*.txt .
-  
+
   You can use the ``-n`` option to prevent overwriting the content of
   existing files. The following example downloads text files from a bucket
   without clobbering the data in your directory:
@@ -809,21 +809,13 @@ class CpCommand(Command):
         exp_src_url.url_string):
       return
 
-    if copy_helper_opts.perform_mv:
-      if copy_object_info.names_container:
-        # Use recursion_requested when performing name expansion for the
-        # directory mv case so we can determine if any of the source URLs are
-        # directories (and then use cp -r and rm -r to perform the move, to
-        # match the behavior of Linux mv (which when moving a directory moves
-        # all the contained files).
-        self.recursion_requested = True
-        # Disallow wildcard src URLs when moving directories, as supporting it
-        # would make the name transformation too complex and would also be
-        # dangerous (e.g., someone could accidentally move many objects to the
-        # wrong name, or accidentally overwrite many objects).
-        if ContainsWildcard(src_url.url_string):
-          raise CommandException('The mv command disallows naming source '
-                                 'directories using wildcards')
+    if copy_helper_opts.perform_mv and copy_object_info.names_container:
+      # Use recursion_requested when performing name expansion for the
+      # directory mv case so we can determine if any of the source URLs are
+      # directories (and then use cp -r and rm -r to perform the move, to
+      # match the behavior of Linux mv (which when moving a directory moves
+      # all the contained files).
+      self.recursion_requested = True
 
     if (copy_object_info.exp_dst_url.IsFileUrl() and
         not os.path.exists(copy_object_info.exp_dst_url.object_name) and
@@ -840,6 +832,7 @@ class CpCommand(Command):
         exp_src_url,
         src_url_names_container,
         have_multiple_srcs,
+        copy_object_info.is_multi_top_level_source_request,
         copy_object_info.exp_dst_url,
         copy_object_info.have_existing_dst_container,
         self.recursion_requested,
