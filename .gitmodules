@@ -61,3 +61,6 @@
 [submodule "third_party/cachetools"]
 	path = third_party/cachetools
 	url = https://github.com/tkem/cachetools
+[submodule "third_party/requests"]
+	path = third_party/requests
+	url = https://github.com/psf/requests
