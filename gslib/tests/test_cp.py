@@ -4694,6 +4694,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
                 os.path.join('fake_dir', 'bin', 'gcloud'), fpath,
                 suri(bucket_uri)), info_lines)
 
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @mock.patch('os.geteuid', new=mock.Mock(return_value=0))
   @mock.patch.object(os, 'chown', autospec=True)
   def test_posix_runs_chown_as_super_user(self, mock_chown):
@@ -4703,6 +4704,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     ParseAndSetPOSIXAttributes(fpath, obj, False, True)
     mock_chown.assert_called_once_with(fpath, USER_ID, -1)
 
+  @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @mock.patch('os.geteuid', new=mock.Mock(return_value=USER_ID))
   @mock.patch.object(os, 'chown', autospec=True)
   def test_posix_skips_chown_when_not_super_user(self, mock_chown):
