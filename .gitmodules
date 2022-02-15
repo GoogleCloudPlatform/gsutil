@@ -82,6 +82,3 @@
 [submodule "third_party/certifi"]
 	path = third_party/certifi
 	url = https://github.com/certifi/python-certifi.git
-[submodule "third_party/pyopenssl"]
-	path = third_party/pyopenssl
-	url = https://github.com/pyca/pyopenssl

@@ -92,7 +92,6 @@ THIRD_PARTY_LIBS = [
     ('idna', ''),  # requests dependency
     ('requests', ''),  # google auth dependency
     ('aiohttp', ''),  # google auth dependency
-    ('pyopenssl', ''), # google auth dependency
     ('google-auth-library-python', ''),
 ]
 
