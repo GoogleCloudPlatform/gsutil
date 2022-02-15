@@ -27,6 +27,7 @@ from gslib.cred_types import CredTypes
 from gslib.exception import CommandException
 from gslib.tests import testcase
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import unittest
 from gslib.utils.wrapped_credentials import WrappedCredentials
 import logging
 from oauth2client.service_account import ServiceAccountCredentials
@@ -36,6 +37,12 @@ from six import add_move, MovedModule
 
 add_move(MovedModule("mock", "mock", "unittest.mock"))
 from six.moves import mock
+
+try:
+  from OpenSSL.crypto import load_pkcs12
+  HAS_OPENSSL = True
+except ImportError:
+  HAS_OPENSSL = False
 
 ERROR_MESSAGE = "This is the error message"
 
@@ -64,6 +71,7 @@ def botoCredentialsSet(
 class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
   """Test logic for interacting with GCS JSON Credentials."""
 
+  @unittest.skipUnless(HAS_OPENSSL, 'signurl requires pyopenssl.')
   def testOauth2ServiceAccountCredential(self):
     contents = pkgutil.get_data("gslib", "tests/test_data/test.p12")
     tmpfile = self.CreateTempFile(contents=contents)
@@ -76,6 +84,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials, ServiceAccountCredentials)
 
+  @unittest.skipUnless(HAS_OPENSSL, 'signurl requires pyopenssl.')
   @mock.patch.object(ServiceAccountCredentials,
                      "__init__",
                      side_effect=ValueError(ERROR_MESSAGE))

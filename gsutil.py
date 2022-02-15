@@ -85,7 +85,14 @@ THIRD_PARTY_LIBS = [
     ('retry-decorator', ''),
     ('six', ''),  # Python 2 / 3 compatibility dependency
     ('cachetools', 'src'),  # google auth dependency
+    ('urllib3', 'src'),  # requests dependency
+    ('charset_normalizer', ''),  # requests dependency
+    ('chardet', ''),  # requests dependency
+    ('certifi', ''),  # requests dependency
+    ('idna', ''),  # requests dependency
     ('requests', ''),  # google auth dependency
+    ('aiohttp', ''),  # google auth dependency
+    ('pyopenssl', ''), # google auth dependency
     ('google-auth-library-python', ''),
 ]
 
