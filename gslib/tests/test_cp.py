@@ -34,6 +34,7 @@ import stat
 import string
 import sys
 import threading
+from unittest import mock
 
 from apitools.base.py import exceptions as apitools_exceptions
 import boto
@@ -101,11 +102,13 @@ from gslib.utils.copy_helper import TrackerFileType
 from gslib.utils.hashing_helper import CalculateB64EncodedMd5FromContents
 from gslib.utils.hashing_helper import CalculateMd5FromContents
 from gslib.utils.hashing_helper import GetMd5
+from gslib.utils.metadata_util import CreateCustomMetadata
 from gslib.utils.posix_util import GID_ATTR
 from gslib.utils.posix_util import MODE_ATTR
 from gslib.utils.posix_util import NA_ID
 from gslib.utils.posix_util import NA_MODE
 from gslib.utils.posix_util import UID_ATTR
+from gslib.utils.posix_util import ParseAndSetPOSIXAttributes
 from gslib.utils.posix_util import ValidateFilePermissionAccess
 from gslib.utils.posix_util import ValidatePOSIXMode
 from gslib.utils.retry_util import Retry
@@ -4690,3 +4693,21 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
             ' -r -r --ignore-symlinks {} {}'.format(
                 os.path.join('fake_dir', 'bin', 'gcloud'), fpath,
                 suri(bucket_uri)), info_lines)
+
+  @mock.patch('os.geteuid', new=mock.Mock(return_value=0))
+  @mock.patch.object(os, 'chown', autospec=True)
+  def test_posix_runs_chown_as_super_user(self, mock_chown):
+      fpath = self.CreateTempFile(contents=b'abcd')
+      obj = apitools_messages.Object()
+      obj.metadata = CreateCustomMetadata(entries={ UID_ATTR: USER_ID })
+      ParseAndSetPOSIXAttributes(fpath, obj, False, True)
+      mock_chown.assert_called_once_with(fpath, USER_ID, -1)
+
+  @mock.patch('os.geteuid', new=mock.Mock(return_value=USER_ID))
+  @mock.patch.object(os, 'chown', autospec=True)
+  def test_posix_skips_chown_when_not_super_user(self, mock_chown):
+      fpath = self.CreateTempFile(contents=b'abcd')
+      obj = apitools_messages.Object()
+      obj.metadata = CreateCustomMetadata(entries={ UID_ATTR: USER_ID })
+      ParseAndSetPOSIXAttributes(fpath, obj, False, True)
+      mock_chown.assert_not_called()

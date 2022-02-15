@@ -454,6 +454,8 @@ def ParseAndSetPOSIXAttributes(path,
     # Only root can change ownership.
     if found_uid and os.geteuid() == 0:
       uid = int(uid)
+    else:
+      uid = NA_ID
     if found_gid:
       gid = int(gid)
     if uid > NA_ID and gid > NA_ID:
