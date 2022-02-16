@@ -4705,7 +4705,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     mock_chown.assert_called_once_with(fpath, USER_ID, -1)
 
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
-  @mock.patch('os.geteuid', new=mock.Mock(return_value=USER_ID))
+  @mock.patch('os.geteuid', new=mock.Mock(return_value=1))
   @mock.patch.object(os, 'chown', autospec=True)
   def test_posix_skips_chown_when_not_super_user(self, mock_chown):
     fpath = self.CreateTempFile(contents=b'abcd')
