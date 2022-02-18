@@ -86,7 +86,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     creds.authorize(http)
     response, content = http.request(uri="www.google.com")
     self.assertEquals(content, CONTENT)
-    MockCredentials.refresh.assert_called_once()
+    MockCredentials.refresh.assert_called_once_with(mock.ANY)
 
     # Make sure the default request gets called with the correct token
     req.assert_called_once_with("www.google.com",

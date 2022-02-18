@@ -150,8 +150,8 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
         self.assertIn(CredTypes.GCE, logger.output[0])
 
   def testExternalAccountCredential(self):
-    contents = pkgutil.get_data("gslib",
-                                "tests/test_data/test_external_account_credentials.json")
+    contents = pkgutil.get_data(
+        "gslib", "tests/test_data/test_external_account_credentials.json")
     tmpfile = self.CreateTempFile(contents=contents)
     with SetBotoConfigForTest(
         botoCredentialsSet(external_account_creds=tmpfile)):
@@ -162,8 +162,8 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
                      "__init__",
                      side_effect=ValueError(ERROR_MESSAGE))
   def testExternalAccountFailure(self, _):
-    contents = pkgutil.get_data("gslib",
-                                "tests/test_data/test_external_account_credentials.json")
+    contents = pkgutil.get_data(
+        "gslib", "tests/test_data/test_external_account_credentials.json")
     tmpfile = self.CreateTempFile(contents=contents)
     with SetBotoConfigForTest(
         botoCredentialsSet(external_account_creds=tmpfile)):
