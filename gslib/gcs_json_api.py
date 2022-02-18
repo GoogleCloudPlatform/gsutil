@@ -2418,7 +2418,7 @@ class GcsJsonApi(CloudApi):
         return NotFoundException(message or e.message, status=e.status_code)
 
       elif e.status_code == 409 and bucket_name:
-        if 'The bucket you tried to delete was not empty.' in str(e):
+        if 'The bucket you tried to delete is not empty.' in str(e):
           return NotEmptyException('BucketNotEmpty (%s)' % bucket_name,
                                    status=e.status_code)
         return ServiceException(
