@@ -512,7 +512,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True,
                             expected_status=1,
                             force_gsutil=True)
-    self.assertIn('Bucket is not empty', stderr)
+    self.assertIn('bucket you tried to delete is not empty', stderr)
 
     # Now try with rm -r.
     @Retry(AssertionError, tries=3, timeout_secs=1)
