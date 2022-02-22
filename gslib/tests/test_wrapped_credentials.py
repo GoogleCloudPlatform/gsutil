@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2022 Google Inc. All Rights Reserved.
+# Copyright 2022 Google LLC. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,13 +40,13 @@ RESPONSE = httplib2.Response({
 
 
 class MockCredentials(external_account.Credentials):
-  refresh = mock.Mock()
 
   def __init__(self, token=None, expiry=None, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self._audience = None
     self.expiry = expiry
     self.token = None
+    self.refresh = mock.Mock(side_effect=side_effect)
 
     def side_effect(*args, **kwargs):
       self.token = token
@@ -88,7 +88,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     self.assertEquals(content, CONTENT)
     MockCredentials.refresh.assert_called_once_with(mock.ANY)
 
-    # Make sure the default request gets called with the correct token
+    # Make sure the default request gets called with the correct token.
     req.assert_called_once_with("www.google.com",
                                 method="GET",
                                 headers=HeadersWithAuth(ACCESS_TOKEN),

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2022 Google Inc. All Rights Reserved.
+# Copyright 2022 Google LLC. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ except ImportError:
 ERROR_MESSAGE = "This is the error message"
 
 
-def botoCredentialsSet(
+def getBotoCredentialsConfig(
     service_account_creds=None,
     user_account_creds=None,
     gce_creds=None,
@@ -61,10 +61,11 @@ def botoCredentialsSet(
                    service_account_creds["client_id"]))
   else:
     config.append(("Credentials", "gs_service_key_file", None))
-  config.append(("Credentials", "gs_oauth2_refresh_token", user_account_creds))
-  config.append(("GoogleCompute", "service_account", gce_creds))
-  config.append(
-      ("Credentials", "gs_external_account_file", external_account_creds))
+  config.extend([
+      ("Credentials", "gs_oauth2_refresh_token", user_account_creds),
+      ("GoogleCompute", "service_account", gce_creds),
+      ("Credentials", "gs_external_account_file", external_account_creds),
+  ])
   return config
 
 
@@ -76,9 +77,9 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
     contents = pkgutil.get_data("gslib", "tests/test_data/test.p12")
     tmpfile = self.CreateTempFile(contents=contents)
     with SetBotoConfigForTest(
-        botoCredentialsSet(service_account_creds={
+        getBotoCredentialsConfig(service_account_creds={
             "keyfile": tmpfile,
-            "client_id": "?"
+            "client_id": "?",
         })):
       self.assertTrue(gcs_json_credentials._HasOauth2ServiceAccountCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
@@ -92,9 +93,9 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
     contents = pkgutil.get_data("gslib", "tests/test_data/test.p12")
     tmpfile = self.CreateTempFile(contents=contents)
     with SetBotoConfigForTest(
-        botoCredentialsSet(service_account_creds={
+        getBotoCredentialsConfig(service_account_creds={
             "keyfile": tmpfile,
-            "client_id": "?"
+            "client_id": "?",
         })):
       with self.assertLogs() as logger:
         with self.assertRaises(Exception) as exc:
@@ -103,7 +104,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
         self.assertIn(CredTypes.OAUTH2_SERVICE_ACCOUNT, logger.output[0])
 
   def testOauth2UserCredential(self):
-    with SetBotoConfigForTest(botoCredentialsSet(user_account_creds="?")):
+    with SetBotoConfigForTest(getBotoCredentialsConfig(user_account_creds="?")):
       self.assertTrue(gcs_json_credentials._HasOauth2UserAccountCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials,
@@ -113,7 +114,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
                      "__init__",
                      side_effect=ValueError(ERROR_MESSAGE))
   def testOauth2UserFailure(self, _):
-    with SetBotoConfigForTest(botoCredentialsSet(user_account_creds="?")):
+    with SetBotoConfigForTest(getBotoCredentialsConfig(user_account_creds="?")):
       with self.assertLogs() as logger:
         with self.assertRaises(Exception) as exc:
           gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
@@ -131,7 +132,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
     mock_credentials.return_value.client_id = None
     mock_credentials.return_value.refresh_token = "rEfrEshtOkEn"
     mock_credentials.return_value.set_store = set_store
-    with SetBotoConfigForTest(botoCredentialsSet(gce_creds="?")):
+    with SetBotoConfigForTest(getBotoCredentialsConfig(gce_creds="?")):
       self.assertTrue(gcs_json_credentials._HasGceCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials, GceAssertionCredentials)
@@ -142,7 +143,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
                      "__init__",
                      side_effect=ValueError(ERROR_MESSAGE))
   def testGCECredentialFailure(self, _):
-    with SetBotoConfigForTest(botoCredentialsSet(gce_creds="?")):
+    with SetBotoConfigForTest(getBotoCredentialsConfig(gce_creds="?")):
       with self.assertLogs() as logger:
         with self.assertRaises(Exception) as exc:
           gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
@@ -154,7 +155,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
         "gslib", "tests/test_data/test_external_account_credentials.json")
     tmpfile = self.CreateTempFile(contents=contents)
     with SetBotoConfigForTest(
-        botoCredentialsSet(external_account_creds=tmpfile)):
+        getBotoCredentialsConfig(external_account_creds=tmpfile)):
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials, WrappedCredentials)
 
@@ -166,7 +167,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
         "gslib", "tests/test_data/test_external_account_credentials.json")
     tmpfile = self.CreateTempFile(contents=contents)
     with SetBotoConfigForTest(
-        botoCredentialsSet(external_account_creds=tmpfile)):
+        getBotoCredentialsConfig(external_account_creds=tmpfile)):
       with self.assertLogs() as logger:
         with self.assertRaises(Exception) as exc:
           gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
@@ -175,10 +176,10 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
 
   def testOauth2ServiceAccountAndOauth2UserCredential(self):
     with SetBotoConfigForTest(
-        botoCredentialsSet(user_account_creds="?",
-                           service_account_creds={
-                               "keyfile": "?",
-                               "client_id": "?",
-                           })):
+        getBotoCredentialsConfig(user_account_creds="?",
+                                 service_account_creds={
+                                     "keyfile": "?",
+                                     "client_id": "?",
+                                 })):
       with self.assertRaises(CommandException):
         gcs_json_api.GcsJsonApi(None, None, None, None)
