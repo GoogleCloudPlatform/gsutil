@@ -46,12 +46,11 @@ class MockCredentials(external_account.Credentials):
     self._audience = None
     self.expiry = expiry
     self.token = None
-    self.refresh = mock.Mock(side_effect=side_effect)
 
     def side_effect(*args, **kwargs):
       self.token = token
 
-    self.refresh.side_effect = side_effect
+    self.refresh = mock.Mock(side_effect=side_effect)
 
   def retrieve_subject_token():
     pass
@@ -86,7 +85,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     creds.authorize(http)
     response, content = http.request(uri="www.google.com")
     self.assertEquals(content, CONTENT)
-    MockCredentials.refresh.assert_called_once_with(mock.ANY)
+    creds._base.refresh.assert_called_once_with(mock.ANY)
 
     # Make sure the default request gets called with the correct token.
     req.assert_called_once_with("www.google.com",
