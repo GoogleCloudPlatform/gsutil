@@ -137,10 +137,9 @@ except ImportError:
                        else CRCMOD_PATH)
   sys.path.insert(0, local_crcmod_path)
 
-_fix_google_module()
-
 
 def RunMain():
+  _fix_google_module()
   # pylint: disable=g-import-not-at-top
   import gslib.__main__
   sys.exit(gslib.__main__.main())
