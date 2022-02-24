@@ -64,7 +64,8 @@ class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
       mock_reload.assert_called_once_with("google")
 
   @mock.patch.object(importlib, "reload")
-  def test_fix_google_module_does_not_reload_if_module_missing(self, mock_reload):
+  def test_fix_google_module_does_not_reload_if_module_missing(
+      self, mock_reload):
     with mock.patch.dict('sys.modules', {}, clear=True):
       gsutil._fix_google_module()
       mock_reload.assert_not_called()
