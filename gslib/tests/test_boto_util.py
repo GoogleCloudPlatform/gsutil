@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import boto.auth
 from gslib import cloud_api
 from gslib.utils import boto_util
 from gslib import context_config
@@ -54,7 +55,8 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         password='password',
     )
 
-  def testHasConfiguredCredentialsNoCreds(self):
+  @mock.patch.object(boto.auth, 'get_auth_handler', return_value=None)
+  def testHasConfiguredCredentialsNoCreds(self, _):
     with SetBotoConfigForTest([
         ('Credentials', 'gs_access_key_id', None),
         ('Credentials', 'gs_secret_access_key', None),
@@ -62,10 +64,13 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', None),
         ('Credentials', 'gs_oauth2_refresh_token', None),
         ('Credentials', 'gs_external_account_file', None),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None),
     ]):
       self.assertFalse(boto_util.HasConfiguredCredentials())
 
-  def testHasConfiguredCredentialsGoogCreds(self):
+  @mock.patch.object(boto.auth, 'get_auth_handler', return_value=None)
+  def testHasConfiguredCredentialsGoogCreds(self, _):
     with SetBotoConfigForTest([
         ('Credentials', 'gs_access_key_id', "?????"),
         ('Credentials', 'gs_secret_access_key', "?????"),
@@ -73,10 +78,13 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', None),
         ('Credentials', 'gs_oauth2_refresh_token', None),
         ('Credentials', 'gs_external_account_file', None),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None),
     ]):
       self.assertTrue(boto_util.HasConfiguredCredentials())
 
-  def testHasConfiguredCredentialsAmznCreds(self):
+  @mock.patch.object(boto.auth, 'get_auth_handler', return_value=None)
+  def testHasConfiguredCredentialsAmznCreds(self, _):
     with SetBotoConfigForTest([
         ('Credentials', 'gs_access_key_id', None),
         ('Credentials', 'gs_secret_access_key', None),
@@ -84,10 +92,13 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', "?????"),
         ('Credentials', 'gs_oauth2_refresh_token', None),
         ('Credentials', 'gs_external_account_file', None),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None),
     ]):
       self.assertTrue(boto_util.HasConfiguredCredentials())
 
-  def testHasConfiguredCredentialsOauthCreds(self):
+  @mock.patch.object(boto.auth, 'get_auth_handler', return_value=None)
+  def testHasConfiguredCredentialsOauthCreds(self, _):
     with SetBotoConfigForTest([
         ('Credentials', 'gs_access_key_id', None),
         ('Credentials', 'gs_secret_access_key', None),
@@ -95,10 +106,13 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', None),
         ('Credentials', 'gs_oauth2_refresh_token', "?????"),
         ('Credentials', 'gs_external_account_file', None),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None),
     ]):
       self.assertTrue(boto_util.HasConfiguredCredentials())
 
-  def testHasConfiguredCredentialsExternalCreds(self):
+  @mock.patch.object(boto.auth, 'get_auth_handler', return_value=None)
+  def testHasConfiguredCredentialsExternalCreds(self, _):
     with SetBotoConfigForTest([
         ('Credentials', 'gs_access_key_id', None),
         ('Credentials', 'gs_secret_access_key', None),
@@ -106,5 +120,7 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', None),
         ('Credentials', 'gs_oauth2_refresh_token', None),
         ('Credentials', 'gs_external_account_file', "?????"),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None),
     ]):
       self.assertTrue(boto_util.HasConfiguredCredentials())
