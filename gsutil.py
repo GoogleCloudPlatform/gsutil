@@ -81,6 +81,7 @@ THIRD_PARTY_LIBS = [
     ('gcs-oauth2-boto-plugin', ''),
     ('fasteners', ''),  # oauth2client and apitools dependency
     ('monotonic', ''),  # fasteners dependency
+    ('pyparsing', ''),  # httplib2 dependency
     ('httplib2', submodule_pyvers),
     ('retry-decorator', ''),
     ('six', ''),  # Python 2 / 3 compatibility dependency

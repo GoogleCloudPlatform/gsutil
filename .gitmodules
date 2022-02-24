@@ -1,3 +1,6 @@
+[submodule "third_party/pyparsing"]
+	path = third_party/pyparsing
+	url = https://github.com/pyparsing/pyparsing.git
 [submodule "third_party/httplib2"]
 	path = third_party/httplib2
 	url = https://github.com/httplib2/httplib2.git
