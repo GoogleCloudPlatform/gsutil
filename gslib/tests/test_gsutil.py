@@ -58,13 +58,13 @@ class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
   """Unit tests for top-level gsutil command."""
 
   @mock.patch.object(importlib, "reload")
-  def test_fix_google_module(self, importlib_reload):
+  def test_fix_google_module(self, mock_reload):
     with mock.patch.dict('sys.modules', {"google": "google"}):
       gsutil._fix_google_module()
-      importlib_reload.assert_called()
+      mock_reload.assert_called()
 
   @mock.patch.object(importlib, "reload")
-  def test_fix_google_module(self, importlib_reload):
+  def test_fix_google_module(self, mock_reload):
     with mock.patch.dict('sys.modules', {}, clear=True):
       gsutil._fix_google_module()
-      importlib_reload.assert_not_called()
+      mock_reload.assert_not_called()
