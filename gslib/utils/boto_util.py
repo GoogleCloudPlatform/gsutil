@@ -332,7 +332,8 @@ def HasConfiguredCredentials():
                     config.has_option('Credentials', 'aws_secret_access_key'))
   has_oauth_creds = (config.has_option('Credentials',
                                        'gs_oauth2_refresh_token'))
-  has_external_creds = (config.has_option('Credentials', 'gs_external_account_file'))
+  has_external_creds = (config.has_option('Credentials',
+                                          'gs_external_account_file'))
   has_service_account_creds = (
       HAS_CRYPTO and
       config.has_option('Credentials', 'gs_service_client_id') and
