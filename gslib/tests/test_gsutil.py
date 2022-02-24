@@ -20,9 +20,15 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import six
+import sys
+import importlib
 
 import gslib
 import gslib.tests.testcase as testcase
+import gsutil
+
+six.add_move(six.MovedModule("mock", "mock", "unittest.mock"))
+from six.moves import mock
 
 if six.PY3:
   long = int
@@ -46,3 +52,19 @@ class TestGsUtil(testcase.GsUtilIntegrationTestCase):
     self.assertIn('checksum', stdout)
     self.assertIn('config path', stdout)
     self.assertIn('gsutil path', stdout)
+
+
+class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
+  """Unit tests for top-level gsutil command."""
+
+  @mock.patch.object(importlib, "reload")
+  def test_fix_google_module(self, importlib_reload):
+    with mock.patch.dict('sys.modules', {"google": "google"}):
+      gsutil._fix_google_module()
+      importlib_reload.assert_called()
+
+  @mock.patch.object(importlib, "reload")
+  def test_fix_google_module(self, importlib_reload):
+    with mock.patch.dict('sys.modules', {}, clear=True):
+      gsutil._fix_google_module()
+      importlib_reload.assert_not_called()

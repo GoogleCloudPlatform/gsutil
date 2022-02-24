@@ -24,6 +24,7 @@ from gslib.utils import boto_util
 from gslib import context_config
 from gslib.tests import testcase
 from gslib.tests.testcase import base
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
 
 from six import add_move, MovedModule
@@ -52,3 +53,58 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         domain='',
         password='password',
     )
+
+  def testHasConfiguredCredentialsNoCreds(self):
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_access_key_id', None),
+        ('Credentials', 'gs_secret_access_key', None),
+        ('Credentials', 'aws_access_key_id', None),
+        ('Credentials', 'aws_secret_access_key', None),
+        ('Credentials', 'gs_oauth2_refresh_token', None),
+        ('Credentials', 'gs_external_account_file', None),
+    ]):
+      self.assertFalse(boto_util.HasConfiguredCredentials())
+
+  def testHasConfiguredCredentialsGoogCreds(self):
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_access_key_id', "?????"),
+        ('Credentials', 'gs_secret_access_key', "?????"),
+        ('Credentials', 'aws_access_key_id', None),
+        ('Credentials', 'aws_secret_access_key', None),
+        ('Credentials', 'gs_oauth2_refresh_token', None),
+        ('Credentials', 'gs_external_account_file', None),
+    ]):
+      self.assertTrue(boto_util.HasConfiguredCredentials())
+
+  def testHasConfiguredCredentialsAmznCreds(self):
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_access_key_id', None),
+        ('Credentials', 'gs_secret_access_key', None),
+        ('Credentials', 'aws_access_key_id', "?????"),
+        ('Credentials', 'aws_secret_access_key', "?????"),
+        ('Credentials', 'gs_oauth2_refresh_token', None),
+        ('Credentials', 'gs_external_account_file', None),
+    ]):
+      self.assertTrue(boto_util.HasConfiguredCredentials())
+
+  def testHasConfiguredCredentialsOauthCreds(self):
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_access_key_id', None),
+        ('Credentials', 'gs_secret_access_key', None),
+        ('Credentials', 'aws_access_key_id', None),
+        ('Credentials', 'aws_secret_access_key', None),
+        ('Credentials', 'gs_oauth2_refresh_token', "?????"),
+        ('Credentials', 'gs_external_account_file', None),
+    ]):
+      self.assertTrue(boto_util.HasConfiguredCredentials())
+
+  def testHasConfiguredCredentialsExternalCreds(self):
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_access_key_id', None),
+        ('Credentials', 'gs_secret_access_key', None),
+        ('Credentials', 'aws_access_key_id', None),
+        ('Credentials', 'aws_secret_access_key', None),
+        ('Credentials', 'gs_oauth2_refresh_token', None),
+        ('Credentials', 'gs_external_account_file', "?????"),
+    ]):
+      self.assertTrue(boto_util.HasConfiguredCredentials())
