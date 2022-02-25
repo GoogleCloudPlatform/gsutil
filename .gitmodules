@@ -58,3 +58,30 @@
 [submodule "gslib/vendored/oauth2client"]
 	path = gslib/vendored/oauth2client
 	url = https://github.com/gsutil-mirrors/oauth2client.git
+[submodule "third_party/google-auth-library-python"]
+	path = third_party/google-auth-library-python
+	url = https://github.com/googleapis/google-auth-library-python
+[submodule "third_party/cachetools"]
+	path = third_party/cachetools
+	url = https://github.com/tkem/cachetools
+[submodule "third_party/requests"]
+	path = third_party/requests
+	url = https://github.com/psf/requests
+[submodule "third_party/aiohttp"]
+	path = third_party/aiohttp
+	url = https://github.com/aio-libs/aiohttp
+[submodule "third_party/urllib3"]
+	path = third_party/urllib3
+	url = https://github.com/urllib3/urllib3
+[submodule "third_party/idna"]
+	path = third_party/idna
+	url = https://github.com/kjd/idna
+[submodule "third_party/charset_normalizer"]
+	path = third_party/charset_normalizer
+	url = https://github.com/Ousret/charset_normalizer
+[submodule "third_party/chardet"]
+	path = third_party/chardet
+	url = https://github.com/chardet/chardet
+[submodule "third_party/certifi"]
+	path = third_party/certifi
+	url = https://github.com/certifi/python-certifi.git

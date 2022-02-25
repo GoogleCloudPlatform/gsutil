@@ -47,6 +47,7 @@ from gslib.utils.boto_util import GetCredentialStoreFilename
 from gslib.utils.boto_util import GetGceCredentialCacheFilename
 from gslib.utils.boto_util import GetGcsJsonApiVersion
 from gslib.utils.constants import UTF8
+from gslib.utils.wrapped_credentials import WrappedCredentials
 import oauth2client
 from oauth2client.client import HAS_CRYPTO
 from oauth2client.contrib import devshell
@@ -210,12 +211,14 @@ def _CheckAndGetCredentials(logger):
     user_creds = _GetOauth2UserAccountCredentials()
     failed_cred_type = CredTypes.OAUTH2_SERVICE_ACCOUNT
     service_account_creds = _GetOauth2ServiceAccountCredentials()
+    failed_cred_type = CredTypes.EXTERNAL_ACCOUNT
+    external_account_creds = _GetExternalAccountCredentials()
     failed_cred_type = CredTypes.GCE
     gce_creds = _GetGceCreds()
     failed_cred_type = CredTypes.DEVSHELL
     devshell_creds = _GetDevshellCreds()
 
-    creds = user_creds or service_account_creds or gce_creds or devshell_creds
+    creds = user_creds or service_account_creds or gce_creds or devshell_creds or external_account_creds
 
     # Use one of the above credential types to impersonate, if configured.
     if _HasImpersonateServiceAccount() and creds:
@@ -270,6 +273,15 @@ def _HasGceCreds():
 
 def _HasImpersonateServiceAccount():
   return _GetImpersonateServiceAccount() not in (None, '')
+
+
+def _GetExternalAccountCredentials():
+  external_account_filename = config.get('Credentials',
+                                         'gs_external_account_file', None)
+  if not external_account_filename:
+    return None
+
+  return WrappedCredentials.for_external_account(external_account_filename)
 
 
 def _GetImpersonateServiceAccount():
