@@ -46,10 +46,11 @@ def _fix_google_module():
   """Reloads the google module to prefer our third_party copy.
 
   When Python is not invoked with the -S option, it can preload google module
-  via .pth file. After this happens, our third_party google
-  package may not in the __path__. After our third_party dependency directory is
-  put at the first place in the sys.path, google module should be reloaded
-  so that our vendored copy can be preferred.
+  via .pth file (https://docs.python.org/3/library/site.html). This means,
+  instead of using the google package from our "third_party" directory, it will end up
+  using the package from site_packages. To ensure
+  that the google package from our "third_party" directory is preferred,
+  we should insert the path at the start of sys.path and reload the google module.
 
   This is a hacky solution as reloading a module is never recommended.
   But given that it is rare that users will run into this issue where
