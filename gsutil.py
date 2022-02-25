@@ -45,19 +45,14 @@ def OutputAndExit(message):
 def _fix_google_module():
   """Reloads the google module to prefer our third_party copy.
 
-  When Python is not invoked with the -S option, it can preload google module
-  via .pth file (https://docs.python.org/3/library/site.html). This means,
-  instead of using the google package from our "third_party" directory, it will end up
-  using the package from site_packages. To ensure
-  that the google package from our "third_party" directory is preferred,
-  we should insert the path at the start of sys.path and reload the google module.
+  When Python is not invoked with the -S option, it may preload the google module via .pth file.
+  This "site_packages" version is preferred over gsutil "third_party" version.
+  To force the "third_party" version, insert the path at the start of sys.path and reload the google module.
 
-  This is a hacky solution as reloading a module is never recommended.
-  But given that it is rare that users will run into this issue where
-  they might have google-auth already installed in their python environment,
-  and the fact that we are reloading it right at the beginning, it should be
-  fine. Note that this reload might be an issue for Python 3.5.3 and lower
-  because of the weakref issue which was fixed in Python 3.5.4:
+  This is a hacky. Reloading is required for the rare case that users have
+  google-auth already installed in their Python environment.
+  Note that this reload may cause an issue for Python 3.5.3 and lower
+  because of the weakref issue, fixed in Python 3.5.4:
   https://github.com/python/cpython/commit/9cd7e17640a49635d1c1f8c2989578a8fc2c1de6.
   """
   if 'google' not in sys.modules:
