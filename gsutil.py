@@ -45,21 +45,22 @@ def OutputAndExit(message):
 def _fix_google_module():
   """Reloads the google module to prefer our third_party copy.
 
-  When python is not invoked with the -S option, it can preload google module
+  When Python is not invoked with the -S option, it can preload google module
   via .pth file. After this happens, our third_party google
   package may not in the __path__. After our third_party dependency directory is
-  put at the first place in the sys.path, google module should be reloaded,
+  put at the first place in the sys.path, google module should be reloaded
   so that our vendored copy can be preferred.
+
+  This is a hacky solution as reloading a module is never recommended.
+  But given that it is rare that users will run into this issue where
+  they might have google-auth already installed in their python environment,
+  and the fact that we are reloading it right at the beginning, it should be
+  fine. Note that this reload might be an issue for Python 3.5.3 and lower
+  because of the weakref issue which was fixed in Python 3.5.4:
+  https://github.com/python/cpython/commit/9cd7e17640a49635d1c1f8c2989578a8fc2c1de6.
   """
   if 'google' not in sys.modules:
     return
-  # This is a hacky solution as reloading a module is never recommended.
-  # But given that it is rare that users will run into this issue where
-  # they might have google-auth already installed in their python environment,
-  # and the fact that we are reloading it right at the beginning, it should be
-  # fine. Note that this reload might be an issue for Python 3.5.3 and lower
-  # because of the weakref issue which was fixed in Python 3.5.4:
-  # https://github.com/python/cpython/commit/9cd7e17640a49635d1c1f8c2989578a8fc2c1de6.
   import importlib  # pylint: disable=g-import-not-at-top
   importlib.reload(sys.modules['google'])
 
