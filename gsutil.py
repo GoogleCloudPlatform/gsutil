@@ -46,7 +46,7 @@ def _fix_google_module():
   """Reloads the google module to prefer our third_party copy.
 
   When Python is not invoked with the -S option, it may preload the google module via .pth file.
-  This "site_packages" version is preferred over gsutil "third_party" version.
+  This leads to the "site_packages" version being preferred over gsutil "third_party" version.
   To force the "third_party" version, insert the path at the start of sys.path and reload the google module.
 
   This is a hacky. Reloading is required for the rare case that users have
