@@ -28,14 +28,6 @@ from boto import config
 from gslib import exception
 from gslib.utils import constants
 
-
-class USE_GCLOUD_STORAGE_VALUE(enum.Enum):
-  NEVER = 'never'
-  IF_AVAILABLE_ELSE_SKIP = 'if_available_else_skip'
-  ALWAYS = 'always'
-  DRY_RUN = 'dry_run'
-
-
 DECRYPTION_KEY_REGEX = re.compile(r'^decryption_key([1-9]$|[1-9][0-9]$|100$)')
 
 # Required for headers translation and boto config translation.
@@ -220,7 +212,7 @@ def _get_gcloud_binary_path():
         ' not installed via Cloud SDK. You can manually set the'
         ' `CLOUDSDK_ROOT_DIR` environment variable to point to the'
         ' google-cloud-sdk installation directory to resolve the issue.'
-        ' Alternatively, you can set `use_gcloud_storage=never` to disable'
+        ' Alternatively, you can set `use_gcloud_storage=False` to disable'
         ' running the command using gcloud storage.')
   return os.path.join(cloudsdk_root, 'bin', 'gcloud')
 
@@ -417,16 +409,13 @@ class GcloudStorageCommandMixin(object):
     return self._get_gcloud_storage_args(self.sub_opts, self.args,
                                          self.gcloud_storage_map)
 
-  def _print_gcloud_storage_command_info(self,
-                                         gcloud_command,
-                                         env_variables,
-                                         dry_run=False):
-    logger_func = self.logger.info if dry_run else self.logger.debug
-    logger_func('Gcloud Storage Command: {}'.format(' '.join(gcloud_command)))
+  def _print_gcloud_storage_command_info(self, gcloud_command, env_variables):
+    self.logger.debug('Gcloud Storage Command: {}'.format(
+        ' '.join(gcloud_command)))
     if env_variables:
-      logger_func('Environment variables for Gcloud Storage:')
+      self.logger.debug('Environment variables for Gcloud Storage:')
       for k, v in env_variables.items():
-        logger_func('%s=%s', k, v)
+        self.logger.debug('%s=%s', k, v)
 
   def translate_to_gcloud_storage_if_requested(self):
     """Translates the gsutil command to gcloud storage equivalent.
@@ -446,15 +435,9 @@ class GcloudStorageCommandMixin(object):
 
       # We don't want to run any translation for the "test" command.
       return False
-    try:
-      use_gcloud_storage = USE_GCLOUD_STORAGE_VALUE(
-          config.get('GSUtil', 'use_gcloud_storage', 'never'))
-    except ValueError:
-      raise exception.CommandException(
-          'Invalid option specified for'
-          ' GSUtil:use_gcloud_storage config setting. Should be one of: {}'.
-          format(' | '.join([x.value for x in USE_GCLOUD_STORAGE_VALUE])))
-    if use_gcloud_storage != USE_GCLOUD_STORAGE_VALUE.NEVER:
+    use_gcloud_storage = config.getbool('GSUtil', 'use_gcloud_storage', False)
+
+    if use_gcloud_storage:
       try:
         top_level_flags, env_variables = self._translate_top_level_flags()
         header_flags = self._translate_headers()
@@ -467,11 +450,7 @@ class GcloudStorageCommandMixin(object):
                                   self.get_gcloud_storage_args() +
                                   top_level_flags + header_flags +
                                   flags_from_boto)
-        if use_gcloud_storage == USE_GCLOUD_STORAGE_VALUE.DRY_RUN:
-          self._print_gcloud_storage_command_info(gcloud_storage_command,
-                                                  env_variables,
-                                                  dry_run=True)
-        elif not os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL'):
+        if not os.environ.get('CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL'):
           raise exception.GcloudStorageTranslationError(
               'Requested to use "gcloud storage" but gsutil is not using the'
               ' same credentials as gcloud.'
@@ -485,7 +464,13 @@ class GcloudStorageCommandMixin(object):
           self._translated_env_variables = env_variables
           return True
       except exception.GcloudStorageTranslationError as e:
-        if use_gcloud_storage == USE_GCLOUD_STORAGE_VALUE.ALWAYS:
+        # shim_no_fallback is a hidden config option that can be used
+        # for test parity or debugging purposes.
+        # Setting shim_no_fallback=True along with use_gcloud_storage=True
+        # will ensure that an error is raised if a command/flag is not
+        # yet supported via the shim.
+        shim_no_fallback = config.getbool('GSUtil', 'shim_no_fallback', False)
+        if shim_no_fallback:
           raise exception.CommandException(e)
         # For all other cases, we want to run gsutil.
         self.logger.error(
