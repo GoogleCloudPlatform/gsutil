@@ -1006,12 +1006,12 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       use_gcloud_storage = False
     else:
       use_gcloud_storage = config.getbool('GSUtil', 'use_gcloud_storage', False)
-    gcloud_storage_setting = [
-        '-o',
-        'GSUtil:use_gcloud_storage={}'.format(use_gcloud_storage),
-        '-o',
-        'GSUtil:hidden_shim_mode=no_fallback',
-    ]
+      gcloud_storage_setting = [
+          '-o',
+          'GSUtil:use_gcloud_storage={}'.format(use_gcloud_storage),
+          '-o',
+          'GSUtil:hidden_shim_mode=no_fallback',
+      ]
     cmd = [
         gslib.GSUTIL_PATH, '--testexceptiontraces', '-o',
         'GSUtil:default_project_id=' + PopulateProjectId()
