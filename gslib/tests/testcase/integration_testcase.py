@@ -144,9 +144,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     self.multiregional_buckets = util.USE_MULTIREGIONAL_BUCKETS
 
-    use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
-    self._use_gcloud_storage = use_gcloud_storage in ('always',
-                                                      'if_available_else_skip')
+    self._use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', False)
 
     if util.RUN_S3_TESTS:
       self.nonexistent_bucket_name = (
@@ -1005,11 +1003,14 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     # TODO(b/203250512) Remove this once all the commands are supported
     # via gcloud storage.
     if force_gsutil:
-      use_gcloud_storage = 'never'
+      use_gcloud_storage = False
     else:
-      use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', 'never')
+      use_gcloud_storage = config.getbool('GSUtil', 'use_gcloud_storage', False)
     gcloud_storage_setting = [
-        '-o', 'GSUtil:use_gcloud_storage={}'.format(use_gcloud_storage)
+        '-o',
+        'GSUtil:use_gcloud_storage={}'.format(use_gcloud_storage),
+        '-o',
+        'GSUtil:hidden_shim_mode=no_fallback',
     ]
     cmd = [
         gslib.GSUTIL_PATH, '--testexceptiontraces', '-o',

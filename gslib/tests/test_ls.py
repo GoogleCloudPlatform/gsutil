@@ -191,7 +191,8 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
     self.assertNotRegex(stdout, 'Placement locations:')
 
   def test_shim_translates_flags(self):
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'dry_run')]):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',

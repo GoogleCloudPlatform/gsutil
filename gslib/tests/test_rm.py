@@ -749,7 +749,8 @@ class TestRmUnitTests(testcase.GsUtilUnitTestCase):
 
   def test_shim_translates_flags(self):
     bucket_uri = self.CreateBucket()
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'dry_run')]):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -770,7 +771,8 @@ class TestRmUnitTests(testcase.GsUtilUnitTestCase):
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri, 'foo', 'abcd')
     mock_stdin.__iter__.return_value = [suri(object_uri)]
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'dry_run')]):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
