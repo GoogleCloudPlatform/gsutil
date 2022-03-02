@@ -112,8 +112,8 @@ _DETAILED_HELP_TEXT = ("""
   Google maintains strict controls over the processing and purging of deleted
   data. If you have concerns that your application software or your users may
   at some point erroneously delete or replace data, see
-  `Best practices for deleting data
-  <https://cloud.google.com/storage/docs/best-practices#deleting>`_ for ways to
+  `Options for controlling data lifecycles
+  <https://cloud.google.com/storage/docs/control-data-lifecycles>`_ for ways to
   protect your data from accidental data deletion.
 
 
