@@ -1,3 +1,18 @@
+Release 5.7 (release date: 2022-03-03)
+======================================
+New Features
+------------------
+- Allow gsutil to transparently call gcloud storage cp or rm through a shim (enable via the Boto configuration GSUTil:use_gcloud_storage=True)
+- Allow external account based credentials (#1452)
+
+Bug Fixes
+------------------
+- Prevent error by only allowing super-user from changing file user when preserve POSIX is enabled. (#1461)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 5.6 (release date: 2022-01-06)
 ======================================
 New Features
