@@ -22,10 +22,16 @@ from __future__ import unicode_literals
 import six
 import sys
 import importlib
+import unittest
 
 import gslib
 import gslib.tests.testcase as testcase
-import gsutil
+
+try:
+  import gsutil
+  GSUTIL_MODULE_LOADED = True
+except ImportError:
+  GSUTIL_MODULE_LOADED = False
 
 six.add_move(six.MovedModule("mock", "mock", "unittest.mock"))
 from six.moves import mock
@@ -57,12 +63,18 @@ class TestGsUtil(testcase.GsUtilIntegrationTestCase):
 class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
   """Unit tests for top-level gsutil command."""
 
+  @unittest.skipUnless(
+      GSUTIL_MODULE_LOADED,
+      'For gsutil installed via pip, the gsutil module will not be present.')
   @mock.patch.object(importlib, "reload", autospec=True)
   def test_fix_google_module(self, mock_reload):
     with mock.patch.dict('sys.modules', {"google": "google"}):
       gsutil._fix_google_module()
       mock_reload.assert_called_once_with("google")
 
+  @unittest.skipUnless(
+      GSUTIL_MODULE_LOADED,
+      'For gsutil installed via pip, the gsutil module will not be present.')
   @mock.patch.object(importlib, "reload")
   def test_fix_google_module_does_not_reload_if_module_missing(
       self, mock_reload):
