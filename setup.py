@@ -50,7 +50,8 @@ requires = [
     'pyOpenSSL>=0.13',
     'retry_decorator>=1.0.0',
     'six>=1.12.0',
-    'google-auth>=2.5.0',
+    # aiohttp is the extra dependency that contains requests lib.
+    'google-auth[aiohttp]>=2.5.0',
 ]
 
 CURDIR = os.path.abspath(os.path.dirname(__file__))
