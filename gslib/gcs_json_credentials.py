@@ -218,7 +218,7 @@ def _CheckAndGetCredentials(logger):
     failed_cred_type = CredTypes.DEVSHELL
     devshell_creds = _GetDevshellCreds()
 
-    creds = user_creds or service_account_creds or gce_creds or devshell_creds or external_account_creds
+    creds = user_creds or service_account_creds or gce_creds or external_account_creds or devshell_creds
 
     # Use one of the above credential types to impersonate, if configured.
     if _HasImpersonateServiceAccount() and creds:
