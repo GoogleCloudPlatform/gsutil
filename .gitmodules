@@ -67,9 +67,6 @@
 [submodule "third_party/requests"]
 	path = third_party/requests
 	url = https://github.com/psf/requests
-[submodule "third_party/aiohttp"]
-	path = third_party/aiohttp
-	url = https://github.com/aio-libs/aiohttp
 [submodule "third_party/urllib3"]
 	path = third_party/urllib3
 	url = https://github.com/urllib3/urllib3
