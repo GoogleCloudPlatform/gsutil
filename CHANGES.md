@@ -1,4 +1,4 @@
-Release 5.7 (release date: 2022-03-03)
+Release 5.8 (release date: 2022-03-07)
 ======================================
 New Features
 ------------------
