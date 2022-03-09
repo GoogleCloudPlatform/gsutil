@@ -129,8 +129,10 @@ _DETAILED_HELP_TEXT = ("""
                          not evaluated. Consequently, only IAM policies grant
                          access to objects in these buckets. Default is "off".
 
-  -c class               Specifies the default storage class.
-                         Default is "Standard".
+  -c class               Specifies the default storage class. Default is
+                         ``Standard``. See `Available storage classes
+                         <https://cloud.google.com/storage/docs/storage-classes#classes>`_
+                         for a list of possible values.
 
   -k <key>               Set the default KMS key using the full path to the key,
                          which has the following form:

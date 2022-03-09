@@ -608,8 +608,8 @@ _OPTIONS_TEXT = """
                  use these URLs to safely make concurrent upload requests, because
                  Cloud Storage refuses to perform an update if the current
                  object version doesn't match the version-specific URL. See
-                 `Generation numbers and preconditions
-                 <https://cloud.google.com/storage/docs/generations-preconditions>`_
+                 `generation numbers
+                 <https://cloud.google.com/storage/docs/metadata#generation-number>`_
                  for more details.
 
   -z <ext,...>   Applies gzip content-encoding to any file upload whose
