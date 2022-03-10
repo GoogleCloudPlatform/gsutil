@@ -186,9 +186,7 @@ class MbCommand(Command):
       min_args=1,
       max_args=NO_MAX,
       supported_sub_args='b:c:l:p:s:k:',
-      supported_private_args=[
-          'autoclass', 'retention=', 'pap=', 'rpo='
-      ],
+      supported_private_args=['autoclass', 'retention=', 'pap=', 'rpo='],
       file_url_ok=False,
       provider_url_ok=False,
       urls_start_arg=0,
