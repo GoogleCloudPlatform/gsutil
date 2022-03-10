@@ -42,7 +42,6 @@ from gslib.utils.encryption_helper import ValidateCMEK
 _SYNOPSIS = """
   gsutil mb [-b (on|off)] [-c <class>] [-k <key>] [-l <location>] [-p <project>]
             [--autoclass] [--retention <time>] [--pap <setting>]
-            [--placement <region1>,<region2>]
             [--rpo {}] gs://<bucket_name>...
 """.format(VALID_RPO_VALUES_STRING)
 
@@ -158,12 +157,6 @@ _DETAILED_HELP_TEXT = ("""
                          "enforced", objects in this bucket cannot be made
                          publicly accessible. Default is "inherited".
 
-  --placement reg1,reg2  Two regions that form the cutom dual-region.
-                         Only regions within the same continent are or will ever
-                         be valid. Invalid location pairs (such as
-                         mixed-continent, or with unsupported regions)
-                         will return an error.
-
   --rpo setting          Specifies the `replication setting <https://cloud.google.com/storage/docs/turbo-replication>`_.
                          This flag is not valid for single-region buckets,
                          and multi-region buckets only accept a value of
@@ -194,7 +187,7 @@ class MbCommand(Command):
       max_args=NO_MAX,
       supported_sub_args='b:c:l:p:s:k:',
       supported_private_args=[
-          'autoclass', 'retention=', 'pap=', 'placement=', 'rpo='
+          'autoclass', 'retention=', 'pap=', 'rpo='
       ],
       file_url_ok=False,
       provider_url_ok=False,
@@ -242,7 +235,6 @@ class MbCommand(Command):
     public_access_prevention = None
     rpo = None
     json_only_flags_in_command = []
-    placements = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '--autoclass':
@@ -276,13 +268,6 @@ class MbCommand(Command):
         elif o == '--pap':
           public_access_prevention = a
           json_only_flags_in_command.append(o)
-        elif o == '--placement':
-          placements = a.split(',')
-          if len(placements) != 2:
-            raise CommandException(
-                'Please specify two regions separated by comma without space.'
-                ' Specified: {}'.format(a))
-          json_only_flags_in_command.append(o)
 
     bucket_metadata = apitools_messages.Bucket(location=location,
                                                rpo=rpo,
@@ -303,11 +288,6 @@ class MbCommand(Command):
       encryption = apitools_messages.Bucket.EncryptionValue()
       encryption.defaultKmsKeyName = kms_key
       bucket_metadata.encryption = encryption
-
-    if placements:
-      placement_config = apitools_messages.Bucket.CustomPlacementConfigValue()
-      placement_config.dataLocations = placements
-      bucket_metadata.customPlacementConfig = placement_config
 
     for bucket_url_str in self.args:
       bucket_url = StorageUrlFromString(bucket_url_str)
