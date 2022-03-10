@@ -44,6 +44,8 @@ FILE_OBJECT_REGEX = re.compile(r'([^:]*://)(?P<filepath>.*)')
 # Regex to determine if a string contains any wildcards.
 WILDCARD_REGEX = re.compile(r'[*?\[\]]')
 
+RELATIVE_PATH_SYMBOLS = frozenset(['.', '..'])
+
 
 class StorageUrl(object):
   """Abstract base class for file and Cloud Storage URLs."""

@@ -737,7 +737,7 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
       check_args: True to have CheckArguments() called after parsing.
       args: List of args. If None, self.args will be used.
       should_update_sub_opts_and_args: True if self.sub_opts and self.args
-        should be updated with the values returned after parsing. Else return a 
+        should be updated with the values returned after parsing. Else return a
         tuple of sub_opts, args returned by getopt.getopt. This is done
         to allow this method to be called from get_gcloud_storage_args in which
         case we do not want to update self.sub_opts and self.args.
@@ -896,7 +896,12 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
           for blr in self.WildcardIterator(
               url.url_string).IterBuckets(bucket_fields=['id']):
             name_expansion_for_url = NameExpansionResult(
-                url, False, False, blr.storage_url, None)
+                source_storage_url=url,
+                is_multi_source_request=False,
+                is_multi_top_level_source_request=False,
+                names_container=False,
+                expanded_storage_url=blr.storage_url,
+                expanded_result=None)
             acl_func(self, name_expansion_for_url)
       else:
         multi_threaded_url_args.append(url_str)
