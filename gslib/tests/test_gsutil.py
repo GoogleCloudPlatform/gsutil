@@ -73,4 +73,4 @@ class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
       self, mock_reload):
     with mock.patch.dict('sys.modules', {}, clear=True):
       _fix_google_module()
-      mock_reload.assert_not_called()
+      self.assertFalse(mock_reload.called)
