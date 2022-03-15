@@ -15,29 +15,22 @@
 """Integration tests for top-level gsutil command."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 
-import six
-import sys
 import importlib
 import unittest
+from unittest import mock
 
 import gslib
 import gslib.tests.testcase as testcase
 
 try:
-  import gsutil
-  GSUTIL_MODULE_LOADED = True
+  from gsutil import _fix_google_module  # pylint: disable=g-import-not-at-top
+  FIX_GOOGLE_MODULE_LOADED = True
 except ImportError:
-  GSUTIL_MODULE_LOADED = False
-
-six.add_move(six.MovedModule("mock", "mock", "unittest.mock"))
-from six.moves import mock
-
-if six.PY3:
-  long = int
+  FIX_GOOGLE_MODULE_LOADED = False
 
 
 class TestGsUtil(testcase.GsUtilIntegrationTestCase):
@@ -64,20 +57,20 @@ class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
   """Unit tests for top-level gsutil command."""
 
   @unittest.skipUnless(
-      GSUTIL_MODULE_LOADED,
-      'For gsutil installed via pip, the gsutil module will not be present.')
-  @mock.patch.object(importlib, "reload", autospec=True)
+      FIX_GOOGLE_MODULE_LOADED,
+      'The gsutil.py file is not available for certain installations like pip.')
+  @mock.patch.object(importlib, 'reload', autospec=True)
   def test_fix_google_module(self, mock_reload):
-    with mock.patch.dict('sys.modules', {"google": "google"}):
-      gsutil._fix_google_module()
-      mock_reload.assert_called_once_with("google")
+    with mock.patch.dict('sys.modules', {'google': 'google'}):
+      _fix_google_module()
+      mock_reload.assert_called_once_with('google')
 
   @unittest.skipUnless(
-      GSUTIL_MODULE_LOADED,
-      'For gsutil installed via pip, the gsutil module will not be present.')
-  @mock.patch.object(importlib, "reload")
+      FIX_GOOGLE_MODULE_LOADED,
+      'The gsutil.py file is not available for certain installations like pip.')
+  @mock.patch.object(importlib, 'reload', autospec=True)
   def test_fix_google_module_does_not_reload_if_module_missing(
       self, mock_reload):
     with mock.patch.dict('sys.modules', {}, clear=True):
-      gsutil._fix_google_module()
+      _fix_google_module()
       mock_reload.assert_not_called()
