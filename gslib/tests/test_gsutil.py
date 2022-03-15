@@ -28,9 +28,9 @@ import gslib.tests.testcase as testcase
 
 try:
   from gsutil import _fix_google_module  # pylint: disable=g-import-not-at-top
-  FIX_GOOGLE_MODULE_LOADED = True
+  FIX_GOOGLE_MODULE_FUNCTION_AVAILABLE = True
 except ImportError:
-  FIX_GOOGLE_MODULE_LOADED = False
+  FIX_GOOGLE_MODULE_FUNCTION_AVAILABLE = False
 
 
 class TestGsUtil(testcase.GsUtilIntegrationTestCase):
@@ -57,7 +57,7 @@ class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
   """Unit tests for top-level gsutil command."""
 
   @unittest.skipUnless(
-      FIX_GOOGLE_MODULE_LOADED,
+      FIX_GOOGLE_MODULE_FUNCTION_AVAILABLE,
       'The gsutil.py file is not available for certain installations like pip.')
   @mock.patch.object(importlib, 'reload', autospec=True)
   def test_fix_google_module(self, mock_reload):
@@ -66,7 +66,7 @@ class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
       mock_reload.assert_called_once_with('google')
 
   @unittest.skipUnless(
-      FIX_GOOGLE_MODULE_LOADED,
+      FIX_GOOGLE_MODULE_FUNCTION_AVAILABLE,
       'The gsutil.py file is not available for certain installations like pip.')
   @mock.patch.object(importlib, 'reload', autospec=True)
   def test_fix_google_module_does_not_reload_if_module_missing(
