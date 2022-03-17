@@ -42,6 +42,11 @@ if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
 fi
 
 function latest_python_release {
+  if [[ $PYVERSION =~ "3.5" ]]; then
+    # The latest version of certain dependencies break with Python 3.5.2 or
+    # lower. Hence we want to make sure that we run these tests with 3.5.2.
+    echo "3.5.2"
+  fi
   # Return string with latest Python version triplet for a given version tuple.
   # Example: PYVERSION="2.7"; latest_python_release -> "2.7.15"
   pyenv install --list \
