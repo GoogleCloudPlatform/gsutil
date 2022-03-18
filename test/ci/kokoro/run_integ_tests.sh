@@ -42,7 +42,7 @@ if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
 fi
 
 function latest_python_release {
-  if [[ $PYVERSION =~ "3.5" && $KOKORO_JOB_NAME =~ "linux"]]; then
+  if [[ $PYVERSION =~ "3.5" && $KOKORO_JOB_NAME =~ "linux" ]]; then
     # The latest version of certain dependencies break with Python 3.5.2 or
     # lower. Hence we want to make sure that we run these tests with 3.5.2.
     # There is too much overhead to run this for MacOS because of OpenSSL 1.0
