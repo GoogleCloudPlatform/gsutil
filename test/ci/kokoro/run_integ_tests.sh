@@ -89,7 +89,7 @@ function init_python {
   # Ensure latest release of desired Python version is installed, and that
   # dependencies from pip, e.g. crcmod, are installed.
   install_pyenv
-  PYVERSIONTRIPLET=$(latest_python_release)
+  PYVERSIONTRIPLET=$(preferred_python_release)
   install_python
   pyenv global "$PYVERSIONTRIPLET"
   # Check if Python version is same as set by the config
