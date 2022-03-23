@@ -41,7 +41,7 @@ if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   export LANG=en_US.UTF-8
 fi
 
-function latest_python_release {
+function preferred_python_release {
   if [[ $PYVERSION =~ "3.5" && $KOKORO_JOB_NAME =~ "linux" ]]; then
     # The latest version of certain dependencies break with Python 3.5.2 or
     # lower. Hence we want to make sure that we run these tests with 3.5.2.
