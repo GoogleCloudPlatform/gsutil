@@ -41,7 +41,15 @@ if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   export LANG=en_US.UTF-8
 fi
 
-function latest_python_release {
+function preferred_python_release {
+  if [[ $PYVERSION =~ "3.5" && $KOKORO_JOB_NAME =~ "linux" ]]; then
+    # The latest version of certain dependencies break with Python 3.5.2 or
+    # lower. Hence we want to make sure that we run these tests with 3.5.2.
+    # There is too much overhead to run this for MacOS because of OpenSSL 1.0
+    # requirement for Python 3.5.2. Hence, we force 3.5.2 only for linux.
+    echo "3.5.2"
+    return
+  fi
   # Return string with latest Python version triplet for a given version tuple.
   # Example: PYVERSION="2.7"; latest_python_release -> "2.7.15"
   pyenv install --list \
@@ -81,7 +89,7 @@ function init_python {
   # Ensure latest release of desired Python version is installed, and that
   # dependencies from pip, e.g. crcmod, are installed.
   install_pyenv
-  PYVERSIONTRIPLET=$(latest_python_release)
+  PYVERSIONTRIPLET=$(preferred_python_release)
   install_python
   pyenv global "$PYVERSIONTRIPLET"
   # Check if Python version is same as set by the config
