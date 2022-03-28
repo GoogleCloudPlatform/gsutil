@@ -184,6 +184,7 @@ def _CheckAndGetCredentials(logger):
     OAuth2Credentials object if any valid ones are found, otherwise None.
   """
   configured_cred_types = []
+  failed_cred_type = None
   try:
     if _HasOauth2UserAccountCreds():
       configured_cred_types.append(CredTypes.OAUTH2_USER_ACCOUNT)
@@ -198,7 +199,6 @@ def _CheckAndGetCredentials(logger):
       # for GCE VMs. We don't want to fail when a user creates a boto file
       # with their own credentials, so in this case we'll use the OAuth2
       # user credentials.
-      failed_cred_type = None
       raise CommandException(
           ('You have multiple types of configured credentials (%s), which is '
            'not supported. One common way this happens is if you run gsutil '

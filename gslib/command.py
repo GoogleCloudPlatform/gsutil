@@ -976,8 +976,8 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
       gsutil_api: gsutil Cloud API to use for the ACL set. Must support XML
           passthrough functions.
     """
+    orig_prefer_api = gsutil_api.prefer_api
     try:
-      orig_prefer_api = gsutil_api.prefer_api
       gsutil_api.prefer_api = ApiSelector.XML
       gsutil_api.XmlPassThroughSetAcl(self.acl_arg,
                                       url,

@@ -337,11 +337,11 @@ def _PerformParallelUploadFileToObject(cls, args, thread_state=None):
         bucket=args.dst_url.bucket_name,
         contentType=args.content_type)
 
+    orig_prefer_api = gsutil_api.prefer_api
     try:
       if global_copy_helper_opts.canned_acl:
         # No canned ACL support in JSON, force XML API to be used for
         # upload/copy operations.
-        orig_prefer_api = gsutil_api.prefer_api
         gsutil_api.prefer_api = ApiSelector.XML
       ret = _UploadFileToObject(args.src_url,
                                 fp,
