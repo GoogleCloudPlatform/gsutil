@@ -757,9 +757,10 @@ class CpCommand(Command):
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command='alpha storage cp',
       flag_map={
+          '-e': GcloudStorageFlag('--ignore-symlinks'),
           '-r': GcloudStorageFlag('-r'),
           '-R': GcloudStorageFlag('-r'),
-          '-e': GcloudStorageFlag('--ignore-symlinks')
+          '-s': GcloudStorageFlag('--storage-class'),
       },
   )
 
