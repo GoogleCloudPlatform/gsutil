@@ -758,9 +758,11 @@ class CpCommand(Command):
       gcloud_command='alpha storage cp',
       flag_map={
           '-e': GcloudStorageFlag('--ignore-symlinks'),
+          '-n': GcloudStorageFlag('--no-clobber'),
           '-r': GcloudStorageFlag('-r'),
           '-R': GcloudStorageFlag('-r'),
           '-s': GcloudStorageFlag('--storage-class'),
+          '-v': GcloudStorageFlag('--print-created-message'),
       },
   )
 

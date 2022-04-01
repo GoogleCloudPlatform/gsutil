@@ -604,12 +604,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'bar')
     stderr = self.RunGsUtil(
         ['cp', '-n', fpath, suri(key_uri)], return_stderr=True)
-    self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
+    self.assertRegex(stderr, r'Skipping.*: {}'.format(suri(key_uri)))
     self.assertEqual(key_uri.get_contents_as_string(), b'foo')
     stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
                             return_stderr=True)
     with open(fpath, 'rb') as f:
-      self.assertIn('Skipping existing item: %s' % suri(f), stderr)
+      self.assertRegex(stderr, r'Skipping.*: {}'.format(suri(f)))
       self.assertEqual(f.read(), b'bar')
 
   @SequentialAndParallelTransfer
@@ -618,12 +618,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'quux')
     stderr = self.RunGsUtil(
         ['cp', '-n', fpath, suri(key_uri)], return_stderr=True)
-    self.assertIn('Skipping existing item: %s' % suri(key_uri), stderr)
+    self.assertRegex(stderr, r'Skipping.*: {}'.format(suri(key_uri)))
     self.assertEqual(key_uri.get_contents_as_string(), b'foo')
     stderr = self.RunGsUtil(['cp', '-n', suri(key_uri), fpath],
                             return_stderr=True)
     with open(fpath, 'rb') as f:
-      self.assertIn('Skipping existing item: %s' % suri(f), stderr)
+      self.assertRegex(stderr, r'Skipping.*: {}'.format(suri(f)))
       self.assertEqual(f.read(), b'quux')
 
   def test_dest_bucket_not_exist(self):
@@ -655,9 +655,11 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(
         ['cp', '-n', suri(key_uri),
          suri(bucket2_uri)], return_stderr=True)
-    self.assertIn(
-        'Skipping existing item: %s' % suri(bucket2_uri, key_uri.object_name),
-        stderr)
+    # Gsutil uses "Skipping existing item:"
+    # Gcloud storage uses "Skipping existing destination item (no-clobber):"
+    self.assertRegex(
+        stderr, r'Skipping.*: {}'.format(suri(bucket2_uri,
+                                              key_uri.object_name)))
 
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
@@ -1316,7 +1318,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Second copy should skip copying.
     stderr = self.RunGsUtil(
         ['cp', '-nv', fpath1, suri(k1_uri)], return_stderr=True)
-    self.assertIn('Skipping existing item:', stderr)
+    self.assertIn('Skipping existing', stderr)
 
   @SequentialAndParallelTransfer
   @SkipForS3('S3 lists versioned objects in reverse timestamp order.')
