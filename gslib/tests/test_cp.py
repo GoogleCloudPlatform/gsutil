@@ -655,8 +655,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(
         ['cp', '-n', suri(key_uri),
          suri(bucket2_uri)], return_stderr=True)
-    # Gsutil uses "Skipping existing item:"
-    # Gcloud storage uses "Skipping existing destination item (no-clobber):"
     self.assertRegex(
         stderr, r'Skipping.*: {}'.format(suri(bucket2_uri,
                                               key_uri.object_name)))
