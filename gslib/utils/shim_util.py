@@ -109,7 +109,7 @@ _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED = frozenset(
 
 def get_flag_from_header(header_key_raw, header_value, unset=False):
   """Returns the gcloud storage flag for the given gsutil header.
-  
+
   Args:
     header_key_raw: The header key.
     header_value: The header value
@@ -119,7 +119,7 @@ def get_flag_from_header(header_key_raw, header_value, unset=False):
   Returns:
     A string representing the equivalent gcloud storage flag and value, if
       translation is possible, else returns None.
-    
+
   Examples:
     >> get_flag_from_header('Cache-Control', 'val')
     --cache-control=val
@@ -170,7 +170,7 @@ class GcloudStorageFlag(object):
 
   def __init__(self, gcloud_flag, supports_output_translation=False):
     """Initializes GcloudStorageFlag.
-    
+
     Args:
       gcloud_flag (str): The name of the gcloud flag.
       support_output_translation (bool): If True, this flag in gcloud storage
@@ -188,10 +188,10 @@ class GcloudStorageMap(object):
                flag_map,
                supports_output_translation=False):
     """Intalizes GcloudStorageMap.
-    
+
     Args:
       gcloud_command (dict|str): The corresponding name of the command to be
-        called in gcloud. If this command supports sub-commands, then this 
+        called in gcloud. If this command supports sub-commands, then this
         field must be a dict of sub-command-name:GcloudStorageMap pairs.
       flag_map (dict): A dict of str to GcloudStorageFlag. Mapping of gsutil
         flags to their equivalent gcloud storage flag names.
@@ -246,7 +246,7 @@ def _get_s3_endpoint_from_boto_config(config):
 
 class GcloudStorageCommandMixin(object):
   """Provides gcloud storage translation functionality.
-  
+
   The command.Command class must inherit this class in order to support
   converting the gsutil command to it's gcloud storage equivalent.
   """
@@ -354,7 +354,7 @@ class GcloudStorageCommandMixin(object):
 
   def _translate_boto_config(self):
     """Translates boto config options to gcloud storage properties.
-    
+
     Returns:
       A tuple where first element is a list of flags and the second element is
       a dict representing the env variables that can be set to set the
@@ -404,7 +404,7 @@ class GcloudStorageCommandMixin(object):
 
     It uses the command_spec.gcloud_storage_map field that provides the
     translation mapping for all the flags.
-    
+
     Returns:
       A list of all the options and arguments that can be used with the
         equivalent gcloud storage command.
@@ -434,7 +434,7 @@ class GcloudStorageCommandMixin(object):
     self._translated_gcloud_storage_command.
     This command also translate the boto config, which gets stored as a dict
     at self._translated_env_variables
-    
+
     Returns:
       True if the command was successfully translated, else False.
     """
