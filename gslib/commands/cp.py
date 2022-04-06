@@ -898,8 +898,7 @@ class CpCommand(Command):
         self.manifest.Initialize(exp_src_url.url_string, dst_url.url_string)
 
       if (self.recursion_requested and
-        copy_object_info.exp_dst_url.object_name and
-        dst_url.IsFileUrl()):
+          copy_object_info.exp_dst_url.object_name and dst_url.IsFileUrl()):
 
         # exp_dst_url is the wildcard-expanded path passed by the user:
         #   exp_dst_url => ~/dir
@@ -913,9 +912,9 @@ class CpCommand(Command):
         # Taking the common path of this and container yields: /usr/name,
         # which does not start with container when the inclusion of '..' strings
         # results in a copy outside of the container.
-        if not os.path.commonpath(
-            [container, os.path.abspath(dst_url.object_name)]
-        ).startswith(container):
+        if not os.path.commonpath([
+            container, os.path.abspath(dst_url.object_name)
+        ]).startswith(container):
           self.logger.warn(
               'Skipping copy of source URL %s because it would be copied '
               'outside the expected destination directory: %s.' %
