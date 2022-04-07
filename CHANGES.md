@@ -1,3 +1,22 @@
+Release 5.9 (release date: 2022-04-07)
+======================================
+New Features
+------------------
+- Add cp -v and -n flags for shim translation. (#1490)
+- Add cp -s flag to shim translation. (#1488)
+
+Bug Fixes
+------------------
+- Prevent copies outside of destination directory. (#1491)
+- Fix copying duplicate file name conflicts by preserving recursive copy (#1465)
+
+Other Changes
+------------------
+- Run Python 3.5 tests with 3.5.2 (#1482)
+- Backfill the changes required to skip the test\_gsutil tests for gsutil.par tests. (#1481)
+- Custom dual region: Drop placement flag as multiple locations can now be provided via -l flag (#1480)
+- Several documentation updates and clarifications.
+
 Release 5.8 (release date: 2022-03-07)
 ======================================
 New Features
