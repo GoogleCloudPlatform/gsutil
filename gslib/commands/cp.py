@@ -896,6 +896,35 @@ class CpCommand(Command):
     try:
       if copy_helper_opts.use_manifest:
         self.manifest.Initialize(exp_src_url.url_string, dst_url.url_string)
+
+      if (self.recursion_requested and
+          copy_object_info.exp_dst_url.object_name and dst_url.IsFileUrl()):
+
+        # exp_dst_url is the wildcard-expanded path passed by the user:
+        #   exp_dst_url => ~/dir
+        #   container => /usr/name/dir
+        container = os.path.abspath(copy_object_info.exp_dst_url.object_name)
+
+        # dst_url holds the complete path of the object's destination:
+        #   dst_url => /usr/name/dir/../file.txt
+        #   abspath => /usr/name/file.txt
+        #
+        # Taking the common path of this and container yields: /usr/name,
+        # which does not start with container when the inclusion of '..' strings
+        # results in a copy outside of the container.
+        if not os.path.commonpath([
+            container, os.path.abspath(dst_url.object_name)
+        ]).startswith(container):
+          self.logger.warn(
+              'Skipping copy of source URL %s because it would be copied '
+              'outside the expected destination directory: %s.' %
+              (exp_src_url, container))
+          if copy_helper_opts.use_manifest:
+            self.manifest.SetResult(
+                exp_src_url.url_string, 0, 'skip',
+                'Would have copied outside the destination directory.')
+          return
+
       _, bytes_transferred, result_url, md5 = copy_helper.PerformCopy(
           self.logger,
           exp_src_url,

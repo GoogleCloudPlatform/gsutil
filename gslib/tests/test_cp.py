@@ -659,6 +659,109 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         stderr, r'Skipping.*: {}'.format(suri(bucket2_uri,
                                               key_uri.object_name)))
 
+  @SequentialAndParallelTransfer
+  @SkipForXML('Boto library does not handle objects with .. in them.')
+  def test_skip_object_with_parent_directory_symbol_in_name(self):
+    bucket_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                object_name='dir/../../../file',
+                                contents=b'data',
+                                prefer_json_api=True)
+    self.CreateObject(bucket_uri=bucket_uri,
+                      object_name='file2',
+                      contents=b'data')
+    directory = self.CreateTempDir()
+
+    stderr = self.RunGsUtil(
+        ['cp', '-r', suri(bucket_uri), directory], return_stderr=True)
+
+    # By default, deletes in the tearDown method run with the XML API. Boto
+    # does not handle names with '..', so we need to delete problematic
+    # objects with the json API. Delete happens before assertions, in case they
+    # raise errors and prevent cleanup.
+    self.json_api.DeleteObject(bucket_uri.bucket_name, key_uri.object_name)
+
+    self.assertIn(
+        'Skipping copy of source URL %s because it would be copied '
+        'outside the expected destination directory: %s.' %
+        (suri(key_uri), os.path.abspath(directory)), stderr)
+    self.assertFalse(os.path.exists(os.path.join(directory, 'file')))
+    self.assertTrue(
+        os.path.exists(os.path.join(directory, bucket_uri.bucket_name,
+                                    'file2')))
+
+  @SequentialAndParallelTransfer
+  @SkipForXML('Boto library does not handle objects with .. in them.')
+  def test_skip_parent_directory_symbol_in_name_is_reflected_in_manifest(self):
+    bucket_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                object_name='dir/../../../file',
+                                contents=b'data',
+                                prefer_json_api=True)
+    directory = self.CreateTempDir()
+    log_path = os.path.join(directory, 'log.csv')
+
+    stderr = self.RunGsUtil(
+        ['cp', '-r', '-L', log_path,
+         suri(bucket_uri), directory],
+        return_stderr=True)
+
+    # By default, deletes in the tearDown method run with the XML API. Boto
+    # does not handle names with '..', so we need to delete problematic
+    # objects with the json API. Delete happens before assertions, in case they
+    # raise errors and prevent cleanup.
+    self.json_api.DeleteObject(bucket_uri.bucket_name, key_uri.object_name)
+
+    self.assertIn(
+        'Skipping copy of source URL %s because it would be copied '
+        'outside the expected destination directory: %s.' %
+        (suri(key_uri), os.path.abspath(directory)), stderr)
+    self.assertFalse(os.path.exists(os.path.join(directory, 'file')))
+    with open(log_path, 'r') as f:
+      lines = f.readlines()
+      results = lines[1].strip().split(',')
+      self.assertEqual(results[0], suri(key_uri))  # The 'Source' column.
+      self.assertEqual(results[8], 'skip')  # The 'Result' column.
+
+  @SequentialAndParallelTransfer
+  @SkipForXML('Boto library does not handle objects with .. in them.')
+  @unittest.skipIf(IS_WINDOWS, 'os.symlink() is not available on Windows.')
+  def test_skip_parent_directory_symbol_object_with_symlink_destination(self):
+    bucket_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                object_name='dir/../../../file',
+                                contents=b'data',
+                                prefer_json_api=True)
+    second_key_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                       object_name='file2',
+                                       contents=b'data')
+
+    directory = self.CreateTempDir()
+    linked_destination = os.path.join(directory, 'linked_destination')
+    destination = os.path.join(directory, 'destination')
+    os.mkdir(destination)
+    os.symlink(destination, linked_destination)
+
+    stderr = self.RunGsUtil([
+        '-D', 'cp', '-r',
+        suri(bucket_uri),
+        suri(second_key_uri), linked_destination
+    ],
+                            return_stderr=True)
+
+    # By default, deletes in the tearDown method run with the XML API. Boto
+    # does not handle names with '..', so we need to delete problematic
+    # objects with the json API. Delete happens before assertions, in case they
+    # raise errors and prevent cleanup.
+    self.json_api.DeleteObject(bucket_uri.bucket_name, key_uri.object_name)
+
+    self.assertIn(
+        'Skipping copy of source URL %s because it would be copied '
+        'outside the expected destination directory: %s.' %
+        (suri(key_uri), linked_destination), stderr)
+    self.assertFalse(os.path.exists(os.path.join(linked_destination, 'file')))
+    self.assertTrue(os.path.exists(os.path.join(linked_destination, 'file2')))
+
   @unittest.skipIf(IS_WINDOWS, 'os.mkfifo not available on Windows.')
   @SequentialAndParallelTransfer
   def test_cp_from_local_file_to_fifo(self):
