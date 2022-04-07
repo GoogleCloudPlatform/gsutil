@@ -60,7 +60,7 @@ _CH_SYNOPSIS = """
 _GET_DESCRIPTION = """
 <B>GET</B>
   The "label get" command gets the
-  `labels <https://cloud.google.com/storage/docs/key-terms#bucket-labels>`_
+  `labels <https://cloud.google.com/storage/docs/bucket-metadata#labels>`_
   applied to a bucket, which you can save and edit for use with the "label set"
   command.
 """
