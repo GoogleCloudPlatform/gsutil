@@ -755,7 +755,7 @@ class CpCommand(Command):
 
   # TODO(b/206151615) Add mappings for remaining flags.
   gcloud_storage_map = GcloudStorageMap(
-      gcloud_command='alpha storage cp',
+      gcloud_command=['alpha', 'storage', 'cp'],
       flag_map={
           '-e': GcloudStorageFlag('--ignore-symlinks'),
           '-n': GcloudStorageFlag('--no-clobber'),

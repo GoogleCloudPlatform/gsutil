@@ -71,7 +71,7 @@ class FakeCommandWithGcloudStorageMap(command.Command):
                                                    supported_sub_args='irz:',
                                                    file_url_ok=True)
   gcloud_storage_map = shim_util.GcloudStorageMap(
-      gcloud_command='objects fake',
+      gcloud_command=['objects', 'fake'],
       flag_map={
           '-r': shim_util.GcloudStorageFlag(gcloud_flag='-x'),
           '-z': shim_util.GcloudStorageFlag(gcloud_flag='--zip'),
@@ -109,13 +109,13 @@ class FakeCommandWithSubCommandWithGcloudStorageMap(command.Command):
   gcloud_storage_map = shim_util.GcloudStorageMap(gcloud_command={
       'set':
           shim_util.GcloudStorageMap(
-              gcloud_command='buckets update',
+              gcloud_command=['buckets', 'update'],
               flag_map={
                   '-a': shim_util.GcloudStorageFlag(gcloud_flag='-x'),
                   '-y': shim_util.GcloudStorageFlag(gcloud_flag='--yyy'),
               }),
       'get':
-          shim_util.GcloudStorageMap(gcloud_command='buckets describe',
+          shim_util.GcloudStorageMap(gcloud_command=['buckets', 'describe'],
                                      flag_map={})
   },
                                                   flag_map={})
@@ -150,6 +150,12 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
     self.assertEqual(gcloud_args,
                      ['objects', 'fake', '--zip', 'opt1', '-x', 'arg1', 'arg2'])
 
+  def test_get_gcloud_storage_args_parses_command_in_list_format(self):
+    self._fake_command.gcloud_command = ['objects', 'fake']
+    gcloud_args = self._fake_command.get_gcloud_storage_args()
+    self.assertEqual(gcloud_args,
+                     ['objects', 'fake', '--zip', 'opt1', '-x', 'arg1', 'arg2'])
+
   def test_get_gcloud_storage_args_parses_subcommands(self):
     fake_with_subcommand = FakeCommandWithSubCommandWithGcloudStorageMap(
         command_runner=mock.ANY,
@@ -175,14 +181,14 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
 
   def test_raises_error_if_gcloud_command_is_of_incorrect_type(self):
     self._fake_command.gcloud_storage_map = shim_util.GcloudStorageMap(
-        gcloud_command=['incorrect', 'command'], flag_map={})
+        gcloud_command='some fake command as a string', flag_map={})
     with self.assertRaisesRegex(
         ValueError, 'Incorrect mapping found for "fake_shim" command'):
       self._fake_command.get_gcloud_storage_args()
 
   def test_raises_error_if_command_option_mapping_is_missing(self):
     self._fake_command.gcloud_storage_map = shim_util.GcloudStorageMap(
-        gcloud_command='fake',
+        gcloud_command=['fake'],
         flag_map={
             '-z': shim_util.GcloudStorageFlag('-a')
             # Mapping for -r is missing.
