@@ -144,7 +144,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     self.multiregional_buckets = util.USE_MULTIREGIONAL_BUCKETS
 
-    self._use_gcloud_storage = config.get('GSUtil', 'use_gcloud_storage', False)
+    self._use_gcloud_storage = config.getbool('GSUtil', 'use_gcloud_storage',
+                                              False)
 
     if util.RUN_S3_TESTS:
       self.nonexistent_bucket_name = (
