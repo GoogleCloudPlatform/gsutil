@@ -263,9 +263,7 @@ class GcloudStorageCommandMixin(object):
           'Command "{}" cannot be translated to gcloud storage because the'
           ' translation mapping is missing.'.format(self.command_name))
     args = []
-    if isinstance(gcloud_storage_map.gcloud_command, str):
-      args = gcloud_storage_map.gcloud_command.split()
-    elif isinstance(gcloud_storage_map.gcloud_command, list):
+    if isinstance(gcloud_storage_map.gcloud_command, list):
       args.extend(gcloud_storage_map.gcloud_command)
     elif isinstance(gcloud_storage_map.gcloud_command, dict):
       # If a command has sub-commands, e.g gsutil pap set, gsutil pap get.
