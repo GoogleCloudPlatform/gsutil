@@ -73,10 +73,14 @@ SHIM_GET_COMMAND_MAP = GcloudStorageMap(
     # Using a list because a string gets splitted up on space and the
     # format string below has a space.
     gcloud_command=[
-        'alpha', 'storage', 'buckets',  'list',
+        'alpha',
+        'storage',
+        'buckets',
+        'list',
         # The url_string for buckets ends with a slash.
         # Substitute the last slash with a colon.
-        '--format=value[separator=" "](url_string.sub("/$", ":"),storage_class)'],
+        '--format=value[separator=" "](url_string.sub("/$", ":"),storage_class)'
+    ],
     flag_map={},
 )
 SHIM_SET_COMMAND_MAP = GcloudStorageMap(
@@ -124,8 +128,8 @@ class DefStorageClassCommand(Command):
 
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command={
-        'get': SHIM_GET_COMMAND_MAP,
-        'set': SHIM_SET_COMMAND_MAP,
+          'get': SHIM_GET_COMMAND_MAP,
+          'set': SHIM_SET_COMMAND_MAP,
       },
       flag_map={},
   )
