@@ -758,6 +758,7 @@ class CpCommand(Command):
       gcloud_command=['alpha', 'storage', 'cp'],
       flag_map={
           '-e': GcloudStorageFlag('--ignore-symlinks'),
+          '-L': GcloudStorageFlag('--manifest-path'),
           '-n': GcloudStorageFlag('--no-clobber'),
           '-P': GcloudStorageFlag('--preserve-posix'),
           '-r': GcloudStorageFlag('-r'),
