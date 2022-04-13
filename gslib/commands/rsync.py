@@ -75,7 +75,7 @@ from gslib.utils.posix_util import ConvertDatetimeToPOSIX
 from gslib.utils.posix_util import ConvertModeToBase8
 from gslib.utils.posix_util import DeserializeFileAttributesFromObjectMetadata
 from gslib.utils.posix_util import GID_ATTR
-from gslib.utils.posix_util import InitializeUserGroups
+from gslib.utils.posix_util import InitializePreservePosixData
 from gslib.utils.posix_util import MODE_ATTR
 from gslib.utils.posix_util import MTIME_ATTR
 from gslib.utils.posix_util import NA_ID
@@ -1770,7 +1770,7 @@ class RsyncCommand(Command):
         elif o == '-P':
           self.preserve_posix_attrs = True
           if not IS_WINDOWS:
-            InitializeUserGroups()
+            InitializePreservePosixData()
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-u':
