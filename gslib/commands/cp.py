@@ -56,7 +56,7 @@ from gslib.utils.copy_helper import Manifest
 from gslib.utils.copy_helper import SkipUnsupportedObjectError
 from gslib.utils.posix_util import ConvertModeToBase8
 from gslib.utils.posix_util import DeserializeFileAttributesFromObjectMetadata
-from gslib.utils.posix_util import InitializeUserGroups
+from gslib.utils.posix_util import InitializePreservePosixData
 from gslib.utils.posix_util import POSIXAttributes
 from gslib.utils.posix_util import SerializeFileAttributesToObjectMetadata
 from gslib.utils.posix_util import ValidateFilePermissionAccess
@@ -1258,7 +1258,7 @@ class CpCommand(Command):
           preserve_acl = True
         elif o == '-P':
           self.preserve_posix_attrs = True
-          InitializeUserGroups()
+          InitializePreservePosixData()
         elif o == '-r' or o == '-R':
           self.recursion_requested = True
         elif o == '-s':

@@ -41,10 +41,10 @@ from gslib.cloud_api import ResumableDownloadException
 from gslib.cloud_api import ResumableUploadException
 from gslib.lazy_wrapper import LazyWrapper
 import gslib.tests as gslib_tests
+from gslib.utils import posix_util
 from gslib.utils.boto_util import UsingCrcmodExtension, HasUserSpecifiedGsHost
 from gslib.utils.constants import UTF8
 from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
-from gslib.utils.posix_util import GetDefaultMode
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.unit_util import MakeHumanReadable
 
@@ -101,7 +101,8 @@ if not IS_WINDOWS:
     return set([GetPrimaryGid()] +
                [g.gr_gid for g in grp.getgrall() if USER_NAME() in g.gr_mem])
 
-  DEFAULT_MODE = int(GetDefaultMode(), 8)
+  posix_util.InitializeDefaultMode()
+  DEFAULT_MODE = int(posix_util.SYSTEM_POSIX_MODE, 8)
   USER_ID = os.getuid()
   USER_NAME = LazyWrapper(lambda: pwd.getpwuid(USER_ID).pw_name)
   # Take the current user's UID and increment it by one, this counts as an
