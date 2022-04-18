@@ -121,3 +121,24 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     self.assertEquals(creds2.client_id, "foo")
     self.assertEquals(creds2.access_token, ACCESS_TOKEN)
     self.assertEquals(creds2.token_expiry, creds.token_expiry)
+
+  def testWrappedCredentialSerializationMissingKeywords(self):
+    """Test logic for creating a Wrapped Credentials using keywords that exist in IdentityPool but not AWS."""
+    creds = WrappedCredentials.from_json(
+        json.dumps({
+            "client_id": "foo",
+            "access_token": ACCESS_TOKEN,
+            "token_expiry": "2001-12-05T00:00:00Z",
+            "_base": {
+                "audience": "foo",
+                "subject_token_type": "bar",
+                "token_url": "baz",
+                "credential_source": {
+                    "url": "www.google.com",
+                    "workforce_pool_user_project": "1234567890"
+                }
+            }
+        }))
+
+    self.assertIsInstance(creds, WrappedCredentials)
+    self.assertIsInstance(creds._base, identity_pool.Credentials)
