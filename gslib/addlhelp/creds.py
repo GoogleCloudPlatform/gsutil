@@ -158,11 +158,10 @@ _DETAILED_HELP_TEXT = ("""
     For more information see
     https://cloud.google.com/iam/docs/creating-short-lived-service-account-credentials
 
-  Third Party Identification:
-    Third Party Identification allows you to grant access to resources to
-    applications running outside of Google Cloud without needing to share a
-    service account key.  For example, from an AWS instance, or from an
-    on-premises server.
+  External Account Credentials (Workload Identity Federation):
+    Using workload identity federation, you can access Google Cloud resources
+    from Amazon Web Services (AWS), Microsoft Azure or any identity provider
+    that supports OpenID Connect (OIDC) or SAML 2.0.
 
     For more information see
     https://cloud.google.com/iam/docs/using-workload-identity-federation
