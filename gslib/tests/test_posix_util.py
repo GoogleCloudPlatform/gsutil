@@ -22,7 +22,9 @@ from __future__ import unicode_literals
 import os
 
 from gslib.tests import testcase
+from gslib.tests.util import unittest
 from gslib.utils import posix_util
+from gslib.utils.system_util import IS_WINDOWS
 
 from six import add_move, MovedModule
 
@@ -41,8 +43,9 @@ class TestPosixUtil(testcase.GsUtilUnitTestCase):
     mock_initialize_default_mode.assert_called_once_with()
     mock_initialize_user_groups.assert_called_once_with()
 
+  @unittest.skipIf(IS_WINDOWS, 'os.umask always returns 0 on Windows.')
   @mock.patch.object(os, 'umask', autospec=True)
-  def test_initialize_default_mode_sets_umask_to_correct_temporary_value(
+  def test_initialize_mode_sets_umask_to_correct_temporary_value_not_windows(
       self, mock_umask):
     # Abort before setting SYSTEM_POSIX_MODE to avoid side effects.
     mock_umask.side_effect = ValueError

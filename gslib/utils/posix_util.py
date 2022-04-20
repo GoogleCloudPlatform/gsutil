@@ -452,9 +452,7 @@ def ParseAndSetPOSIXAttributes(path,
 
     if found_mode:
       mode = int(str(mode), 8)
-    else:
-      mode = int(SYSTEM_POSIX_MODE)
-    os.chmod(path, mode)
+      os.chmod(path, mode)
 
   except ValueError:
     raise CommandException('Check POSIX attribute values for %s' %
@@ -512,6 +510,11 @@ def ConvertDatetimeToPOSIX(dt):
 
 def InitializeDefaultMode():
   """Records the default POSIX mode using os.umask."""
+  global SYSTEM_POSIX_MODE
+  if IS_WINDOWS:
+    # os.umask returns 0 on Windows. Below math works out to 666.
+    SYSTEM_POSIX_MODE = '666'
+    return
   # umask returns the permissions that should not be granted, so they must be
   # subtracted from the maximum set of permissions.
   max_permissions = 0o777
@@ -520,7 +523,6 @@ def InitializeDefaultMode():
   mode = max_permissions - current_umask
   # Files are not given execute privileges by default. Therefore we need to
   # subtract one from every odd permissions value. This is done via a bitmask.
-  global SYSTEM_POSIX_MODE
   SYSTEM_POSIX_MODE = oct(mode & 0o666)[-3:]
 
 
