@@ -143,7 +143,7 @@ def _get_external_account_credentials_from_info(info):
   try:
     # Check if configuration corresponds to an AWS credentials.
     creds = aws.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
-  except (ValueError, exceptions.RefreshError):
+  except (TypeError, ValueError, exceptions.RefreshError):
     try:
       # Check if configuration corresponds to an Identity Pool credentials.
       creds = identity_pool.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
