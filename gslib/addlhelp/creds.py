@@ -99,7 +99,7 @@ _DETAILED_HELP_TEXT = ("""
     "gcloud init" for Cloud SDK installs), you can edit the generated ~/.boto
     config file and look for comments for where other credentials can be added.
 
-    For more details about HMAC authentication, see 
+    For more details about HMAC authentication, see
     https://developers.google.com/storage/docs/reference/v1/getting-startedv1#keys
 
   OAuth2 Service Account:
@@ -121,13 +121,13 @@ _DETAILED_HELP_TEXT = ("""
     permissions on a bucket.
 
     To set up a service account for use with "gsutil config -e" or "gcloud auth
-    activate-service-account", see 
+    activate-service-account", see
     https://cloud.google.com/storage/docs/authentication#generating-a-private-key
 
-    For more details about OAuth2 service accounts, see 
+    For more details about OAuth2 service accounts, see
     https://developers.google.com/accounts/docs/OAuth2ServiceAccount
 
-    For further information about account roles, see 
+    For further information about account roles, see
     https://developers.google.com/console/help/#DifferentRoles
 
   Google Compute Engine Internal Service Account:
@@ -137,10 +137,10 @@ _DETAILED_HELP_TEXT = ("""
     creates command and the credentials can be controlled with the --scopes
     flag.
 
-    For more details about Google Compute Engine service accounts, see 
+    For more details about Google Compute Engine service accounts, see
     https://developers.google.com/compute/docs/authentication;
 
-    For more details about App Engine service accounts, see 
+    For more details about App Engine service accounts, see
     https://developers.google.com/appengine/docs/python/appidentity/overview
 
   Service Account Impersonation:
@@ -155,8 +155,16 @@ _DETAILED_HELP_TEXT = ("""
 
     In order to impersonate, your original credentials need to be granted
     roles/iam.serviceAccountTokenCreator on the target service account.
-    For more information see 
+    For more information see
     https://cloud.google.com/iam/docs/creating-short-lived-service-account-credentials
+
+  External Account Credentials (Workload Identity Federation):
+    Using workload identity federation, you can access Google Cloud resources
+    from Amazon Web Services (AWS), Microsoft Azure or any identity provider
+    that supports OpenID Connect (OIDC) or SAML 2.0.
+
+    For more information see
+    https://cloud.google.com/iam/docs/using-workload-identity-federation
 """)
 
 
