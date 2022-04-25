@@ -146,8 +146,7 @@ class WebCommand(Command):
       help_name='web',
       help_name_aliases=['getwebcfg', 'setwebcfg'],
       help_type='command_help',
-      help_one_line_summary=(
-          'Set a website configuration for a bucket'),
+      help_one_line_summary=('Set a website configuration for a bucket'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
