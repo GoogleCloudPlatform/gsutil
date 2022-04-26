@@ -1,3 +1,17 @@
+Release 5.10 (release date: 2022-04-26)
+======================================
+New Features
+------------------
+- Shim support for defstorageclass (#1494)
+
+Bug Fixes
+------------------
+- Include Third Party Identification as a Credential Type supporting various use cases (#1501)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 5.9 (release date: 2022-04-07)
 ======================================
 New Features
