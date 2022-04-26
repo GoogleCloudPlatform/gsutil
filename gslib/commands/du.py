@@ -62,7 +62,8 @@ _DETAILED_HELP_TEXT = ("""
               can use this to make the output machine-readable.
 
   -a          Includes both live and noncurrent object versions. Also prints the
-              generation and metageneration number for each listed object.
+              generation and metageneration number for each listed object. If 
+              this flag is not specified, only live object versions are included.
 
   -c          Includes a total size at the end of the output.
 
