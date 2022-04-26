@@ -74,16 +74,18 @@ _GET_DESCRIPTION = """
 
 _DESCRIPTION = """
   Cloud Storage allows you to configure a bucket to behave like a static
-  website. When you set a configuration, requests made to the bucket via a
-  `custom domain
-  <https://cloud.google.com/storage/docs/request-endpoints#custom-domains>`_
-  work like any other website. For example, if you set a ``main_page_suffix``,
-  a subsequent GET bucket request through a custom domain serves the specified
-  "main" page instead of performing the usual bucket listing. Similarly, if
-  you set an ``error_page``, a subsequent GET object request through a custom
-  domain for a non-existent object serves the specified error page instead of
-  the standard Cloud Storage error.
+  website when the bucket is accessed through a `custom domain
+  <https://cloud.google.com/storage/docs/request-endpoints#custom-domains>`_.
+  For example, if you set a ``main_page_suffix``, a subsequent GET bucket
+  request through a custom domain serves the specified "main" page instead of
+  performing the usual bucket listing. Similarly, if you set an ``error_page``,
+  a subsequent GET object request through a custom domain for a non-existent
+  object serves the specified error page instead of the standard Cloud Storage
+  error.
 
+  Requests to a bucket through other `endpoints
+  <https://cloud.google.com/storage/docs/request-endpoints>`_ are unaffected
+  by the bucket's website configuration.
   
   See `Static website examples and tips
   <https://cloud.google.com/storage/docs/static-website>`_ for additional
@@ -144,8 +146,7 @@ class WebCommand(Command):
       help_name='web',
       help_name_aliases=['getwebcfg', 'setwebcfg'],
       help_type='command_help',
-      help_one_line_summary=(
-          'Set a main page and/or error page for one or more buckets'),
+      help_one_line_summary=('Set a website configuration for a bucket'),
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={
           'get': _get_help_text,
