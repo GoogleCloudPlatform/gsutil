@@ -251,7 +251,7 @@ _COPY_IN_CLOUD_TEXT = """
 
     gsutil cp gs://bucket1/obj gs://bucket2
 
-   To also copy noncurrent versions, use the ``-A`` flag:
+  To also copy noncurrent versions, use the ``-A`` flag:
 
     gsutil cp -A gs://bucket1/obj gs://bucket2
 
@@ -283,8 +283,8 @@ _CHECKSUM_VALIDATION_TEXT = """
     Copying file://obj [Content-Type=text/plain]...
     Uploading   gs://your-bucket/obj:                                182 b/182 B
 
-    If the checksums don't match, the service rejects the upload and
-    gsutil prints a message like:
+  If the checksums don't match, the service rejects the upload and
+  gsutil prints a message like:
 
     BadRequestException: 400 Provided MD5 hash "VgyllJgiiaRAbyUUIqDMmw=="
     doesn't match calculated MD5 hash "7gyllJgiiaRAbyUUIqDMmw==".
