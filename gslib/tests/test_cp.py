@@ -2162,6 +2162,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         'Source Size', 'Bytes Transferred', 'Result', 'Description'
     ]
     self.assertEqual(expected_headers, lines[0].strip().split(','))
+
     results = lines[1].strip().split(',')
     self.assertEqual(results[0][:5], '%s://' % self.default_provider)  # source
     self.assertEqual(results[1][:7], 'file://')  # destination
