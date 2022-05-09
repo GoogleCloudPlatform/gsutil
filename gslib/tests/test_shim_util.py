@@ -41,7 +41,7 @@ from gslib.tests import util
 @contextmanager
 def _mock_boto_config(boto_config_dict):
   """"Mock boto config replacing any exiting config.
-  
+
   The util.SetBotoConfigForTest has a use_existing_config flag that can be
   set to False, but it does not work if the config has been already loaded,
   which is the case for all unit tests that do not use RunCommand method.
@@ -427,10 +427,13 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                                autospec=True) as mock_logger:
           self._fake_command.translate_to_gcloud_storage_if_requested()
           # Verify translation.
-          mock_logger.debug.assert_called_once_with(
-              'Gcloud Storage Command: {} objects'
-              ' fake --zip opt1 -x arg1 arg2'.format(
-                  os.path.join('fake_dir', 'bin', 'gcloud')))
+          mock_logger.debug.assert_has_calls([
+              mock.call('Gcloud Storage Command: {} objects'
+                        ' fake --zip opt1 -x arg1 arg2'.format(
+                            os.path.join('fake_dir', 'bin', 'gcloud'))),
+              mock.call('Environment variables for Gcloud Storage:'),
+              mock.call('%s=%s', 'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM', 'True')
+          ])
 
   def test_print_gcloud_storage_env_vars_in_dry_run_mode(self):
     """Should log the command and env vars to logger.info"""
@@ -481,6 +484,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             fake_command._translated_env_variables, {
                 'CLOUDSDK_STORAGE_PROCESS_COUNT': '1',
                 'CLOUDSDK_STORAGE_THREAD_COUNT': '1',
+                'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM': 'True',
             })
 
   def test_parallel_operations_true_does_not_add_process_count_env_vars(self):
@@ -744,7 +748,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
 
 class TestGetFlagFromHeader(testcase.GsUtilUnitTestCase):
   """Test Command.get_flag_from_header function.
-  
+
   We only test the unset functionality because rest of the workflows have been
   already tested indirectly in TestHeaderTranslation.
   """
@@ -840,8 +844,11 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
                 expected_gcloud_path, 'objects', 'fake', '--zip', 'opt1', '-x',
                 'arg1', 'arg2', '--content-language=foo'
             ])
-        self.assertEqual(self._fake_command._translated_env_variables,
-                         {'CLOUDSDK_CORE_PROJECT': 'fake_project'})
+        self.assertEqual(
+            self._fake_command._translated_env_variables, {
+                'CLOUDSDK_CORE_PROJECT': 'fake_project',
+                'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM': 'True'
+            })
 
   def test_gcs_json_endpoint_translation(self):
     with _mock_boto_config({
