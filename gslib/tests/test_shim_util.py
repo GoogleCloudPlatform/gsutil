@@ -962,6 +962,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
             'disable_analytics_prompt': 'USAGE_REPORTING_value',
             'use_magicfile': 'USE_MAGICFILE_value',
             'parallel_composite_upload_threshold': '100M',
+            'resumable_threshold': '256K',
         },
         'OAuth2': {
             'client_id': 'CLOUDSDK_AUTH_CLIENT_ID_value',
@@ -995,6 +996,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
               'CLOUDSDK_CORE_DISABLE_USAGE_REPORTING': 'USAGE_REPORTING_value',
               'CLOUDSDK_STORAGE_USE_MAGICFILE': 'USE_MAGICFILE_value',
               'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD': '100M',
+              'CLOUDSDK_STORAGE_RESUMABLE_THRESHOLD': '256K',
               'CLOUDSDK_AUTH_CLIENT_ID': 'CLOUDSDK_AUTH_CLIENT_ID_value',
               'CLOUDSDK_AUTH_CLIENT_SECRET': 'AUTH_CLIENT_SECRET_value',
               'CLOUDSDK_AUTH_AUTH_HOST': 'CLOUDSDK_AUTH_AUTH_HOST_value',
