@@ -140,6 +140,12 @@ if not IS_WINDOWS:
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
 
+# (status_code, error_prefix, error_substring)
+_GCLOUD_STORAGE_GZIP_FLAG_CONFLICT_OUTPUT = (
+    2, 'ERROR',
+    'At most one of --gzip-in-flight-all | --gzip-in-flight-extensions |'
+    ' --gzip-local-all | --gzip-local-extensions can be specified')
+
 
 def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
   """Helper function for preserve_posix_errors tests in test_cp and test_mv.
@@ -2282,8 +2288,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         stderr: String output from running the gsutil command to upload mock
                   data.
       """
+      if self._use_gcloud_storage:
+        extension_list_string = 'js,html'
+      else:
+        extension_list_string = 'js, html'
       stderr = self.RunGsUtil([
-          '-D', 'cp', '-j', 'js, html',
+          '-D', 'cp', '-j', extension_list_string,
           os.path.join(tmpdir, 'test*'),
           suri(bucket_uri)
       ],
@@ -2354,9 +2364,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           return_stderr=True)
       # Ensure all objects are uploaded.
       self.AssertNObjectsInBucket(bucket_uri, 10)
-      # Ensure the progress logger sees a gzip encoding.
-      self.assertIn('send: Using gzip transport encoding for the request.',
-                    stderr)
+      if not self._use_gcloud_storage:
+        # Ensure the progress logger sees a gzip encoding.
+        self.assertIn('send: Using gzip transport encoding for the request.',
+                      stderr)
 
   @SkipForS3('No compressed transport encoding support for S3.')
   @SkipForXML('No compressed transport encoding support for the XML API.')
@@ -2381,9 +2392,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
           return_stderr=True)
       # Ensure all objects are uploaded.
       self.AssertNObjectsInBucket(bucket_uri, 10)
-      # Ensure the progress logger sees a gzip encoding.
-      self.assertIn('send: Using gzip transport encoding for the request.',
-                    stderr)
+      if not self._use_gcloud_storage:
+        # Ensure the progress logger sees a gzip encoding.
+        self.assertIn('send: Using gzip transport encoding for the request.',
+                      stderr)
 
   @SequentialAndParallelTransfer
   def test_gzip_all_upload_and_download(self):
@@ -2452,9 +2464,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertIn(
         'Using compressed transport encoding for file://%s.' % (local_uri2),
         stderr)
-    # Ensure the progress logger sees a gzip encoding.
-    self.assertIn('send: Using gzip transport encoding for the request.',
-                  stderr)
+    if not self._use_gcloud_storage:
+      # Ensure the progress logger sees a gzip encoding.
+      self.assertIn('send: Using gzip transport encoding for the request.',
+                    stderr)
     # Ensure the files do not have a stored encoding of gzip and are stored
     # uncompressed.
     remote_uri1 = suri(bucket_uri, 'test.txt')
@@ -2475,11 +2488,20 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         # Same test, but with arguments in the opposite order.
         ['cp', '-z', 'html, js', '-Z', 'a.js', 'b.js'])
 
+    if self._use_gcloud_storage:
+      expected_status, expected_error_prefix, expected_error_substring = (
+          _GCLOUD_STORAGE_GZIP_FLAG_CONFLICT_OUTPUT)
+    else:
+      expected_status = 1
+      expected_error_prefix = 'CommandException'
+      expected_error_substring = (
+          'Specifying both the -z and -Z options together is invalid.')
     for case in cases:
-      stderr = self.RunGsUtil(case, return_stderr=True, expected_status=1)
-      self.assertIn('CommandException', stderr)
-      self.assertIn(
-          'Specifying both the -z and -Z options together is invalid.', stderr)
+      stderr = self.RunGsUtil(case,
+                              return_stderr=True,
+                              expected_status=expected_status)
+      self.assertIn(expected_error_prefix, stderr)
+      self.assertIn(expected_error_substring, stderr)
 
   def test_both_gzip_transport_encoding_options_error(self):
     """Test that mixing transport encoding flags error."""
@@ -2489,11 +2511,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         # Same test, but with arguments in the opposite order.
         ['cp', '-j', 'html, js', '-J', 'a.js', 'b.js'])
 
+    if self._use_gcloud_storage:
+      expected_status, expected_error_prefix, expected_error_substring = (
+          _GCLOUD_STORAGE_GZIP_FLAG_CONFLICT_OUTPUT)
+    else:
+      expected_status = 1
+      expected_error_prefix = 'CommandException'
+      expected_error_substring = (
+          'Specifying both the -j and -J options together is invalid.')
+
     for case in cases:
-      stderr = self.RunGsUtil(case, return_stderr=True, expected_status=1)
-      self.assertIn('CommandException', stderr)
-      self.assertIn(
-          'Specifying both the -j and -J options together is invalid.', stderr)
+      stderr = self.RunGsUtil(case,
+                              return_stderr=True,
+                              expected_status=expected_status)
+      self.assertIn(expected_error_prefix, stderr)
+      self.assertIn(expected_error_substring, stderr)
 
   def test_combined_gzip_options_error(self):
     """Test that mixing transport encoding and compression flags error."""
@@ -2502,12 +2534,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                         'b.js'], ['cp', '-j', 'html, js', '-Z', 'a.js', 'b.js'],
              ['cp', '-z', 'html, js', '-J', 'a.js', 'b.js'])
 
+    if self._use_gcloud_storage:
+      expected_status, expected_error_prefix, expected_error_substring = (
+          _GCLOUD_STORAGE_GZIP_FLAG_CONFLICT_OUTPUT)
+    else:
+      expected_status = 1
+      expected_error_prefix = 'CommandException'
+      expected_error_substring = (
+          'Specifying both the -j/-J and -z/-Z options together is invalid.')
+
     for case in cases:
-      stderr = self.RunGsUtil(case, return_stderr=True, expected_status=1)
-      self.assertIn('CommandException', stderr)
-      self.assertIn(
-          'Specifying both the -j/-J and -z/-Z options together is invalid.',
-          stderr)
+      stderr = self.RunGsUtil(case,
+                              return_stderr=True,
+                              expected_status=expected_status)
+      self.assertIn(expected_error_prefix, stderr)
+      self.assertIn(expected_error_substring, stderr)
 
   def test_upload_with_subdir_and_unexpanded_wildcard(self):
     fpath1 = self.CreateTempFile(file_name=('tmp', 'x', 'y', 'z'))
@@ -3676,14 +3717,18 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(file_name='looks-zipped.gz', contents=b'foo')
     stderr = self.RunGsUtil([
-        '-D', '-h', 'content-type:application/gzip', 'cp', '-J',
+        '-D', '-d', '-h', 'content-type:application/gzip', 'cp', '-J',
         suri(fpath),
         suri(bucket_uri, 'foo')
     ],
                             return_stderr=True)
     # Ensure the progress logger sees a gzip encoding.
-    self.assertIn('send: Using gzip transport encoding for the request.',
-                  stderr)
+    if self._use_gcloud_storage:
+      self.assertIn("b\'Content-Encoding\': b\'gzip\'", stderr)
+      self.assertIn('"contentType": "application/gzip"', stderr)
+    else:
+      self.assertIn('send: Using gzip transport encoding for the request.',
+                    stderr)
     self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath])
 
   @SequentialAndParallelTransfer

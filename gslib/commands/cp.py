@@ -758,6 +758,8 @@ class CpCommand(Command):
       gcloud_command=['alpha', 'storage', 'cp'],
       flag_map={
           '-e': GcloudStorageFlag('--ignore-symlinks'),
+          '-J': GcloudStorageFlag('--gzip-in-flight-all'),
+          '-j': GcloudStorageFlag('--gzip-in-flight'),
           '-L': GcloudStorageFlag('--manifest-path'),
           '-n': GcloudStorageFlag('--no-clobber'),
           '-P': GcloudStorageFlag('--preserve-posix'),
@@ -765,6 +767,8 @@ class CpCommand(Command):
           '-R': GcloudStorageFlag('-r'),
           '-s': GcloudStorageFlag('--storage-class'),
           '-v': GcloudStorageFlag('--print-created-message'),
+          '-Z': GcloudStorageFlag('--gzip-local-all'),
+          '-z': GcloudStorageFlag('--gzip-local'),
       },
   )
 

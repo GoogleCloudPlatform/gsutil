@@ -91,7 +91,9 @@ _BOTO_CONFIG_MAP = {
         'use_magicfile':
             'CLOUDSDK_STORAGE_USE_MAGICFILE',
         'parallel_composite_upload_threshold':
-            'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD'
+            'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD',
+        'resumable_threshold':
+            'CLOUDSDK_STORAGE_RESUMABLE_THRESHOLD',
     },
     'OAuth2': {
         'client_id': 'CLOUDSDK_AUTH_CLIENT_ID',
