@@ -36,7 +36,7 @@ class HIDDEN_SHIM_MODE(enum.Enum):
   NONE = 'none'
 
 
-class RepeatedFlagType(enum.Enum):
+class RepeatFlagType(enum.Enum):
   LIST = 0
   DICT = 1
 
@@ -178,19 +178,19 @@ class GcloudStorageFlag(object):
 
   def __init__(self,
                gcloud_flag,
-               repeated_type=None,
+               repeat_type=None,
                supports_output_translation=False):
     """Initializes GcloudStorageFlag.
 
     Args:
       gcloud_flag (str): The name of the gcloud flag.
-      repeated_type (RepeatedFlagType|None): Gsutil sometimes handles list
+      repeat_type (RepeatFlagType|None): Gsutil sometimes handles list
         and dictionary inputs by accepting a flag multiple times.
       support_output_translation (bool): If True, this flag in gcloud storage
         supports printing gsutil formatted output.
     """
     self.gcloud_flag = gcloud_flag
-    self.repeated_type = repeated_type
+    self.repeat_type = repeat_type
     self.supports_output_translation = supports_output_translation
 
 
@@ -258,32 +258,38 @@ def _get_s3_endpoint_from_boto_config(config):
   return None
 
 
-def _convert_repeated_flag_to_gcloud_format(args, gcloud_storage_map):
+def _convert_args_to_gcloud_values(args, gcloud_storage_map):
   gcloud_args = []
-  repeated_flag_data = collections.defaultdict(list)
+  repeat_flag_data = collections.defaultdict(list)
   i = 0
   while i < len(args):
-    if (i < len(args) - 1 and args[i] in gcloud_storage_map.flag_map and
-        gcloud_storage_map.flag_map[args[i]].repeated_type):
-      # Capture "v1" and "v2" in ["-k", "v1", "-k", "v2"].
-      repeated_flag_data[gcloud_storage_map.flag_map[args[i]]].append(args[i +
+    if args[i] in gcloud_storage_map.flag_map:
+      if (i < len(args) - 1 and
+          gcloud_storage_map.flag_map[args[i]].repeat_type):
+        # Capture "v1" and "v2" in ["-k", "v1", "-k", "v2"].
+        repeat_flag_data[gcloud_storage_map.flag_map[args[i]]].append(args[i +
                                                                            1])
-      i += 2
+        i += 1
+      else:
+        # Translata\e non-repeated flag.
+        gcloud_args.append(gcloud_storage_map.flag_map[args[i]].gcloud_flag)
     else:
+      # Add positional args and flag values for non-repeated flags.
       gcloud_args.append(args[i])
-      i += 1
 
-  for gcloud_flag_object, values in repeated_flag_data.items():
-    if gcloud_flag_object.repeated_type is RepeatedFlagType.LIST:
+    i += 1
+
+  for gcloud_flag_object, values in repeat_flag_data.items():
+    if gcloud_flag_object.repeat_type is RepeatFlagType.LIST:
       # gsutil: "-k v1 -k v2" -> gcloud: "-k=v1,v2"
       condensed_flag_values = ','.join(values)
-    elif gcloud_flag_object.repeated_type is RepeatedFlagType.DICT:
+    elif gcloud_flag_object.repeat_type is RepeatFlagType.DICT:
       # gcloud: "-d k1:v1 -d k2:v2" -> gcloud: "-d=k1=v1,k2=v2"
       condensed_flag_values = ','.join(
           ['{}={}'.format(*s.split(':', 1)) for s in values])
     else:
-      raise ValueError('Shim cannot handle repeated flag type: {}'.format(
-          repeated_flag_data.repeated_type))
+      raise ValueError('Shim cannot handle repeat flag type: {}'.format(
+          repeat_flag_data.repeat_type))
     gcloud_args.append('{}={}'.format(gcloud_flag_object.gcloud_flag,
                                       condensed_flag_values))
 
@@ -336,20 +342,15 @@ class GcloudStorageCommandMixin(object):
           raise exception.GcloudStorageTranslationError(
               'Command option "{}" cannot be translated to'
               ' gcloud storage'.format(option))
-        elif gcloud_storage_map.flag_map[option].repeated_type:
-          # Handled later in _convert_repeated_flag_to_gcloud_format.
-          # TODO(b/234030720): Arguments not converted to sub_opts if positional
-          # arguments precede flags.
-          args.extend([option, value])
         else:
-          args.append(gcloud_storage_map.flag_map[option].gcloud_flag)
+          args.append(option)
           if value != '':
             # Empty string represents that the user did not passed in a value
             # for the flag.
             args.append(value)
 
-    return _convert_repeated_flag_to_gcloud_format(args + gsutil_args,
-                                                   gcloud_storage_map)
+    return _convert_args_to_gcloud_values(args + gsutil_args,
+                                          gcloud_storage_map)
 
   def _translate_top_level_flags(self):
     """Translates gsutil's top level flags.

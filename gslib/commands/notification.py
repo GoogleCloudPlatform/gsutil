@@ -376,53 +376,29 @@ PAYLOAD_FORMAT_MAP = {
 _GCLOUD_LIST_FORMAT = (
     '--format=value[separator="",terminator=""]('
     '"Notification Configuration".selfLink.sub('
-    '"https://www.googleapis.com/storage/v1/b/",'
-    '"projects/_/buckets/"'
+    '"https://www.googleapis.com/storage/v1/b/", "projects/_/buckets/"'
     ').sub("$", "\n"),'
     '"Notification Configuration".topic.sub('
-    '"//pubsub.googleapis.com/",'
-    '"\tCloud Pub/Sub topic: "'
+    '"//pubsub.googleapis.com/", "\tCloud Pub/Sub topic: "'
     ').sub("$", "\n"),'
     '"Notification Configuration".custom_attributes.yesno('
-    '"\tCustom attributes:\n",'
-    '""'
-    '),'
+    '"\tCustom attributes:\n", ""),'
     '"Notification Configuration".custom_attributes.list(separator="\n").sub('
-    'pattern="=",'
-    'replacement=": "'
-    ').sub('
-    'pattern="^(?=.)",'
-    'replacement="\t\t"'
-    '),'
+    'pattern="=", replacement=": "'
+    ').sub(pattern="^(?=.)", replacement="\t\t"),'
     '"Notification Configuration".custom_attributes.yesno('
-    '"\n",'
-    '""'
-    '),'
+    '"\n", ""),'
     '"Notification Configuration".firstof(event_types, object_name_prefix)'
-    '.yesno('
-    '"\tFilters:\n",'
-    '""'
-    '),'
+    '.yesno("\tFilters:\n",""),'
     '"Notification Configuration".event_types.join(", ").sub('
-    'pattern="^(?=.)",'
-    'replacement="\t\tEvent Types: "'
-    '),'
+    'pattern="^(?=.)", replacement="\t\tEvent Types: "),'
     '"Notification Configuration".event_types.yesno('
-    '"\n",'
-    '""'
-    '),'
+    '"\n", ""),'
     '"Notification Configuration".object_name_prefix.map().sub('
-    'pattern="^(?=.)",'
-    'replacement="\t\tObject name prefix: \'"'
-    ').map().sub('
-    'pattern="(?<=.)$",'
-    'replacement="\'\n"'
-    '),'
+    'pattern="^(?=.)", replacement="\t\tObject name prefix: \'"'
+    ').map().sub(pattern="(?<=.)$", replacement="\'\n"),'
     '"Notification Configuration".yesno('
-    '"\n",'
-    '""'
-    ')'
-    ')')
+    '"\n", ""))')
 
 
 class NotificationCommand(Command):
@@ -509,13 +485,11 @@ class NotificationCommand(Command):
                       '-m':
                           GcloudStorageFlag(
                               '--custom-attributes',
-                              repeated_flag_type=shim_util.RepeatedFlagType.DICT
-                          ),
+                              repeat_type=shim_util.RepeatFlagType.DICT),
                       '-e':
                           GcloudStorageFlag(
                               '--event-types',
-                              repeated_flag_type=shim_util.RepeatedFlagType.LIST
-                          ),
+                              repeat_type=shim_util.RepeatFlagType.LIST),
                       '-p':
                           GcloudStorageFlag('--object-prefix'),
                       '-f':

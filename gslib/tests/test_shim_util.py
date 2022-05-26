@@ -68,13 +68,23 @@ class FakeCommandWithGcloudStorageMap(command.Command):
   command_spec = command.Command.CreateCommandSpec('fake_shim',
                                                    min_args=1,
                                                    max_args=constants.NO_MAX,
-                                                   supported_sub_args='irz:',
+                                                   supported_sub_args='dilrz:',
                                                    file_url_ok=True)
   gcloud_storage_map = shim_util.GcloudStorageMap(
       gcloud_command=['objects', 'fake'],
       flag_map={
-          '-r': shim_util.GcloudStorageFlag(gcloud_flag='-x'),
-          '-z': shim_util.GcloudStorageFlag(gcloud_flag='--zip'),
+          '-r':
+              shim_util.GcloudStorageFlag(gcloud_flag='-x'),
+          '-z':
+              shim_util.GcloudStorageFlag(gcloud_flag='--zip'),
+          '-l':
+              shim_util.GcloudStorageFlag(
+                  gcloud_flag='--ludicrous-list',
+                  repeat_type=shim_util.RepeatFlagType.LIST),
+          '-d':
+              shim_util.GcloudStorageFlag(
+                  gcloud_flag='--delightful-dict',
+                  repeat_type=shim_util.RepeatFlagType.DICT),
       })
   help_spec = command.Command.HelpSpec(
       help_name='fake_shim',
@@ -170,6 +180,71 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
     self.assertEqual(
         gcloud_args,
         ['buckets', 'update', '--yyy', 'opt1', '-x', 'arg1', 'arg2'])
+
+  def test_get_gcloud_storage_args_with_positional_arg_at_beginning(self):
+    fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=['positional_arg', '-z', 'opt1', '-r', 'opt2'],
+        headers=mock.ANY,
+        debug=mock.ANY,
+        trace_token=mock.ANY,
+        parallel_operations=mock.ANY,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    gcloud_args = fake_command.get_gcloud_storage_args()
+    self.assertEqual(
+        gcloud_args,
+        ['objects', 'fake', 'positional_arg', '--zip', 'opt1', '-x', 'opt2'])
+
+  def test_get_gcloud_storage_args_with_positional_arg_in_middle(self):
+    fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=['-z', 'opt1', 'positional_arg', '-r', 'opt2'],
+        headers=mock.ANY,
+        debug=mock.ANY,
+        trace_token=mock.ANY,
+        parallel_operations=mock.ANY,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    gcloud_args = fake_command.get_gcloud_storage_args()
+    self.assertEqual(
+        gcloud_args,
+        ['objects', 'fake', '--zip', 'opt1', 'positional_arg', '-x', 'opt2'])
+
+  def test_get_gcloud_storage_args_with_repeat_flag_list(self):
+    fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=['-l', 'flag_value1', '-l', 'flag_value2', 'positional_arg'],
+        headers=mock.ANY,
+        debug=mock.ANY,
+        trace_token=mock.ANY,
+        parallel_operations=mock.ANY,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    gcloud_args = fake_command.get_gcloud_storage_args()
+    self.assertEqual(gcloud_args, [
+        'objects', 'fake', 'positional_arg',
+        '--ludicrous-list=flag_value1,flag_value2'
+    ])
+
+  def test_get_gcloud_storage_args_with_repeat_flag_dict(self):
+    fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=[
+            '-d', 'flag_key1:flag_value1', '-d', 'flag_key2:flag_value2',
+            'positional_arg'
+        ],
+        headers=mock.ANY,
+        debug=mock.ANY,
+        trace_token=mock.ANY,
+        parallel_operations=mock.ANY,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    gcloud_args = fake_command.get_gcloud_storage_args()
+    self.assertEqual(gcloud_args, [
+        'objects', 'fake', 'positional_arg',
+        '--delightful-dict=flag_key1=flag_value1,flag_key2=flag_value2'
+    ])
 
   def test_raises_error_if_gcloud_storage_map_is_missing(self):
     self._fake_command.gcloud_storage_map = None
