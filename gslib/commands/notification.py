@@ -23,11 +23,10 @@ import getopt
 import re
 import time
 import uuid
-
 from datetime import datetime
+
 from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
-from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import PublishPermissionDeniedException
 from gslib.command import Command
@@ -41,6 +40,9 @@ from gslib.pubsub_api import PubsubApi
 from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.pubsub_apitools.pubsub_v1_messages import Binding
 from gslib.utils import copy_helper
+from gslib.utils import shim_util
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 
 # Cloud Pub/Sub commands
 
@@ -371,6 +373,33 @@ PAYLOAD_FORMAT_MAP = {
     'json': 'JSON_API_V1',
 }
 
+_GCLOUD_LIST_FORMAT = (
+    '--format=value[separator="",terminator=""]('
+    '"Notification Configuration".selfLink.sub('
+    '"https://www.googleapis.com/storage/v1/b/", "projects/_/buckets/"'
+    ').sub("$", "\n"),'
+    '"Notification Configuration".topic.sub('
+    '"//pubsub.googleapis.com/", "\tCloud Pub/Sub topic: "'
+    ').sub("$", "\n"),'
+    '"Notification Configuration".custom_attributes.yesno('
+    '"\tCustom attributes:\n", ""),'
+    '"Notification Configuration".custom_attributes.list(separator="\n").sub('
+    'pattern="=", replacement=": "'
+    ').sub(pattern="^(?=.)", replacement="\t\t"),'
+    '"Notification Configuration".custom_attributes.yesno('
+    '"\n", ""),'
+    '"Notification Configuration".firstof(event_types, object_name_prefix)'
+    '.yesno("\tFilters:\n",""),'
+    '"Notification Configuration".event_types.join(", ").sub('
+    'pattern="^(?=.)", replacement="\t\tEvent Types: "),'
+    '"Notification Configuration".event_types.yesno('
+    '"\n", ""),'
+    '"Notification Configuration".object_name_prefix.map().sub('
+    'pattern="^(?=.)", replacement="\t\tObject name prefix: \'"'
+    ').map().sub(pattern="(?<=.)$", replacement="\'\n"),'
+    '"Notification Configuration".yesno('
+    '"\n", ""))')
+
 
 class NotificationCommand(Command):
   """Implementation of gsutil notification command."""
@@ -443,6 +472,52 @@ class NotificationCommand(Command):
           'watchbucket': _watchbucket_help_text,
           'stopchannel': _stopchannel_help_text,
       },
+  )
+
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command={
+          'create':
+              GcloudStorageMap(
+                  gcloud_command=[
+                      'alpha', 'storage', 'buckets', 'notifications', 'create'
+                  ],
+                  flag_map={
+                      '-m':
+                          GcloudStorageFlag(
+                              '--custom-attributes',
+                              repeat_type=shim_util.RepeatFlagType.DICT),
+                      '-e':
+                          GcloudStorageFlag(
+                              '--event-types',
+                              repeat_type=shim_util.RepeatFlagType.LIST),
+                      '-p':
+                          GcloudStorageFlag('--object-prefix'),
+                      '-f':
+                          GcloudStorageFlag('--payload-format'),
+                      '-s':
+                          GcloudStorageFlag('--skip-topic-setup'),
+                      '-t':
+                          GcloudStorageFlag('--topic'),
+                  },
+              ),
+          'delete':
+              GcloudStorageMap(
+                  gcloud_command=[
+                      'alpha', 'storage', 'buckets', 'notifications', 'delete'
+                  ],
+                  flag_map={},
+              ),
+          'list':
+              GcloudStorageMap(
+                  gcloud_command=[
+                      'alpha', 'storage', 'buckets', 'notifications', 'list',
+                      _GCLOUD_LIST_FORMAT
+                  ],
+                  flag_map={},
+                  supports_output_translation=True,
+              ),
+      },
+      flag_map={},
   )
 
   def _WatchBucket(self):
