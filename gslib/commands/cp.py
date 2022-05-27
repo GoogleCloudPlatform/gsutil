@@ -757,12 +757,14 @@ class CpCommand(Command):
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command=['alpha', 'storage', 'cp'],
       flag_map={
+          '-a': GcloudStorageFlag('--predefined-acl'),
           '-e': GcloudStorageFlag('--ignore-symlinks'),
           '-J': GcloudStorageFlag('--gzip-in-flight-all'),
           '-j': GcloudStorageFlag('--gzip-in-flight'),
           '-L': GcloudStorageFlag('--manifest-path'),
           '-n': GcloudStorageFlag('--no-clobber'),
           '-P': GcloudStorageFlag('--preserve-posix'),
+          '-p': GcloudStorageFlag('--preserve-acl'),
           '-r': GcloudStorageFlag('-r'),
           '-R': GcloudStorageFlag('-r'),
           '-s': GcloudStorageFlag('--storage-class'),
