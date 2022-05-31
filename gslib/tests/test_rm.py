@@ -244,7 +244,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1)
     if self._use_gcloud_storage:
-      no_url_matched_target = 'URL matched no objects or files: %s'
+      no_url_matched_target = no_url_matched_target = (
+          'The following URLs matched no objects or files:\n-%s')
     else:
       no_url_matched_target = NO_URLS_MATCHED_TARGET
     self.assertIn(no_url_matched_target % suri(bucket_uri, 'foo'), stderr)
@@ -295,7 +296,10 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                               return_stderr=True,
                               expected_status=1)
       if self._use_gcloud_storage:
-        self.assertIn('not found', stderr)
+        if self._use_gcloud_storage:
+          # GCS and S3 responses.
+          self.assertTrue('not found: 404' in stderr or
+                          'NoSuchBucket' in stderr)
       else:
         self.assertIn('bucket does not exist', stderr)
 
@@ -384,8 +388,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
     if self._use_gcloud_storage:
       self.assertIn(
-          'URL matched no objects or files: %s' % suri(bucket_uri, 'missing'),
-          stderr)
+          'The following URLs matched no objects or files:\n-%s' %
+          suri(bucket_uri, 'missing'), stderr)
     else:
       self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'missing'),
                     stderr)
@@ -721,25 +725,23 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True,
                             expected_status=1)
     if self._use_gcloud_storage:
-      self.assertIn('%s not found: 404' % self.nonexistent_bucket_name, stderr)
+      # GCS and S3 responses.
+      self.assertTrue('not found: 404' in stderr or 'NoSuchBucket' in stderr)
     else:
       self.assertIn('Encountered non-existent bucket', stderr)
 
   def test_rm_multiple_nonexistent_objects(self):
     bucket_uri = self.CreateBucket()
     nonexistent_object1 = suri(bucket_uri, 'nonexistent1')
-    nonexistent_object2 = suri(bucket_uri, 'nonexistent1')
+    nonexistent_object2 = suri(bucket_uri, 'nonexistent2')
     stderr = self.RunGsUtil(
         ['rm', '-rf', nonexistent_object1, nonexistent_object2],
         return_stderr=True,
         expected_status=1)
     if self._use_gcloud_storage:
       self.assertIn(
-          'WARNING: URL matched no objects or files: %s' % nonexistent_object1,
-          stderr)
-      self.assertIn(
-          'WARNING: URL matched no objects or files: %s' % nonexistent_object2,
-          stderr)
+          'The following URLs matched no objects or files:\n-{}\n-{}'.format(
+              nonexistent_object1, nonexistent_object2), stderr)
     else:
       self.assertIn('2 files/objects could not be removed.', stderr)
 
