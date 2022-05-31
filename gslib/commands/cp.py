@@ -759,6 +759,7 @@ class CpCommand(Command):
       flag_map={
           '-a': GcloudStorageFlag('--predefined-acl'),
           '-e': GcloudStorageFlag('--ignore-symlinks'),
+          '-I': GcloudStorageFlag('--read-paths-from-stdin'),
           '-J': GcloudStorageFlag('--gzip-in-flight-all'),
           '-j': GcloudStorageFlag('--gzip-in-flight'),
           '-L': GcloudStorageFlag('--manifest-path'),
