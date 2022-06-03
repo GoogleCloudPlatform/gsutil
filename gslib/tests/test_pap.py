@@ -105,12 +105,18 @@ class TestPublicAccessPrevention(testcase.GsUtilIntegrationTestCase):
                             ['inherited', suri(bucket_uri)],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('command can only be used for GCS Buckets', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('Flags disallowed for S3', stderr)
+    else:
+      self.assertIn('command can only be used for GCS Buckets', stderr)
 
-    stderr = self.RunGsUtil(self._get_pap_cmd + [suri(bucket_uri)],
-                            return_stderr=True,
-                            expected_status=1)
-    self.assertIn('command can only be used for GCS Buckets', stderr)
+    if not self._use_gcloud_storage:
+      # gcloud storage uses a generic buckets describe command for this, and it
+      # would not print a result instead of erroring.
+      stderr = self.RunGsUtil(self._get_pap_cmd + [suri(bucket_uri)],
+                              return_stderr=True,
+                              expected_status=1)
+      self.assertIn('command can only be used for GCS Buckets', stderr)
 
   def test_set_too_few_arguments_fails(self):
     stderr = self.RunGsUtil(self._set_pap_cmd,

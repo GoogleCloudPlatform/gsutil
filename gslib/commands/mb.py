@@ -34,6 +34,8 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
 from gslib.utils.retention_util import RetentionInSeconds
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.text_util import InsistAscii
 from gslib.utils.text_util import InsistOnOrOff
 from gslib.utils.text_util import NormalizeStorageClass
@@ -220,6 +222,30 @@ class MbCommand(Command):
       help_one_line_summary='Make buckets',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
+  )
+
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command=['alpha', 'storage', 'buckets', 'create'],
+      flag_map={
+          '-b':
+              GcloudStorageFlag({
+                  'on': '--uniform-bucket-level-access',
+                  'off': None,
+              }),
+          '-c':
+              GcloudStorageFlag('--default-storage-class'),
+          '-k':
+              GcloudStorageFlag('--default-encryption-key'),
+          '-l':
+              GcloudStorageFlag('--location'),
+          '--pap':
+              GcloudStorageFlag({
+                  'enforced': '--public-access-prevention',
+                  'inherited': None,
+              }),
+          '--retention':
+              GcloudStorageFlag('--retention-period'),
+      },
   )
 
   def RunCommand(self):
