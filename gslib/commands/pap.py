@@ -28,6 +28,8 @@ from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 
 _SET_SYNOPSIS = """
   gsutil pap set (enforced|inherited) gs://<bucket_name>...
@@ -81,6 +83,9 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 # Aliases to make these more likely to fit enforced one line.
 IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
 
+_GCLOUD_LIST_FORMAT = ('--format=value[separator=": "]'
+                       '(name.sub("^","gs://"),public_access_prevention)')
+
 
 class PapCommand(Command):
   """Implements the gsutil pap command."""
@@ -115,6 +120,48 @@ class PapCommand(Command):
           'get': _get_help_text,
           'set': _set_help_text,
       },
+  )
+
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command={
+          'get':
+              GcloudStorageMap(
+                  gcloud_command=[
+                      'alpha', 'storage', 'buckets', 'list', _GCLOUD_LIST_FORMAT
+                  ],
+                  flag_map={},
+                  supports_output_translation=True,
+              ),
+          'set':
+              GcloudStorageMap(
+                  gcloud_command={
+                      'enforced':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha',
+                                  'storage',
+                                  'buckets',
+                                  'update',
+                                  '--public-access-prevention',
+                              ],
+                              flag_map={},
+                          ),
+                      'inherited':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha',
+                                  'storage',
+                                  'buckets',
+                                  'update',
+                                  '--no-public-access-prevention',
+                              ],
+                              flag_map={},
+                          ),
+                  },
+                  flag_map={},
+              )
+      },
+      flag_map={},
   )
 
   def _ValidateBucketListingRefAndReturnBucketName(self, blr):

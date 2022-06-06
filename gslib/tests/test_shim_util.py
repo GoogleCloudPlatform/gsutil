@@ -68,7 +68,7 @@ class FakeCommandWithGcloudStorageMap(command.Command):
   command_spec = command.Command.CreateCommandSpec('fake_shim',
                                                    min_args=1,
                                                    max_args=constants.NO_MAX,
-                                                   supported_sub_args='dilrz:',
+                                                   supported_sub_args='deilrz:',
                                                    file_url_ok=True)
   gcloud_storage_map = shim_util.GcloudStorageMap(
       gcloud_command=['objects', 'fake'],
@@ -85,6 +85,11 @@ class FakeCommandWithGcloudStorageMap(command.Command):
               shim_util.GcloudStorageFlag(
                   gcloud_flag='--delightful-dict',
                   repeat_type=shim_util.RepeatFlagType.DICT),
+          '-e':
+              shim_util.GcloudStorageFlag(gcloud_flag={
+                  'on': '--e-on',
+                  'off': '--e-off'
+              }),
       })
   help_spec = command.Command.HelpSpec(
       help_name='fake_shim',
@@ -245,6 +250,36 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
         'objects', 'fake', 'positional_arg',
         '--delightful-dict=flag_key1=flag_value1,flag_key2=flag_value2'
     ])
+
+  def test_get_gcloud_storage_args_with_value_translated_to_flag(self):
+    fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=['-e', 'on', 'positional_arg'],
+        headers=mock.ANY,
+        debug=mock.ANY,
+        trace_token=mock.ANY,
+        parallel_operations=mock.ANY,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    gcloud_args = fake_command.get_gcloud_storage_args()
+    self.assertEqual(gcloud_args,
+                     ['objects', 'fake', '--e-on', 'positional_arg'])
+    fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=[
+            'positional_arg',
+            '-e',
+            'off',
+        ],
+        headers=mock.ANY,
+        debug=mock.ANY,
+        trace_token=mock.ANY,
+        parallel_operations=mock.ANY,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    gcloud_args = fake_command.get_gcloud_storage_args()
+    self.assertEqual(gcloud_args,
+                     ['objects', 'fake', 'positional_arg', '--e-off'])
 
   def test_raises_error_if_gcloud_storage_map_is_missing(self):
     self._fake_command.gcloud_storage_map = None

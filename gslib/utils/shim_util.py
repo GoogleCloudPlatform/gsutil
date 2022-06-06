@@ -183,7 +183,9 @@ class GcloudStorageFlag(object):
     """Initializes GcloudStorageFlag.
 
     Args:
-      gcloud_flag (str): The name of the gcloud flag.
+      gcloud_flag (str|dict): The name of the gcloud flag or a dictionary for
+        when the gcloud flag depends on a gsutil value.
+        gsutil "--pap off" -> gcloud "--no-public-access-prevention"
       repeat_type (RepeatFlagType|None): Gsutil sometimes handles list
         and dictionary inputs by accepting a flag multiple times.
       support_output_translation (bool): If True, this flag in gcloud storage
@@ -264,15 +266,24 @@ def _convert_args_to_gcloud_values(args, gcloud_storage_map):
   i = 0
   while i < len(args):
     if args[i] in gcloud_storage_map.flag_map:
-      if (i < len(args) - 1 and
-          gcloud_storage_map.flag_map[args[i]].repeat_type):
+      gcloud_flag_object = gcloud_storage_map.flag_map[args[i]]
+      if gcloud_flag_object.repeat_type:
         # Capture "v1" and "v2" in ["-k", "v1", "-k", "v2"].
-        repeat_flag_data[gcloud_storage_map.flag_map[args[i]]].append(args[i +
-                                                                           1])
+        repeat_flag_data[gcloud_flag_object].append(args[i + 1])
         i += 1
       else:
-        # Translata\e non-repeated flag.
-        gcloud_args.append(gcloud_storage_map.flag_map[args[i]].gcloud_flag)
+        # Immediately translate non-repeated flag.
+        if isinstance(gcloud_flag_object.gcloud_flag, str):
+          # gsutil: "-x" -> gcloud: "-y"
+          gcloud_args.append(gcloud_flag_object.gcloud_flag)
+        else:  # isinstance(gcloud_flag_object.gcloud_flag, dict)
+          # gsutil: "--pap on" -> gcloud: "--pap"
+          # gsutil: "--pap off" -> gcloud: "--no-pap"
+          translated_flag_and_value = gcloud_flag_object.gcloud_flag[args[i +
+                                                                          1]]
+          if translated_flag_and_value:
+            gcloud_args.append(translated_flag_and_value)
+          i += 1
     else:
       # Add positional args and flag values for non-repeated flags.
       gcloud_args.append(args[i])
