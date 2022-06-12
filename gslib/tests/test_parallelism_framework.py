@@ -98,7 +98,7 @@ def _ReturnOneValue(cls, args, thread_state=None):
 
 
 def _ReturnProcAndThreadId(cls, args, thread_state=None):
-  return (os.getpid(), threading.currentThread().ident)
+  return os.getpid(), threading.current_thread().ident
 
 
 def _SleepThenReturnProcAndThreadId(cls, args, thread_state=None):
