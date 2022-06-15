@@ -266,6 +266,27 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     ],
                    expected_status=0)
 
+  @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
+  def test_create_with_custom_dual_regions_via_l_flag(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(['mb', '-l', 'us-central1+us-west1', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r"Location constraint:\t\tUS-CENTRAL1\+US-WEST1")
+
+  @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
+  def test_create_with_invalid_dual_regions_via_l_flag_raises_error(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(
+        ['mb', '-l', 'invalid_reg1+invalid_reg2',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('The specified location constraint is not valid', stderr)
+
   @SkipForXML('The --placement flag only works for GCS JSON API.')
   def test_create_with_placement_flag(self):
     bucket_name = self.MakeTempName('bucket')
