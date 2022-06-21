@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import io
 import sys
+import time
 
 from boto import config
 
@@ -150,6 +151,8 @@ class CatHelper(object):
                   generation=storage_url.generation,
                   decryption_tuple=decryption_keywrapper,
                   provider=storage_url.scheme)
+              cat_out_fd.flush()
+
             else:
               with open(storage_url.object_name, 'rb') as f:
                 self._WriteBytesBufferedFileToFile(f, cat_out_fd)
