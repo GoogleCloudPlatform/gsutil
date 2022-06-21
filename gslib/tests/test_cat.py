@@ -185,13 +185,14 @@ class TestCatHelper(testcase.GsUtilUnitTestCase):
     obj1 = self.CreateObject(bucket_uri=bucket_uri,
                              object_name='foo1',
                              contents=object_contents)
-    obj.root_object = None
+
     command_mock.WildcardIterator.return_value = self._test_wildcard_iterator(
         'gs://bucket/foo*')
 
     stdout_mock = mock.mock_open()()
 
-    # Mocks two functions because we need to record the order of the function calls (write, flush, write, flush).
+    # Mocks two functions because we need to record the order of the
+    # function calls (write, flush, write, flush).
     write_flush_collector_mock = mock.Mock()
     command_mock.gsutil_api.GetObjectMedia = write_flush_collector_mock
     stdout_mock.flush = write_flush_collector_mock
