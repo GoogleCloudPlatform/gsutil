@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import six
 import sys
 
 from gslib.cs_api_map import ApiSelector
@@ -198,7 +199,7 @@ class TestCatHelper(testcase.GsUtilUnitTestCase):
     stdout_mock.flush = write_flush_collector_mock
 
     cat_helper_mock.CatUrlStrings(url_strings=['url'], cat_out_fd=stdout_mock)
-    self.assertEqual(write_flush_collector_mock.call_args_list, [
+    mock_part_one = [
         mock.call('bucket',
                   'foo',
                   stdout_mock,
@@ -209,7 +210,9 @@ class TestCatHelper(testcase.GsUtilUnitTestCase):
                   generation=None,
                   decryption_tuple=None,
                   provider='gs'),
-        mock.call(),
+        mock.call()
+    ]
+    mock_part_two = [
         mock.call('bucket',
                   'foo1',
                   stdout_mock,
@@ -221,4 +224,10 @@ class TestCatHelper(testcase.GsUtilUnitTestCase):
                   decryption_tuple=None,
                   provider='gs'),
         mock.call()
-    ])
+    ]
+    # Needed to do these two checks because the object list order differs
+    # between Windows OS and Python Version 3.5.
+    self.assertIn(write_flush_collector_mock.call_args_list[0:2],
+                  [mock_part_one, mock_part_two])
+    self.assertIn(write_flush_collector_mock.call_args_list[2:4],
+                  [mock_part_one, mock_part_two])
