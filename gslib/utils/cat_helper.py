@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 
 import io
 import sys
-import time
 
 from boto import config
 
