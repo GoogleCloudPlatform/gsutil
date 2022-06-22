@@ -151,6 +151,10 @@ _DESCRIPTION = """
   The kms command has three sub-commands that deal with configuring Cloud
   Storage's integration with Cloud KMS: ``authorize``, ``encryption``,
   and ``serviceaccount``.
+  
+  Before using this command, read the `prerequisites
+  <https://cloud.google.com/storage/docs/encryption/using-customer-managed-keys#prereqs>`_.
+  for using Cloud KMS with Cloud Storage.
 """ + (_AUTHORIZE_DESCRIPTION + _ENCRYPTION_DESCRIPTION +
        _SERVICEACCOUNT_DESCRIPTION)
 
