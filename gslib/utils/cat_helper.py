@@ -137,6 +137,10 @@ class CatHelper(object):
               printed_one = True
             cat_object = blr.root_object
             storage_url = StorageUrlFromString(blr.url_string)
+            # This if statement ensures nothing is ouputted and no error
+            # is thrown if the user enters an out of bounds range for the object.
+            if start_byte >= cat_object.size:
+              return 0
             if storage_url.IsCloudUrl():
               compressed_encoding = ObjectIsGzipEncoded(cat_object)
               self.command_obj.gsutil_api.GetObjectMedia(
