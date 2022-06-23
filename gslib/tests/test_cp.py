@@ -844,8 +844,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         stdin='bar',
         return_stderr=True)
     if self._use_gcloud_storage:
-      self.assertIn('Copying file://- to ' + suri(bucket_uri, 'foo'),
-      stderr)
+      self.assertIn('Copying file://- to ' + suri(bucket_uri, 'foo'), stderr)
     else:
       self.assertIn('Copying from <STDIN>', stderr)
     key_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
@@ -882,8 +881,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.fail('Reading/writing to the fifo timed out.')
 
     if self._use_gcloud_storage:
-      self.assertIn('Copying file://{} to {}'.format(
-          fifo_path, suri(bucket_uri, object_name)), list_for_output[0])
+      self.assertIn(
+          'Copying file://{} to {}'.format(fifo_path,
+                                           suri(bucket_uri, object_name)),
+          list_for_output[0])
     else:
       self.assertIn('Copying from named pipe', list_for_output[0])
 
@@ -943,8 +944,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True,
                             expected_status=1)
     if self._use_gcloud_storage:
-      self.assertIn('Multiple URL strings are not supported when transferring'
-                    ' from stdin.', stderr)
+      self.assertIn(
+          'Multiple URL strings are not supported when transferring'
+          ' from stdin.', stderr)
     else:
       self.assertIn('Multiple URL strings are not supported with streaming',
                     stderr)
@@ -1670,9 +1672,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         stdin='streaming data')
     if self._use_gcloud_storage:
       self.assertIn(
-        'Gzip content encoding is not currently supported for streaming '
-        'uploads.',
-        stderr)
+          'Gzip content encoding is not currently supported for streaming '
+          'uploads.', stderr)
     else:
       self.assertIn(
           'gzip compression is not currently supported on streaming uploads',
@@ -4810,8 +4811,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     if self._use_gcloud_storage:
       self.assertIn(
           'WARNING: Using sequential instead of parallel task execution to'
-          ' transfer from stdin',
-          stderr)
+          ' transfer from stdin', stderr)
     else:
       self.assertIn(
           'CommandException: Cannot upload from a stream when using gsutil -m',
