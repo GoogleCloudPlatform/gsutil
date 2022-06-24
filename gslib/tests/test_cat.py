@@ -173,20 +173,20 @@ class TestCatHelper(testcase.GsUtilUnitTestCase):
   """Unit tests for cat helper."""
 
   def test_cat_helper_runs_flush(self):
-    command_mock = mock.Mock()
-    cat_helper_mock = cat_helper.CatHelper(command_obj=command_mock)
+    cat_command_mock = mock.Mock()
+    cat_helper_mock = cat_helper.CatHelper(command_obj=cat_command_mock)
 
     object_contents = '0123456789'
     bucket_uri = self.CreateBucket(bucket_name='bucket',
                                    provider=self.default_provider)
     obj = self.CreateObject(bucket_uri=bucket_uri,
-                            object_name='foo',
+                            object_name='foo1',
                             contents=object_contents)
     obj1 = self.CreateObject(bucket_uri=bucket_uri,
-                             object_name='foo1',
+                             object_name='foo2',
                              contents=object_contents)
 
-    command_mock.WildcardIterator.return_value = self._test_wildcard_iterator(
+    cat_command_mock.WildcardIterator.return_value = self._test_wildcard_iterator(
         'gs://bucket/foo*')
 
     stdout_mock = mock.mock_open()()
@@ -194,24 +194,11 @@ class TestCatHelper(testcase.GsUtilUnitTestCase):
     # Mocks two functions because we need to record the order of the
     # function calls (write, flush, write, flush).
     write_flush_collector_mock = mock.Mock()
-    command_mock.gsutil_api.GetObjectMedia = write_flush_collector_mock
+    cat_command_mock.gsutil_api.GetObjectMedia = write_flush_collector_mock
     stdout_mock.flush = write_flush_collector_mock
 
     cat_helper_mock.CatUrlStrings(url_strings=['url'], cat_out_fd=stdout_mock)
     mock_part_one = [
-        mock.call('bucket',
-                  'foo',
-                  stdout_mock,
-                  compressed_encoding=None,
-                  start_byte=0,
-                  end_byte=None,
-                  object_size=10,
-                  generation=None,
-                  decryption_tuple=None,
-                  provider='gs'),
-        mock.call()
-    ]
-    mock_part_two = [
         mock.call('bucket',
                   'foo1',
                   stdout_mock,
@@ -224,8 +211,21 @@ class TestCatHelper(testcase.GsUtilUnitTestCase):
                   provider='gs'),
         mock.call()
     ]
-    # Needed to do these two checks because the object list order differs
-    # between Windows OS and Python Version 3.5.
+    mock_part_two = [
+        mock.call('bucket',
+                  'foo2',
+                  stdout_mock,
+                  compressed_encoding=None,
+                  start_byte=0,
+                  end_byte=None,
+                  object_size=10,
+                  generation=None,
+                  decryption_tuple=None,
+                  provider='gs'),
+        mock.call()
+    ]
+    # Needed to do these two checks because the object
+    # ordering varies if run on Windows with Python 3.5.
     self.assertIn(write_flush_collector_mock.call_args_list[0:2],
                   [mock_part_one, mock_part_two])
     self.assertIn(write_flush_collector_mock.call_args_list[2:4],
