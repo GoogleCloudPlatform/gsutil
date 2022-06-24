@@ -843,7 +843,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         ['cp', '-', '%s' % suri(bucket_uri, 'foo')],
         stdin='bar',
         return_stderr=True)
-    self.assertIn('Copying from <STDIN>', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('Copying file://- to ' + suri(bucket_uri, 'foo'), stderr)
+    else:
+      self.assertIn('Copying from <STDIN>', stderr)
     key_uri = self.StorageUriCloneReplaceName(bucket_uri, 'foo')
     self.assertEqual(key_uri.get_contents_as_string(), b'bar')
 
@@ -876,7 +879,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     write_thread.join(120)
     if not list_for_output:
       self.fail('Reading/writing to the fifo timed out.')
-    self.assertIn('Copying from named pipe', list_for_output[0])
+
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'Copying file://{} to {}'.format(fifo_path,
+                                           suri(bucket_uri, object_name)),
+          list_for_output[0])
+    else:
+      self.assertIn('Copying from named pipe', list_for_output[0])
 
     key_uri = self.StorageUriCloneReplaceName(bucket_uri, object_name)
     self.assertEqual(key_uri.get_contents_as_string(), object_contents)
@@ -933,8 +943,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                             stdin='bar',
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('Multiple URL strings are not supported with streaming',
-                  stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'Multiple URL strings are not supported when transferring'
+          ' from stdin.', stderr)
+    else:
+      self.assertIn('Multiple URL strings are not supported with streaming',
+                    stderr)
 
   # TODO: Implement a way to test both with and without using magic file.
 
@@ -1655,9 +1670,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1,
         stdin='streaming data')
-    self.assertIn(
-        'gzip compression is not currently supported on streaming uploads',
-        stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'Gzip content encoding is not currently supported for streaming '
+          'uploads.', stderr)
+    else:
+      self.assertIn(
+          'gzip compression is not currently supported on streaming uploads',
+          stderr)
 
   def test_seek_ahead_upload_cp(self):
     """Tests that the seek-ahead iterator estimates total upload work."""
@@ -4788,9 +4808,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['-m', 'cp', '-', 'file'],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn(
-        'CommandException: Cannot upload from a stream when using gsutil -m',
-        stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'WARNING: Using sequential instead of parallel task execution to'
+          ' transfer from stdin', stderr)
+    else:
+      self.assertIn(
+          'CommandException: Cannot upload from a stream when using gsutil -m',
+          stderr)
 
   @SequentialAndParallelTransfer
   def test_cp_overwrites_existing_destination(self):
