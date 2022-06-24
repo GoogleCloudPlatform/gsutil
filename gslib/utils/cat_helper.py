@@ -139,6 +139,7 @@ class CatHelper(object):
             # This if statement ensures nothing is ouputted and no error
             # is thrown if the user enters an out of bounds range for the object.
             if start_byte >= cat_object.size:
+              sys.stdout = old_stdout
               return 0
             storage_url = StorageUrlFromString(blr.url_string)
             if storage_url.IsCloudUrl():

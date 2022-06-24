@@ -131,7 +131,7 @@ class CatCommand(Command):
           # This if statement ensures the full object is returned
           # instead of throwing a CommandException.
           if request_range == '-':
-            break
+            continue
           range_matcher = re.compile(
               '^(?P<start>[0-9]+)-(?P<end>[0-9]*)$|^(?P<endslice>-[0-9]+)$')
           range_match = range_matcher.match(request_range)
