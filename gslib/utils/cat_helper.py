@@ -138,8 +138,9 @@ class CatHelper(object):
             cat_object = blr.root_object
             # This if statement ensures nothing is ouputted and no error
             # is thrown if the user enters an out of bounds range for the object.
-            if getattr(cat_object, 'size',
-                       None) is not None and start_byte >= cat_object.size:
+            if getattr(
+                cat_object, 'size', None
+            ) is not None and cat_object.size > 0 and start_byte >= cat_object.size:
               sys.stdout = old_stdout
               return 0
             storage_url = StorageUrlFromString(blr.url_string)
