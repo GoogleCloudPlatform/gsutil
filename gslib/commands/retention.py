@@ -44,6 +44,7 @@ from gslib.utils.retention_util import RetentionPolicyToString
 from gslib.utils.retention_util import SetEventHoldFuncWrapper
 from gslib.utils.retention_util import SetTempHoldFuncWrapper
 from gslib.utils.retention_util import UpdateObjectMetadataExceptionHandler
+from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.translation_helper import PreconditionsFromHeaders
 
 _SET_SYNOPSIS = """
@@ -81,7 +82,7 @@ _SET_DESCRIPTION = """
   data retention policy, permanently preventing the policy from being reduced or
   removed. For more information, see `Retention policies and Bucket Lock
   <https://cloud.google.com/storage/docs/bucket-lock>`_.
-  
+
   The ``gsutil retention set`` command allows you to set or update the
   retention policy on one or more buckets.
 
@@ -323,6 +324,56 @@ class RetentionCommand(Command):
           'event': _event_help_text,
           'temp': _temp_help_text
       },
+  )
+
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command={
+          'event':
+              GcloudStorageMap(
+                  gcloud_command={
+                      'set':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha', 'storage', 'objects', 'update',
+                                  '--event-based-hold'
+                              ],
+                              flag_map={},
+                          ),
+                      'release':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha', 'storage', 'objects', 'update',
+                                  '--no-event-based-hold'
+                              ],
+                              flag_map={},
+                          ),
+                  },
+                  flag_map={},
+              ),
+          'temp':
+              GcloudStorageMap(
+                  gcloud_command={
+                      'set':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha', 'storage', 'objects', 'update',
+                                  '--temporary-hold'
+                              ],
+                              flag_map={},
+                          ),
+                      'release':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha', 'storage', 'objects', 'update',
+                                  '--no-temporary-hold'
+                              ],
+                              flag_map={},
+                          ),
+                  },
+                  flag_map={},
+              ),
+      },
+      flag_map={},
   )
 
   def RunCommand(self):
