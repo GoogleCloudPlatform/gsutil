@@ -90,6 +90,8 @@ class FakeCommandWithGcloudStorageMap(command.Command):
                   'on': '--e-on',
                   'off': '--e-off'
               }),
+          '-f':
+              None,
       })
   help_spec = command.Command.HelpSpec(
       help_name='fake_shim',
@@ -185,6 +187,20 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
     self.assertEqual(
         gcloud_args,
         ['buckets', 'update', '--yyy', 'opt1', '-x', 'arg1', 'arg2'])
+
+  def test_get_gcloud_storage_args_with_flags_to_ignore(self):
+    fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=['positional_arg', '-f', '-r', 'opt2', '-f'],
+        headers=mock.ANY,
+        debug=mock.ANY,
+        trace_token=mock.ANY,
+        parallel_operations=mock.ANY,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    gcloud_args = fake_command.get_gcloud_storage_args()
+    self.assertEqual(gcloud_args,
+                     ['objects', 'fake', 'positional_arg', '-x', 'opt2'])
 
   def test_get_gcloud_storage_args_with_positional_arg_at_beginning(self):
     fake_command = FakeCommandWithGcloudStorageMap(

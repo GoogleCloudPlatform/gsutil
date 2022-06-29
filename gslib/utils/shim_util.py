@@ -45,7 +45,8 @@ DECRYPTION_KEY_REGEX = re.compile(r'^decryption_key([1-9]$|[1-9][0-9]$|100$)')
 
 # Required for headers translation and boto config translation.
 DATA_TRANSFER_COMMANDS = frozenset(['cp', 'mv', 'rsync'])
-ENCRYPTION_SUPPORTED_COMMANDS = DATA_TRANSFER_COMMANDS | frozenset(['ls'])
+ENCRYPTION_SUPPORTED_COMMANDS = DATA_TRANSFER_COMMANDS | frozenset(
+    ['ls', 'rewrite'])
 PRECONDITONS_ONLY_SUPPORTED_COMMANDS = frozenset(
     ['compose', 'rewrite', 'rm', 'retention'])
 DATA_TRANSFER_HEADERS = frozenset([
@@ -265,30 +266,32 @@ def _convert_args_to_gcloud_values(args, gcloud_storage_map):
   repeat_flag_data = collections.defaultdict(list)
   i = 0
   while i < len(args):
-    if args[i] in gcloud_storage_map.flag_map:
-      gcloud_flag_object = gcloud_storage_map.flag_map[args[i]]
-      if gcloud_flag_object.repeat_type:
-        # Capture "v1" and "v2" in ["-k", "v1", "-k", "v2"].
-        repeat_flag_data[gcloud_flag_object].append(args[i + 1])
-        i += 1
-      else:
-        # Immediately translate non-repeated flag.
-        if isinstance(gcloud_flag_object.gcloud_flag, str):
-          # gsutil: "-x" -> gcloud: "-y"
-          gcloud_args.append(gcloud_flag_object.gcloud_flag)
-        else:  # isinstance(gcloud_flag_object.gcloud_flag, dict)
-          # gsutil: "--pap on" -> gcloud: "--pap"
-          # gsutil: "--pap off" -> gcloud: "--no-pap"
-          translated_flag_and_value = gcloud_flag_object.gcloud_flag[args[i +
-                                                                          1]]
-          if translated_flag_and_value:
-            gcloud_args.append(translated_flag_and_value)
-          i += 1
-    else:
-      # Add positional args and flag values for non-repeated flags.
+    if not args[i] in gcloud_storage_map.flag_map:
+      # Add raw value (positional args and flag values for non-repeated flags).
       gcloud_args.append(args[i])
+      i += 1
+      continue
 
-    i += 1
+    gcloud_flag_object = gcloud_storage_map.flag_map[args[i]]
+    if not gcloud_flag_object:
+      # Flag asked to be skipped over.
+      i += 1
+    elif gcloud_flag_object.repeat_type:
+      # Capture "v1" and "v2" in ["-k", "v1", "-k", "v2"].
+      repeat_flag_data[gcloud_flag_object].append(args[i + 1])
+      i += 2
+    elif isinstance(gcloud_flag_object.gcloud_flag, str):
+      # Simple translation.
+      # gsutil: "-x" -> gcloud: "-y"
+      gcloud_args.append(gcloud_flag_object.gcloud_flag)
+      i += 1
+    else:  # isinstance(gcloud_flag_object.gcloud_flag, dict)
+      # gsutil: "--pap on" -> gcloud: "--pap"
+      # gsutil: "--pap off" -> gcloud: "--no-pap"
+      translated_flag_and_value = gcloud_flag_object.gcloud_flag[args[i + 1]]
+      if translated_flag_and_value:
+        gcloud_args.append(translated_flag_and_value)
+      i += 2
 
   for gcloud_flag_object, values in repeat_flag_data.items():
     if gcloud_flag_object.repeat_type is RepeatFlagType.LIST:
