@@ -1155,14 +1155,21 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
     self.assertRegex(stdout, r'Cache-Control\s*:\s*public,max-age=12')
-    self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
+
+    if self._use_gcloud_storage:
+      self.assertRegex(stdout, r'"key":\s* "1",\n\s*"value":\s*"abcd"')
+    else:
+      self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
 
     dst_uri2 = suri(bucket_uri, 'bar')
     self.RunGsUtil(['cp', dst_uri, dst_uri2])
     # Ensure metadata was preserved across copy.
     stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
     self.assertRegex(stdout, r'Cache-Control\s*:\s*public,max-age=12')
-    self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
+    if self._use_gcloud_storage:
+      self.assertRegex(stdout, r'"key":\s* "1",\n\s*"value":\s*"abcd"')
+    else:
+      self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
 
   @SequentialAndParallelTransfer
   def test_request_reason_header(self):
@@ -1172,13 +1179,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     dst_uri = suri(bucket_uri, 'foo')
     fpath = self._get_test_file('test.gif')
     # Ensure x-goog-request-header is set in cp command
-    stderr = self.RunGsUtil(['-D', 'cp', fpath, dst_uri], return_stderr=True)
-    self.assertRegex(stderr,
-                     r'\'x-goog-request-reason\': \'b/this_is_env_reason\'')
+    stderr = self.RunGsUtil(['-DD', 'cp', fpath, dst_uri], return_stderr=True)
+
+    if self._use_gcloud_storage:
+      reason_regex = r"b'X-Goog-Request-Reason': b'b/this_is_env_reason'"
+    else:
+      reason_regex = r"'x-goog-request-reason': 'b/this_is_env_reason'"
+
+    self.assertRegex(stderr, reason_regex)
     # Ensure x-goog-request-header is set in ls command
-    stderr = self.RunGsUtil(['-D', 'ls', '-L', dst_uri], return_stderr=True)
-    self.assertRegex(stderr,
-                     r'\'x-goog-request-reason\': \'b/this_is_env_reason\'')
+    stderr = self.RunGsUtil(['-DD', 'ls', '-L', dst_uri], return_stderr=True)
+    self.assertRegex(stderr, reason_regex)
 
   @SequentialAndParallelTransfer
   @SkipForXML('XML APIs use a different debug log format.')
@@ -1191,14 +1202,17 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     boto_config_for_test = ('GSUtil', 'resumable_threshold', '0')
     with SetBotoConfigForTest([boto_config_for_test]):
-      stderr = self.RunGsUtil(['-D', 'cp', fpath, dst_uri], return_stderr=True)
+      stderr = self.RunGsUtil(['-DD', 'cp', fpath, dst_uri], return_stderr=True)
 
-    # PUT follows GET request. Both need the request-reason header.
-    reason_regex = (r'Making http GET[\s\S]*'
-                    r'x-goog-request-reason\': \'b/this_is_env_reason[\s\S]*'
-                    r'send: (b\')?PUT[\s\S]*x-goog-request-reason:'
-                    r' b/this_is_env_reason')
-    self.assertRegex(stderr, reason_regex)
+    if self._use_gcloud_storage:
+      reason_regex = r'X-Goog-Request-Reason\': b\'b/this_is_env_reason'
+    else:
+      reason_regex = r'x-goog-request-reason\': \'b/this_is_env_reason'
+
+    self.assertRegex(
+        stderr,
+        # PUT follows GET request. Both need the request-reason header.
+        r'GET[\s\S]*' + reason_regex + r'[\s\S]*PUT[\s\S]*' + reason_regex)
 
   @SequentialAndParallelTransfer
   @SkipForJSON('JSON API uses a different debug log format.')
@@ -1388,7 +1402,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
          suri(bucket_uri)],
         return_stderr=True,
         expected_status=1)
-    self.assertIn('PreconditionException', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'HTTPError 412: At least one of the pre-conditions you specified'
+          ' did not hold.', stderr)
+    else:
+      self.assertIn('PreconditionException', stderr)
 
   @SequentialAndParallelTransfer
   @SkipForS3('Preconditions not supported for S3.')
