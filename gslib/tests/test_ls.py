@@ -1143,13 +1143,15 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     self.assertRegex(stdout, r'RPO:\t\t\t\tASYNC_TURBO')
 
+  @SkipForXML('Custom Dual Region is not supported for the XML API.')
   @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
-  def test_list_Lb_displays_custom_dual_region_info(self):
+  def test_list_Lb_displays_custom_dual_region_placement_info(self):
     bucket_name = 'gs://' + self.MakeTempName('bucket')
-    self.RunGsUtil(['mb', '-l', 'us-central1+us-west1', bucket_name],
+    self.RunGsUtil(['mb', '--placement', 'us-central1,us-west1', bucket_name],
                    expected_status=0)
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_name], return_stdout=True)
-    self.assertRegex(stdout, r"Location constraint:\t\tUS-CENTRAL1\+US-WEST1")
+    self.assertRegex(stdout,
+                     r"Placement locations:\t\t\['US-CENTRAL1', 'US-WEST1'\]")
 
   @SkipForXML('Autoclass is not supported for the XML API.')
   @SkipForS3('Autoclass is not supported for S3 buckets.')

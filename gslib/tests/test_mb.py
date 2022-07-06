@@ -267,7 +267,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                    expected_status=0)
 
   @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
-  def test_create_with_custom_dual_regions(self):
+  def test_create_with_custom_dual_regions_via_l_flag(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
@@ -276,7 +276,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     self.assertRegex(stdout, r"Location constraint:\t\tUS-CENTRAL1\+US-WEST1")
 
   @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
-  def test_create_with_invalid_dual_regions_raises_error(self):
+  def test_create_with_invalid_dual_regions_via_l_flag_raises_error(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
@@ -286,6 +286,48 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1)
     self.assertIn('The specified location constraint is not valid', stderr)
+
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_create_with_placement_flag(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(
+        ['mb', '--placement', 'us-central1,us-west1',
+         suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout,
+                     r"Placement locations:\t\t\['US-CENTRAL1', 'US-WEST1'\]")
+
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_create_with_invalid_placement_flag_raises_error(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(
+        ['mb', '--placement', 'invalid_reg1,invalid_reg2',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertRegex(
+        stderr, r'.*BadRequestException: 400 (Invalid custom placement config|'
+        r'One or more unrecognized regions in dual-region, received:'
+        r' INVALID_REG1, INVALID_REG2).*')
+
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_create_with_incorrect_number_of_placement_values_raises_error(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    # Location nam4 is used for dual-region.
+    stderr = self.RunGsUtil(
+        ['mb', '--placement', 'val1,val2,val3',
+         suri(bucket_uri)],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'CommandException: Please specify two regions separated by comma'
+        ' without space. Specified: val1,val2,val3', stderr)
 
   @SkipForJSON('Testing XML only behavior.')
   def test_single_json_only_flag_raises_error_with_xml_api(self):
@@ -306,13 +348,13 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
     stderr = self.RunGsUtil([
-        'mb', '--autoclass', '--pap', 'enabled', '--rpo', 'ASYNC_TURBO', '-b',
-        'on',
+        'mb', '--autoclass', '--pap', 'enabled', '--placement',
+        'uscentral-1,us-asia1', '--rpo', 'ASYNC_TURBO', '-b', 'on',
         suri(bucket_uri)
     ],
                             return_stderr=True,
                             expected_status=1)
     self.assertIn(
-        'CommandException: The --autoclass, --pap, --rpo,'
+        'CommandException: The --autoclass, --pap, --placement, --rpo,'
         ' -b option(s) can only be used for GCS Buckets with the JSON API',
         stderr)
