@@ -160,7 +160,7 @@ _DETAILED_HELP_TEXT = ("""
                          "enforced", objects in this bucket cannot be made
                          publicly accessible. Default is "inherited".
 
-  --placement reg1,reg2  Two regions that form the cutom dual-region.
+  --placement reg1,reg2  Two regions that form the custom dual-region.
                          Only regions within the same continent are or will ever
                          be valid. Invalid location pairs (such as
                          mixed-continent, or with unsupported regions)
@@ -265,10 +265,10 @@ class MbCommand(Command):
     location = None
     storage_class = None
     seconds = None
+    placements = None
     public_access_prevention = None
     rpo = None
     json_only_flags_in_command = []
-    placements = None
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '--autoclass':
