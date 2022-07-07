@@ -1,3 +1,33 @@
+Release 5.11 (release date: 2022-07-07)
+======================================
+New Features
+------------------
+- Bring back placement flag for custom dual regions (#1525)
+- Shim rewrite command. (#1537)
+- Shim retention object-based subcommands. (#1536)
+- Test parity for streaming uploads. (#1533)
+- Add pap flag shim support. (#1522)
+- Shim support for kms (#1507)
+- Update rm shim test parity (#1521)
+- Shim cp -I flag (#1520)
+- Add shim support for notification commands. (#1518)
+- Add shim support for cp ACL flags (#1519)
+- Turning off metrics when the shim is enabled. (#1512)
+- Add shim support for gzip flags. (#1511)
+- Shim translation and test parity for cp manifest flag. (#1497)
+- Run by shim env var. (#1510)
+- Shim preserve posix (-P) flag. (#1506)
+
+Bug Fixes
+------------------
+- Added flush to cat\_helper.py (#1528)
+
+Other Changes
+------------------
+- Replace deprecated threading.currentThread with current\_thread (#1524)
+- Updated boto to latest commit
+- Several documentation updates and clarifications.
+
 Release 5.10 (release date: 2022-04-26)
 ======================================
 New Features
