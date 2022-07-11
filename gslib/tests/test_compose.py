@@ -19,6 +19,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import functools
+
 from six.moves import xrange
 from six.moves import range
 
@@ -213,6 +215,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
           suri(bucket_uri, 'obj')
       ])
 
+  @functools.lru_cache()
   def authorize_project_to_use_testing_kms_key(
       self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
     # Make sure our keyRing and cryptoKey exist.

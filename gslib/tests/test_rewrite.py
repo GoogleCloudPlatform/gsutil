@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import functools
 import logging
 import os
 import re
@@ -458,6 +459,7 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
                                          new_dec_key=TEST_ENCRYPTION_KEY3,
                                          new_enc_key=TEST_ENCRYPTION_KEY4)
 
+  @functools.lru_cache()
   def authorize_project_to_use_testing_kms_key(
       self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
     # Make sure our keyRing and cryptoKey exist.

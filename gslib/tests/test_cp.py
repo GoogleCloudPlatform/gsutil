@@ -23,6 +23,7 @@ import ast
 import base64
 import binascii
 import datetime
+import functools
 import gzip
 import logging
 import os
@@ -4696,6 +4697,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                       r'Storage class:\s+STANDARD',
                                       flags=re.IGNORECASE)
 
+  @functools.lru_cache()
   def authorize_project_to_use_testing_kms_key(
       self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
     # Make sure our keyRing and cryptoKey exist.

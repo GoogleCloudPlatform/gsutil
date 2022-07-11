@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import functools
 import os
 
 import six
@@ -3094,6 +3095,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertIn('send: Using gzip transport encoding for the request.',
                   stderr)
 
+  @functools.lru_cache()
   def authorize_project_to_use_testing_kms_key(
       self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
     # Make sure our keyRing and cryptoKey exist.
