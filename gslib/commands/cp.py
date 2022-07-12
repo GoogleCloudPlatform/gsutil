@@ -390,9 +390,9 @@ _PARALLEL_COMPOSITE_UPLOADS_TEXT = """
   gsutil can automatically use
   `object composition <https://cloud.google.com/storage/docs/composite-objects>`_
   to perform uploads in parallel for large, local files being uploaded to
-  Cloud Storage. See the `Uploads and downloads documentation
-  <https://cloud.google.com/storage/docs/uploads-downloads#parallel-composite-uploads>`_
-  for a complete discussion.
+  Cloud Storage. See the `parallel composite uploads documentation
+  <https://cloud.google.com/storage/docs/parallel-composite-uploads>`_ for a
+  complete discussion.
 """
 
 _CHANGING_TEMP_DIRECTORIES_TEXT = """
