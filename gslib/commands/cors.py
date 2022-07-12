@@ -90,7 +90,7 @@ _DESCRIPTION = ("""
 """ + '\n'.join([_GET_DESCRIPTION, _SET_DESCRIPTION]) + """
 For more info about CORS generally, see https://www.w3.org/TR/cors/.
 For more info about CORS in Cloud Storage, see the 
-`CORS concept page <https://cloud.google.com/storage/docs/configuring-cors>`_.
+`CORS concept page <https://cloud.google.com/storage/docs/cross-origin>`_.
 """)
 
 _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
