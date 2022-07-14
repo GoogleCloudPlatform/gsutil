@@ -1333,3 +1333,18 @@ class KmsTestingResources(object):
   # while also not creating too many one-time-use keys (as they cannot be
   # deleted). Tests should fill in the %d entries with a digit between 0 and 9.
   MUTABLE_KEY_NAME_TEMPLATE = 'cryptokey-for-gsutil-integration-tests-%d%d%d'
+
+
+def authorize_project_to_use_testing_kms_key(
+      self, key_name=KmsTestingResources.CONSTANT_KEY_NAME):
+    # Make sure our keyRing and cryptoKey exist.
+    kms_api = KmsApi(logging.getLogger())
+    keyring_fqn = kms_api.CreateKeyRing(
+        PopulateProjectId(None),
+        KmsTestingResources.KEYRING_NAME,
+        location=KmsTestingResources.KEYRING_LOCATION)
+    key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
+    # Make sure that the service account for our default project is authorized
+    # to use our test KMS key.
+    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
+    return key_fqn

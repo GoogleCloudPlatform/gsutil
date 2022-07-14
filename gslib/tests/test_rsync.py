@@ -19,7 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-import functools
+import multiprocessing
 import os
 
 import six
@@ -63,6 +63,9 @@ if not IS_WINDOWS:
   from gslib.tests.util import INVALID_UID
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
+
+key_map = {}
+key_map_lock = multiprocessing.Lock()
 
 if six.PY3:
   long = int
@@ -3095,19 +3098,23 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertIn('send: Using gzip transport encoding for the request.',
                   stderr)
 
-  @functools.lru_cache()
   def authorize_project_to_use_testing_kms_key(
       self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
     # Make sure our keyRing and cryptoKey exist.
-    keyring_fqn = self.kms_api.CreateKeyRing(
-        PopulateProjectId(None),
-        testcase.KmsTestingResources.KEYRING_NAME,
-        location=testcase.KmsTestingResources.KEYRING_LOCATION)
-    key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
-    # Make sure that the service account for our default project is authorized
-    # to use our test KMS key.
-    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn])
-    return key_fqn
+    with key_map_lock:
+      if key_name in key_map:
+        return key_map[key_name]
+
+      keyring_fqn = self.kms_api.CreateKeyRing(
+          PopulateProjectId(None),
+          testcase.KmsTestingResources.KEYRING_NAME,
+          location=testcase.KmsTestingResources.KEYRING_LOCATION)
+      key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
+      # Make sure that the service account for our default project is authorized
+      # to use our test KMS key.
+      self.RunGsUtil(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
+      key_map[key_name] = key_fqn
+      return key_fqn
 
   @SkipForS3('Test uses gs-specific KMS encryption')
   def test_kms_key_applied_to_dest_objects(self):

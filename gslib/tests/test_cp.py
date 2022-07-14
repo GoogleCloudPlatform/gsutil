@@ -23,9 +23,9 @@ import ast
 import base64
 import binascii
 import datetime
-import functools
 import gzip
 import logging
+import multiprocessing
 import os
 import pickle
 import pkgutil
@@ -146,6 +146,10 @@ _GCLOUD_STORAGE_GZIP_FLAG_CONFLICT_OUTPUT = (
     2, 'ERROR',
     'At most one of --gzip-in-flight-all | --gzip-in-flight-extensions |'
     ' --gzip-local-all | --gzip-local-extensions can be specified')
+
+
+key_map = {}
+key_map_lock = multiprocessing.Lock()
 
 
 def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
@@ -4697,19 +4701,23 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                       r'Storage class:\s+STANDARD',
                                       flags=re.IGNORECASE)
 
-  @functools.lru_cache()
   def authorize_project_to_use_testing_kms_key(
       self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
     # Make sure our keyRing and cryptoKey exist.
-    keyring_fqn = self.kms_api.CreateKeyRing(
-        PopulateProjectId(None),
-        testcase.KmsTestingResources.KEYRING_NAME,
-        location=testcase.KmsTestingResources.KEYRING_LOCATION)
-    key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
-    # Make sure that the service account for our default project is authorized
-    # to use our test KMS key.
-    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
-    return key_fqn
+    with key_map_lock:
+      if key_name in key_map:
+        return key_map[key_name]
+
+      keyring_fqn = self.kms_api.CreateKeyRing(
+          PopulateProjectId(None),
+          testcase.KmsTestingResources.KEYRING_NAME,
+          location=testcase.KmsTestingResources.KEYRING_LOCATION)
+      key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
+      # Make sure that the service account for our default project is authorized
+      # to use our test KMS key.
+      self.RunGsUtil(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
+      key_map[key_name] = key_fqn
+      return key_fqn
 
   @SkipForS3('Test uses gs-specific KMS encryption')
   def test_kms_key_correctly_applied_to_dst_obj_from_src_with_no_key(self):
