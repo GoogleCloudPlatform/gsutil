@@ -239,17 +239,10 @@ class KmsTestingResources(object):
   # number of resources created by using a hard-coded keyRing name.
   KEYRING_NAME = 'keyring-for-gsutil-integration-tests'
 
-  FULLY_QUALIFIED_KEYRING = ('projects/{}/locations/{}/keyRings/{}'.format(
-      PopulateProjectId(None), KEYRING_LOCATION, KEYRING_NAME))
-
   # Used by tests where we don't need to alter the state of a cryptoKey and/or
   # its IAM policy bindings once it's initialized the first time.
   CONSTANT_KEY_NAME = 'key-for-gsutil-integration-tests'
   CONSTANT_KEY_NAME2 = 'key-for-gsutil-integration-tests2'
-
-  _FULLY_QUALIFIED_KEY_PREFIX = FULLY_QUALIFIED_KEYRING + '/cryptoKeys/'
-  FULLY_QUALIFIED_KEY_NAME = _FULLY_QUALIFIED_KEY_PREFIX + CONSTANT_KEY_NAME
-  FULLY_QUALIFIED_KEY_NAME2 = _FULLY_QUALIFIED_KEY_PREFIX + CONSTANT_KEY_NAME2
 
   # This key should not be authorized so it can be used for failure cases.
   CONSTANT_KEY_NAME_DO_NOT_AUTHORIZE = 'key-for-gsutil-no-auth'
@@ -259,6 +252,17 @@ class KmsTestingResources(object):
   # while also not creating too many one-time-use keys (as they cannot be
   # deleted). Tests should fill in the %d entries with a digit between 0 and 9.
   MUTABLE_KEY_NAME_TEMPLATE = 'cryptokey-for-gsutil-integration-tests-%d%d%d'
+
+
+def _GetFullyQualifiedKmsKeyringName():
+  # Cannot be done at import, since PopulateProjectId fails for some commands.
+  return ('projects/{}/locations/{}/keyRings/{}'.format(
+      PopulateProjectId(None), KmsTestingResources.KEYRING_LOCATION,
+      KmsTestingResources.KEYRING_NAME))
+
+
+def GetFullyQualifiedKmsKeyName(key_name=KmsTestingResources.CONSTANT_KEY_NAME):
+  return _GetFullyQualifiedKmsKeyringName() + '/cryptoKeys/' + key_name
 
 
 def AuthorizeProjectToUseTestingKmsKeys():

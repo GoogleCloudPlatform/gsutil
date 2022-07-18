@@ -3314,7 +3314,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=b'abcd')
     obj_suri = suri(bucket_uri, 'composed')
-    key_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
+    key_fqn = GetFullyQualifiedKmsKeyName()
 
     with SetBotoConfigForTest([
         ('GSUtil', 'encryption_key', key_fqn),
@@ -4702,7 +4702,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     obj1_name = 'foo'
     obj2_name = 'bar'
-    key_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
+    key_fqn = GetFullyQualifiedKmsKeyName()
 
     # Create the unencrypted object, then copy it, specifying a KMS key for the
     # new object.
@@ -4725,7 +4725,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'abcd')
     obj_name = 'foo'
     obj_suri = suri(bucket_uri) + '/' + obj_name
-    key_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
+    key_fqn = GetFullyQualifiedKmsKeyName()
 
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
       self.RunGsUtil(['cp', fpath, obj_suri])
@@ -4740,7 +4740,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'a' * resumable_threshold)
     obj_name = 'foo'
     obj_suri = suri(bucket_uri) + '/' + obj_name
-    key_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
+    key_fqn = GetFullyQualifiedKmsKeyName()
 
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn),
                                ('GSUtil', 'resumable_threshold',
@@ -4755,8 +4755,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     obj1_name = 'foo'
     obj2_name = 'bar'
-    key1_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
-    key2_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME2
+    key1_fqn = GetFullyQualifiedKmsKeyName()
+    key2_fqn = GetFullyQualifiedKmsKeyName(
+        key_name=KmsTestingResources.CONSTANT_KEY_NAME2)
     obj1_suri = suri(
         self.CreateObject(bucket_uri=bucket_uri,
                           object_name=obj1_name,

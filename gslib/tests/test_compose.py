@@ -26,7 +26,7 @@ from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
-from gslib.tests.util import KmsTestingResources
+from gslib.tests.util import GetFullyQualifiedKmsKeyName
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TEST_ENCRYPTION_KEY1
@@ -225,7 +225,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'bar')
 
     obj_suri = suri(bucket_uri, 'composed')
-    key_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
+    key_fqn = GetFullyQualifiedKmsKeyName()
 
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
       self.RunGsUtil([

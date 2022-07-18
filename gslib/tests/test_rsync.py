@@ -31,7 +31,7 @@ from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import BuildErrorRegex
-from gslib.tests.util import KmsTestingResources
+from gslib.tests.util import GetFullyQualifiedKmsKeyName
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
 from gslib.tests.util import POSIX_GID_ERROR
@@ -3105,7 +3105,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateTempFile(tmpdir=tmp_dir,
                         file_name=obj_name,
                         contents=obj_contents)
-    key_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
+    key_fqn = GetFullyQualifiedKmsKeyName()
 
     # Rsync the object from our tmpdir to a GCS bucket, specifying a KMS key.
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
