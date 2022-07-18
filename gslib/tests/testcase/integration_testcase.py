@@ -1001,52 +1001,15 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       If only one return_* value was specified, that value is returned directly
       rather than being returned within a 1-tuple.
     """
-    # TODO(b/203250512) Remove this once all the commands are supported
-    # via gcloud storage.
-    if force_gsutil:
-      use_gcloud_storage = False
-    else:
-      use_gcloud_storage = config.getbool('GSUtil', 'use_gcloud_storage', False)
-    gcloud_storage_setting = [
-        '-o',
-        'GSUtil:use_gcloud_storage={}'.format(use_gcloud_storage),
-        '-o',
-        'GSUtil:hidden_shim_mode=no_fallback',
-    ]
-    cmd = [
-        gslib.GSUTIL_PATH, '--testexceptiontraces', '-o',
-        'GSUtil:default_project_id=' + PopulateProjectId()
-    ] + gcloud_storage_setting + cmd
+    processed_command = util.GetGsutilCommand(cmd, force_gsutil=force_gsutil)
+    process = util.GetGsutilSubprocess(processed_command, env_vars=env_vars)
+
     if stdin is not None:
       if six.PY3:
         if not isinstance(stdin, bytes):
           stdin = stdin.encode(UTF8)
       else:
         stdin = stdin.encode(UTF8)
-    # checking to see if test was invoked from a par file (bundled archive)
-    # if not, add python executable path to ensure correct version of python
-    # is used for testing
-    cmd = [str(sys.executable)] + cmd if not InvokedFromParFile() else cmd
-    env = os.environ.copy()
-    if env_vars:
-      env.update(env_vars)
-    # Ensuring correct text types
-    envstr = dict()
-    for k, v in six.iteritems(env):
-      envstr[six.ensure_str(k)] = six.ensure_str(v)
-    cmd = [six.ensure_str(part) for part in cmd]
-
-    # executing command - the setsid allows us to kill the process group below
-    # if the execution times out.  With python 2.7, there's no other way to
-    # stop the execution (p.kill() doesn't work).  Since setsid is not available
-    # on Windows, we just deal with the occasional timeouts on Windows.
-    preexec_fn = os.setsid if hasattr(os, 'setsid') else None
-    p = subprocess.Popen(cmd,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
-                         stdin=subprocess.PIPE,
-                         env=envstr,
-                         preexec_fn=preexec_fn)
     comm_kwargs = {'input': stdin}
 
     def Kill():
@@ -1059,7 +1022,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       timer = threading.Timer(180, Kill)
       timer.start()
 
-    c_out = p.communicate(**comm_kwargs)
+    c_out = process.communicate(**comm_kwargs)
 
     if not six.PY3:
       timer.cancel()
@@ -1073,7 +1036,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       ]
     stdout = c_out[0].replace(os.linesep, '\n')
     stderr = c_out[1].replace(os.linesep, '\n')
-    status = p.returncode
+    status = process.returncode
 
     if expected_status is not None:
       cmd = map(six.ensure_text, cmd)
@@ -1312,39 +1275,3 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       contents: String of the new contents of the object
     """
     return storage_uri.set_contents_from_string(contents)
-
-
-class KmsTestingResources(object):
-  """Constants for KMS resource names to be used in integration testing."""
-  KEYRING_LOCATION = 'us-central1'
-  # Since KeyRings and their child resources cannot be deleted, we minimize the
-  # number of resources created by using a hard-coded keyRing name.
-  KEYRING_NAME = 'keyring-for-gsutil-integration-tests'
-
-  # Used by tests where we don't need to alter the state of a cryptoKey and/or
-  # its IAM policy bindings once it's initialized the first time.
-  CONSTANT_KEY_NAME = 'key-for-gsutil-integration-tests'
-  CONSTANT_KEY_NAME2 = 'key-for-gsutil-integration-tests2'
-  # This key should not be authorized so it can be used for failure cases.
-  CONSTANT_KEY_NAME_DO_NOT_AUTHORIZE = 'key-for-gsutil-no-auth'
-  # Pattern used for keys that should only be operated on by one tester at a
-  # time. Because multiple integration test invocations can run at the same
-  # time, we want to minimize the risk of them operating on each other's key,
-  # while also not creating too many one-time-use keys (as they cannot be
-  # deleted). Tests should fill in the %d entries with a digit between 0 and 9.
-  MUTABLE_KEY_NAME_TEMPLATE = 'cryptokey-for-gsutil-integration-tests-%d%d%d'
-
-
-def authorize_project_to_use_testing_kms_key(
-      self, key_name=KmsTestingResources.CONSTANT_KEY_NAME):
-    # Make sure our keyRing and cryptoKey exist.
-    kms_api = KmsApi(logging.getLogger())
-    keyring_fqn = kms_api.CreateKeyRing(
-        PopulateProjectId(None),
-        KmsTestingResources.KEYRING_NAME,
-        location=KmsTestingResources.KEYRING_LOCATION)
-    key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
-    # Make sure that the service account for our default project is authorized
-    # to use our test KMS key.
-    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
-    return key_fqn

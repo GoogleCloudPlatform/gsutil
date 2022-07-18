@@ -28,6 +28,7 @@ from gslib.commands.compose import MAX_COMPOSE_ARITY
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import KmsTestingResources
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TEST_ENCRYPTION_KEY1
@@ -219,24 +220,6 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
           suri(bucket_uri, 'obj')
       ])
 
-  def authorize_project_to_use_testing_kms_key(
-      self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
-    # Make sure our keyRing and cryptoKey exist.
-    with key_map_lock:
-      if key_name in key_map:
-        return key_map[key_name]
-
-      keyring_fqn = self.kms_api.CreateKeyRing(
-          PopulateProjectId(None),
-          testcase.KmsTestingResources.KEYRING_NAME,
-          location=testcase.KmsTestingResources.KEYRING_LOCATION)
-      key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
-      # Make sure that the service account for our default project is authorized
-      # to use our test KMS key.
-      self.RunGsUtil(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
-      key_map[key_name] = key_fqn
-      return key_fqn
-
   @SkipForS3('Test uses gs-specific KMS encryption')
   def test_compose_with_kms_encryption(self):
     """Tests composing encrypted objects."""
@@ -248,7 +231,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'bar')
 
     obj_suri = suri(bucket_uri, 'composed')
-    key_fqn = self.authorize_project_to_use_testing_kms_key()
+    key_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
 
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
       self.RunGsUtil([

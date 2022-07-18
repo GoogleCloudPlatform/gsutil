@@ -554,6 +554,16 @@ class TestCommand(Command):
         elif o == '-u':
           tests.util.RUN_INTEGRATION_TESTS = False
 
+    if tests.util.RUN_INTEGRATION_TESTS:
+      try:
+        tests.util.AuthorizeProjectToUseTestingKmsKeys()
+      except Exception as error:
+        # Authorized keys are static resources which typically already have
+        # appropriate permissions. Most errors can be safely ignored.
+        logging.warning(
+            'Failed to authorize the service agent to use KMS keys.')
+        logging.debug(error)
+
     if perform_coverage and not coverage:
       raise CommandException(
           'Coverage has been requested but the coverage module was not found. '

@@ -32,6 +32,7 @@ from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import BuildErrorRegex
+from gslib.tests.util import KmsTestingResources
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
 from gslib.tests.util import POSIX_GID_ERROR
@@ -3098,24 +3099,6 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertIn('send: Using gzip transport encoding for the request.',
                   stderr)
 
-  def authorize_project_to_use_testing_kms_key(
-      self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
-    # Make sure our keyRing and cryptoKey exist.
-    with key_map_lock:
-      if key_name in key_map:
-        return key_map[key_name]
-
-      keyring_fqn = self.kms_api.CreateKeyRing(
-          PopulateProjectId(None),
-          testcase.KmsTestingResources.KEYRING_NAME,
-          location=testcase.KmsTestingResources.KEYRING_LOCATION)
-      key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
-      # Make sure that the service account for our default project is authorized
-      # to use our test KMS key.
-      self.RunGsUtil(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
-      key_map[key_name] = key_fqn
-      return key_fqn
-
   @SkipForS3('Test uses gs-specific KMS encryption')
   def test_kms_key_applied_to_dest_objects(self):
     bucket_uri = self.CreateBucket()
@@ -3126,7 +3109,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.CreateTempFile(tmpdir=tmp_dir,
                         file_name=obj_name,
                         contents=obj_contents)
-    key_fqn = self.authorize_project_to_use_testing_kms_key()
+    key_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
 
     # Rsync the object from our tmpdir to a GCS bucket, specifying a KMS key.
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
