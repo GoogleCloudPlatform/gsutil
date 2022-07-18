@@ -266,7 +266,7 @@ def _convert_args_to_gcloud_values(args, gcloud_storage_map):
   repeat_flag_data = collections.defaultdict(list)
   i = 0
   while i < len(args):
-    if not args[i] in gcloud_storage_map.flag_map:
+    if args[i] not in gcloud_storage_map.flag_map:
       # Add raw value (positional args and flag values for non-repeated flags).
       gcloud_args.append(args[i])
       i += 1
