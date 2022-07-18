@@ -43,10 +43,6 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     """Tests cat command with various range arguments."""
     key_uri = self.CreateObject(contents=b'0123456789')
     # Test various invalid ranges.
-    stderr = self.RunGsUtil(['cat', '-r -', suri(key_uri)],
-                            return_stderr=True,
-                            expected_status=1)
-    self.assertIn('Invalid range', stderr)
     stderr = self.RunGsUtil(['cat', '-r a-b', suri(key_uri)],
                             return_stderr=True,
                             expected_status=1)
@@ -63,6 +59,14 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
     self.assertIn('Invalid range', stderr)
 
     # Test various valid ranges.
+    stdout = self.RunGsUtil(['cat', '-r -', suri(key_uri)], return_stdout=True)
+    self.assertEqual('0123456789', stdout)
+    stdout = self.RunGsUtil(
+        ['cat', '-r 1000-3000', suri(key_uri)], return_stdout=True)
+    self.assertEqual('', stdout)
+    stdout = self.RunGsUtil(
+        ['cat', '-r 1000-', suri(key_uri)], return_stdout=True)
+    self.assertEqual('', stdout)
     stdout = self.RunGsUtil(['cat', '-r 1-3', suri(key_uri)],
                             return_stdout=True)
     self.assertEqual('123', stdout)

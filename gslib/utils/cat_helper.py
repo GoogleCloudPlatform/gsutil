@@ -136,6 +136,10 @@ class CatHelper(object):
               print('==> %s <==' % blr)
               printed_one = True
             cat_object = blr.root_object
+            # This if statement ensures nothing is outputted and no error
+            # is thrown if the user enters an out of bounds range for the object.
+            if 0 < getattr(cat_object, 'size', -1) <= start_byte:
+              return 0
             storage_url = StorageUrlFromString(blr.url_string)
             if storage_url.IsCloudUrl():
               compressed_encoding = ObjectIsGzipEncoded(cat_object)
