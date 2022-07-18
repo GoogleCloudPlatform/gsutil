@@ -118,7 +118,7 @@ _DETAILED_HELP_TEXT = ("""
      change impacts any of the core gsutil code (like the gsutil cp command).
 
   9. Please run the yapf linter with the config files in the root of the GitHub
-     repository.
+     repository:
 
        yapf -irp .
 

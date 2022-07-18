@@ -199,8 +199,8 @@ _DETAILED_HELP_TEXT = ("""
   - the number of wildcard components (e.g., "gs://bucket/a??b/c*/*/d"
     has 3 wildcard components);
   - the number of subdirectories that match each component; and
-  - the number of results (pagination is implemented using one GET
-    request per 1000 results, specifying markers for each).
+  - the number of results (pagination is implemented when the number of results
+    is too large, specifying markers for each).
 
   If you want to use a mid-path wildcard, you might try instead using a
   recursive wildcard, for example:

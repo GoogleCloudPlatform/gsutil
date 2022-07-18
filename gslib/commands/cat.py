@@ -67,7 +67,7 @@ _DETAILED_HELP_TEXT = ("""
               of each text object that matched the wildcard.
 
   -r range    Causes gsutil to output just the specified byte range of the
-              object. Ranges are can be of these forms:
+              object. Ranges can be of these forms:
 
                 start-end (e.g., -r 256-5939)
                 start-    (e.g., -r 256-)
