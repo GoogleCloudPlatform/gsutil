@@ -1013,7 +1013,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     comm_kwargs = {'input': stdin}
 
     def Kill():
-      os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+      os.killpg(os.getpgid(process.pid), signal.SIGKILL)
 
     if six.PY3:
       # TODO(b/135936279): Make this number configurable in .boto

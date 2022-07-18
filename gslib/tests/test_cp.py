@@ -67,6 +67,7 @@ from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.testcase.integration_testcase import SkipForJSON
 from gslib.tests.util import BuildErrorRegex
 from gslib.tests.util import GenerationFromURI as urigen
+from gslib.tests.util import GetFullyQualifiedKmsKeyName
 from gslib.tests.util import HaltingCopyCallbackHandler
 from gslib.tests.util import HaltOneComponentCopyCallbackHandler
 from gslib.tests.util import HAS_GS_PORT
