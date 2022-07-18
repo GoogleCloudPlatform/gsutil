@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import logging
-import multiprocessing
 import os
 import re
 import unittest
@@ -51,8 +50,6 @@ from gslib.tracker_file import GetRewriteTrackerFilePath
 from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.utils.unit_util import ONE_MIB
 
-key_map = {}
-key_map_lock = multiprocessing.Lock()
 
 @SkipForS3('gsutil doesn\'t support S3 customer-supplied encryption keys.')
 class TestRewrite(testcase.GsUtilIntegrationTestCase):

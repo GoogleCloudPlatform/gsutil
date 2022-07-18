@@ -128,12 +128,14 @@ if not IS_WINDOWS:
 
 
 def GetGsutilCommand(raw_command, force_gsutil=False):
+  """Adds config options to a list of strings defining a gsutil subcommand."""
   # TODO(b/203250512) Remove this once all the commands are supported
   # via gcloud storage.
   if force_gsutil:
     use_gcloud_storage = False
   else:
-    use_gcloud_storage = boto.config.getbool('GSUtil', 'use_gcloud_storage', False)
+    use_gcloud_storage = boto.config.getbool('GSUtil', 'use_gcloud_storage',
+                                             False)
   gcloud_storage_setting = [
       '-o',
       'GSUtil:use_gcloud_storage={}'.format(use_gcloud_storage),
@@ -157,6 +159,7 @@ def GetGsutilCommand(raw_command, force_gsutil=False):
 
 
 def GetGsutilSubprocess(cmd, env_vars=None):
+  """Returns a subprocess.Popen object for for running a gsutil command."""
   env = os.environ.copy()
   if env_vars:
     env.update(env_vars)
@@ -236,9 +239,8 @@ class KmsTestingResources(object):
   # number of resources created by using a hard-coded keyRing name.
   KEYRING_NAME = 'keyring-for-gsutil-integration-tests'
 
-  FULLY_QUALIFIED_KEYRING = (
-      'projects/{}/locations/{}/keyRings/{}'.format(
-          PopulateProjectId(None), KEYRING_LOCATION, KEYRING_NAME))
+  FULLY_QUALIFIED_KEYRING = ('projects/{}/locations/{}/keyRings/{}'.format(
+      PopulateProjectId(None), KEYRING_LOCATION, KEYRING_NAME))
 
   # Used by tests where we don't need to alter the state of a cryptoKey and/or
   # its IAM policy bindings once it's initialized the first time.
@@ -273,7 +275,8 @@ def AuthorizeProjectToUseTestingKmsKeys():
       KmsTestingResources.CONSTANT_KEY_NAME2,
   ]:
     key_fqn = kms_api.CreateCryptoKey(keyring_fqn, key_name)
-    cmd = GetGsutilCommand(['gsutil', 'kms', 'authorize', '-k', key_fqn], force_gsutil=True)
+    cmd = GetGsutilCommand(['gsutil', 'kms', 'authorize', '-k', key_fqn],
+                           force_gsutil=True)
     process = GetGsutilSubprocess(cmd)
     process.communicate()
 

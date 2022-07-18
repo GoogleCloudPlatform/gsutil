@@ -19,8 +19,6 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-import multiprocessing
-
 from six.moves import xrange
 from six.moves import range
 
@@ -35,10 +33,6 @@ from gslib.tests.util import TEST_ENCRYPTION_KEY1
 from gslib.tests.util import TEST_ENCRYPTION_KEY2
 from gslib.tests.util import unittest
 from gslib.project_id import PopulateProjectId
-
-
-key_map = {}
-key_map_lock = multiprocessing.Lock()
 
 
 @SkipForS3('S3 does not support object composition.')

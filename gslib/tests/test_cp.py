@@ -25,7 +25,6 @@ import binascii
 import datetime
 import gzip
 import logging
-import multiprocessing
 import os
 import pickle
 import pkgutil
@@ -147,10 +146,6 @@ _GCLOUD_STORAGE_GZIP_FLAG_CONFLICT_OUTPUT = (
     2, 'ERROR',
     'At most one of --gzip-in-flight-all | --gzip-in-flight-extensions |'
     ' --gzip-local-all | --gzip-local-extensions can be specified')
-
-
-key_map = {}
-key_map_lock = multiprocessing.Lock()
 
 
 def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):

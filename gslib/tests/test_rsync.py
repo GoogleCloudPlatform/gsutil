@@ -19,7 +19,6 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-import multiprocessing
 import os
 
 import six
@@ -64,9 +63,6 @@ if not IS_WINDOWS:
   from gslib.tests.util import INVALID_UID
   from gslib.tests.util import USER_ID
 # pylint: enable=g-import-not-at-top
-
-key_map = {}
-key_map_lock = multiprocessing.Lock()
 
 if six.PY3:
   long = int
