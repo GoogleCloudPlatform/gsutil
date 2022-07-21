@@ -147,9 +147,9 @@ def GetGsutilCommand(raw_command, force_gsutil=False):
       'GSUtil:default_project_id=' + PopulateProjectId()
   ] + gcloud_storage_setting + raw_command
 
-  # checking to see if test was invoked from a par file (bundled archive)
-  # if not, add python executable path to ensure correct version of python
-  # is used for testing
+  # Checks to see if the test was invoked from a par file (bundled archive).
+  # If not, adds the Python executable path to ensure that the correct version
+  # of Python is used for testing.
   if not InvokedFromParFile():
     gsutil_command_with_executable_path = [str(sys.executable)] + gsutil_command
   else:
@@ -167,9 +167,9 @@ def GetGsutilSubprocess(cmd, env_vars=None):
   for k, v in six.iteritems(env):
     envstr[six.ensure_str(k)] = six.ensure_str(v)
 
-  # executing command - the setsid allows us to kill the process group below
-  # if the execution times out.  With python 2.7, there's no other way to
-  # stop the execution (p.kill() doesn't work).  Since setsid is not available
+  # The os.setsid call allows us to kill the process group below
+  # if execution times out. With Python 2.7, there's no other way to
+  # stop execution (p.kill() doesn't work). Since os.setsid is not available
   # on Windows, we just deal with the occasional timeouts on Windows.
   preexec_fn = os.setsid if hasattr(os, 'setsid') else None
   return subprocess.Popen(cmd,

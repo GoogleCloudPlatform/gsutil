@@ -557,12 +557,15 @@ class TestCommand(Command):
     if tests.util.RUN_INTEGRATION_TESTS:
       try:
         tests.util.AuthorizeProjectToUseTestingKmsKeys()
+        service_agent_authorized_successfully = True
       except Exception as error:
-        # Authorized keys are static resources which typically already have
-        # appropriate permissions. Most errors can be safely ignored.
+        # Authorized keys are static resources that typically already have
+        # appropriate permissions. Demoting errors to warnings means transient
+        # errors will not block running the whole suite of tests.
         logging.warning(
             'Failed to authorize the service agent to use KMS keys.')
         logging.debug(error)
+        service_agent_authorized_successfully = False
 
     if perform_coverage and not coverage:
       raise CommandException(
@@ -752,6 +755,9 @@ class TestCommand(Command):
       coverage_controller.save()
       print(('Coverage information was saved to: %s' %
              coverage_controller.data_files.filename))
+
+    if tests.util.RUN_INTEGRATION_TESTS and not service_agent_authorized_successfully:
+      logging.warning('Failed to authorize the service agent to use KMS keys.')
 
     # Re-enable analytics to report the test command.
     os.environ['GSUTIL_TEST_ANALYTICS'] = '0'
