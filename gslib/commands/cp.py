@@ -758,6 +758,7 @@ class CpCommand(Command):
       gcloud_command=['alpha', 'storage', 'cp'],
       flag_map={
           '-a': GcloudStorageFlag('--predefined-acl'),
+          '-D': GcloudStorageFlag('--daisy-chain'),
           '-e': GcloudStorageFlag('--ignore-symlinks'),
           '-I': GcloudStorageFlag('--read-paths-from-stdin'),
           '-J': GcloudStorageFlag('--gzip-in-flight-all'),
