@@ -4780,7 +4780,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     obj1_name = 'foo'
     obj2_name = 'bar'
-    key1_fqn = KmsTestingResources.FULLY_QUALIFIED_KEY_NAME
+    key1_fqn = GetFullyQualifiedKmsKeyName()
     obj1_suri = suri(
         self.CreateObject(bucket_uri=bucket_uri,
                           object_name=obj1_name,
