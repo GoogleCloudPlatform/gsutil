@@ -180,6 +180,41 @@ def GetGsutilSubprocess(cmd, env_vars=None):
                           preexec_fn=preexec_fn)
 
 
+def CommunicateWithTimeout(process, stdin=None):
+  if stdin is not None:
+    if six.PY3:
+      if not isinstance(stdin, bytes):
+        stdin = stdin.encode(UTF8)
+    else:
+      stdin = stdin.encode(UTF8)
+  comm_kwargs = {'input': stdin}
+
+  def Kill():
+    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+
+  if six.PY3:
+    # TODO(b/135936279): Make this number configurable in .boto
+    comm_kwargs['timeout'] = 180
+  else:
+    timer = threading.Timer(180, Kill)
+    timer.start()
+
+  c_out = process.communicate(**comm_kwargs)
+
+  if not six.PY3:
+    timer.cancel()
+  
+  try:
+    c_out = [six.ensure_text(output) for output in c_out]
+  except UnicodeDecodeError:
+    c_out = [
+        six.ensure_text(output, locale.getpreferredencoding(False))
+        for output in c_out
+    ]
+  
+  return c_out
+
+
 # 256-bit base64 encryption keys used for testing AES256 customer-supplied
 # encryption. These are public and open-source, so don't ever use them for
 # real data.
@@ -282,7 +317,7 @@ def AuthorizeProjectToUseTestingKmsKeys():
     cmd = GetGsutilCommand(['gsutil', 'kms', 'authorize', '-k', key_fqn],
                            force_gsutil=True)
     process = GetGsutilSubprocess(cmd)
-    process.communicate()
+    CommunicateWithTimeout(process)
 
 
 def BuildErrorRegex(obj, err_str):
