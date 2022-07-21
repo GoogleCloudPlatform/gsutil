@@ -30,6 +30,8 @@ from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.utils import cat_helper
 from gslib.utils import constants
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 
 if six.PY3:
   long = int
@@ -113,6 +115,14 @@ class CatCommand(Command):
       help_one_line_summary='Concatenate object content to stdout',
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
+  )
+
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command=['alpha', 'storage', 'cat'],
+      flag_map={
+          '-h': GcloudStorageFlag('-d'),
+          '-r': GcloudStorageFlag('-r'),
+      },
   )
 
   # Command entry point.
