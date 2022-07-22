@@ -32,6 +32,8 @@ from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 
 _SET_SYNOPSIS = """
   gsutil web set [-m <main_page_suffix>] [-e <error_page>] gs://<bucket_name>...
@@ -86,7 +88,7 @@ _DESCRIPTION = """
   Requests to a bucket through other `endpoints
   <https://cloud.google.com/storage/docs/request-endpoints>`_ are unaffected
   by the bucket's website configuration.
-  
+
   See `Static website examples and tips
   <https://cloud.google.com/storage/docs/static-website>`_ for additional
   examples and information.
@@ -153,6 +155,52 @@ class WebCommand(Command):
           'set': _set_help_text,
       },
   )
+
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command={
+          'get':
+              GcloudStorageMap(
+                  gcloud_command=[
+                      'alpha', 'storage', 'buckets', 'describe',
+                      '--format=multi(website:format=json)'
+                  ],
+                  flag_map={},
+                  supports_output_translation=True,
+              ),
+          # "set" subcommand handled in get_gcloud_storage_args.
+      },
+      flag_map={},
+  )
+
+  def get_gcloud_storage_args(self):
+    if self.args[0] == 'set':
+      set_command_map = GcloudStorageMap(
+          gcloud_command={
+              'set':
+                  GcloudStorageMap(
+                      gcloud_command=[
+                          'alpha',
+                          'storage',
+                          'buckets',
+                          'update',
+                      ],
+                      flag_map={
+                          '-e': GcloudStorageFlag('--web-error-page'),
+                          '-m': GcloudStorageFlag('--web-main-page-suffix'),
+                      })
+          },
+          flag_map={},
+      )
+      if not ('-e' in self.args or '-m' in self.args):
+        set_command_map.gcloud_command['set'].gcloud_command += [
+            '--clear-web-error-page', '--clear-web-main-page-suffix'
+        ]
+
+      gcloud_storage_map = set_command_map
+    else:
+      gcloud_storage_map = WebCommand.gcloud_storage_map
+
+    return super().get_gcloud_storage_args(gcloud_storage_map)
 
   def _GetWeb(self):
     """Gets website configuration for a bucket."""
