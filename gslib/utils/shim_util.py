@@ -468,11 +468,17 @@ class GcloudStorageCommandMixin(object):
       flags.append('--decryption-keys=' + ','.join(decryption_keys))
     return flags, env_vars
 
-  def get_gcloud_storage_args(self):
+  def get_gcloud_storage_args(self, gcloud_storage_map=None):
     """Translates the gsutil command flags to gcloud storage flags.
 
     It uses the command_spec.gcloud_storage_map field that provides the
     translation mapping for all the flags.
+
+    Args:
+      gcloud_storage_map (GcloudStorageMap|None): Command surface may pass a
+        custom translation map instead of using the default class constant.
+        Useful for when translations change based on conditional logic.
+
 
     Returns:
       A list of all the options and arguments that can be used with the
@@ -482,8 +488,8 @@ class GcloudStorageCommandMixin(object):
       ValueError: If there is any issue with the mapping provided by
         GcloudStorageMap.
     """
-    return self._get_gcloud_storage_args(self.sub_opts, self.args,
-                                         self.gcloud_storage_map)
+    return self._get_gcloud_storage_args(
+        self.sub_opts, self.args, gcloud_storage_map or self.gcloud_storage_map)
 
   def _print_gcloud_storage_command_info(self,
                                          gcloud_command,

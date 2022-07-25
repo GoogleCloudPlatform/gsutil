@@ -167,6 +167,18 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
     self.assertEqual(gcloud_args,
                      ['objects', 'fake', '--zip', 'opt1', '-x', 'arg1', 'arg2'])
 
+  def test_get_gcloud_storage_args_parses_custom_command_map(self):
+    gcloud_args = self._fake_command.get_gcloud_storage_args(
+        shim_util.GcloudStorageMap(
+            gcloud_command=['objects', 'custom-fake'],
+            flag_map={
+                '-z': shim_util.GcloudStorageFlag(gcloud_flag='-a'),
+                '-r': shim_util.GcloudStorageFlag(gcloud_flag='-b'),
+            }))
+    self.assertEqual(
+        gcloud_args,
+        ['objects', 'custom-fake', '-a', 'opt1', '-b', 'arg1', 'arg2'])
+
   def test_get_gcloud_storage_args_parses_command_in_list_format(self):
     self._fake_command.gcloud_command = ['objects', 'fake']
     gcloud_args = self._fake_command.get_gcloud_storage_args()
