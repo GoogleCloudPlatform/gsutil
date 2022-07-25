@@ -34,6 +34,8 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import UrlsAreForSingleProvider
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils import text_util
 
 _SET_SYNOPSIS = """
@@ -108,7 +110,7 @@ _DESCRIPTION = """
   of the requests made on a specified bucket and are created hourly. Storage
   logs provide information about the storage consumption of that bucket for
   the last day and are created daily.
-  
+
   Once set up, usage logs and storage logs are automatically created as new
   objects in a bucket that you specify. Usage logs and storage logs are
   subject to the same pricing as other objects stored in Cloud Storage.
@@ -166,6 +168,53 @@ class LoggingCommand(Command):
           'get': _get_help_text,
           'set': _set_help_text,
       },
+  )
+
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command={
+          'get':
+              GcloudStorageMap(
+                  gcloud_command=[
+                      'alpha', 'storage', 'buckets', 'list',
+                      '--format=multi(logging:format=json)'
+                  ],
+                  flag_map={},
+              ),
+          'set':
+              GcloudStorageMap(
+                  gcloud_command={
+                      'on':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha',
+                                  'storage',
+                                  'buckets',
+                                  'update',
+                              ],
+                              flag_map={
+                                  '-b':
+                                      GcloudStorageFlag('--log-bucket'),
+                                  '-o':
+                                      GcloudStorageFlag('--log-object-prefix'),
+                              },
+                          ),
+                      'off':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha',
+                                  'storage',
+                                  'buckets',
+                                  'update',
+                                  '--clear-log-bucket',
+                                  '--clear-log-object-prefix',
+                              ],
+                              flag_map={},
+                          ),
+                  },
+                  flag_map={},
+              )
+      },
+      flag_map={},
   )
 
   def _Get(self):
