@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
 import sys
 
 from gslib.cs_api_map import ApiSelector
@@ -223,8 +224,9 @@ class TestShimCatFlags(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            'Gcloud Storage Command: fake_dir/bin/gcloud alpha storage cat'
-            ' -d -r 2-4 {}'.format(suri(object_uri)), info_lines)
+            'Gcloud Storage Command: {} alpha storage cat'
+            ' -d -r 2-4 {}'.format(os.path.join('fake_dir', 'bin', 'gcloud'),
+                                   suri(object_uri)), info_lines)
 
 
 class TestCatHelper(testcase.GsUtilUnitTestCase):
