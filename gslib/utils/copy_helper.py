@@ -1022,9 +1022,9 @@ def _PartitionFile(fp,
     file_size: The size of fp, in bytes.
     src_url: Source FileUrl from the original command.
     content_type: content type for the component and final objects.
-    storage_class: storage class for the final object
+    storage_class: storage class for the component and final objects.
     canned_acl: The user-provided canned_acl, if applicable.
-    dst_bucket_url: CloudUrl for the destination bucket
+    dst_bucket_url: CloudUrl for the destination bucket.
     random_prefix: The randomly-generated prefix used to prevent collisions
                    among the temporary component names.
     tracker_file: The path to the parallel composite upload tracker file.
