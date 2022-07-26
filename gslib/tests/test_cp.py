@@ -3325,6 +3325,22 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
       self.AssertObjectUsesCMEK(obj_suri, key_fqn)
 
+  @SkipForS3('No composite upload support for S3.')
+  def test_nearline_applied_to_parallel_composite_upload(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=b'abcd')
+    obj_suri = suri(bucket_uri, 'composed')
+
+    with SetBotoConfigForTest([
+        ('GSUtil', 'parallel_composite_upload_threshold', '1'),
+        ('GSUtil', 'parallel_composite_upload_component_size', '1')
+    ]):
+      self.RunGsUtil(['cp', '-s', 'nearline', fpath, obj_suri])
+    stdout = self.RunGsUtil(['ls', '-L', obj_suri], return_stdout=True)
+    self.assertRegexpMatchesWithFlags(stdout,
+                                      r'Storage class:\s+NEARLINE',
+                                      flags=re.IGNORECASE)
+
   # This temporarily changes the tracker directory to unwritable which
   # interferes with any parallel running tests that use the tracker directory.
   @NotParallelizable
