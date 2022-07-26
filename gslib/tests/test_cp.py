@@ -3327,7 +3327,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
   @SkipForS3('No composite upload support for S3.')
   def test_nearline_applied_to_parallel_composite_upload(self):
-    bucket_uri = self.CreateBucket()
+    bucket_uri = self.CreateBucket(storage_class='standard')
     fpath = self.CreateTempFile(contents=b'abcd')
     obj_suri = suri(bucket_uri, 'composed')
 

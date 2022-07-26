@@ -111,13 +111,13 @@ class TestCpFuncs(GsUtilUnitTestCase):
     self.assertEqual(50, component_size)
 
   def testFilterExistingComponentsNonVersioned(self):
-    """Tests upload with a variety of component states, including custom storage class."""
+    """Tests upload with a variety of component states."""
     mock_api = MockCloudApi()
     bucket_name = self.MakeTempName('bucket')
     tracker_file = self.CreateTempFile(file_name='foo', contents=b'asdf')
     tracker_file_lock = parallelism_framework_util.CreateLock()
 
-    # dst_obj_metadata used for passing content-type and storage-class.
+    # dst_obj_metadata used for passing content-type and storage class.
     content_type = 'ContentType'
     storage_class = 'StorageClass'
 
@@ -223,13 +223,13 @@ class TestCpFuncs(GsUtilUnitTestCase):
                      existing_objects_to_delete[0].url_string)
 
   def testFilterExistingComponentsVersioned(self):
-    """Tests upload with versionined parallel components and custom storage class."""
+    """Tests upload with versionined parallel components."""
 
     mock_api = MockCloudApi()
     bucket_name = self.MakeTempName('bucket')
     mock_api.MockCreateVersionedBucket(bucket_name)
 
-    # dst_obj_metadata used for passing content-type and storage-class.
+    # dst_obj_metadata used for passing content-type and storage class.
     content_type = 'ContentType'
     storage_class = 'StorageClass'
 
