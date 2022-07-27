@@ -3338,7 +3338,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       self.RunGsUtil(['cp', '-s', 'nearline', fpath, obj_suri])
     stdout = self.RunGsUtil(['ls', '-L', obj_suri], return_stdout=True)
     self.assertRegexpMatchesWithFlags(stdout,
-                                      r'Storage class:\s+NEARLINE',
+                                      r'Storage class:          NEARLINE',
                                       flags=re.IGNORECASE)
 
   # This temporarily changes the tracker directory to unwritable which
