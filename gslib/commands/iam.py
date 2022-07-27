@@ -130,12 +130,12 @@ _SET_DESCRIPTION = """
 
   -R, -r      Performs ``iam set`` recursively on all objects under the
               specified bucket.
-              
-              This flag can only be set if the policy exclusively uses 
+
+              This flag can only be set if the policy exclusively uses
               ``roles/storage.legacyObjectReader`` or ``roles/storage.legacyObjectOwner``.
               This flag cannot be used if the bucket is configured
               for uniform bucket-level access.
-              
+
   -a          Performs ``iam set`` on all object versions.
 
   -e <etag>   Performs the precondition check on each object with the
@@ -205,8 +205,8 @@ _CH_DESCRIPTION = """
 
   -R, -r      Performs ``iam ch`` recursively to all objects under the
               specified bucket.
-              
-              This flag can only be set if the policy exclusively uses 
+
+              This flag can only be set if the policy exclusively uses
               ``roles/storage.legacyObjectReader`` or ``roles/storage.legacyObjectOwner``.
               This flag cannot be used if the bucket is configured
               for uniform bucket-level access.
@@ -646,7 +646,11 @@ class IamCommand(Command):
     # This list of wildcard strings will be handled by NameExpansionIterator.
     threaded_wildcards = []
 
-    for pattern in patterns:
+    surls = map(StorageUrlFromString, patterns)
+
+    if all(surl.IsBucket() )
+
+    for surl in surls:
       surl = StorageUrlFromString(pattern)
       if surl.IsBucket():
         if self.recursion_requested:
