@@ -266,6 +266,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     ],
                    expected_status=0)
 
+  @SkipForXML('Custom Dual Region is not supported for the XML API.')
   @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
   def test_create_with_custom_dual_regions_via_l_flag(self):
     bucket_name = self.MakeTempName('bucket')
@@ -275,6 +276,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     self.assertRegex(stdout, r"Location constraint:\t\tUS-CENTRAL1\+US-WEST1")
 
+  @SkipForXML('Custom Dual Region is not supported for the XML API.')
   @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
   def test_create_with_invalid_dual_regions_via_l_flag_raises_error(self):
     bucket_name = self.MakeTempName('bucket')
