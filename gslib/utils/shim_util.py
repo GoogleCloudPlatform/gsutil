@@ -44,8 +44,8 @@ class RepeatFlagType(enum.Enum):
 DECRYPTION_KEY_REGEX = re.compile(r'^decryption_key([1-9]$|[1-9][0-9]$|100$)')
 
 # Required for headers translation and boto config translation.
-DATA_TRANSFER_COMMANDS = frozenset(['cp', 'mv', 'rsync'])
-ENCRYPTION_SUPPORTED_COMMANDS = DATA_TRANSFER_COMMANDS | frozenset(
+COMMANDS_SUPPORTING_ALL_HEADERS = frozenset(['cp', 'mv', 'rsync', 'setmeta'])
+ENCRYPTION_SUPPORTED_COMMANDS = COMMANDS_SUPPORTING_ALL_HEADERS | frozenset(
     ['ls', 'rewrite', 'stat', 'cat'])
 PRECONDITONS_ONLY_SUPPORTED_COMMANDS = frozenset(
     ['compose', 'rewrite', 'rm', 'retention'])
@@ -58,8 +58,10 @@ DATA_TRANSFER_HEADERS = frozenset([
     'content-type',
     'custom-time',
 ])
-PRECONDITIONS_HEADERS = frozenset(
-    ['x-goog-if-generation-match', 'x-goog-if-metageneration-match'])
+PRECONDITIONS_HEADERS = frozenset([
+    'x-goog-generation-match', 'x-goog-if-generation-match',
+    'x-goog-metageneration-match', 'x-goog-if-metageneration-match'
+])
 
 # The format for _BOTO_CONFIG_MAP is as follows:
 # {
@@ -116,11 +118,11 @@ _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED = frozenset(
     ['stet_binary_path', 'stet_config_path'])
 
 
-def get_flag_from_header(header_key_raw, header_value, unset=False):
+def get_flag_from_header(raw_header_key, header_value, unset=False):
   """Returns the gcloud storage flag for the given gsutil header.
 
   Args:
-    header_key_raw: The header key.
+    raw_header_key: The header key.
     header_value: The header value
     unset: If True, the equivalent clear/remove flag is returned instead of the
       setter flag. This only applies to setmeta.
@@ -134,23 +136,27 @@ def get_flag_from_header(header_key_raw, header_value, unset=False):
     --cache-control=val
 
     >> get_flag_from_header('x-goog-meta-foo', 'val')
-    --add-custom-metadata=foo=val
+    --update-custom-metadata=foo=val
 
     >> get_flag_from_header('x-goog-meta-foo', 'val', unset=True)
     --remove-custom-metadata=foo
 
   """
-  header = header_key_raw.lower()
-  if header in PRECONDITIONS_HEADERS:
-    flag_name = header.lstrip('x-goog-')
-  elif header in DATA_TRANSFER_HEADERS:
-    flag_name = header
+  lowercase_header_key = raw_header_key.lower()
+  if lowercase_header_key in PRECONDITIONS_HEADERS:
+    providerless_flag = raw_header_key[len('x-goog-'):]
+    if not providerless_flag.startswith('if-'):
+      flag_name = 'if-' + providerless_flag
+    else:
+      flag_name = providerless_flag
+  elif lowercase_header_key in DATA_TRANSFER_HEADERS:
+    flag_name = lowercase_header_key
   else:
     flag_name = None
 
   if flag_name is not None:
     if unset:
-      if header in PRECONDITIONS_HEADERS or header == 'content-md5':
+      if lowercase_header_key in PRECONDITIONS_HEADERS or lowercase_header_key == 'content-md5':
         # Precondition headers and content-md5 cannot be cleared.
         return None
       else:
@@ -158,19 +164,22 @@ def get_flag_from_header(header_key_raw, header_value, unset=False):
     return '--{}={}'.format(flag_name, header_value)
 
   for header_prefix in ('x-goog-meta-', 'x-amz-meta-'):
-    if header.startswith(header_prefix):
-      metadata_key = header.lstrip(header_prefix)
+    if lowercase_header_key.startswith(header_prefix):
+      # Preserving raw header keys to avoid forcing lowercase on custom data.
+      metadata_key = raw_header_key[len(header_prefix):]
       if unset:
         return '--remove-custom-metadata=' + metadata_key
       else:
-        return '--add-custom-metadata={}={}'.format(metadata_key, header_value)
+        return '--update-custom-metadata={}={}'.format(metadata_key,
+                                                       header_value)
 
-  if header.startswith('x-amz-'):
+  if lowercase_header_key.startswith('x-amz-'):
     # Send the entire header as it is.
     if unset:
-      return '--remove-custom-headers=' + header
+      return '--remove-custom-headers=' + raw_header_key
     else:
-      return '--add-custom-headers={}={}'.format(header, header_value)
+      return '--update-custom-headers={}={}'.format(raw_header_key,
+                                                    header_value)
 
   return None
 
@@ -399,24 +408,38 @@ class GcloudStorageCommandMixin(object):
       env_variables['CLOUDSDK_STORAGE_PROCESS_COUNT'] = '1'
     return top_level_flags, env_variables
 
-  def _translate_headers(self):
-    """Translates gsutil headers to equivalent gcloud storage flags."""
+  def _translate_headers(self, headers=None, unset=False):
+    """Translates gsutil headers to equivalent gcloud storage flags.
+
+    Args:
+      headers (dict|None): If absent, extracts headers from command instance.
+      unset (bool): Yield metadata clear flags instead of setter flags.
+
+    Returns:
+      List[str]: Translated flags for gcloud.
+
+    Raises:
+      GcloudStorageTranslationError: Could not translate flag.
+    """
     flags = []
-    for header_key_raw, header_value in self.headers.items():
-      header_key = header_key_raw.lower()
-      if header_key == 'x-goog-api-version':
+    # Accept custom headers or extract headers dict from Command class.
+    headers_to_translate = headers if headers is not None else self.headers
+    for raw_header_key, header_value in headers_to_translate.items():
+      lowercase_header_key = raw_header_key.lower()
+      if lowercase_header_key == 'x-goog-api-version':
         # Gsutil adds this header. We don't have to translate it for gcloud.
         continue
-      flag = get_flag_from_header(header_key, header_value)
-      if self.command_name in DATA_TRANSFER_COMMANDS:
+      flag = get_flag_from_header(raw_header_key, header_value, unset=unset)
+      if self.command_name in COMMANDS_SUPPORTING_ALL_HEADERS:
         if flag is None:
           raise exception.GcloudStorageTranslationError(
               'Header cannot be translated to a gcloud storage equivalent'
-              ' flag. Invalid header: {}:{}'.format(header_key, header_value))
+              ' flag. Invalid header: {}:{}'.format(raw_header_key,
+                                                    header_value))
         else:
           flags.append(flag)
       elif (self.command_name in PRECONDITONS_ONLY_SUPPORTED_COMMANDS and
-            header_key in PRECONDITIONS_HEADERS):
+            lowercase_header_key in PRECONDITIONS_HEADERS):
         flags.append(flag)
       # We ignore the headers for all other cases, so does gsutil.
     return flags
@@ -452,7 +475,7 @@ class GcloudStorageCommandMixin(object):
               self.command_name in ENCRYPTION_SUPPORTED_COMMANDS):
           decryption_keys.append(value)
         elif (key == 'content_language' and
-              self.command_name in DATA_TRANSFER_COMMANDS):
+              self.command_name in COMMANDS_SUPPORTING_ALL_HEADERS):
           flags.append('--content-language=' + value)
         elif key in _REQUIRED_BOTO_CONFIG_NOT_YET_SUPPORTED:
           self.logger.error('The boto config field {}:{} cannot be translated'

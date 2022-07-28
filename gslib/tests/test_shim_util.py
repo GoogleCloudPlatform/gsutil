@@ -511,7 +511,8 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
 
   def test_use_gcloud_storage_true_with_hidden_shim_mode_not_set(self):
     """Should not raise error."""
-    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                                    ('GSUtil', 'hidden_shim_mode', None)]):
       with util.SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -755,7 +756,9 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
         bucket_storage_uri_class=mock.ANY,
         gsutil_api_class_map_factory=mock.MagicMock())
 
-  @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
+  @mock.patch.object(shim_util,
+                     'COMMANDS_SUPPORTING_ALL_HEADERS',
+                     new={'fake_shim'})
   def test_translated_headers_get_added_to_final_command(self):
     with _mock_boto_config({
         'GSUtil': {
@@ -783,7 +786,9 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
             'arg1', 'arg2', '--content-type=fake_val'
         ])
 
-  @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
+  @mock.patch.object(shim_util,
+                     'COMMANDS_SUPPORTING_ALL_HEADERS',
+                     new={'fake_shim'})
   def test_translate_headers_returns_correct_flags_for_data_transfer_command(
       self):
     self._fake_command.headers = {
@@ -799,9 +804,10 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
         'x-goog-if-generation-match': 'fake_gen_match',
         'x-goog-if-metageneration-match': 'fake_metagen_match',
         # Custom metadata.
-        'x-goog-meta-foo': 'fake_goog_meta',
-        'x-amz-meta-foo': 'fake_amz_meta',
-        'x-amz-foo': 'fake_amz_custom_header',
+        'x-goog-meta-cAsE': 'sEnSeTiVe',
+        'x-goog-meta-gfoo': 'fake_goog_meta',
+        'x-amz-meta-afoo': 'fake_amz_meta',
+        'x-amz-afoo': 'fake_amz_custom_header',
     }
     flags = self._fake_command._translate_headers()
     self.assertCountEqual(flags, [
@@ -814,12 +820,31 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
         '--custom-time=fake_time',
         '--if-generation-match=fake_gen_match',
         '--if-metageneration-match=fake_metagen_match',
-        '--add-custom-metadata=foo=fake_goog_meta',
-        '--add-custom-metadata=foo=fake_amz_meta',
-        '--add-custom-headers=x-amz-foo=fake_amz_custom_header',
+        '--update-custom-metadata=cAsE=sEnSeTiVe',
+        '--update-custom-metadata=gfoo=fake_goog_meta',
+        '--update-custom-metadata=afoo=fake_amz_meta',
+        '--update-custom-headers=x-amz-afoo=fake_amz_custom_header',
     ])
 
-  @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
+  @mock.patch.object(shim_util,
+                     'COMMANDS_SUPPORTING_ALL_HEADERS',
+                     new={'fake_shim'})
+  def test_translate_custom_headers_returns_correct_flags(self):
+    flags = self._fake_command._translate_headers(
+        {'Cache-Control': 'fake_Cache_Control'})
+    self.assertCountEqual(flags, ['--cache-control=fake_Cache_Control'])
+
+  @mock.patch.object(shim_util,
+                     'COMMANDS_SUPPORTING_ALL_HEADERS',
+                     new={'fake_shim'})
+  def test_translate_clear_headers_returns_correct_flags(self):
+    flags = self._fake_command._translate_headers(
+        {'Cache-Control': 'fake_Cache_Control'}, unset=True)
+    self.assertCountEqual(flags, ['--clear-cache-control'])
+
+  @mock.patch.object(shim_util,
+                     'COMMANDS_SUPPORTING_ALL_HEADERS',
+                     new={'fake_shim'})
   def test_translate_headers_for_data_transfer_command_with_invalid_header(
       self):
     """Should raise error."""
@@ -833,11 +858,26 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
   @mock.patch.object(shim_util,
                      'PRECONDITONS_ONLY_SUPPORTED_COMMANDS',
                      new={'fake_shim'})
-  def test_translate_headers_for_precondition_supported_command_with_valid_header(
-      self):
+  def test_translate_valid_headers_for_precondition_supported_command(self):
     self._fake_command.headers = {
         'x-goog-if-generation-match': 'fake_gen_match',
         'x-goog-if-metageneration-match': 'fake_metagen_match',
+        # Custom metadata. These should be ignored.
+        'x-goog-meta-foo': 'fake_goog_meta',
+    }
+    flags = self._fake_command._translate_headers()
+    self.assertCountEqual(flags, [
+        '--if-generation-match=fake_gen_match',
+        '--if-metageneration-match=fake_metagen_match',
+    ])
+
+  @mock.patch.object(shim_util,
+                     'PRECONDITONS_ONLY_SUPPORTED_COMMANDS',
+                     new={'fake_shim'})
+  def test_translate_short_headers_for_precondition_supported_command(self):
+    self._fake_command.headers = {
+        'x-goog-generation-match': 'fake_gen_match',
+        'x-goog-metageneration-match': 'fake_metagen_match',
         # Custom metadata. These should be ignored.
         'x-goog-meta-foo': 'fake_goog_meta',
     }
@@ -858,7 +898,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
 
   def test_translate_headers_ignores_headers_for_commands_not_in_allowlist(
       self):
-    # Allowlist is defined by the shim_util.DATA_TRANSFER_COMMANDS and
+    # Allowlist is defined by the shim_util.COMMANDS_SUPPORTING_ALL_HEADERS and
     # the shim_util.PRECONDITONS_ONLY_SUPPORTED_COMMANDS list.
     # The fake_shim command defined by self._fake_command is not part of
     # either of the list, and hence the headers must be ignored.
@@ -958,7 +998,9 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
         bucket_storage_uri_class=mock.ANY,
         gsutil_api_class_map_factory=mock.MagicMock())
 
-  @mock.patch.object(shim_util, 'DATA_TRANSFER_COMMANDS', new={'fake_shim'})
+  @mock.patch.object(shim_util,
+                     'COMMANDS_SUPPORTING_ALL_HEADERS',
+                     new={'fake_shim'})
   def test_translated_boto_config_gets_added(self):
     """Should add translated env vars as well flags."""
     with _mock_boto_config({
