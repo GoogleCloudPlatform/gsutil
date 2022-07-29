@@ -647,19 +647,20 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-lb', bucket_suri], return_stdout=True)
     self.assertNotIn('Logging configuration', stdout)
 
+    spacing = '       ' if self._use_gcloud_storage else '\t\t'
     # Logging configuration is absent by default
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Logging configuration:\t\tNone', stdout)
+    self.assertIn('Logging configuration:{}None'.format(spacing), stdout)
 
     # Enable and check
     self.RunGsUtil(['logging', 'set', 'on', '-b', bucket_suri, bucket_suri])
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Logging configuration:\t\tPresent', stdout)
+    self.assertIn('Logging configuration:{}Present'.format(spacing), stdout)
 
     # Disable and check
     self.RunGsUtil(['logging', 'set', 'off', bucket_suri])
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Logging configuration:\t\tNone', stdout)
+    self.assertIn('Logging configuration:{}None'.format(spacing), stdout)
 
   @SkipForS3('S3 bucket configuration values are not supported via ls.')
   def test_web(self):
@@ -671,19 +672,20 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-lb', bucket_suri], return_stdout=True)
     self.assertNotIn('Website configuration', stdout)
 
+    spacing = '       ' if self._use_gcloud_storage else '\t\t'
     # Website configuration is absent by default
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Website configuration:\t\tNone', stdout)
+    self.assertIn('Website configuration:{}None'.format(spacing), stdout)
 
     # Initialize and check
     self.RunGsUtil(['web', 'set', '-m', 'google.com', bucket_suri])
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Website configuration:\t\tPresent', stdout)
+    self.assertIn('Website configuration:{}Present'.format(spacing), stdout)
 
     # Clear and check
     self.RunGsUtil(['web', 'set', bucket_suri])
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Website configuration:\t\tNone', stdout)
+    self.assertIn('Website configuration:{}None'.format(spacing), stdout)
 
   @SkipForS3('S3 bucket configuration values are not supported via ls.')
   @SkipForXML('Requester Pays is not supported for the XML API.')
@@ -692,23 +694,24 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     bucket_suri = suri(bucket_uri)
 
+    spacing = '      ' if self._use_gcloud_storage else '\t\t'
     # No requester pays configuration
     stdout = self.RunGsUtil(['ls', '-lb', bucket_suri], return_stdout=True)
     self.assertNotIn('Requester Pays enabled', stdout)
 
     # Requester Pays configuration is absent by default
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Requester Pays enabled:\t\tNone', stdout)
+    self.assertIn('Requester Pays enabled:{}None'.format(spacing), stdout)
 
     # Initialize and check
     self.RunGsUtil(['requesterpays', 'set', 'on', bucket_suri])
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Requester Pays enabled:\t\tTrue', stdout)
+    self.assertIn('Requester Pays enabled:{}True'.format(spacing), stdout)
 
     # Clear and check
     self.RunGsUtil(['requesterpays', 'set', 'off', bucket_suri])
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
-    self.assertIn('Requester Pays enabled:\t\tFalse', stdout)
+    self.assertIn('Requester Pays enabled:{}False'.format(spacing), stdout)
 
   def test_list_sizes(self):
     """Tests various size listing options."""
@@ -892,9 +895,13 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['ls', suri(bucket_uri, 'wildcard*')],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn(
-        'Cloud folder %s%s contains a wildcard' %
-        (suri(bucket_uri), '/wildcard*/'), stderr)
+
+    if self._use_gcloud_storage:
+      warning_message = ('Cloud folders named with wildcards are not supported.'
+                         ' API returned {}/wildcard*/')
+    else:
+      warning_message = 'Cloud folder {}/wildcard*/ contains a wildcard'
+    self.assertIn(warning_message.format(suri(bucket_uri)), stderr)
 
     # Listing with a flat wildcard should still succeed.
     # Use @Retry as hedge against bucket listing eventual consistency.
