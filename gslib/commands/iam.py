@@ -527,12 +527,12 @@ class IamCommand(Command):
     self.everything_set_okay = True
     self.tried_ch_on_resource_with_conditions = False
     threaded_wildcards = []
-    
-    surls = map(StorageUrlFromString, patterns)
-    
+
+    surls = list(map(StorageUrlFromString, patterns))
+
     if (UrlsAreMixOfBucketsAndObjects(surls) and not self.recursion_requested):
       raise CommandException('Cannot operate on a mix of buckets and objects.')
-    
+
     for surl in surls:
       try:
         if surl.IsBucket():
@@ -652,7 +652,7 @@ class IamCommand(Command):
     # This list of wildcard strings will be handled by NameExpansionIterator.
     threaded_wildcards = []
 
-    surls = map(StorageUrlFromString, patterns)
+    surls = list(map(StorageUrlFromString, patterns))
 
     if (UrlsAreMixOfBucketsAndObjects(surls) and not self.recursion_requested):
       raise CommandException('Cannot operate on a mix of buckets and objects.')

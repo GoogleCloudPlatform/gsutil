@@ -879,7 +879,7 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
     """
     multi_threaded_url_args = []
 
-    urls = map(StorageUrlFromString, url_strs)
+    urls = list(map(StorageUrlFromString, url_strs))
 
     if (UrlsAreMixOfBucketsAndObjects(urls) and not self.recursion_requested):
       raise CommandException('Cannot operate on a mix of buckets and objects.')
@@ -910,7 +910,7 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
                 expanded_result=None)
             acl_func(self, name_expansion_for_url)
       else:
-        multi_threaded_url_args.append(url_str)
+        multi_threaded_url_args.append(url.url_string)
 
     if len(multi_threaded_url_args) >= 1:
       name_expansion_iterator = NameExpansionIterator(

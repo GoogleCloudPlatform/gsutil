@@ -701,8 +701,7 @@ class TestAcl(TestAclBase):
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                 return_stdout=True)
     self.RunGsUtil(self._set_acl_prefix +
-                   ['-f', 'public-read',
-                    suri(bucket_uri) + 'foo2', obj_uri],
+                   ['-f', 'public-read', obj_uri + 'foo2', obj_uri],
                    expected_status=1)
     acl_string2 = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                  return_stdout=True)

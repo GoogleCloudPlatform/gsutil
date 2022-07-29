@@ -499,7 +499,9 @@ def UrlsAreMixOfBucketsAndObjects(urls):
     check.
 
   Returns:
-    True if URLs are a mix of buckets and objects.
+    True if URLs are a mix of buckets and objects. False if URLs are all buckets
+    or all objects. None if invalid Cloud URLs are included.
   """
-  are_buckets = map(lambda x: x.IsCloudUrl() and x.IsBucket(), urls)
-  return any(are_buckets) and not all(are_buckets)
+  if all(url.IsCloudUrl() for url in urls):
+    are_buckets = list(map(lambda x: x.IsBucket(), urls))
+    return any(are_buckets) and not all(are_buckets)

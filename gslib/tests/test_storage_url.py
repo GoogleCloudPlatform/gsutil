@@ -121,18 +121,17 @@ class TestStorageUrl(base.GsUtilTestCase):
         [mock.call(_UNSUPPORTED_DOUBLE_WILDCARD_WARNING_TEXT)] * 14)
 
   def test_urls_are_mix_of_objects_and_buckets_is_false_for_all_buckets(self):
-    urls = map(storage_url.StorageUrlFromString, ['gs://b1', 'gs://b2'])
+    urls = list(map(storage_url.StorageUrlFromString, ['gs://b1', 'gs://b2']))
     self.assertFalse(storage_url.UrlsAreMixOfBucketsAndObjects(urls))
-  
+
   def test_urls_are_mix_of_objects_and_buckets_is_false_for_all_objects(self):
-    urls = map(storage_url.StorageUrlFromString, ['gs://b/o1', 'gs://b/o2'])
+    urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b/p']))
     self.assertFalse(storage_url.UrlsAreMixOfBucketsAndObjects(urls))
 
   def test_urls_are_mix_of_objects_and_buckets_is_true_for_a_mix(self):
-    urls = map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b'])
+    urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b']))
     self.assertTrue(storage_url.UrlsAreMixOfBucketsAndObjects(urls))
 
-  def test_urls_are_are_mix_of_objects_and_buckets_raises_for_file(self):
-    urls = map(storage_url.StorageUrlFromString, ['gs://b/o', 'file://f'])
-    with self.assertRaises(InvalidUrlError):
-      storage_url.UrlsAreMixOfBucketsAndObjects(urls)
+  def test_urls_are_mix_of_objects_and_buckets_is_null_for_invalid(self):
+    urls = list(map(storage_url.StorageUrlFromString, ['gs://b', 'f:o@o:o']))
+    self.assertIsNone(storage_url.UrlsAreMixOfBucketsAndObjects(urls))
