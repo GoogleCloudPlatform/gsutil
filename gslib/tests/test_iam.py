@@ -474,6 +474,20 @@ class TestIamCh(TestIamIntegration):
                             expected_status=1)
     self.assertIn('CommandException', stderr)
 
+  def test_path_mix_of_buckets_and_objects(self):
+    """Tests expected failure if both buckets and objects are provided."""
+    stderr = self.RunGsUtil([
+        'iam', 'ch', '%s:%s' % (self.user, IAM_BUCKET_READ_ROLE_ABBREV),
+        self.bucket.uri, self.object.uri])
+    self.assertIn('CommandException', stderr)
+
+  def test_path_file_url(self):
+    """Tests expected failure is caught when a file url is provided."""
+    stderr = self.RunGsUtil([
+        'iam', 'ch', '%s:%s' % (self.user, IAM_BUCKET_READ_ROLE_ABBREV),
+        'file://somefile'])
+    self.assertIn('CommandException', stderr)
+
   def test_patch_single_grant_single_bucket(self):
     """Tests granting single role."""
     self.assertHasNo(self.bucket_iam_string, self.user, IAM_BUCKET_READ_ROLE)
@@ -848,8 +862,8 @@ class TestIamSet(TestIamIntegration):
         contents=json.dumps(self.new_bucket_policy_with_conditions_policy))
 
     # Create an object to fetch its policy, used as a base for other policies.
-    tmp_object = self.CreateObject(contents='foobar')
-    self.object_iam_string = self.RunGsUtil(['iam', 'get', tmp_object.uri],
+    self.object = self.CreateObject(contents='foobar')
+    self.object_iam_string = self.RunGsUtil(['iam', 'get', self.object.uri],
                                             return_stdout=True)
     self.old_object_iam_path = self.CreateTempFile(
         contents=self.object_iam_string.encode(UTF8))
@@ -876,6 +890,22 @@ class TestIamSet(TestIamIntegration):
           ['-m', 'iam', 'set', self.new_object_iam_path, gsutil_object.uri],
           return_stderr=True)
       self.assertIn('Estimated work for this command: objects: 1\n', stderr)
+
+  def test_set_mix_of_buckets_and_objects(self):
+    """Tests expected failure if both buckets and objects are provided."""
+    
+    stderr = self.RunGsUtil([
+        'iam', 'set', self.new_object_iam_path, self.bucket.uri, self.object.uri], return_stderr=True,
+                              expected_status=1)
+    self.assertIn('CommandException', stderr)
+
+  def test_set_file_url(self):
+    """Tests expected failure is caught when a file url is provided."""
+    stderr = self.RunGsUtil([
+        'iam', 'set', self.new_object_iam_path, 'file://somefile'], return_stderr=True,
+                              expected_status=1)
+    self.assertIn('CommandException', stderr)
+
 
   def test_set_invalid_iam_bucket(self):
     """Ensures invalid content returns error on input check."""

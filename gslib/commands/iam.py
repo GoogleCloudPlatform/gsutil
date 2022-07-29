@@ -45,6 +45,7 @@ from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import GetSchemeFromUrlString
 from gslib.storage_url import IsKnownUrlScheme
 from gslib.storage_url import StorageUrlFromString
+from gslib.storage_url import UrlsAreMixOfBucketsAndObjects
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.constants import IAM_POLICY_VERSION
@@ -526,8 +527,13 @@ class IamCommand(Command):
     self.everything_set_okay = True
     self.tried_ch_on_resource_with_conditions = False
     threaded_wildcards = []
-    for pattern in patterns:
-      surl = StorageUrlFromString(pattern)
+    
+    surls = map(StorageUrlFromString, patterns)
+    
+    if (UrlsAreMixOfBucketsAndObjects(surls) and not self.recursion_requested):
+      raise CommandException('Cannot operate on a mix of buckets and objects.')
+    
+    for surl in surls:
       try:
         if surl.IsBucket():
           if self.recursion_requested:
@@ -648,10 +654,11 @@ class IamCommand(Command):
 
     surls = map(StorageUrlFromString, patterns)
 
-    if all(surl.IsBucket() )
+    if (UrlsAreMixOfBucketsAndObjects(surls) and not self.recursion_requested):
+      raise CommandException('Cannot operate on a mix of buckets and objects.')
 
     for surl in surls:
-      surl = StorageUrlFromString(pattern)
+      print(surl.url_string)
       if surl.IsBucket():
         if self.recursion_requested:
           surl.object_name = '*'
