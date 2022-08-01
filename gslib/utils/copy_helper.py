@@ -237,7 +237,7 @@ UPLOAD_RETURN_FIELDS = [
 PerformParallelUploadFileToObjectArgs = namedtuple(
     'PerformParallelUploadFileToObjectArgs',
     'filename file_start file_length src_url dst_url canned_acl '
-    'content_type tracker_file tracker_file_lock encryption_key_sha256 '
+    'content_type storage_class tracker_file tracker_file_lock encryption_key_sha256 '
     'gzip_encoded')
 
 PerformSlicedDownloadObjectToFileArgs = namedtuple(
@@ -331,11 +331,12 @@ def _PerformParallelUploadFileToObject(cls, args, thread_state=None):
     # reach a state in which uploads will always fail on retries.
     preconditions = None
 
-    # Fill in content type if one was provided.
+    # Fill in content type and storage class if one was provided.
     dst_object_metadata = apitools_messages.Object(
         name=args.dst_url.object_name,
         bucket=args.dst_url.bucket_name,
-        contentType=args.content_type)
+        contentType=args.content_type,
+        storageClass=args.storage_class)
 
     orig_prefer_api = gsutil_api.prefer_api
     try:
@@ -997,13 +998,14 @@ def CheckForDirFileConflict(exp_src_url, dst_url):
                            (exp_src_url.url_string, dst_path))
 
 
-def _PartitionFile(fp,
-                   file_size,
-                   src_url,
+def _PartitionFile(canned_acl,
                    content_type,
-                   canned_acl,
                    dst_bucket_url,
+                   file_size,
+                   fp,
                    random_prefix,
+                   src_url,
+                   storage_class,
                    tracker_file,
                    tracker_file_lock,
                    encryption_key_sha256=None,
@@ -1016,14 +1018,15 @@ def _PartitionFile(fp,
   corresponding to each part.
 
   Args:
-    fp: The file object to be partitioned.
-    file_size: The size of fp, in bytes.
-    src_url: Source FileUrl from the original command.
-    content_type: content type for the component and final objects.
     canned_acl: The user-provided canned_acl, if applicable.
-    dst_bucket_url: CloudUrl for the destination bucket
+    content_type: content type for the component and final objects.
+    dst_bucket_url: CloudUrl for the destination bucket.
+    file_size: The size of fp, in bytes.
+    fp: The file object to be partitioned.
     random_prefix: The randomly-generated prefix used to prevent collisions
                    among the temporary component names.
+    src_url: Source FileUrl from the original command.
+    storage_class: storage class for the component and final objects.
     tracker_file: The path to the parallel composite upload tracker file.
     tracker_file_lock: The lock protecting access to the tracker file.
     encryption_key_sha256: Encryption key SHA256 for use in this upload, if any.
@@ -1064,8 +1067,8 @@ def _PartitionFile(fp,
     offset = i * component_size
     func_args = PerformParallelUploadFileToObjectArgs(
         fp.name, offset, file_part_length, src_url, tmp_dst_url, canned_acl,
-        content_type, tracker_file, tracker_file_lock, encryption_key_sha256,
-        gzip_encoded)
+        content_type, storage_class, tracker_file, tracker_file_lock,
+        encryption_key_sha256, gzip_encoded)
     file_names.append(temp_file_name)
     dst_args[temp_file_name] = func_args
 
@@ -1164,13 +1167,14 @@ def _DoParallelCompositeUpload(fp,
   # before and after the operation.
   components_info = {}
   # Get the set of all components that should be uploaded.
-  dst_args = _PartitionFile(fp,
-                            file_size,
-                            src_url,
+  dst_args = _PartitionFile(canned_acl,
                             dst_obj_metadata.contentType,
-                            canned_acl,
                             dst_bucket_url,
+                            file_size,
+                            fp,
                             random_prefix,
+                            src_url,
+                            dst_obj_metadata.storageClass,
                             tracker_file_name,
                             tracker_file_lock,
                             encryption_key_sha256=encryption_key_sha256,

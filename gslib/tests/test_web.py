@@ -84,7 +84,7 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
     if self._use_gcloud_storage:
       self.assertEquals('[]\n', stdout)
     else:
-      self.assertEquals(json.loads(stdout), WEBCFG_EMPTY)
+      self.assertIn(WEBCFG_EMPTY, stdout)
 
   def testTooFewArgumentsFails(self):
     """Ensures web commands fail with too few arguments."""
