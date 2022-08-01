@@ -166,6 +166,16 @@ TestProcessData = namedtuple('TestProcessData',
                              'name return_code stdout stderr')
 
 
+_KMS_AUTHORIZATION_WARNING = (
+    'Failed to authorize the service agent to use KMS keys. Since keys are'
+    ' static resources, and the service agent typically already has'
+    ' authorization to use them, you may safely disregard this warning if it is'
+    ' not associated with kms-related test failures. If it is, you can manually'
+    ' authorize the service agent using the `gsutil kms -k` command with the'
+    ' keys included in test error messages.'
+)
+
+
 def MakeCustomTestResultClass(total_tests):
   """Creates a closure of CustomTestResult.
 
@@ -554,17 +564,13 @@ class TestCommand(Command):
         elif o == '-u':
           tests.util.RUN_INTEGRATION_TESTS = False
 
-    if tests.util.RUN_INTEGRATION_TESTS:
+    if tests.util.RUN_INTEGRATION_TESTS and not sequential_only:
       try:
         tests.util.AuthorizeProjectToUseTestingKmsKeys()
         service_agent_authorized_successfully = True
       except Exception as error:
-        # Authorized keys are static resources that typically already have
-        # appropriate permissions. Demoting errors to warnings means transient
-        # errors will not block running the whole suite of tests.
-        logging.warning(
-            'Failed to authorize the service agent to use KMS keys.')
-        logging.debug(error)
+        self.logger.warn(_KMS_AUTHORIZATION_WARNING)
+        self.logger.debug(error)
         service_agent_authorized_successfully = False
 
     if perform_coverage and not coverage:
@@ -756,8 +762,9 @@ class TestCommand(Command):
       print(('Coverage information was saved to: %s' %
              coverage_controller.data_files.filename))
 
-    if tests.util.RUN_INTEGRATION_TESTS and not service_agent_authorized_successfully:
-      logging.warning('Failed to authorize the service agent to use KMS keys.')
+    if (tests.util.RUN_INTEGRATION_TESTS and not sequential_only and
+        not service_agent_authorized_successfully):
+      self.logger.warning(_KMS_AUTHORIZATION_WARNING)
 
     # Re-enable analytics to report the test command.
     os.environ['GSUTIL_TEST_ANALYTICS'] = '0'

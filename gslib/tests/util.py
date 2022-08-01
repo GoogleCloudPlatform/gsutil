@@ -20,12 +20,14 @@ from __future__ import unicode_literals
 
 from contextlib import contextmanager
 import functools
+import locale
 import logging
 import os
 import pkgutil
 import posixpath
 import re
 import io
+import signal
 import subprocess
 import sys
 import tempfile
@@ -203,7 +205,7 @@ def CommunicateWithTimeout(process, stdin=None):
 
   if not six.PY3:
     timer.cancel()
-  
+
   try:
     c_out = [six.ensure_text(output) for output in c_out]
   except UnicodeDecodeError:
@@ -211,7 +213,7 @@ def CommunicateWithTimeout(process, stdin=None):
         six.ensure_text(output, locale.getpreferredencoding(False))
         for output in c_out
     ]
-  
+
   return c_out
 
 
@@ -314,7 +316,7 @@ def AuthorizeProjectToUseTestingKmsKeys():
       KmsTestingResources.CONSTANT_KEY_NAME2,
   ]:
     key_fqn = kms_api.CreateCryptoKey(keyring_fqn, key_name)
-    cmd = GetGsutilCommand(['gsutil', 'kms', 'authorize', '-k', key_fqn],
+    cmd = GetGsutilCommand(['kms', 'authorize', '-k', key_fqn],
                            force_gsutil=True)
     process = GetGsutilSubprocess(cmd)
     CommunicateWithTimeout(process)
