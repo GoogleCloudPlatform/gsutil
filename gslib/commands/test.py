@@ -562,7 +562,7 @@ class TestCommand(Command):
         elif o == '-u':
           tests.util.RUN_INTEGRATION_TESTS = False
 
-    if tests.util.RUN_INTEGRATION_TESTS and not sequential_only:
+    if tests.util.RUN_INTEGRATION_TESTS and not sequential_only and tests.util.USING_JSON_API:
       try:
         tests.util.AuthorizeProjectToUseTestingKmsKeys()
         service_agent_authorized_successfully = True
@@ -761,6 +761,7 @@ class TestCommand(Command):
              coverage_controller.data_files.filename))
 
     if (tests.util.RUN_INTEGRATION_TESTS and not sequential_only and
+        tests.util.USING_JSON_API and
         not service_agent_authorized_successfully):
       self.logger.warning(_KMS_AUTHORIZATION_WARNING)
 
