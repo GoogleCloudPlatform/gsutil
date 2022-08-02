@@ -165,15 +165,13 @@ _DETAILED_HELP_TEXT = ("""
 TestProcessData = namedtuple('TestProcessData',
                              'name return_code stdout stderr')
 
-
 _KMS_AUTHORIZATION_WARNING = (
     'Failed to authorize the service agent to use KMS keys. Since keys are'
     ' static resources, and the service agent typically already has'
     ' authorization to use them, you may safely disregard this warning if it is'
     ' not associated with kms-related test failures. If it is, you can manually'
     ' authorize the service agent using the `gsutil kms -k` command with the'
-    ' keys included in test error messages.'
-)
+    ' keys included in test error messages.')
 
 
 def MakeCustomTestResultClass(total_tests):
