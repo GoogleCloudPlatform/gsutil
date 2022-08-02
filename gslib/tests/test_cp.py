@@ -3337,9 +3337,13 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     ]):
       self.RunGsUtil(['cp', '-s', 'nearline', fpath, obj_suri])
     stdout = self.RunGsUtil(['ls', '-L', obj_suri], return_stdout=True)
-    self.assertRegexpMatchesWithFlags(stdout,
-                                      r'Storage class:          NEARLINE',
-                                      flags=re.IGNORECASE)
+    if self._use_gcloud_storage:
+      self.assertRegexpMatchesWithFlags(
+          stdout, r'Storage class:               NEARLINE', flags=re.IGNORECASE)
+    else:
+      self.assertRegexpMatchesWithFlags(stdout,
+                                        r'Storage class:          NEARLINE',
+                                        flags=re.IGNORECASE)
 
   # This temporarily changes the tracker directory to unwritable which
   # interferes with any parallel running tests that use the tracker directory.
