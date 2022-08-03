@@ -24,6 +24,7 @@ import textwrap
 
 from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
+from gslib.cloud_api import ServiceException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
@@ -37,6 +38,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils import text_util
 from gslib.utils.constants import NO_MAX
 from gslib.utils.encryption_helper import ValidateCMEK
+from gslib.utils.retry_util import Retry
 from gslib.utils.shim_util import GcloudStorageFlag
 from gslib.utils.shim_util import GcloudStorageMap
 
@@ -273,6 +275,7 @@ class KmsCommand(Command):
     if not self.project_id:
       self.project_id = PopulateProjectId(None)
 
+  @Retry(ServiceException, tries=3, timeout_secs=1)
   def _AuthorizeProject(self, project_id, kms_key):
     """Authorizes a project's service account to be used with a KMS key.
 
