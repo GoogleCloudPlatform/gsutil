@@ -23,7 +23,8 @@ import getopt
 import textwrap
 
 from gslib import metrics
-from gslib.cloud_api import AccessDeniedException, ServiceException
+from gslib.cloud_api import AccessDeniedException
+from gslib.cloud_api import ServiceException
 from gslib.command import Command
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector

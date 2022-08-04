@@ -165,14 +165,6 @@ _DETAILED_HELP_TEXT = ("""
 TestProcessData = namedtuple('TestProcessData',
                              'name return_code stdout stderr')
 
-_KMS_AUTHORIZATION_WARNING = (
-    'Failed to authorize the service agent to use KMS keys. Since keys are'
-    ' static resources, and the service agent typically already has'
-    ' authorization to use them, you may safely disregard this warning if it is'
-    ' not associated with kms-related test failures. If it is, you can manually'
-    ' authorize the service agent using the `gsutil kms -k` command with the'
-    ' keys included in test error messages.')
-
 
 def MakeCustomTestResultClass(total_tests):
   """Creates a closure of CustomTestResult.
@@ -562,15 +554,6 @@ class TestCommand(Command):
         elif o == '-u':
           tests.util.RUN_INTEGRATION_TESTS = False
 
-    if tests.util.RUN_INTEGRATION_TESTS and not sequential_only and tests.util.USING_JSON_API:
-      try:
-        tests.util.AuthorizeProjectToUseTestingKmsKeys()
-        service_agent_authorized_successfully = True
-      except Exception as error:
-        self.logger.warn(_KMS_AUTHORIZATION_WARNING)
-        self.logger.debug(error)
-        service_agent_authorized_successfully = False
-
     if perform_coverage and not coverage:
       raise CommandException(
           'Coverage has been requested but the coverage module was not found. '
@@ -759,11 +742,6 @@ class TestCommand(Command):
       coverage_controller.save()
       print(('Coverage information was saved to: %s' %
              coverage_controller.data_files.filename))
-
-    if (tests.util.RUN_INTEGRATION_TESTS and not sequential_only and
-        tests.util.USING_JSON_API and
-        not service_agent_authorized_successfully):
-      self.logger.warning(_KMS_AUTHORIZATION_WARNING)
 
     # Re-enable analytics to report the test command.
     os.environ['GSUTIL_TEST_ANALYTICS'] = '0'

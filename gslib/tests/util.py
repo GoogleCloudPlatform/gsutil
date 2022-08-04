@@ -291,18 +291,8 @@ class KmsTestingResources(object):
   MUTABLE_KEY_NAME_TEMPLATE = 'cryptokey-for-gsutil-integration-tests-%d%d%d'
 
 
-def _GetFullyQualifiedKmsKeyringName():
-  # Cannot be done at import, since PopulateProjectId fails for some commands.
-  return ('projects/{}/locations/{}/keyRings/{}'.format(
-      PopulateProjectId(None), KmsTestingResources.KEYRING_LOCATION,
-      KmsTestingResources.KEYRING_NAME))
-
-
-def GetFullyQualifiedKmsKeyName(key_name=KmsTestingResources.CONSTANT_KEY_NAME):
-  return _GetFullyQualifiedKmsKeyringName() + '/cryptoKeys/' + key_name
-
-
-def AuthorizeProjectToUseTestingKmsKeys():
+def AuthorizeProjectToUseTestingKmsKey(
+    key_name=KmsTestingResources.CONSTANT_KEY_NAME):
   """Ensures test keys exist and that the service agent is authorized."""
   kms_api = KmsApi(logging.getLogger())
 
@@ -311,15 +301,11 @@ def AuthorizeProjectToUseTestingKmsKeys():
       KmsTestingResources.KEYRING_NAME,
       location=KmsTestingResources.KEYRING_LOCATION)
 
-  for key_name in [
-      KmsTestingResources.CONSTANT_KEY_NAME,
-      KmsTestingResources.CONSTANT_KEY_NAME2,
-  ]:
-    key_fqn = kms_api.CreateCryptoKey(keyring_fqn, key_name)
-    cmd = GetGsutilCommand(['kms', 'authorize', '-k', key_fqn],
-                           force_gsutil=True)
-    process = GetGsutilSubprocess(cmd)
-    CommunicateWithTimeout(process)
+  key_fqn = kms_api.CreateCryptoKey(keyring_fqn, key_name)
+  cmd = GetGsutilCommand(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
+  process = GetGsutilSubprocess(cmd)
+  CommunicateWithTimeout(process)
+  return key_fqn
 
 
 def BuildErrorRegex(obj, err_str):

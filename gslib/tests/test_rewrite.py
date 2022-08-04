@@ -36,8 +36,8 @@ from gslib.tests.rewrite_helper import HaltingRewriteCallbackHandler
 from gslib.tests.rewrite_helper import RewriteHaltException
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.tests.util import AuthorizeProjectToUseTestingKmsKey
 from gslib.tests.util import GenerationFromURI as urigen
-from gslib.tests.util import GetFullyQualifiedKmsKeyName
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import TEST_ENCRYPTION_KEY1
@@ -462,7 +462,7 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_to_kms_then_unencrypted(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    key_fqn = GetFullyQualifiedKmsKeyName()
+    key_fqn = AuthorizeProjectToUseTestingKmsKey()
     object_uri = self.CreateObject(contents=b'foo')
 
     boto_config_for_test = [('GSUtil', 'encryption_key', key_fqn)]
@@ -483,7 +483,7 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_to_kms_then_csek(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    key_fqn = GetFullyQualifiedKmsKeyName()
+    key_fqn = AuthorizeProjectToUseTestingKmsKey()
     object_uri = self.CreateObject(contents=b'foo')
 
     boto_config_for_test = [('GSUtil', 'encryption_key', key_fqn)]
@@ -504,7 +504,7 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_to_csek_then_kms(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
-    key_fqn = GetFullyQualifiedKmsKeyName()
+    key_fqn = AuthorizeProjectToUseTestingKmsKey()
     object_uri = self.CreateObject(contents=b'foo')
 
     boto_config_for_test = [('GSUtil', 'encryption_key', TEST_ENCRYPTION_KEY1)]
@@ -536,7 +536,7 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     # since we don't know if the operation will end up decrypting the object or
     # implicitly encrypting it with the bucket's default KMS key.
 
-    key_fqn = GetFullyQualifiedKmsKeyName()
+    key_fqn = AuthorizeProjectToUseTestingKmsKey()
 
     # Create an unencrypted object.
     bucket_uri = self.CreateBucket()
