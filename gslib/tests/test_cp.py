@@ -65,12 +65,14 @@ from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.testcase.integration_testcase import SkipForJSON
+from gslib.tests.util import AuthorizeProjectToUseTestingKmsKey
 from gslib.tests.util import BuildErrorRegex
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import HaltingCopyCallbackHandler
 from gslib.tests.util import HaltOneComponentCopyCallbackHandler
 from gslib.tests.util import HAS_GS_PORT
 from gslib.tests.util import HAS_S3_CREDS
+from gslib.tests.util import KmsTestingResources
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
 from gslib.tests.util import POSIX_GID_ERROR
@@ -3313,7 +3315,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=b'abcd')
     obj_suri = suri(bucket_uri, 'composed')
-    key_fqn = self.authorize_project_to_use_testing_kms_key()
+    key_fqn = AuthorizeProjectToUseTestingKmsKey()
 
     with SetBotoConfigForTest([
         ('GSUtil', 'encryption_key', key_fqn),
@@ -4696,25 +4698,12 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
                                       r'Storage class:\s+STANDARD',
                                       flags=re.IGNORECASE)
 
-  def authorize_project_to_use_testing_kms_key(
-      self, key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME):
-    # Make sure our keyRing and cryptoKey exist.
-    keyring_fqn = self.kms_api.CreateKeyRing(
-        PopulateProjectId(None),
-        testcase.KmsTestingResources.KEYRING_NAME,
-        location=testcase.KmsTestingResources.KEYRING_LOCATION)
-    key_fqn = self.kms_api.CreateCryptoKey(keyring_fqn, key_name)
-    # Make sure that the service account for our default project is authorized
-    # to use our test KMS key.
-    self.RunGsUtil(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
-    return key_fqn
-
   @SkipForS3('Test uses gs-specific KMS encryption')
   def test_kms_key_correctly_applied_to_dst_obj_from_src_with_no_key(self):
     bucket_uri = self.CreateBucket()
     obj1_name = 'foo'
     obj2_name = 'bar'
-    key_fqn = self.authorize_project_to_use_testing_kms_key()
+    key_fqn = AuthorizeProjectToUseTestingKmsKey()
 
     # Create the unencrypted object, then copy it, specifying a KMS key for the
     # new object.
@@ -4737,7 +4726,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'abcd')
     obj_name = 'foo'
     obj_suri = suri(bucket_uri) + '/' + obj_name
-    key_fqn = self.authorize_project_to_use_testing_kms_key()
+    key_fqn = AuthorizeProjectToUseTestingKmsKey()
 
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn)]):
       self.RunGsUtil(['cp', fpath, obj_suri])
@@ -4752,7 +4741,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     fpath = self.CreateTempFile(contents=b'a' * resumable_threshold)
     obj_name = 'foo'
     obj_suri = suri(bucket_uri) + '/' + obj_name
-    key_fqn = self.authorize_project_to_use_testing_kms_key()
+    key_fqn = AuthorizeProjectToUseTestingKmsKey()
 
     with SetBotoConfigForTest([('GSUtil', 'encryption_key', key_fqn),
                                ('GSUtil', 'resumable_threshold',
@@ -4767,9 +4756,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     obj1_name = 'foo'
     obj2_name = 'bar'
-    key1_fqn = self.authorize_project_to_use_testing_kms_key()
-    key2_fqn = self.authorize_project_to_use_testing_kms_key(
-        key_name=testcase.KmsTestingResources.CONSTANT_KEY_NAME2)
+    key1_fqn = AuthorizeProjectToUseTestingKmsKey()
+    key2_fqn = AuthorizeProjectToUseTestingKmsKey(
+        key_name=KmsTestingResources.CONSTANT_KEY_NAME2)
     obj1_suri = suri(
         self.CreateObject(bucket_uri=bucket_uri,
                           object_name=obj1_name,
@@ -4791,7 +4780,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     obj1_name = 'foo'
     obj2_name = 'bar'
-    key1_fqn = self.authorize_project_to_use_testing_kms_key()
+    key1_fqn = AuthorizeProjectToUseTestingKmsKey()
     obj1_suri = suri(
         self.CreateObject(bucket_uri=bucket_uri,
                           object_name=obj1_name,
