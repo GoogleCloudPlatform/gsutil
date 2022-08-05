@@ -296,16 +296,18 @@ def AuthorizeProjectToUseTestingKmsKey(
   """Ensures test keys exist and that the service agent is authorized."""
   kms_api = KmsApi(logging.getLogger())
 
-  keyring_fqn = kms_api.CreateKeyRing(
+  keyring_fully_qualified_name = kms_api.CreateKeyRing(
       PopulateProjectId(None),
       KmsTestingResources.KEYRING_NAME,
       location=KmsTestingResources.KEYRING_LOCATION)
 
-  key_fqn = kms_api.CreateCryptoKey(keyring_fqn, key_name)
-  cmd = GetGsutilCommand(['kms', 'authorize', '-k', key_fqn], force_gsutil=True)
+  key_fully_qualified_name = kms_api.CreateCryptoKey(
+      keyring_fully_qualified_name, key_name)
+  cmd = GetGsutilCommand(['kms', 'authorize', '-k', key_fully_qualified_name],
+                         force_gsutil=True)
   process = GetGsutilSubprocess(cmd)
   CommunicateWithTimeout(process)
-  return key_fqn
+  return key_fully_qualified_name
 
 
 def BuildErrorRegex(obj, err_str):

@@ -1001,8 +1001,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       If only one return_* value was specified, that value is returned directly
       rather than being returned within a 1-tuple.
     """
-    processed_command = util.GetGsutilCommand(cmd, force_gsutil=force_gsutil)
-    process = util.GetGsutilSubprocess(processed_command, env_vars=env_vars)
+    full_gsutil_command = util.GetGsutilCommand(cmd, force_gsutil=force_gsutil)
+    process = util.GetGsutilSubprocess(full_gsutil_command, env_vars=env_vars)
 
     c_out = util.CommunicateWithTimeout(process, stdin=stdin)
     stdout = c_out[0].replace(os.linesep, '\n')
