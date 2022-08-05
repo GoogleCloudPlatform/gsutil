@@ -1156,20 +1156,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-L', dst_uri], return_stdout=True)
     self.assertRegex(stdout, r'Cache-Control\s*:\s*public,max-age=12')
 
-    if self._use_gcloud_storage:
-      self.assertRegex(stdout, r'"key":\s* "1",\n\s*"value":\s*"abcd"')
-    else:
-      self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
+    self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
 
     dst_uri2 = suri(bucket_uri, 'bar')
     self.RunGsUtil(['cp', dst_uri, dst_uri2])
     # Ensure metadata was preserved across copy.
     stdout = self.RunGsUtil(['ls', '-L', dst_uri2], return_stdout=True)
     self.assertRegex(stdout, r'Cache-Control\s*:\s*public,max-age=12')
-    if self._use_gcloud_storage:
-      self.assertRegex(stdout, r'"key":\s* "1",\n\s*"value":\s*"abcd"')
-    else:
-      self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
+    self.assertRegex(stdout, r'Metadata:\s*1:\s*abcd')
 
   @SequentialAndParallelTransfer
   def test_request_reason_header(self):
@@ -1211,8 +1205,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     self.assertRegex(
         stderr,
-        # PUT follows GET request. Both need the request-reason header.
-        r'GET[\s\S]*' + reason_regex + r'[\s\S]*PUT[\s\S]*' + reason_regex)
+        # POST follows GET request. Both need the request-reason header.
+        r'GET[\s\S]*' + reason_regex + r'[\s\S]*POST[\s\S]*' + reason_regex)
 
   @SequentialAndParallelTransfer
   @SkipForJSON('JSON API uses a different debug log format.')

@@ -170,7 +170,8 @@ def get_flag_from_header(raw_header_key, header_value, unset=False):
       if unset:
         return '--remove-custom-metadata=' + metadata_key
       else:
-        return '--update-custom-metadata={}={}'.format(metadata_key, header_value)
+        return '--update-custom-metadata={}={}'.format(metadata_key,
+                                                       header_value)
 
   if lowercase_header_key.startswith('x-amz-'):
     # Send the entire header as it is.
