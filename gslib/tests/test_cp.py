@@ -159,7 +159,21 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
     tmpdir: The local file path to cp to.
     is_cp: Whether or not the calling test suite is cp or mv.
   """
-  error = 'error'
+  error_key = 'error_regex'
+  if cls._use_gcloud_storage:
+    insufficient_access_error = no_read_access_error = re.compile(
+        r"User \d+ owns file, but owner does not have read permission")
+    missing_gid_error = re.compile(
+        r"GID in .* metadata doesn't exist on current system")
+    missing_uid_error = re.compile(
+        r"UID in .* metadata doesn't exist on current system")
+  else:
+    insufficient_access_error = BuildErrorRegex(
+        obj, POSIX_INSUFFICIENT_ACCESS_ERROR)
+    missing_gid_error = BuildErrorRegex(obj, POSIX_GID_ERROR)
+    missing_uid_error = BuildErrorRegex(obj, POSIX_UID_ERROR)
+    no_read_access_error = BuildErrorRegex(obj, POSIX_MODE_ERROR)
+
   # A dict of test_name: attrs_dict.
   # attrs_dict holds the different attributes that we want for the object in a
   # specific test.
@@ -169,74 +183,74 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
   test_params = {
       'test1': {
           MODE_ATTR: '333',
-          error: POSIX_MODE_ERROR
+          error_key: no_read_access_error,
       },
       'test2': {
           GID_ATTR: GetInvalidGid,
-          error: POSIX_GID_ERROR
+          error_key: missing_gid_error,
       },
       'test3': {
           GID_ATTR: GetInvalidGid,
           MODE_ATTR: '420',
-          error: POSIX_GID_ERROR
+          error_key: missing_gid_error,
       },
       'test4': {
           UID_ATTR: INVALID_UID,
-          error: POSIX_UID_ERROR
+          error_key: missing_uid_error,
       },
       'test5': {
           UID_ATTR: INVALID_UID,
           MODE_ATTR: '530',
-          error: POSIX_UID_ERROR
+          error_key: missing_uid_error,
       },
       'test6': {
           UID_ATTR: INVALID_UID,
           GID_ATTR: GetInvalidGid,
-          error: POSIX_UID_ERROR
+          error_key: missing_uid_error,
       },
       'test7': {
           UID_ATTR: INVALID_UID,
           GID_ATTR: GetInvalidGid,
           MODE_ATTR: '640',
-          error: POSIX_UID_ERROR
+          error_key: missing_uid_error,
       },
       'test8': {
           UID_ATTR: INVALID_UID,
           GID_ATTR: GetPrimaryGid,
-          error: POSIX_UID_ERROR
+          error_key: missing_uid_error,
       },
       'test9': {
           UID_ATTR: INVALID_UID,
           GID_ATTR: GetNonPrimaryGid,
-          error: POSIX_UID_ERROR
+          error_key: missing_uid_error,
       },
       'test10': {
           UID_ATTR: INVALID_UID,
           GID_ATTR: GetPrimaryGid,
           MODE_ATTR: '640',
-          error: POSIX_UID_ERROR
+          error_key: missing_uid_error,
       },
       'test11': {
           UID_ATTR: INVALID_UID,
           GID_ATTR: GetNonPrimaryGid,
           MODE_ATTR: '640',
-          error: POSIX_UID_ERROR
+          error_key: missing_uid_error,
       },
       'test12': {
           UID_ATTR: USER_ID,
           GID_ATTR: GetInvalidGid,
-          error: POSIX_GID_ERROR
+          error_key: missing_gid_error,
       },
       'test13': {
           UID_ATTR: USER_ID,
           GID_ATTR: GetInvalidGid,
           MODE_ATTR: '640',
-          error: POSIX_GID_ERROR
+          error_key: missing_gid_error,
       },
       'test14': {
           GID_ATTR: GetPrimaryGid,
           MODE_ATTR: '240',
-          error: POSIX_INSUFFICIENT_ACCESS_ERROR
+          error_key: insufficient_access_error,
       }
   }
   # The first variable below can be used to help debug the test if there is a
@@ -268,11 +282,17 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
     ],
                            expected_status=1,
                            return_stderr=True)
+
+    if cls._use_gcloud_storage:
+      general_posix_error = 'ERROR'
+    else:
+      general_posix_error = ORPHANED_FILE
     cls.assertIn(
-        ORPHANED_FILE, stderr,
+        general_posix_error, stderr,
         'Error during test "%s": %s not found in stderr:\n%s' %
-        (test_name, ORPHANED_FILE, stderr))
-    error_regex = BuildErrorRegex(obj, attrs_dict.get(error))
+        (test_name, general_posix_error, stderr))
+
+    error_regex = attrs_dict[error_key]
     cls.assertTrue(
         error_regex.search(stderr),
         'Test %s did not match expected error; could not find a match for '
