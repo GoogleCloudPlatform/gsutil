@@ -272,9 +272,9 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
-    self.RunGsUtil(['mb', '-l', 'us-central1+us-west1', suri(bucket_uri)])
+    self.RunGsUtil(['mb', '-l', 'us-east1+us-east4', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegex(stdout, r"Location constraint:\t\tUS-CENTRAL1\+US-WEST1")
+    self.assertRegex(stdout, r"Location constraint:\t\tUS-EAST1\+US-EAST4")
 
   @SkipForXML('Custom Dual Region is not supported for the XML API.')
   @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
