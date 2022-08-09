@@ -45,6 +45,7 @@ from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.storage_url import GetSchemeFromUrlString
 from gslib.storage_url import IsKnownUrlScheme
 from gslib.storage_url import StorageUrlFromString
+from gslib.storage_url import UrlsAreMixOfBucketsAndObjects
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.constants import IAM_POLICY_VERSION
@@ -130,12 +131,12 @@ _SET_DESCRIPTION = """
 
   -R, -r      Performs ``iam set`` recursively on all objects under the
               specified bucket.
-              
-              This flag can only be set if the policy exclusively uses 
+
+              This flag can only be set if the policy exclusively uses
               ``roles/storage.legacyObjectReader`` or ``roles/storage.legacyObjectOwner``.
               This flag cannot be used if the bucket is configured
               for uniform bucket-level access.
-              
+
   -a          Performs ``iam set`` on all object versions.
 
   -e <etag>   Performs the precondition check on each object with the
@@ -205,8 +206,8 @@ _CH_DESCRIPTION = """
 
   -R, -r      Performs ``iam ch`` recursively to all objects under the
               specified bucket.
-              
-              This flag can only be set if the policy exclusively uses 
+
+              This flag can only be set if the policy exclusively uses
               ``roles/storage.legacyObjectReader`` or ``roles/storage.legacyObjectOwner``.
               This flag cannot be used if the bucket is configured
               for uniform bucket-level access.
@@ -526,8 +527,13 @@ class IamCommand(Command):
     self.everything_set_okay = True
     self.tried_ch_on_resource_with_conditions = False
     threaded_wildcards = []
-    for pattern in patterns:
-      surl = StorageUrlFromString(pattern)
+
+    surls = list(map(StorageUrlFromString, patterns))
+
+    if (UrlsAreMixOfBucketsAndObjects(surls) and not self.recursion_requested):
+      raise CommandException('Cannot operate on a mix of buckets and objects.')
+
+    for surl in surls:
       try:
         if surl.IsBucket():
           if self.recursion_requested:
@@ -646,8 +652,13 @@ class IamCommand(Command):
     # This list of wildcard strings will be handled by NameExpansionIterator.
     threaded_wildcards = []
 
-    for pattern in patterns:
-      surl = StorageUrlFromString(pattern)
+    surls = list(map(StorageUrlFromString, patterns))
+
+    if (UrlsAreMixOfBucketsAndObjects(surls) and not self.recursion_requested):
+      raise CommandException('Cannot operate on a mix of buckets and objects.')
+
+    for surl in surls:
+      print(surl.url_string)
       if surl.IsBucket():
         if self.recursion_requested:
           surl.object_name = '*'

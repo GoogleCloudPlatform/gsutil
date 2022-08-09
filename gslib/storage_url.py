@@ -489,3 +489,19 @@ def UrlsAreForSingleProvider(url_args):
     elif url.scheme != provider:
       return False
   return provider is not None
+
+
+def UrlsAreMixOfBucketsAndObjects(urls):
+  """Tests whether the URLs are a mix of buckets and objects.
+
+  Args:
+    url_args: (Iterable[gslib.storage_url.StorageUrl]) Collection of URLs to
+    check.
+
+  Returns:
+    True if URLs are a mix of buckets and objects. False if URLs are all buckets
+    or all objects. None if invalid Cloud URLs are included.
+  """
+  if all(url.IsCloudUrl() for url in urls):
+    are_buckets = list(map(lambda x: x.IsBucket(), urls))
+    return any(are_buckets) and not all(are_buckets)

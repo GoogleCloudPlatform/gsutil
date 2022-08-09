@@ -69,6 +69,7 @@ from gslib.storage_url import HaveFileUrls
 from gslib.storage_url import HaveProviderUrls
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import UrlsAreForSingleProvider
+from gslib.storage_url import UrlsAreMixOfBucketsAndObjects
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
@@ -877,12 +878,17 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
       CommandException if an ACL could not be set.
     """
     multi_threaded_url_args = []
+
+    urls = list(map(StorageUrlFromString, url_strs))
+
+    if (UrlsAreMixOfBucketsAndObjects(urls) and not self.recursion_requested):
+      raise CommandException('Cannot operate on a mix of buckets and objects.')
+
     # Handle bucket ACL setting operations single-threaded, because
     # our threading machinery currently assumes it's working with objects
     # (name_expansion_iterator), and normally we wouldn't expect users to need
     # to set ACLs on huge numbers of buckets at once anyway.
-    for url_str in url_strs:
-      url = StorageUrlFromString(url_str)
+    for url in urls:
       if url.IsCloudUrl() and url.IsBucket():
         if self.recursion_requested:
           # If user specified -R option, convert any bucket args to bucket
@@ -904,7 +910,7 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
                 expanded_result=None)
             acl_func(self, name_expansion_for_url)
       else:
-        multi_threaded_url_args.append(url_str)
+        multi_threaded_url_args.append(url.url_string)
 
     if len(multi_threaded_url_args) >= 1:
       name_expansion_iterator = NameExpansionIterator(

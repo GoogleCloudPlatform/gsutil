@@ -119,3 +119,19 @@ class TestStorageUrl(base.GsUtilTestCase):
 
     mock_stderr.assert_has_calls(
         [mock.call(_UNSUPPORTED_DOUBLE_WILDCARD_WARNING_TEXT)] * 14)
+
+  def test_urls_are_mix_of_objects_and_buckets_is_false_for_all_buckets(self):
+    urls = list(map(storage_url.StorageUrlFromString, ['gs://b1', 'gs://b2']))
+    self.assertFalse(storage_url.UrlsAreMixOfBucketsAndObjects(urls))
+
+  def test_urls_are_mix_of_objects_and_buckets_is_false_for_all_objects(self):
+    urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b/p']))
+    self.assertFalse(storage_url.UrlsAreMixOfBucketsAndObjects(urls))
+
+  def test_urls_are_mix_of_objects_and_buckets_is_true_for_a_mix(self):
+    urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b']))
+    self.assertTrue(storage_url.UrlsAreMixOfBucketsAndObjects(urls))
+
+  def test_urls_are_mix_of_objects_and_buckets_is_null_for_invalid(self):
+    urls = list(map(storage_url.StorageUrlFromString, ['gs://b', 'f:o@o:o']))
+    self.assertIsNone(storage_url.UrlsAreMixOfBucketsAndObjects(urls))
