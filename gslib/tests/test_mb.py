@@ -274,7 +274,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                                   suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '-l', 'us-east1+us-east4', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegex(stdout, r"Location constraint:\t\tUS-EAST1\+US-EAST4")
+    self.assertRegex(stdout, r"locations:\t\t\[\'US-EAST1\', \'US-EAST4")
 
   @SkipForXML('Custom Dual Region is not supported for the XML API.')
   @SkipForS3('Custom Dual Region is not supported for S3 buckets.')
