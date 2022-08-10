@@ -78,17 +78,17 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
         MockCredentials(token=ACCESS_TOKEN,
                         audience="foo",
                         subject_token_type="bar",
-                        token_url="baz",
+                        token_url="https://sts.googleapis.com",
                         credential_source="qux"))
 
     http = oauth2client.transport.get_http_object()
     creds.authorize(http)
-    _, content = http.request(uri="https://sts.googleapis.com")
+    _, content = http.request(uri="google.com")
     self.assertEquals(content, CONTENT)
     creds._base.refresh.assert_called_once_with(mock.ANY)
 
     # Make sure the default request gets called with the correct token.
-    req.assert_called_once_with("https://sts.googleapis.com",
+    req.assert_called_once_with("google.com",
                                 method="GET",
                                 headers=HeadersWithAuth(ACCESS_TOKEN),
                                 body=None,
@@ -98,11 +98,10 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
   def testWrappedCredentialSerialization(self):
     """Test logic for converting Wrapped Credentials to and from JSON for serialization."""
     creds = WrappedCredentials(
-        identity_pool.Credentials(
-            audience="foo",
-            subject_token_type="bar",
-            token_url="baz",
-            credential_source={"url": "https://sts.googleapis.com"}))
+        identity_pool.Credentials(audience="foo",
+                                  subject_token_type="bar",
+                                  token_url="https://sts.googleapis.com",
+                                  credential_source={"url": "google.com"}))
     creds.access_token = ACCESS_TOKEN
     creds.token_expiry = datetime.datetime(2001, 12, 5, 0, 0)
     creds_json = creds.to_json()
@@ -112,9 +111,10 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     self.assertEquals(json_values['token_expiry'], "2001-12-05T00:00:00Z")
     self.assertEquals(json_values["_base"]["audience"], "foo")
     self.assertEquals(json_values["_base"]["subject_token_type"], "bar")
-    self.assertEquals(json_values["_base"]["token_url"], "baz")
-    self.assertEquals(json_values["_base"]["credential_source"]["url"],
+    self.assertEquals(json_values["_base"]["token_url"],
                       "https://sts.googleapis.com")
+    self.assertEquals(json_values["_base"]["credential_source"]["url"],
+                      "google.com")
 
     creds2 = WrappedCredentials.from_json(creds_json)
     self.assertIsInstance(creds2, WrappedCredentials)
@@ -133,9 +133,9 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
             "_base": {
                 "audience": "foo",
                 "subject_token_type": "bar",
-                "token_url": "baz",
+                "token_url": "https://sts.googleapis.com",
                 "credential_source": {
-                    "url": "https://sts.googleapis.com",
+                    "url": "google.com",
                     "workforce_pool_user_project": "1234567890"
                 }
             }
