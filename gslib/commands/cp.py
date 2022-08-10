@@ -757,6 +757,7 @@ class CpCommand(Command):
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command=['alpha', 'storage', 'cp'],
       flag_map={
+          '-A': GcloudStorageFlag('--all-versions'),
           '-a': GcloudStorageFlag('--predefined-acl'),
           '-D': GcloudStorageFlag('--daisy-chain'),
           '-e': GcloudStorageFlag('--ignore-symlinks'),

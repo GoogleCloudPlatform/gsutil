@@ -1310,7 +1310,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       ],
                               expected_status=1,
                               return_stderr=True)
-      self.assertIn('-m option is not supported with the cp -A flag', stderr)
+      if self._use_gcloud_storage:
+        self.assertIn('sequential instead of parallel task execution', stderr)
+      else:
+        self.assertIn('-m option is not supported with the cp -A flag', stderr)
 
     _Check()
 
@@ -1445,7 +1448,10 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1)
 
-    self.assertIn('PreconditionException', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('pre-condition', stderr)
+    else:
+      self.assertIn('PreconditionException', stderr)
 
     # Specifiying a generation with -n should fail before the request hits the
     # server.
@@ -1455,10 +1461,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1)
 
-    self.assertIn('ArgumentException', stderr)
-    self.assertIn(
-        'Specifying x-goog-if-generation-match is not supported '
-        'with cp -n', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'Cannot specify both generation precondition and no-clobber', stderr)
+    else:
+      self.assertIn('ArgumentException', stderr)
+      self.assertIn(
+          'Specifying x-goog-if-generation-match is not supported '
+          'with cp -n', stderr)
 
   @SequentialAndParallelTransfer
   def test_cp_nv(self):
