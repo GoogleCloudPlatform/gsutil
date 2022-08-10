@@ -66,28 +66,50 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 
   def test_compose_too_few_fails(self):
     stderr = self.RunGsUtil(['compose', 'gs://b/composite-obj'],
-                            expected_status=1,
+                            expected_status=2 if self._use_gcloud_storage else 1,
                             return_stderr=True)
-    self.assertIn(
-        'CommandException: "compose" requires at least 1 component object.\n',
-        stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'argument DESTINATION: Must be specified.',
+          stderr)
+    else:  
+      self.assertIn(
+          'CommandException: "compose" requires at least 1 component object.\n',
+          stderr)
 
   def test_compose_between_buckets_fails(self):
-    target = 'gs://b/composite-obj'
-    offending_obj = 'gs://alt-b/obj2'
-    components = ['gs://b/obj1', offending_obj]
-    stderr = self.RunGsUtil(['compose'] + components + [target],
+    bucket_uri_1 = self.CreateBucket()
+    bucket_uri_2 = self.CreateBucket()
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri_1, contents=b'1')
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri_2, contents=b'2')
+    components = [object_uri1, object_uri2]
+    composite = self.StorageUriCloneReplaceName(bucket_uri_1,
+                                                self.MakeTempName('obj'))
+    stderr = self.RunGsUtil(['compose',
+                            suri(object_uri1),
+                            suri(object_uri2),
+                            suri(composite)],
                             expected_status=1,
                             return_stderr=True)
-    expected_msg = ('CommandException: GCS does '
-                    'not support inter-bucket composing.\n')
-    self.assertIn(expected_msg, stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('GCS does not support inter-bucket composing.\n', stderr)
+    else:
+      self.assertIn('CommandException: GCS does '
+                    'not support inter-bucket composing.\n', stderr)
 
   def test_versioned_target_disallowed(self):
-    stderr = self.RunGsUtil(
-        ['compose', 'gs://b/o1', 'gs://b/o2', 'gs://b/o3#1234'],
-        expected_status=1,
-        return_stderr=True)
+    bucket_uri = self.CreateBucket()
+    object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'1')
+    object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'2')
+    components = [object_uri1, object_uri2]
+    composite = self.StorageUriCloneReplaceName(bucket_uri,
+                                                self.MakeTempName('obj#123'))
+    stderr = self.RunGsUtil(['compose',
+                            suri(object_uri1),
+                            suri(object_uri2),
+                            suri(composite)],
+                            expected_status=1,
+                            return_stderr=True)
     expected_msg = ('CommandException: A version-specific URL (%s) '
                     'cannot be the destination for gsutil compose - abort.' %
                     'gs://b/o3#1234')
