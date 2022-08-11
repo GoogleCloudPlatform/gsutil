@@ -1,3 +1,29 @@
+ Release 5.12 (release date: 2022-08-11)
+======================================
+New Features
+------------------
+- Allow custom storage class flag for parallel composite upload (#1553)
+- Shim requesterpays command (#1552)
+- Shim logging command (#1551)
+- Shim web command (#1550)
+- Shim gsutil rb command (#1549)
+- Shim versioning command to gcloud storage (#1544)
+- Shim stat command (#1543)
+
+Bug Fixes
+------------------
+- Update URL for wrapped external creds test (#1568-#1571)
+- Update CDR regions to a working pair (#1566)
+- Add retries with exponential backoff to the flow that authorizes the service agent to use CMEKs (#1541)
+- Fix linter check in shim_util.py (#1546)
+- Edit test_nearline_applied_to_parallel_composite_upload so shim passes. (#1558)
+- Skip all CDR tests on XML API as there's no way to list placement. (#1556)
+
+Other Changes
+------------------
+- Increased test parity coverage
+- Updated the cat -r command error behavior (#1531)
+
 Release 5.11 (release date: 2022-07-07)
 ======================================
 New Features
