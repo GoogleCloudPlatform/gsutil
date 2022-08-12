@@ -89,8 +89,7 @@ class ComposeCommand(Command):
 
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command=['alpha', 'storage', 'objects', 'compose'],
-      flag_map={
-      },
+      flag_map={},
   )
 
   def CheckProvider(self, url):
