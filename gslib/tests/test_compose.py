@@ -93,24 +93,15 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
         expected_status=1,
         return_stderr=True)
     if self._use_gcloud_storage:
-      self.assertIn('GCS does not support inter-bucket composing.\n', stderr)
+      self.assertIn('Inter-bucket composing not supported\n', stderr)
     else:
       self.assertIn(
           'CommandException: GCS does '
           'not support inter-bucket composing.\n', stderr)
 
   def test_versioned_target_disallowed(self):
-    bucket_uri = self.CreateBucket()
-    object_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'1')
-    object_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'2')
-    components = [object_uri1, object_uri2]
-    composite = self.StorageUriCloneReplaceName(bucket_uri,
-                                                self.MakeTempName('obj\#1234'))
     stderr = self.RunGsUtil(
-        ['compose',
-         suri(object_uri1),
-         suri(object_uri2),
-         suri(composite)],
+        ['compose', 'gs://b/o1', 'gs://b/o2', 'gs://b/o3#1234'],
         expected_status=1,
         return_stderr=True)
 
@@ -122,7 +113,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
       self.assertIn(
           'CommandException: A version-specific URL (%s) '
           'cannot be the destination for gsutil compose - abort.' %
-          'gs://bucket/obj#1234', stderr)
+          'gs://b/o3#1234', stderr)
 
   def test_simple_compose(self):
     self.check_n_ary_compose(1)
@@ -271,14 +262,8 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
       ])
 
     # verify composed object uses CMEK.
-    if self._use_gcloud_storage:
-      self.AssertObjectUsesCMEK(
-          obj_suri,
-          'KMS key:\\s+projects/stofe-storage/locations/us-central1/keyRings/keyring-for-gsutil-integration-tests/cryptoKeys/key-for-gsutil-integration-tests'
-      )
-    else:
-      with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
-        self.AssertObjectUsesCMEK(obj_suri, key_fqn)
+    with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
+      self.AssertObjectUsesCMEK(obj_suri, key_fqn)
 
   def test_compose_different_encryption_keys(self):
     """Tests composing encrypted objects with different encryption keys."""
@@ -356,25 +341,23 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 class TestCompatibleCompose(testcase.GsUtilIntegrationTestCase):
 
   def test_compose_non_gcs_target(self):
-    stderr = self.RunGsUtil(
-        ['compose', 'gs://bucket/o1', 'gs://bucket/o2', 's3://bucket/o3'],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['compose', 'gs://b/o1', 'gs://b/o2', 's3://b/o3'],
+                            expected_status=1,
+                            return_stderr=True)
     if self._use_gcloud_storage:
-      self.assertIn('Compose is only available with the GCS provider.', stderr)
+      self.assertIn('Composing across providers is not supported.', stderr)
     else:
       expected_msg = ('CommandException: "compose" called on URL with '
-                      'unsupported provider (%s).\n' % 's3://bucket/o3')
+                      'unsupported provider (%s).\n' % 's3://b/o3')
       self.assertIn(expected_msg, stderr)
 
   def test_compose_non_gcs_component(self):
-    stderr = self.RunGsUtil(
-        ['compose', 'gs://bucket/o1', 's3://bucket/o2', 'gs://bucket/o3'],
-        expected_status=1,
-        return_stderr=True)
+    stderr = self.RunGsUtil(['compose', 'gs://b/o1', 's3://b/o2', 'gs://b/o3'],
+                            expected_status=1,
+                            return_stderr=True)
     if self._use_gcloud_storage:
-      self.assertIn('Compose is only available with the GCS provider.', stderr)
+      self.assertIn('Composing across providers is not supported.', stderr)
     else:
       expected_msg = ('CommandException: "compose" called on URL with '
-                      'unsupported provider (%s).\n' % 's3://bucket/o2')
+                      'unsupported provider (%s).\n' % 's3://b/o2')
       self.assertIn(expected_msg, stderr)
