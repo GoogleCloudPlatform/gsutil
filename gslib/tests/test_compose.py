@@ -82,16 +82,16 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     bucket_uri_2 = self.CreateBucket()
     object_uri1 = self.CreateObject(bucket_uri=bucket_uri_1, contents=b'1')
     object_uri2 = self.CreateObject(bucket_uri=bucket_uri_2, contents=b'2')
-    components = [object_uri1, object_uri2]
-    composite = self.StorageUriCloneReplaceName(bucket_uri_1,
-                                                self.MakeTempName('obj'))
-    stderr = self.RunGsUtil(
-        ['compose',
-         suri(object_uri1),
-         suri(object_uri2),
-         suri(composite)],
-        expected_status=1,
-        return_stderr=True)
+    composite_object_uri = self.StorageUriCloneReplaceName(
+        bucket_uri_1, self.MakeTempName('obj'))
+    stderr = self.RunGsUtil([
+        'compose',
+        suri(object_uri1),
+        suri(object_uri2),
+        suri(composite_object_uri)
+    ],
+                            expected_status=1,
+                            return_stderr=True)
     if self._use_gcloud_storage:
       self.assertIn('Inter-bucket composing not supported\n', stderr)
     else:
@@ -107,7 +107,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
 
     if self._use_gcloud_storage:
       self.assertIn(
-          'A version-specific URL cannot be the destination for objects compose.',
+          'Verison-specific URLs are not valid destinations because composing always results in creating an object with the latest generation.',
           stderr)
     else:
       self.assertIn(
