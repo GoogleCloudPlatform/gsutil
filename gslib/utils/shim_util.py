@@ -46,7 +46,7 @@ DECRYPTION_KEY_REGEX = re.compile(r'^decryption_key([1-9]$|[1-9][0-9]$|100$)')
 # Required for headers translation and boto config translation.
 COMMANDS_SUPPORTING_ALL_HEADERS = frozenset(['cp', 'mv', 'rsync', 'setmeta'])
 ENCRYPTION_SUPPORTED_COMMANDS = COMMANDS_SUPPORTING_ALL_HEADERS | frozenset(
-    ['ls', 'rewrite', 'stat', 'cat'])
+    ['ls', 'rewrite', 'stat', 'cat', 'compose'])
 PRECONDITONS_ONLY_SUPPORTED_COMMANDS = frozenset(
     ['compose', 'rewrite', 'rm', 'retention'])
 DATA_TRANSFER_HEADERS = frozenset([
