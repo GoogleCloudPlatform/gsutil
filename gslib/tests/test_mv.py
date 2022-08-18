@@ -216,7 +216,12 @@ class TestMvE2ETests(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(
         ['mv', '-n', fpath1, suri(object_uri)], return_stderr=True)
     # Copy should be skipped and source file should not be removed.
-    self.assertIn('Skipping existing item: %s' % suri(object_uri), stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'Skipping existing destination item (no-clobber): %s' %
+          suri(object_uri), stderr)
+    else:
+      self.assertIn('Skipping existing item: %s' % suri(object_uri), stderr)
     self.assertNotIn('Removing %s' % suri(fpath1), stderr)
     # Object content should be unchanged.
     contents = self.RunGsUtil(['cat', suri(object_uri)], return_stdout=True)
