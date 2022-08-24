@@ -681,6 +681,29 @@ _DETAILED_HELP_TEXT = '\n\n'.join([
 ])
 
 CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRs:tUvz:Zj:J'
+# May be used by mv or rsync.
+GENERIC_COPY_COMMAND_SHIM_FLAG_MAP = {
+    '-A': GcloudStorageFlag('--all-versions'),
+    '-a': GcloudStorageFlag('--predefined-acl'),
+    '-D': GcloudStorageFlag('--daisy-chain'),
+    '-e': GcloudStorageFlag('--ignore-symlinks'),
+    '-I': GcloudStorageFlag('--read-paths-from-stdin'),
+    '-J': GcloudStorageFlag('--gzip-in-flight-all'),
+    '-j': GcloudStorageFlag('--gzip-in-flight'),
+    '-L': GcloudStorageFlag('--manifest-path'),
+    '-n': GcloudStorageFlag('--no-clobber'),
+    '-P': GcloudStorageFlag('--preserve-posix'),
+    '-p': GcloudStorageFlag('--preserve-acl'),
+    '-s': GcloudStorageFlag('--storage-class'),
+    '-v': GcloudStorageFlag('--print-created-message'),
+    '-Z': GcloudStorageFlag('--gzip-local-all'),
+    '-z': GcloudStorageFlag('--gzip-local'),
+}
+# Adds recursion flags.
+CP_SHIM_FLAG_MAP = {
+    k: v for k, v in list(GENERIC_COPY_COMMAND_SHIM_FLAG_MAP.items()) +
+    [('-r', GcloudStorageFlag('-r')), ('-R', GcloudStorageFlag('-r'))]
+}
 
 
 def _CopyFuncWrapper(cls, args, thread_state=None):
@@ -756,25 +779,7 @@ class CpCommand(Command):
   # TODO(b/206151615) Add mappings for remaining flags.
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command=['alpha', 'storage', 'cp'],
-      flag_map={
-          '-A': GcloudStorageFlag('--all-versions'),
-          '-a': GcloudStorageFlag('--predefined-acl'),
-          '-D': GcloudStorageFlag('--daisy-chain'),
-          '-e': GcloudStorageFlag('--ignore-symlinks'),
-          '-I': GcloudStorageFlag('--read-paths-from-stdin'),
-          '-J': GcloudStorageFlag('--gzip-in-flight-all'),
-          '-j': GcloudStorageFlag('--gzip-in-flight'),
-          '-L': GcloudStorageFlag('--manifest-path'),
-          '-n': GcloudStorageFlag('--no-clobber'),
-          '-P': GcloudStorageFlag('--preserve-posix'),
-          '-p': GcloudStorageFlag('--preserve-acl'),
-          '-r': GcloudStorageFlag('-r'),
-          '-R': GcloudStorageFlag('-r'),
-          '-s': GcloudStorageFlag('--storage-class'),
-          '-v': GcloudStorageFlag('--print-created-message'),
-          '-Z': GcloudStorageFlag('--gzip-local-all'),
-          '-z': GcloudStorageFlag('--gzip-local'),
-      },
+      flag_map=CP_SHIM_FLAG_MAP,
   )
 
   # pylint: disable=too-many-statements
