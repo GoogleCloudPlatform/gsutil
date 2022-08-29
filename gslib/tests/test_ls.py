@@ -409,8 +409,9 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
 
-    with SetBotoConfigForTest([('s3', 'calling_format',
-                                'boto.s3.connection.SubdomainCallingFormat')]):
+    custom_calling_format = 'boto.s3.connection.SubdomainCallingFormat'
+    with SetBotoConfigForTest([('s3', 'calling_format', custom_calling_format)
+                              ]):
       stderr = self.RunGsUtil(['-D', 'ls', suri(object_uri)],
                               return_stdout=True)
     self.assertIn('Host: %s.storage.googleapis.com' % bucket_uri.bucket_name,
