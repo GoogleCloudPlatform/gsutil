@@ -366,7 +366,7 @@ _SLICED_OBJECT_DOWNLOADS_TEXT = """
   gsutil can automatically use ranged ``GET`` requests to perform downloads in
   parallel for large files being downloaded from Cloud Storage. See `sliced object
   download documentation
-  <https://cloud.google.com/storage/docs/sliced-object-downloads">`_
+  <https://cloud.google.com/storage/docs/sliced-object-downloads>`_
   for a complete discussion.
 """
 
