@@ -34,6 +34,7 @@ from gslib.cs_api_map import ApiSelector
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
+from gslib.tests.testcase.integration_testcase import SkipForJSON
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import CaptureStdout
@@ -394,6 +395,27 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   @SkipForGS('Only s3 V4 signatures error on location mismatches.')
   def test_301_location_redirect(self):
     self.location_redirect_test_helper('eu-west-1', 'us-east-2')
+
+  @SkipForJSON('Only the XML API supports changing the calling format.')
+  def test_default_gcs_calling_format_is_path_style(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+
+    stderr = self.RunGsUtil(['-D', 'ls', suri(object_uri)], return_stdout=True)
+    self.assertIn('Host: storage.googleapis.com', stderr)
+
+  @SkipForJSON('Only the XML API supports changing the calling format.')
+  def test_gcs_calling_format_is_configurable(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+
+    custom_calling_format = 'boto.s3.connection.SubdomainCallingFormat'
+    with SetBotoConfigForTest([('s3', 'calling_format', custom_calling_format)
+                              ]):
+      stderr = self.RunGsUtil(['-D', 'ls', suri(object_uri)],
+                              return_stdout=True)
+    self.assertIn('Host: %s.storage.googleapis.com' % bucket_uri.bucket_name,
+                  stderr)
 
   @SkipForXML('Credstore file gets created only for json API')
   def test_credfile_lock_permissions(self):
