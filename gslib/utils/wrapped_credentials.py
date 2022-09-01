@@ -153,7 +153,6 @@ def _get_external_account_credentials_from_info(info):
       return identity_pool.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
   except (ValueError, TypeError, exceptions.RefreshError):
     return None
-  return creds
 
 
 def _get_external_account_credentials_from_file(filename):
