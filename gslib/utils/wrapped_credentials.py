@@ -30,6 +30,7 @@ from google.auth import credentials
 from google.auth import exceptions
 from google.auth import external_account
 from google.auth import identity_pool
+from google.auth import pluggable
 from google.auth.transport import requests
 from gslib.utils import constants
 import oauth2client
@@ -141,16 +142,17 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
 
 def _get_external_account_credentials_from_info(info):
   try:
-    # Check if configuration corresponds to an AWS credentials.
-    creds = aws.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
-  except (TypeError, ValueError, exceptions.RefreshError):
-    try:
-      # Check if configuration corresponds to an Identity Pool credentials.
-      creds = identity_pool.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
-    except ValueError:
-      # If the configuration is invalid or does not correspond to any
-      # supported external_account credentials, no credentials are found.
-      return None
+    if info.get(
+        'subject_token_type') == 'urn:ietf:params:aws:token-type:aws4_request':
+      # Check if configuration corresponds to an AWS credentials.
+      return aws.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
+    elif (info.get('credential_source') is not None and
+          info.get('credential_source').get('executable') is not None):
+      return pluggable.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
+    else:
+      return identity_pool.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
+  except (ValueError, TypeError, exceptions.RefreshError):
+    return None
   return creds
 
 
