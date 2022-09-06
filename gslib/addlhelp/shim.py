@@ -28,7 +28,7 @@ than gsutil when performing uploads and downloads with less parameter tweaking.
 This new CLI has a syntax and command structure that is familiar to gsutil users
 but is fundamentally different in many important ways. To ease transition to
 this new CLI, gsutil provides a shim that translates your gsutil commands to
-cloud storage commands if an equivalent exists, and falls back to gsutil's
+gcloud storage commands if an equivalent exists, and falls back to gsutil's
 usual behavior if an equivalent does not exist.
 
 
