@@ -571,6 +571,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                         ' fake --zip opt1 -x arg1 arg2'.format(
                             os.path.join('fake_dir', 'bin', 'gcloud'))),
               mock.call('Environment variables for Gcloud Storage:'),
+              mock.call('%s=%s', 'CLOUDSDK_METRICS_ENVIRONMENT', 'gsutil_shim'),
               mock.call('%s=%s', 'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM', 'True')
           ])
 
@@ -623,6 +624,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             fake_command._translated_env_variables, {
                 'CLOUDSDK_STORAGE_PROCESS_COUNT': '1',
                 'CLOUDSDK_STORAGE_THREAD_COUNT': '1',
+                'CLOUDSDK_METRICS_ENVIRONMENT': 'gsutil_shim',
                 'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM': 'True',
             })
 
@@ -1027,6 +1029,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
         self.assertEqual(
             self._fake_command._translated_env_variables, {
                 'CLOUDSDK_CORE_PROJECT': 'fake_project',
+                'CLOUDSDK_METRICS_ENVIRONMENT': 'gsutil_shim',
                 'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM': 'True'
             })
 
