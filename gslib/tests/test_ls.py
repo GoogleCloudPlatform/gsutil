@@ -396,6 +396,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_301_location_redirect(self):
     self.location_redirect_test_helper('eu-west-1', 'us-east-2')
 
+  @SkipForS3('Not relevant for S3')
   @SkipForJSON('Only the XML API supports changing the calling format.')
   def test_default_gcs_calling_format_is_path_style(self):
     bucket_uri = self.CreateBucket()
@@ -404,6 +405,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['-D', 'ls', suri(object_uri)], return_stdout=True)
     self.assertIn('Host: storage.googleapis.com', stderr)
 
+  @SkipForS3('Not relevant for S3')
   @SkipForJSON('Only the XML API supports changing the calling format.')
   def test_gcs_calling_format_is_configurable(self):
     bucket_uri = self.CreateBucket()
