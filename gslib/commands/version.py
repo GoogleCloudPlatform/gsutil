@@ -118,7 +118,7 @@ class VersionCommand(Command):
           'compiled crcmod: {compiled_crcmod}\n'
           'installed via package manager: {is_package_install}\n'
           'editable install: {is_editable_install}\n'
-          'is shim enabled: {is_shim_enabled}\n')
+          'shim enabled: {is_shim_enabled}\n')
 
       sys.stdout.write(
           long_form_output.format(
