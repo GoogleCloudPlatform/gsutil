@@ -573,7 +573,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
               mock.call('Environment variables for Gcloud Storage:'),
               mock.call('%s=%s', 'CLOUDSDK_METRICS_ENVIRONMENT', 'gsutil_shim'),
               mock.call('%s=%s', 'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM', 'True')
-          ])
+          ], any_order=True)
 
   def test_print_gcloud_storage_env_vars_in_dry_run_mode(self):
     """Should log the command and env vars to logger.info"""
