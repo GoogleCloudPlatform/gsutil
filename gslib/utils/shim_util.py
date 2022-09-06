@@ -387,7 +387,10 @@ class GcloudStorageCommandMixin(object):
         variables that can be set for the gcloud storage command execution.
     """
     top_level_flags = []
-    env_variables = {'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM': 'True'}
+    env_variables = {
+        'CLOUDSDK_METRICS_ENVIRONMENT': 'gsutil_shim',
+        'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM': 'True'
+    }
     if self.debug >= 3:
       top_level_flags.extend(['--verbosity', 'debug'])
     if self.debug == 4:
