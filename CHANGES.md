@@ -1,4 +1,16 @@
- Release 5.12 (release date: 2022-08-11)
+Release 5.13 (release date: 2022-09-07)
+======================================
+New Features
+------------------
+- Shim now supports mv, compose.
+- The version command will now report on whether the shim is being used.
+
+Other changes
+------------------
+- Shim topic added to additional help.
+- Several documentation updates and clarifications.
+
+Release 5.12 (release date: 2022-08-11)
 ======================================
 New Features
 ------------------
