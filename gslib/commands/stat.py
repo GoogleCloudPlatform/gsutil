@@ -129,6 +129,7 @@ class StatCommand(Command):
           'storage',
           'objects',
           'list',
+          '--stat'
       ],
       flag_map={},
   )
