@@ -670,6 +670,7 @@ CP_SUB_ARGS = 'a:AcDeIL:MNnpPrRs:tUvz:Zj:J'
 GENERIC_COPY_COMMAND_SHIM_FLAG_MAP = {
     '-A': GcloudStorageFlag('--all-versions'),
     '-a': GcloudStorageFlag('--predefined-acl'),
+    '-c': GcloudStorageFlag('--continue-on-error'),
     '-D': GcloudStorageFlag('--daisy-chain'),
     '-e': GcloudStorageFlag('--ignore-symlinks'),
     '-I': GcloudStorageFlag('--read-paths-from-stdin'),
