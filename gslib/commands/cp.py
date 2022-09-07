@@ -671,6 +671,7 @@ GENERIC_COPY_COMMAND_SHIM_FLAG_MAP = {
     '-A': GcloudStorageFlag('--all-versions'),
     '-a': GcloudStorageFlag('--predefined-acl'),
     '-D': GcloudStorageFlag('--daisy-chain'),
+    '-c': GcloudStorageFlag('--continue-on-error'),
     '-e': GcloudStorageFlag('--ignore-symlinks'),
     '-I': GcloudStorageFlag('--read-paths-from-stdin'),
     '-J': GcloudStorageFlag('--gzip-in-flight-all'),
