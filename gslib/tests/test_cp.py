@@ -4367,14 +4367,16 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject(bucket_uri=bucket_uri,
                                    object_name='foo',
                                    contents=b'foo')
-    self.RunGsUtil([
-        'cp', '-c',
+
+    cp_command = [
+        'cp',
+        '-c',
         suri(bucket_uri) + '/foo2',
         suri(object_uri),
-        suri(bucket_uri) + '/dir/'
-    ],
-                   expected_status=1)
-    self.RunGsUtil(['stat', '%s/dir/foo' % suri(bucket_uri)], force_gsutil=True)
+        suri(bucket_uri) + '/dir/',
+    ]
+    self.RunGsUtil(cp_command, expected_status=1)
+    self.RunGsUtil(['stat', '%s/dir/foo' % suri(bucket_uri)])
 
   def test_rewrite_cp(self):
     """Tests the JSON Rewrite API."""
