@@ -142,12 +142,10 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>SOFTWARE INTEGRITY AND UPDATES</B>
-  gsutil is distributed as a standalone bundle via tar and zip files stored in
-  the gs://pub bucket, as a PyPi module, and as part of the bundled Cloud
-  SDK release. Each of these distribution methods takes a variety of security
-  precautions to protect the integrity of the software. We strongly recommend
-  against getting a copy of gsutil from any other sources (such as mirror
-  sites).
+  gsutil is distributed as a part of the bundled Cloud SDK release. This
+  distribution method takes a variety of security precautions to protect the
+  integrity of the software. We strongly recommend against getting a copy of
+  gsutil from any other sources (such as mirror sites).
 
 
 <B>PROXY USAGE</B>
