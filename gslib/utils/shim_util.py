@@ -297,6 +297,10 @@ def _convert_args_to_gcloud_values(args, gcloud_storage_map):
     else:  # isinstance(gcloud_flag_object.gcloud_flag, dict)
       # gsutil: "--pap on" -> gcloud: "--pap"
       # gsutil: "--pap off" -> gcloud: "--no-pap"
+      if args[i + 1] not in gcloud_flag_object.gcloud_flag:
+        raise ValueError(
+            'Flag value not in translation map for "{}": {}'.format(
+                args[i], args[i + 1]))
       translated_flag_and_value = gcloud_flag_object.gcloud_flag[args[i + 1]]
       if translated_flag_and_value:
         gcloud_args.append(translated_flag_and_value)

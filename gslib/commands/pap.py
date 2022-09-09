@@ -84,7 +84,9 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
 
 _GCLOUD_LIST_FORMAT = ('--format=value[separator=": "]'
-                       '(name.sub("^","gs://"),public_access_prevention)')
+                       '(name.sub("^","gs://"),'
+                       'iamConfiguration.publicAccessPrevention.yesno('
+                       'no="inherited"))')
 
 
 class PapCommand(Command):

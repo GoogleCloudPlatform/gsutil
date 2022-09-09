@@ -247,6 +247,8 @@ class MbCommand(Command):
               GcloudStorageFlag('--default-encryption-key'),
           '-l':
               GcloudStorageFlag('--location'),
+          '-p':
+              GcloudStorageFlag('--project'),
           '--pap':
               GcloudStorageFlag({
                   'enforced': '--public-access-prevention',

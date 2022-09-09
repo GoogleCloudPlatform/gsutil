@@ -309,6 +309,20 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
     self.assertEqual(gcloud_args,
                      ['objects', 'fake', 'positional_arg', '--e-off'])
 
+  def test_raises_error_for_invalid_value_translated_to_flag(self):
+    fake_command = FakeCommandWithGcloudStorageMap(
+        command_runner=mock.ANY,
+        args=['-e', 'incorrect', 'positional_arg'],
+        headers=mock.ANY,
+        debug=mock.ANY,
+        trace_token=mock.ANY,
+        parallel_operations=mock.ANY,
+        bucket_storage_uri_class=mock.ANY,
+        gsutil_api_class_map_factory=mock.MagicMock())
+    with self.assertRaisesRegex(
+        ValueError, 'Flag value not in translation map for "-e": incorrect'):
+      gcloud_args = fake_command.get_gcloud_storage_args()
+
   def test_raises_error_if_gcloud_storage_map_is_missing(self):
     self._fake_command.gcloud_storage_map = None
     with self.assertRaisesRegex(

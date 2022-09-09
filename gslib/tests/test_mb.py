@@ -70,13 +70,21 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['mb', suri(bucket_uri)],
                             expected_status=1,
                             return_stderr=True)
-    self.assertIn('already exists', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn(
+          'HTTPError 409: The requested bucket name is not available.', stderr)
+    else:
+      self.assertIn('already exists', stderr)
 
   def test_non_ascii_project_fails(self):
     stderr = self.RunGsUtil(['mb', '-p', 'ã', 'gs://fobarbaz'],
                             expected_status=1,
                             return_stderr=True)
-    self.assertIn('Invalid non-ASCII', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('The project property must be set to a valid project ID',
+                    stderr)
+    else:
+      self.assertIn('Invalid non-ASCII', stderr)
 
   @SkipForS3(BUCKET_LOCK_SKIP_MSG)
   def test_create_with_retention_seconds(self):
@@ -123,7 +131,12 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                              suri(bucket_uri)],
                             expected_status=1,
                             return_stderr=True)
-    self.assertRegexpMatches(stderr, r'Incorrect retention period specified')
+    if self._use_gcloud_storage:
+      # The "s" from "second" is cut b/c "s" is a valid unit.
+      self.assertIn("Duration unit 'econd' must be preceded by a number",
+                    stderr)
+    else:
+      self.assertRegexpMatches(stderr, r'Incorrect retention period specified')
 
   def test_create_with_retention_on_s3_urls_fails(self):
     bucket_name = self.MakeTempName('bucket')
@@ -133,8 +146,12 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         ['mb', '--retention', '1y', suri(bucket_uri)],
         expected_status=1,
         return_stderr=True)
-    self.assertRegexpMatches(
-        stderr, r'Retention policy can only be specified for GCS buckets.')
+    if self._use_gcloud_storage:
+      self.assertIn('Features disallowed for S3: Setting Retention Period',
+                    stderr)
+    else:
+      self.assertRegexpMatches(
+          stderr, r'Retention policy can only be specified for GCS buckets.')
 
   @SkipForXML('Public access prevention only runs on GCS JSON API.')
   def test_create_with_pap_enforced(self):
@@ -164,7 +181,11 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                              suri(bucket_uri)],
                             expected_status=1,
                             return_stderr=True)
-    self.assertRegexpMatches(stderr, r'invalid_arg is not a valid value')
+    if self._use_gcloud_storage:
+      self.assertIn('Flag value not in translation map for --pap: invalid_arg',
+                    stderr)
+    else:
+      self.assertRegexpMatches(stderr, r'invalid_arg is not a valid value')
 
   @SkipForXML('RPO flag only works for GCS JSON API.')
   def test_create_with_rpo_async_turbo(self):
@@ -230,8 +251,13 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     ],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('To authorize, run:', stderr)
-    self.assertIn('-k %s' % key, stderr)
+
+    if self._use_gcloud_storage:
+      self.assertIn('HTTPError 403: Permission denied on Cloud KMS key.',
+                    stderr)
+    else:
+      self.assertIn('To authorize, run:', stderr)
+      self.assertIn('-k %s' % key, stderr)
 
   @SkipForXML(KMS_SKIP_MSG)
   @SkipForS3(KMS_SKIP_MSG)
@@ -248,8 +274,13 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     ],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('To authorize, run:', stderr)
-    self.assertIn('-p %s' % PopulateProjectId(), stderr)
+
+    if self._use_gcloud_storage:
+      self.assertIn('HTTPError 403: Permission denied on Cloud KMS key.',
+                    stderr)
+    else:
+      self.assertIn('To authorize, run:', stderr)
+      self.assertIn('-p %s' % PopulateProjectId(), stderr)
 
   @SkipForXML(KMS_SKIP_MSG)
   @SkipForS3(KMS_SKIP_MSG)
