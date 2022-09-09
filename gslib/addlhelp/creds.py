@@ -27,8 +27,7 @@ _DETAILED_HELP_TEXT = ("""
   well as the ability to `access public data anonymously
   <https://cloud.google.com/storage/docs/access-public-data>`_. Each of these
   type of credentials is discussed in more detail below, along with
-  information about configuring and using credentials via either the Cloud SDK
-  or standalone installations of gsutil.
+  information about configuring and using credentials via the Cloud SDK.
 
 
 <B>Configuring/Using Credentials via Cloud SDK Distribution of gsutil</B>
@@ -47,29 +46,6 @@ _DETAILED_HELP_TEXT = ("""
   environment variable). However, gsutil will still look for credentials in the
   boto config file if a type of non-GCS credential is needed that's not stored
   in the gcloud credential store (e.g., an HMAC credential for an S3 account).
-
-
-<B>Configuring/Using Credentials via Standalone gsutil Distribution</B>
-  If you installed a standalone distribution of gsutil (downloaded from
-  https://pub.storage.googleapis.com/gsutil.tar.gz,
-  https://pub.storage.googleapis.com/gsutil.zip, or PyPi), credentials are
-  configured using the gsutil config command, and are stored in the
-  user-editable boto config file (located at ~/.boto unless a different path is
-  specified in the BOTO_CONFIG environment). In this case if you want to set up
-  multiple credentials (e.g., one for an individual user account and a second
-  for a service account), you run gsutil config once for each credential, and
-  save each of the generated boto config files (e.g., renaming one to
-  ~/.boto_user_account and the second to ~/.boto_service_account), and you
-  switch between the credentials using the BOTO_CONFIG environment variable
-  (e.g., by running BOTO_CONFIG=~/.boto_user_account gsutil ls).
-
-  Note that when using the standalone version of gsutil with the JSON API you
-  can configure at most one of the following types of Google Cloud Storage
-  credentials in a single boto config file: OAuth2 User Account, OAuth2 Service
-  Account. In addition to these, you may also have S3 HMAC credentials
-  (necessary for using s3:// URLs) and Google Compute Engine Internal Service
-  Account credentials. Google Compute Engine Internal Service Account
-  credentials are used only when OAuth2 credentials are not present.
 
 
 <B>SUPPORTED CREDENTIAL TYPES</B>
