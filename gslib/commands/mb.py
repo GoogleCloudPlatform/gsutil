@@ -179,6 +179,7 @@ _DETAILED_HELP_TEXT = ("""
 BUCKET_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9\._-]{1,253}[a-zA-Z0-9]$')
 # Regex to disallow buckets with individual DNS labels longer than 63.
 TOO_LONG_DNS_NAME_COMP = re.compile(r'[-_a-z0-9]{64}')
+_RETENTION_FLAG = '--retention'
 
 IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
 BucketPolicyOnlyValue = IamConfigurationValue.BucketPolicyOnlyValue
@@ -254,10 +255,23 @@ class MbCommand(Command):
                   'enforced': '--public-access-prevention',
                   'inherited': None,
               }),
-          '--retention':
+          _RETENTION_FLAG:
               GcloudStorageFlag('--retention-period'),
       },
   )
+
+  def get_gcloud_storage_args(self):
+    retention_arg_idx = 0
+    while retention_arg_idx < len(self.sub_opts):
+      if self.sub_opts[retention_arg_idx][0] == _RETENTION_FLAG:
+        break
+      retention_arg_idx += 1
+    if retention_arg_idx < len(self.sub_opts):
+      # Convert retention time to seconds, which gcloud knows how to handle.
+      self.sub_opts[retention_arg_idx] = (
+          _RETENTION_FLAG,
+          str(RetentionInSeconds(self.sub_opts[retention_arg_idx][1])) + 's')
+    return super().get_gcloud_storage_args(MbCommand.gcloud_storage_map)
 
   def RunCommand(self):
     """Command entry point for the mb command."""
@@ -288,7 +302,7 @@ class MbCommand(Command):
           self.project_id = a
         elif o == '-c' or o == '-s':
           storage_class = NormalizeStorageClass(a)
-        elif o == '--retention':
+        elif o == _RETENTION_FLAG:
           seconds = RetentionInSeconds(a)
         elif o == '--rpo':
           rpo = a.strip()

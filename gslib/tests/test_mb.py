@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
 from random import randint
 
 import boto
@@ -31,6 +32,8 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.utils.retention_util import SECONDS_IN_DAY
 from gslib.utils.retention_util import SECONDS_IN_MONTH
 from gslib.utils.retention_util import SECONDS_IN_YEAR
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.utils.retry_util import Retry
 
 BUCKET_LOCK_SKIP_MSG = ('gsutil does not support bucket lock operations for '
@@ -391,3 +394,27 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         'CommandException: The --autoclass, --pap, --placement, --rpo,'
         ' -b option(s) can only be used for GCS Buckets with the JSON API',
         stderr)
+
+
+class TestMbUnitTests(testcase.GsUtilUnitTestCase):
+  """Unit tests for gsutil mb."""
+
+  def test_shim_translates_retention_seconds_flags(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('mb',
+                                           args=[
+                                               '--retention',
+                                               '1y',
+                                               'gs://fake-bucket',
+                                           ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} alpha storage buckets create'
+                       ' --retention-period 31557600s gs://fake-bucket').format(
+                           os.path.join('fake_dir', 'bin', 'gcloud')),
+                      info_lines)
