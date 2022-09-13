@@ -244,8 +244,8 @@ class KmsCommand(Command):
       else:
         gcloud_storage_map.gcloud_command['encryption'].gcloud_command += [
             'describe',
-            ('--format="value[separator=\": \"](\"name\",\"default_kms_key\"'
-             '.yesno(no=\"No default encryption key.\"))'),
+            ('--format=value[separator=\": \"](name, encryption'
+             '.defaultKmsKeyName.yesno(no="No default encryption key."))'),
         ]
     else:
       gcloud_storage_map = KmsCommand.gcloud_storage_map
