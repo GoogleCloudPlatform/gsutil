@@ -349,10 +349,10 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             'Gcloud Storage Command: {} alpha storage buckets describe '
-            '--format="value[separator=": "]("name","default_kms_key"'
-            '.yesno(no="No default encryption key.")) {}'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud'), suri(bucket_uri)),
-            info_lines)
+            '--format=value[separator=\": \"](name, encryption'
+            '.defaultKmsKeyName.yesno(no="No default encryption key.")) {}'.
+            format(os.path.join('fake_dir', 'bin', 'gcloud'),
+                   suri(bucket_uri)), info_lines)
 
   @mock.patch(
       'gslib.cloud_api_delegator.CloudApiDelegator.GetProjectServiceAccount')
