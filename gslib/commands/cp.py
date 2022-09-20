@@ -155,7 +155,8 @@ _NAME_CONSTRUCTION_TEXT = """
 
   Note that in the above example, the '**' wildcard matches all names
   anywhere under ``dir``. The wildcard '*' matches names just one level deep. For
-  more details, see "gsutil help wildcards".
+  more details, see `URI wildcards
+  <https://cloud.google.com/storage/docs/wildcards#surprising-behavior>`_.
 
   The same rules apply for uploads and downloads: recursive copies of buckets and
   bucket subdirectories produce a mirrored filename structure, while copying
