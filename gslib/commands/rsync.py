@@ -140,8 +140,8 @@ _DETAILED_HELP_TEXT = ("""
   Note 1: Shells (like bash, zsh) sometimes attempt to expand wildcards in ways
   that can be surprising. Also, attempting to copy files whose names contain
   wildcard characters can result in problems. For more details about these
-  issues see the section "POTENTIALLY SURPRISING BEHAVIOR WHEN USING WILDCARDS"
-  under "gsutil help wildcards".
+  issues see `Wildcard behavior considerations
+  <https://cloud.google.com/storage/docs/wildcards#surprising-behavior>`_.
 
   Note 2: If you are synchronizing a large amount of data between clouds you
   might consider setting up a
