@@ -127,8 +127,8 @@ _DESCRIPTION_TEXT = """
   NOTE: Shells like ``bash`` and ``zsh`` sometimes attempt to expand
   wildcards in ways that can be surprising. You may also encounter issues when
   attempting to copy files whose names contain wildcard characters. For more
-  details about these issues, see "Potentially Surprising Behavior When Using Wildcards"
-  under "gsutil help wildcards".
+  details about these issues, see `Wildcard behavior considerations
+  <https://cloud.google.com/storage/docs/wildcards#surprising-behavior>`_.
 """
 
 _NAME_CONSTRUCTION_TEXT = """
