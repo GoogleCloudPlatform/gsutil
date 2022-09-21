@@ -194,6 +194,7 @@ class BotoTranslation(CloudApi):
                provider=None,
                credentials=None,
                debug=0,
+               http_headers=None,
                trace_token=None,
                perf_trace_token=None,
                user_project=None):
@@ -209,6 +210,7 @@ class BotoTranslation(CloudApi):
                 the provider argument and use this one instead.
       credentials: Unused.
       debug: Debug level for the API implementation (0..3).
+      http_headers (dict|None): Arbitrary headers to be included in every request. 
       trace_token: Unused in this subclass.
       perf_trace_token: Performance trace token to use when making API calls
           ('gs' provider only).
@@ -219,6 +221,7 @@ class BotoTranslation(CloudApi):
                                           status_queue,
                                           provider=provider,
                                           debug=debug,
+                                          http_headers=http_headers,
                                           trace_token=trace_token,
                                           perf_trace_token=perf_trace_token)
     _ = credentials
@@ -1272,6 +1275,8 @@ class BotoTranslation(CloudApi):
   def _CreateBaseHeaders(self):
     """Creates base headers used for all API calls in this class."""
     base_headers = {}
+    if self.http_headers:
+      base_headers.update(self.http_headers)
 
     if self.provider == 'gs':
       base_headers['x-goog-api-version'] = self.api_version

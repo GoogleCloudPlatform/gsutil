@@ -184,6 +184,7 @@ class GcsJsonApi(CloudApi):
                provider=None,
                credentials=None,
                debug=0,
+               http_headers=None,
                trace_token=None,
                perf_trace_token=None,
                user_project=None):
@@ -197,6 +198,7 @@ class GcsJsonApi(CloudApi):
       credentials: Credentials to be used for interacting with Google Cloud
                    Storage.
       debug: Debug level for the API implementation (0..3).
+      http_headers (dict|None): Arbitrary headers to be included in every request.
       trace_token: Trace token to pass to the API implementation.
       perf_trace_token: Performance trace token to use when making API calls.
       user_project: Project to be billed for this request.
@@ -208,6 +210,7 @@ class GcsJsonApi(CloudApi):
                                      status_queue,
                                      provider='gs',
                                      debug=debug,
+                                     http_headers=http_headers,
                                      trace_token=trace_token,
                                      perf_trace_token=perf_trace_token,
                                      user_project=user_project)
@@ -281,8 +284,7 @@ class GcsJsonApi(CloudApi):
     if gs_json_host_header and gs_json_host:
       additional_http_headers['Host'] = gs_json_host_header
 
-    self._AddPerfTraceTokenToHeaders(additional_http_headers)
-    self._AddReasonToHeaders(additional_http_headers)
+    self._UpdateHeaders(additional_http_headers)
 
     log_request = (debug >= 3)
     log_response = (debug >= 3)
@@ -324,11 +326,15 @@ class GcsJsonApi(CloudApi):
           'Cannot get service account email id for the given '
           'credential type.')
 
-  def _AddPerfTraceTokenToHeaders(self, headers):
+  def _UpdateHeaders(self, headers):
+    if self.http_headers:
+      headers.update(self.http_headers)
+
+    # The following functional headers potentially overwrite
+    # arbitrary ones provided by -h.
     if self.perf_trace_token:
       headers['cookie'] = self.perf_trace_token
 
-  def _AddReasonToHeaders(self, headers):
     request_reason = os.environ.get(REQUEST_REASON_ENV_VAR)
     if request_reason:
       headers[REQUEST_REASON_HEADER_KEY] = request_reason
@@ -1348,8 +1354,7 @@ class GcsJsonApi(CloudApi):
     AddAcceptEncodingGzipIfNeeded(additional_headers,
                                   compressed_encoding=compressed_encoding)
 
-    self._AddPerfTraceTokenToHeaders(additional_headers)
-    self._AddReasonToHeaders(additional_headers)
+    self._UpdateHeaders(additional_headers)
     additional_headers.update(
         self._EncryptionHeadersFromTuple(decryption_tuple))
 
@@ -1488,8 +1493,7 @@ class GcsJsonApi(CloudApi):
     additional_headers = {
         'user-agent': self.api_client.user_agent,
     }
-    self._AddPerfTraceTokenToHeaders(additional_headers)
-    self._AddReasonToHeaders(additional_headers)
+    self._UpdateHeaders(additional_headers)
 
     try:
       content_type = None
@@ -1541,8 +1545,7 @@ class GcsJsonApi(CloudApi):
             'user-agent': self.api_client.user_agent,
         }
         additional_headers.update(encryption_headers)
-        self._AddPerfTraceTokenToHeaders(additional_headers)
-        self._AddReasonToHeaders(additional_headers)
+        self._UpdateHeaders(additional_headers)
 
         return self._PerformResumableUpload(
             upload_stream, self.authorized_upload_http, content_type, size,
