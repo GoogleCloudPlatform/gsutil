@@ -185,7 +185,7 @@ _DETAILED_HELP_TEXT = ("""
   ------------------------
 
   - check_hashes: CLOUDSDK_STORAGE_CHECK_HASHES
-  - default_project_id: CLOUDSDK_CORE_PROJEC
+  - default_project_id: CLOUDSDK_CORE_PROJECT
   - disable_analytics_prompt: CLOUDSDK_CORE_DISABLE_USAGE_REPORTING
   - use_magicfile: CLOUDSDK_STORAGE_USE_MAGICFILE
   - parallel_composite_upload_threshold: CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD
