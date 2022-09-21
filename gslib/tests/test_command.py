@@ -54,7 +54,7 @@ class TestParseSubOpts(testcase.GsUtilUnitTestCase):
     self._fake_command = FakeGsutilCommand(
         command_runner=mock.ANY,
         args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
-        headers=mock.ANY,
+        headers={},
         debug=mock.ANY,
         trace_token=mock.ANY,
         parallel_operations=mock.ANY,
@@ -82,7 +82,7 @@ class TestParseSubOpts(testcase.GsUtilUnitTestCase):
     self._fake_command = FakeGsutilCommand(
         command_runner=mock.ANY,
         args=['-z', 'opt1', '-r', 'arg1', 'arg2'],
-        headers=mock.ANY,
+        headers={},
         debug=mock.ANY,
         trace_token=mock.ANY,
         parallel_operations=mock.ANY,
