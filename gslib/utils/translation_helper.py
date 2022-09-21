@@ -71,7 +71,7 @@ CUSTOM_GOOG_METADATA_REGEX = re.compile(r'^x-goog-meta-(?P<header_key>.*)',
 CUSTOM_AMZ_METADATA_REGEX = re.compile(r'^x-amz-meta-(?P<header_key>.*)', re.I)
 CUSTOM_AMZ_HEADER_REGEX = re.compile(r'^x-amz-(?P<header_key>.*)', re.I)
 
-metadata_header_regexes = [
+metadata_header_regexes = frozenset({
     CACHE_CONTROL_REGEX,
     CONTENT_DISPOSITION_REGEX,
     CONTENT_ENCODING_REGEX,
@@ -84,7 +84,7 @@ metadata_header_regexes = [
     GOOG_METAGENERATION_MATCH_REGEX,
     CUSTOM_GOOG_METADATA_REGEX,
     CUSTOM_AMZ_METADATA_REGEX,
-]
+})
 
 # This distinguishes S3 custom headers from S3 metadata on objects.
 S3_HEADER_PREFIX = 'custom-amz-header'
@@ -118,10 +118,7 @@ PRIVATE_DEFAULT_OBJ_ACL = apitools_messages.ObjectAccessControl(
 def GetNonMetadataHeaders(headers):
   arbitrary_headers = {}
   for header, value in headers.items():
-    metadata_regexes_matches = [
-        regex.match(header) for regex in metadata_header_regexes
-    ]
-    if not any(metadata_regexes_matches):
+    if not any(regex.match(header) for regex in metadata_header_regexes):
       arbitrary_headers[header] = value
   return arbitrary_headers
 

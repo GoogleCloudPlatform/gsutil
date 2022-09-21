@@ -330,6 +330,8 @@ class GcsJsonApi(CloudApi):
     if self.http_headers:
       headers.update(self.http_headers)
 
+    # The following functional headers potentially overwrite
+    # arbitrary ones provided by -h.
     if self.perf_trace_token:
       headers['cookie'] = self.perf_trace_token
 

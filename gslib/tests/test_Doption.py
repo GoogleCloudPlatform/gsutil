@@ -114,20 +114,19 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
     file_name = 'bar'
     fpath = self.CreateTempFile(file_name=file_name, contents=b'foo')
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil([
-        '-D', '-h', 'x-goog-custom-header:asdf', 'cp', fpath,
-        suri(bucket_uri)
-    ],
-                            return_stderr=True)
-    self.assertRegex(
-        stderr, r"Headers: \{[\s\S]*'x-goog-custom-header': 'asdf'[\s\S]*\}")
+    stderr = self.RunGsUtil(
+        ['-D', '-h', 'custom-header:asdf', 'cp', fpath,
+         suri(bucket_uri)],
+        return_stderr=True)
+    self.assertRegex(stderr,
+                     r"Headers: \{[\s\S]*'custom-header': 'asdf'[\s\S]*\}")
     stderr2 = self.RunGsUtil([
-        '-D', '-h', 'x-goog-custom-header:asdf', 'cp',
+        '-D', '-h', 'custom-header:asdf', 'cp',
         suri(bucket_uri, file_name), fpath
     ],
                              return_stderr=True)
-    self.assertRegex(
-        stderr2, r"Headers: \{[\s\S]*'x-goog-custom-header': 'asdf'[\s\S]*\}")
+    self.assertRegex(stderr2,
+                     r"Headers: \{[\s\S]*'custom-header': 'asdf'[\s\S]*\}")
 
     # Ensure the header wasn't set in metadata somehow:
     stdout = self.RunGsUtil(
