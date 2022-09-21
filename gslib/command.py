@@ -97,6 +97,7 @@ from gslib.utils.shim_util import GcloudStorageCommandMixin
 from gslib.utils.system_util import GetTermLines
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.translation_helper import AclTranslation
+from gslib.utils.translation_helper import GetNonMetadataHeaders
 from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 from gslib.wildcard_iterator import CreateWildcardIterator
 from six.moves import queue as Queue
@@ -679,16 +680,16 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
         self.gsutil_api_class_map_factory, support_map, default_map)
 
     self.project_id = None
-    self.gsutil_api = CloudApiDelegator(self.bucket_storage_uri_class,
-                                        self.gsutil_api_map,
-                                        self.logger,
-                                        MainThreadUIQueue(
-                                            sys.stderr, ui_controller),
-                                        debug=self.debug,
-                                        http_headers=self.headers,
-                                        trace_token=self.trace_token,
-                                        perf_trace_token=self.perf_trace_token,
-                                        user_project=self.user_project)
+    self.gsutil_api = CloudApiDelegator(
+        self.bucket_storage_uri_class,
+        self.gsutil_api_map,
+        self.logger,
+        MainThreadUIQueue(sys.stderr, ui_controller),
+        debug=self.debug,
+        http_headers=GetNonMetadataHeaders(self.headers),
+        trace_token=self.trace_token,
+        perf_trace_token=self.perf_trace_token,
+        user_project=self.user_project)
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''
     # If running on Windows, invoke python interpreter explicitly.
