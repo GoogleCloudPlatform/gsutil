@@ -685,6 +685,7 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
                                         MainThreadUIQueue(
                                             sys.stderr, ui_controller),
                                         debug=self.debug,
+                                        http_headers=self.headers,
                                         trace_token=self.trace_token,
                                         perf_trace_token=self.perf_trace_token,
                                         user_project=self.user_project)

@@ -170,9 +170,6 @@ def ObjectMetadataFromHeaders(headers):
         obj_metadata.metadata.additionalProperties.append(
             apitools_messages.Object.MetadataValue.AdditionalProperty(
                 key=header_key, value=value))
-      else:
-        raise ArgumentException('Invalid header specified: %s:%s' %
-                                (header, value))
   return obj_metadata
 
 
