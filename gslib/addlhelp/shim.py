@@ -33,7 +33,7 @@ _DETAILED_HELP_TEXT = ("""
 
 
 <B>TO ENABLE</B>
-  Set the ``use_gcloud_storage`` field in the ``.boto`` config file under the
+  Set ``use_gcloud_storage=True`` in the ``.boto`` config file under the
   ``[GSUtil]`` section.
 
     [GSUtil]
@@ -141,8 +141,6 @@ _DETAILED_HELP_TEXT = ("""
   stat
   ------------------------
 
-  - Uses a list call rather than a get call, which is potentially not strongly
-    consistent (this will be fixed in a later version).
   - Includes a field "Storage class update time:" which may throw off tabbing.
 
   versioning
