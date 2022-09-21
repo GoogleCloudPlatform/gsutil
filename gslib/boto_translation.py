@@ -1275,7 +1275,8 @@ class BotoTranslation(CloudApi):
   def _CreateBaseHeaders(self):
     """Creates base headers used for all API calls in this class."""
     base_headers = {}
-    base_headers.update(self.http_headers)
+    if self.http_headers:
+      base_headers.update(self.http_headers)
 
     if self.provider == 'gs':
       base_headers['x-goog-api-version'] = self.api_version
