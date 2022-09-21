@@ -210,7 +210,7 @@ class BotoTranslation(CloudApi):
                 the provider argument and use this one instead.
       credentials: Unused.
       debug: Debug level for the API implementation (0..3).
-      http_headers (dict): Arbitrary headers to be included in every request. 
+      http_headers (dict|None): Arbitrary headers to be included in every request. 
       trace_token: Unused in this subclass.
       perf_trace_token: Performance trace token to use when making API calls
           ('gs' provider only).

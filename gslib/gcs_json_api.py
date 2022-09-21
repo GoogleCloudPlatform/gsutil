@@ -198,7 +198,7 @@ class GcsJsonApi(CloudApi):
       credentials: Credentials to be used for interacting with Google Cloud
                    Storage.
       debug: Debug level for the API implementation (0..3).
-      http_headers (dict): Arbitrary headers to be included in every request.
+      http_headers (dict|None): Arbitrary headers to be included in every request.
       trace_token: Trace token to pass to the API implementation.
       perf_trace_token: Performance trace token to use when making API calls.
       user_project: Project to be billed for this request.

@@ -48,7 +48,7 @@ class CloudApi(object):
       provider: Default provider prefix describing cloud storage provider to
                 connect to.
       debug: Debug level for the API implementation (0..3).
-      http_headers (dict): Arbitrary headers to be included in every request.
+      http_headers (dict|None): Arbitrary headers to be included in every request.
       trace_token: Google internal trace token to pass to the API
                    implementation (string).
       perf_trace_token: Performance trace token to use when making API calls.
