@@ -1,3 +1,23 @@
+Release 5.14 (release date: 2022-09-22)
+======================================
+New Features
+------------------
+- Support including arbitrary headers in requests. (#1598)
+- Translate retention flag output for mb shim (#1593)
+- Shim cp continue-on-error flag (#1591)
+- Add flag for shimming stat. Stop relying on 'run by shim' property. (#1587)
+
+Bug Fixes
+------------------
+- Update shim get keys (#1595)
+- Update google auth dependency (#1581)
+
+Other Changes
+------------------
+- Update formatting on shim.py (#1597)
+- Mb test parity minus retention. (#1592)
+- Several documentation updates and clarifications.
+
 Release 5.13 (release date: 2022-09-07)
 ======================================
 New Features
