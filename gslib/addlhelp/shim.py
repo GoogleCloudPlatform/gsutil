@@ -34,13 +34,13 @@ _DETAILED_HELP_TEXT = ("""
 
 <B>TO ENABLE</B>
   Set ``use_gcloud_storage=True`` in the ``.boto`` config file under the
-  ``[GSUtil]`` section.
+  ``[GSUtil]`` section:
 
     [GSUtil]
     use_gcloud_storage=True
 
   You can also set the flag for individual commands using the top-level ``-o``
-  flag.
+  flag:
 
     gsutil -o "GSUtil:use_gcloud_storage=True" -m cp -p file gs://bucket/obj
 
@@ -54,7 +54,7 @@ _DETAILED_HELP_TEXT = ("""
 
   - Prints object data for a second object even if the first object is invalid.
 
-  compose:
+  compose
   ------------------------
 
   - Works as expected.

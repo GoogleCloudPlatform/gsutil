@@ -77,9 +77,9 @@ ordered in the list lexicographically by name.
   gsutil currently supports ``gs://`` and ``s3://`` as valid providers
 
   If you specify bucket URLs, or use `URI wildcards
-  <https://cloud.google.com/storage/docs/wildcards#surprising-behavior>`_. to
-  capture a set of buckets, ``gsutil ls`` lists objects at the top level of each
-  bucket, along with the names of each subdirectory. For example:
+  <https://cloud.google.com/storage/docs/wildcards>`_. to capture a set of
+  buckets, ``gsutil ls`` lists objects at the top level of each bucket, along
+  with the names of each subdirectory. For example:
 
     gsutil ls gs://bucket
 
@@ -104,7 +104,7 @@ ordered in the list lexicographically by name.
   the bucket.
 
   For more details, see `URI wildcards
-  <https://cloud.google.com/storage/docs/wildcards#surprising-behavior>`_.
+  <https://cloud.google.com/storage/docs/wildcards>`_.
 
 
 <B>DIRECTORY BY DIRECTORY, FLAT, and RECURSIVE LISTINGS</B>
