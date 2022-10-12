@@ -641,7 +641,7 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
       for log_filter in logging_filters:
         self.logger.addFilter(log_filter)
 
-    if self.headers:
+    if self.headers is not None:
       self.non_metadata_headers = GetNonMetadataHeaders(self.headers)
 
     if self.command_spec is None:

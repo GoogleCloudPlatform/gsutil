@@ -3150,3 +3150,33 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     self.assertTrue(headers_for_all_requests)
     for headers in headers_for_all_requests:
       self.assertIn("'arbitrary': 'header'", headers)
+
+  @SkipForGS('Tests that S3 SSE-C is handled.')
+  def test_s3_sse_is_handled_with_arbitrary_headers(self):
+    tmp_dir = self.CreateTempDir()
+    tmp_file = self.CreateTempFile(tmpdir=tmp_dir, contents=b'foo')
+    bucket_uri1 = self.CreateBucket()
+    bucket_uri2 = self.CreateBucket()
+
+    header_flags = [
+        '-h',
+        '"x-amz-server-side-encryption-customer-algorithm:AES256"',
+        '-h',
+        '"x-amz-server-side-encryption-customer-key:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="',
+        '-h',
+        '"x-amz-server-side-encryption-customer-key-md5:dnF5x6K/8ZZRzpfSlMMM+w=="',
+    ]
+
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      self.RunGsUtil(header_flags +
+                     ['-m', 'cp', tmp_file,
+                      suri(bucket_uri1, 'test')])
+      self.RunGsUtil(
+          header_flags +
+          ['-m', 'rsync', suri(bucket_uri1),
+           suri(bucket_uri2)])
+      contents = self.RunGsUtil(header_flags +
+                                ['cat', suri(bucket_uri2, 'test')],
+                                return_stdout=True)
+
+    self.assertEqual(contents, 'foo')

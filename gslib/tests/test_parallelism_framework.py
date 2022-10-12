@@ -252,6 +252,9 @@ class FakeCommand(Command):
     self.multiprocessing_is_available = (
         CheckMultiprocessingAvailableAndInit().is_available)
     self.debug = 0
+    self.non_metadata_headers = {}
+    self.perf_trace_token = None
+    self.trace_token = None
     self.user_project = None
 
 
