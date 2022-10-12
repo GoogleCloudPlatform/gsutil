@@ -3131,7 +3131,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # formatting (i.e. specifying KMS key in a request to S3's API).
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
       self.RunGsUtil(['rsync', tmp_dir, suri(bucket_uri)])
-  
+
   def test_bucket_to_bucket_includes_arbitrary_headers(self):
     bucket1_uri = self.CreateBucket()
     bucket2_uri = self.CreateBucket()
@@ -3139,7 +3139,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                       object_name='obj1',
                       contents=b'obj1')
 
-    stderr = self.RunGsUtil(['-D', '-h', 'arbitrary:header', 'rsync', suri(bucket1_uri), suri(bucket2_uri)], return_stderr=True)
+    stderr = self.RunGsUtil([
+        '-D', '-h', 'arbitrary:header', 'rsync',
+        suri(bucket1_uri),
+        suri(bucket2_uri)
+    ],
+                            return_stderr=True)
 
     headers_for_all_requests = re.findall(r"Headers: \{([\s\S]*?)\}", stderr)
     self.assertTrue(headers_for_all_requests)
