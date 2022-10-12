@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
+import re
 
 import six
 
@@ -3130,3 +3131,17 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     # formatting (i.e. specifying KMS key in a request to S3's API).
     with SetBotoConfigForTest([('GSUtil', 'prefer_api', 'json')]):
       self.RunGsUtil(['rsync', tmp_dir, suri(bucket_uri)])
+  
+  def test_bucket_to_bucket_includes_arbitrary_headers(self):
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket1_uri,
+                      object_name='obj1',
+                      contents=b'obj1')
+
+    stderr = self.RunGsUtil(['-D', '-h', 'arbitrary:header', 'rsync', suri(bucket1_uri), suri(bucket2_uri)], return_stderr=True)
+
+    headers_for_all_requests = re.findall(r"Headers: \{([\s\S]*?)\}", stderr)
+    self.assertTrue(headers_for_all_requests)
+    for headers in headers_for_all_requests:
+      self.assertIn("'arbitrary': 'header'", headers)
