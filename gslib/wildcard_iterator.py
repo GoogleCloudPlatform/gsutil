@@ -651,7 +651,8 @@ class FileWildcardIterator(WildcardIterator):
       expanded_url = StorageUrlFromString(filepath)
       try:
         if self.exclude_pattern and self.exclude_pattern.match(filepath):
-          print('excluded: ' + filepath)
+          if self.logger:
+            self.logger.info('Skipping excluded path %s...', filepath)
           continue
         if self.ignore_symlinks and os.path.islink(filepath):
           if self.logger:
