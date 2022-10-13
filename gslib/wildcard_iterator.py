@@ -583,16 +583,23 @@ class FileWildcardIterator(WildcardIterator):
   files in any subdirectory named 'abc').
   """
 
-  def __init__(self, wildcard_url, ignore_symlinks=False, logger=None):
+  def __init__(self,
+               wildcard_url,
+               exclude_pattern=None,
+               ignore_symlinks=False,
+               logger=None):
     """Instantiates an iterator over BucketListingRefs matching wildcard URL.
 
     Args:
       wildcard_url: FileUrl that contains the wildcard to iterate.
+      exclude_pattern: A regex of paths to ignore during iteration.
       ignore_symlinks: If True, ignore symlinks during iteration.
       logger: logging.Logger used for outputting debug messages during
               iteration. If None, the root logger will be used.
     """
     self.wildcard_url = wildcard_url
+    self.exclude_pattern = re.compile(
+        exclude_pattern) if exclude_pattern else None
     self.ignore_symlinks = ignore_symlinks
     self.logger = logger or logging.getLogger()
 
@@ -643,6 +650,9 @@ class FileWildcardIterator(WildcardIterator):
     for filepath in filepaths:
       expanded_url = StorageUrlFromString(filepath)
       try:
+        if self.exclude_pattern and self.exclude_pattern.match(filepath):
+          print('excluded: ' + filepath)
+          continue
         if self.ignore_symlinks and os.path.islink(filepath):
           if self.logger:
             self.logger.info('Skipping symbolic link %s...', filepath)
@@ -794,6 +804,7 @@ def CreateWildcardIterator(url_str,
                            gsutil_api,
                            all_versions=False,
                            project_id=None,
+                           exclude_pattern=None,
                            ignore_symlinks=False,
                            logger=None):
   """Instantiate a WildcardIterator for the given URL string.
@@ -806,6 +817,7 @@ def CreateWildcardIterator(url_str,
                   matching the wildcard.  If false, yields just the live
                   object version.
     project_id: Project id to use for bucket listings.
+    exclude_pattern: For FileUrls, a regex of paths to ignore during iteration.
     ignore_symlinks: For FileUrls, ignore symlinks during iteration if true.
     logger: logging.Logger used for outputting debug messages during iteration.
             If None, the root logger will be used.
@@ -818,6 +830,7 @@ def CreateWildcardIterator(url_str,
   logger = logger or logging.getLogger()
   if url.IsFileUrl():
     return FileWildcardIterator(url,
+                                exclude_pattern=exclude_pattern,
                                 ignore_symlinks=ignore_symlinks,
                                 logger=logger)
   else:  # Cloud URL

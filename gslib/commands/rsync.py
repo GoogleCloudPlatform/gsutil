@@ -735,6 +735,7 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
         wildcard,
         gsutil_api,
         project_id=cls.project_id,
+        exclude_pattern=cls.exclude_pattern,
         ignore_symlinks=cls.exclude_symlinks,
         logger=cls.logger).IterObjects(
             # Request just the needed fields, to reduce bandwidth usage.
