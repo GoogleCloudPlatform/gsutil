@@ -32,6 +32,8 @@ from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import AuthorizeProjectToUseTestingKmsKey
+from gslib.tests.util import TEST_ENCRYPTION_KEY_S3
+from gslib.tests.util import TEST_ENCRYPTION_KEY_S3_MD5
 from gslib.tests.util import BuildErrorRegex
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import ORPHANED_FILE
@@ -3162,19 +3164,18 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
         '-h',
         '"x-amz-server-side-encryption-customer-algorithm:AES256"',
         '-h',
-        '"x-amz-server-side-encryption-customer-key:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="',
+        '"x-amz-server-side-encryption-customer-key:{}"'.format(
+            TEST_ENCRYPTION_KEY_S3),
         '-h',
-        '"x-amz-server-side-encryption-customer-key-md5:dnF5x6K/8ZZRzpfSlMMM+w=="',
+        '"x-amz-server-side-encryption-customer-key-md5:{}"'.format(
+            TEST_ENCRYPTION_KEY_S3_MD5),
     ]
 
     with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      self.RunGsUtil(header_flags + ['cp', tmp_file, suri(bucket_uri1, 'test')])
       self.RunGsUtil(header_flags +
-                     ['-m', 'cp', tmp_file,
-                      suri(bucket_uri1, 'test')])
-      self.RunGsUtil(
-          header_flags +
-          ['-m', 'rsync', suri(bucket_uri1),
-           suri(bucket_uri2)])
+                     ['rsync', suri(bucket_uri1),
+                      suri(bucket_uri2)])
       contents = self.RunGsUtil(header_flags +
                                 ['cat', suri(bucket_uri2, 'test')],
                                 return_stdout=True)

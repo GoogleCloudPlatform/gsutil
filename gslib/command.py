@@ -643,6 +643,8 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
 
     if self.headers is not None:
       self.non_metadata_headers = GetNonMetadataHeaders(self.headers)
+    else:
+      self.non_metadata_headers = None
 
     if self.command_spec is None:
       raise CommandException('"%s" command implementation is missing a '
