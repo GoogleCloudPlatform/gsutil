@@ -979,7 +979,9 @@ class BotoTranslation(CloudApi):
       # Therefore, if the object gets overwritten before the ACL and get_key
       # operations, the best we can do is warn that it happened.
       self._SetObjectAcl(object_metadata, dst_uri)
-      return self._BotoKeyToObject(dst_uri.get_key(), fields=fields)
+      headers = self._CreateBaseHeaders()
+      return self._BotoKeyToObject(dst_uri.get_key(headers=headers),
+                                   fields=fields)
     except boto.exception.InvalidUriError as e:
       if e.message and NON_EXISTENT_OBJECT_REGEX.match(e.message.encode(UTF8)):
         raise CommandException('\n'.join(

@@ -641,6 +641,11 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
       for log_filter in logging_filters:
         self.logger.addFilter(log_filter)
 
+    if self.headers is not None:
+      self.non_metadata_headers = GetNonMetadataHeaders(self.headers)
+    else:
+      self.non_metadata_headers = None
+
     if self.command_spec is None:
       raise CommandException('"%s" command implementation is missing a '
                              'command_spec definition.' % self.command_name)
@@ -680,16 +685,16 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
         self.gsutil_api_class_map_factory, support_map, default_map)
 
     self.project_id = None
-    self.gsutil_api = CloudApiDelegator(
-        self.bucket_storage_uri_class,
-        self.gsutil_api_map,
-        self.logger,
-        MainThreadUIQueue(sys.stderr, ui_controller),
-        debug=self.debug,
-        http_headers=GetNonMetadataHeaders(self.headers),
-        trace_token=self.trace_token,
-        perf_trace_token=self.perf_trace_token,
-        user_project=self.user_project)
+    self.gsutil_api = CloudApiDelegator(self.bucket_storage_uri_class,
+                                        self.gsutil_api_map,
+                                        self.logger,
+                                        MainThreadUIQueue(
+                                            sys.stderr, ui_controller),
+                                        debug=self.debug,
+                                        http_headers=self.non_metadata_headers,
+                                        trace_token=self.trace_token,
+                                        perf_trace_token=self.perf_trace_token,
+                                        user_project=self.user_project)
     # Cross-platform path to run gsutil binary.
     self.gsutil_cmd = ''
     # If running on Windows, invoke python interpreter explicitly.
@@ -840,6 +845,7 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
           logging.getLogger('dummy'),
           glob_status_queue,
           debug=self.debug,
+          http_headers=self.non_metadata_headers,
           trace_token=self.trace_token,
           perf_trace_token=self.perf_trace_token,
           user_project=self.user_project)
@@ -1599,7 +1605,12 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
     # Create a WorkerThread to handle all of the logic needed to actually call
     # the function. Note that this thread will never be started, and all work
     # is done in the current thread.
-    worker_thread = WorkerThread(None, False, user_project=self.user_project)
+    worker_thread = WorkerThread(None,
+                                 False,
+                                 headers=self.non_metadata_headers,
+                                 perf_trace_token=self.perf_trace_token,
+                                 trace_token=self.trace_token,
+                                 user_project=self.user_project)
     args_iterator = iter(args_iterator)
     # Count of sequential calls that have been made. Used for producing
     # suggestion to use gsutil -m.
@@ -1754,6 +1765,9 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
                    gsutil_api_map=self.gsutil_api_map,
                    debug=self.debug,
                    status_queue=glob_status_queue,
+                   headers=self.non_metadata_headers,
+                   perf_trace_token=self.perf_trace_token,
+                   trace_token=self.trace_token,
                    user_project=self.user_project)
 
     if process_count > 1:  # Handle process pool creation.
@@ -1798,6 +1812,9 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
                        gsutil_api_map=self.gsutil_api_map,
                        debug=self.debug,
                        status_queue=glob_status_queue,
+                       headers=self.non_metadata_headers,
+                       perf_trace_token=self.perf_trace_token,
+                       trace_token=self.trace_token,
                        user_project=self.user_project)
         finally:
           worker_checking_level_lock.release()
@@ -1940,6 +1957,9 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
         gsutil_api_map=self.gsutil_api_map,
         debug=self.debug,
         status_queue=status_queue,
+        headers=self.non_metadata_headers,
+        perf_trace_token=self.perf_trace_token,
+        trace_token=self.trace_token,
         user_project=self.user_project)
 
     num_enqueued = 0
@@ -2229,6 +2249,9 @@ class WorkerPool(object):
                gsutil_api_map=None,
                debug=0,
                status_queue=None,
+               headers=None,
+               perf_trace_token=None,
+               trace_token=None,
                user_project=None):
     # In the multi-process case, a worker sempahore is required to ensure
     # even work distribution.
@@ -2240,6 +2263,9 @@ class WorkerPool(object):
     #
     # Thus, exactly one of task_queue or worker_semaphore must be provided.
     assert (worker_semaphore is None) != (task_queue is None)
+    self.headers = headers
+    self.perf_trace_token = perf_trace_token
+    self.trace_token = trace_token
     self.user_project = user_project
 
     self.task_queue = task_queue or _NewThreadsafeQueue()
@@ -2253,6 +2279,9 @@ class WorkerPool(object):
           gsutil_api_map=gsutil_api_map,
           debug=debug,
           status_queue=status_queue,
+          headers=self.headers,
+          perf_trace_token=self.perf_trace_token,
+          trace_token=self.trace_token,
           user_project=self.user_project)
       self.threads.append(worker_thread)
       worker_thread.start()
@@ -2287,6 +2316,9 @@ class WorkerThread(threading.Thread):
                gsutil_api_map=None,
                debug=0,
                status_queue=None,
+               headers=None,
+               perf_trace_token=None,
+               trace_token=None,
                user_project=None):
     """Initializes the worker thread.
 
@@ -2314,6 +2346,9 @@ class WorkerThread(threading.Thread):
     self.daemon = True
     self.cached_classes = {}
     self.shared_vars_updater = _SharedVariablesUpdater()
+    self.headers = headers
+    self.perf_trace_token = perf_trace_token
+    self.trace_token = trace_token
     self.user_project = user_project
 
     # Note that thread_gsutil_api is not initialized in the sequential
@@ -2321,12 +2356,16 @@ class WorkerThread(threading.Thread):
     # to retrieve the main thread's CloudApiDelegator in that case.
     self.thread_gsutil_api = None
     if bucket_storage_uri_class and gsutil_api_map:
-      self.thread_gsutil_api = CloudApiDelegator(bucket_storage_uri_class,
-                                                 gsutil_api_map,
-                                                 logger,
-                                                 status_queue,
-                                                 debug=debug,
-                                                 user_project=self.user_project)
+      self.thread_gsutil_api = CloudApiDelegator(
+          bucket_storage_uri_class,
+          gsutil_api_map,
+          logger,
+          status_queue,
+          debug=debug,
+          http_headers=self.headers,
+          perf_trace_token=self.perf_trace_token,
+          trace_token=self.trace_token,
+          user_project=self.user_project)
 
   @CaptureThreadStatException
   def _StartBlockedTime(self):
