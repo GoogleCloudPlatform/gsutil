@@ -353,7 +353,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     Args:
       uri_or_str: StorageUri or string representing the wildcard string.
-      exclude: An optional regex of paths to ignore during iteration.
+      exclude: For FileUrls only, a regex of paths to ignore during iteration.
       debug: debug level to pass to the underlying connection (0..3)
 
     Returns:
