@@ -504,7 +504,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     """Tests that the exclude regex will omit a nested directory."""
     exp_uri_strs = self.root_files_uri_strs
     uri = self._test_storage_uri(suri(self.test_dir, '*'))
-    exclude = '.*dir1'
+    exclude = 'dir1'
     actual_uri_strs = set(
         str(u)
         for u in self._test_wildcard_iterator(uri, exclude=exclude).IterAll(
