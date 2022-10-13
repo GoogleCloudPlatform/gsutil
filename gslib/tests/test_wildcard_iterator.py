@@ -26,6 +26,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import re
 import six
 import tempfile
 
@@ -504,7 +505,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     """Tests that the exclude regex will omit a nested directory."""
     exp_uri_strs = self.root_files_uri_strs
     uri = self._test_storage_uri(suri(self.test_dir, '*'))
-    exclude = 'dir1'
+    exclude = re.compile('dir1')
     actual_uri_strs = set(
         str(u)
         for u in self._test_wildcard_iterator(uri, exclude=exclude).IterAll(

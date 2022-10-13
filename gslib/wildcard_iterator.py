@@ -598,8 +598,7 @@ class FileWildcardIterator(WildcardIterator):
               iteration. If None, the root logger will be used.
     """
     self.wildcard_url = wildcard_url
-    self.exclude_pattern = re.compile(
-        exclude_pattern) if exclude_pattern else None
+    self.exclude_pattern = exclude_pattern
     self.ignore_symlinks = ignore_symlinks
     self.logger = logger or logging.getLogger()
 
