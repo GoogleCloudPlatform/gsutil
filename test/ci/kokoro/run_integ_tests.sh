@@ -127,17 +127,3 @@ python "$GSUTIL_ENTRYPOINT" \
   -o "Credentials:gs_json_host=storage-psc.p.googleapis.com" \
   -o "Credentials:gs_json_host_header=www.googleapis.com" \
   test gslib.tests.test_psc
-
-# Run mTLS authentication test.
-if [[ $API == "json" ]]; then
-  MTLS_TEST_ACCOUNT_REFRESH_TOKEN="/tmpfs/src/keystore/74008_mtls_test_account_refresh_token"
-  MTLS_TEST_ACCOUNT_CLIENT_ID="/tmpfs/src/keystore/74008_mtls_test_account_client_id"
-  MTLS_TEST_ACCOUNT_CLIENT_SECRET="/tmpfs/src/keystore/74008_mtls_test_account_client_secret"
-  MTLS_TEST_CERT_PATH="/tmpfs/src/keystore/74008_mtls_test_cert"
-
-  # Generate .boto config specifically for mTLS tests.
-  bash "$CFG_GENERATOR" "" "$API" "$BOTO_CONFIG" "$MTLS_TEST_ACCOUNT_REFRESH_TOKEN" "$MTLS_TEST_ACCOUNT_CLIENT_ID" "$MTLS_TEST_ACCOUNT_CLIENT_SECRET" "$MTLS_TEST_CERT_PATH"
-
-  # Run mTLS E2E test.
-  python "$GSUTIL_ENTRYPOINT" test gslib.tests.test_mtls.TestMtls
-fi
