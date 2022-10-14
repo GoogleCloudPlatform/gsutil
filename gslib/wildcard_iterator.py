@@ -585,22 +585,20 @@ class FileWildcardIterator(WildcardIterator):
 
   def __init__(self,
                wildcard_url,
-               exclude_tuple=None,
+               exclude_pattern=None,
                ignore_symlinks=False,
                logger=None):
     """Instantiates an iterator over BucketListingRefs matching wildcard URL.
 
     Args:
       wildcard_url: FileUrl that contains the wildcard to iterate.
-      exclude_tuple: (exclude_pattern, base_url_str), where base_url_str is
-                    top-level URL string to list; exclude_pattern is a regex of
-                    paths to ignore during iteration.
+      exclude_pattern: A regex of paths to ignore during iteration.
       ignore_symlinks: If True, ignore symlinks during iteration.
       logger: logging.Logger used for outputting debug messages during
               iteration. If None, the root logger will be used.
     """
     self.wildcard_url = wildcard_url
-    self.exclude_tuple = exclude_tuple
+    self.exclude_pattern = exclude_pattern
     self.ignore_symlinks = ignore_symlinks
     self.logger = logger or logging.getLogger()
 
@@ -651,12 +649,8 @@ class FileWildcardIterator(WildcardIterator):
     for filepath in filepaths:
       expanded_url = StorageUrlFromString(filepath)
       try:
-        if self.exclude_tuple is not None:
-          (base_url_str, exclude_pattern) = self.exclude_tuple
-          str_to_check = filepath[len(base_url_str):]
-          if str_to_check.startswith(self.wildcard_url.delim):
-            str_to_check = str_to_check[1:]
-          if exclude_pattern.match(str_to_check):
+        if self.exclude_pattern is not None:
+          if self.expanded_exclude_pattern.match(str(expanded_url)):
             if self.logger:
               self.logger.info('Skipping excluded path %s...', filepath)
             continue
@@ -811,7 +805,7 @@ def CreateWildcardIterator(url_str,
                            gsutil_api,
                            all_versions=False,
                            project_id=None,
-                           exclude_tuple=(None, None),
+                           exclude_plattern=None,
                            ignore_symlinks=False,
                            logger=None):
   """Instantiate a WildcardIterator for the given URL string.
@@ -824,9 +818,7 @@ def CreateWildcardIterator(url_str,
                   matching the wildcard.  If false, yields just the live
                   object version.
     project_id: Project id to use for bucket listings.
-    exclude_tuple: (exclude_pattern, base_url_str), where base_url_str is
-                   top-level URL string to list; exclude_pattern is a regex of
-                   paths to ignore during iteration.
+    exclude_plattern: For FileUrls, a regex of paths to ignore during iteration.
     ignore_symlinks: For FileUrls, ignore symlinks during iteration if true.
     logger: logging.Logger used for outputting debug messages during iteration.
             If None, the root logger will be used.
@@ -839,7 +831,7 @@ def CreateWildcardIterator(url_str,
   logger = logger or logging.getLogger()
   if url.IsFileUrl():
     return FileWildcardIterator(url,
-                                exclude_tuple=exclude_tuple,
+                                exclude_plattern=exclude_plattern,
                                 ignore_symlinks=ignore_symlinks,
                                 logger=logger)
   else:  # Cloud URL
