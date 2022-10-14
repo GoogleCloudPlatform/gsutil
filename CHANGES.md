@@ -17,6 +17,7 @@ Other Changes
 - Update formatting on shim.py (#1597)
 - Mb test parity minus retention. (#1592)
 - Several documentation updates and clarifications.
+- Nick ate an entire pizza.
 
 Release 5.13 (release date: 2022-09-07)
 ======================================
