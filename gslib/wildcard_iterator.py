@@ -805,7 +805,7 @@ def CreateWildcardIterator(url_str,
                            gsutil_api,
                            all_versions=False,
                            project_id=None,
-                           exclude_plattern=None,
+                           exclude_pattern=None,
                            ignore_symlinks=False,
                            logger=None):
   """Instantiate a WildcardIterator for the given URL string.
@@ -818,7 +818,7 @@ def CreateWildcardIterator(url_str,
                   matching the wildcard.  If false, yields just the live
                   object version.
     project_id: Project id to use for bucket listings.
-    exclude_plattern: For FileUrls, a regex of paths to ignore during iteration.
+    exclude_pattern: For FileUrls, a regex of paths to ignore during iteration.
     ignore_symlinks: For FileUrls, ignore symlinks during iteration if true.
     logger: logging.Logger used for outputting debug messages during iteration.
             If None, the root logger will be used.
@@ -831,7 +831,7 @@ def CreateWildcardIterator(url_str,
   logger = logger or logging.getLogger()
   if url.IsFileUrl():
     return FileWildcardIterator(url,
-                                exclude_plattern=exclude_plattern,
+                                exclude_pattern=exclude_pattern,
                                 ignore_symlinks=ignore_symlinks,
                                 logger=logger)
   else:  # Cloud URL
