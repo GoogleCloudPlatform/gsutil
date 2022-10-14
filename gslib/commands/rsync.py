@@ -731,9 +731,9 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
           'metadata/%s' % GID_ATTR,
           'metadata/%s' % UID_ATTR,
       ])
-    expanded_exclude_pattern = re.compile(
-        os.path.join(base_url_str, cls.exclude_pattern.pattern)
-    ) if cls.exclude_pattern is not None else None,
+    expanded_exclude_pattern = re.compile('{}/{}'.format(
+        base_url_str.rstrip('/\\'), cls.exclude_pattern.pattern
+    )) if cls.exclude_pattern is not None else None
     iterator = CreateWildcardIterator(
         wildcard,
         gsutil_api,
