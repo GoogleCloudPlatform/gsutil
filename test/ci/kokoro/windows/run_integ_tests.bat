@@ -43,14 +43,3 @@ set PscConfig=-o "Credentials:gs_host=storage-psc.p.googleapis.com"^
  -o "Credentials:gs_json_host=storage-psc.p.googleapis.com"^
  -o "Credentials:gs_json_host_header=www.googleapis.com"
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%' -Tests 'psc' -TopLevelFlags '%PscConfig%'" || exit /B 1
-
-rem mTLS tests only run on GCS JSON.
-if not "json" == "%API%" exit /B 0
-
-set "MtlsTestAccountRefreshToken=T:\src\keystore\74008_mtls_test_account_refresh_token"
-set "MtlsTestAccountClientId=T:\src\keystore\74008_mtls_test_account_client_id"
-set "MtlsTestAccountClientSecret=T:\src\keystore\74008_mtls_test_account_client_secret"
-set "MtlsTestCertPath=T:\src\keystore\74008_mtls_test_cert"
-
-PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\config_generator.ps1' '' '%API%' '%BOTO_CONFIG%' '%MtlsTestAccountRefreshToken%' '%MtlsTestAccountClientId%' '%MtlsTestAccountClientSecret%' '%MtlsTestCertPath%'"
-PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '%GsutilRepoDir%\test\ci\kokoro\windows\run_integ_tests.ps1' -GsutilRepoDir '%GsutilRepoDir%' -PyExe '%PyExePath%' -Tests 'mtls'"
