@@ -2768,7 +2768,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       """Tests rsync skips the excluded pattern."""
       # Add a trailing slash to the source directory to ensure its removed.
       self.RunGsUtil([
-          'rsync', '-r', '-x', 'data./.*\.txt$', tmpdir + '/',
+          'rsync', '-r', '-x', 'data./.*\\.txt$', tmpdir + '/',
           suri(bucket_uri)
       ])
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
