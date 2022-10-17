@@ -299,7 +299,8 @@ def _GetOauth2ServiceAccountCredentials():
   service_client_id = config.get('Credentials', 'gs_service_client_id', '')
   private_key_filename = config.get('Credentials', 'gs_service_key_file', '')
 
-  with io.open(private_key_filename, 'rb') as private_key_file:
+  with io.open(private_key_filename, 'rb',
+               encoding='utf-8') as private_key_file:
     private_key = private_key_file.read()
 
   keyfile_is_utf8 = False
