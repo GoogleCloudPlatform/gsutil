@@ -1,3 +1,14 @@
+Release 5.15 (release date: 2022-10-18)
+======================================
+Bug Fixes
+------------------
+- Wildcard iterator should exclude filepaths from rsync -x (#1602)
+- Ensure arbitrary headers are included in every rsync request. (#1600)
+
+Other Changes
+------------------
+- Disable mTLS E2E tests (#1604)
+
 Release 5.14 (release date: 2022-09-22)
 ======================================
 New Features
