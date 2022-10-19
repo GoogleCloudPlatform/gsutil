@@ -42,6 +42,7 @@ from six.moves import http_client
 import boto
 from boto import config
 from boto import handler
+from boto.gs.key import Key as GsKey
 from boto.gs.cors import Cors
 from boto.gs.lifecycle import LifecycleConfig
 from boto.s3.cors import CORSConfiguration as S3Cors
@@ -210,7 +211,7 @@ class BotoTranslation(CloudApi):
                 the provider argument and use this one instead.
       credentials: Unused.
       debug: Debug level for the API implementation (0..3).
-      http_headers (dict|None): Arbitrary headers to be included in every request. 
+      http_headers (dict|None): Arbitrary headers to be included in every request.
       trace_token: Unused in this subclass.
       perf_trace_token: Performance trace token to use when making API calls
           ('gs' provider only).
@@ -651,13 +652,14 @@ class BotoTranslation(CloudApi):
                              num_progress_callbacks=XML_PROGRESS_CALLBACKS,
                              headers=None,
                              hash_algs=None):
-    try:
+    if isinstance(key, GsKey):
       key.get_contents_to_file(download_stream,
                                cb=progress_callback,
                                num_cb=num_progress_callbacks,
                                headers=headers,
                                hash_algs=hash_algs)
-    except TypeError:  # s3 and mocks do not support hash_algs
+    else:
+      # s3 and mocks do not support hash_algs
       key.get_contents_to_file(download_stream,
                                cb=progress_callback,
                                num_cb=num_progress_callbacks,
