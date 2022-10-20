@@ -2769,11 +2769,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Tests rsync skips the excluded pattern."""
+      regex = 'data.[/\\\\].*\\.txt$'
       # Add a trailing slash to the source directory to ensure its removed.
-      self.RunGsUtil([
-          'rsync', '-r', '-x', 'data./.*\\.txt$', tmpdir + '/',
-          suri(bucket_uri)
-      ])
+      local = tmpdir + ('\\' if IS_WINDOWS else '/')
+      self.RunGsUtil(['rsync', '-r', '-x', regex, local, suri(bucket_uri)])
+
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       self.assertEquals(
