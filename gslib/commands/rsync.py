@@ -513,7 +513,7 @@ _DETAILED_HELP_TEXT = ("""
                  path is always relative (similar to Unix rsync or tar exclude
                  options). For example, if you run the command:
 
-                   gsutil rsync -x "data./.*\\.txt$" dir gs://my-bucket
+                   gsutil rsync -x "data.[/\\\\].*\\.txt$" dir gs://my-bucket
 
                  it skips the file dir/data1/a.txt.
 
@@ -732,7 +732,7 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
           'metadata/%s' % UID_ATTR,
       ])
     expanded_exclude_pattern = re.compile('{}/{}'.format(
-        base_url_str.rstrip('/\\'), cls.exclude_pattern.pattern
+        re.escape(base_url_str).rstrip('/\\'), cls.exclude_pattern.pattern
     )) if cls.exclude_pattern is not None else None
     iterator = CreateWildcardIterator(
         wildcard,
