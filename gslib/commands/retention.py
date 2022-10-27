@@ -326,55 +326,87 @@ class RetentionCommand(Command):
       },
   )
 
-  gcloud_storage_map = GcloudStorageMap(
-      gcloud_command={
-          'event':
-              GcloudStorageMap(
-                  gcloud_command={
-                      'set':
-                          GcloudStorageMap(
-                              gcloud_command=[
-                                  'alpha', 'storage', 'objects', 'update',
-                                  '--event-based-hold'
-                              ],
-                              flag_map={},
-                          ),
-                      'release':
-                          GcloudStorageMap(
-                              gcloud_command=[
-                                  'alpha', 'storage', 'objects', 'update',
-                                  '--no-event-based-hold'
-                              ],
-                              flag_map={},
-                          ),
-                  },
-                  flag_map={},
-              ),
-          'temp':
-              GcloudStorageMap(
-                  gcloud_command={
-                      'set':
-                          GcloudStorageMap(
-                              gcloud_command=[
-                                  'alpha', 'storage', 'objects', 'update',
-                                  '--temporary-hold'
-                              ],
-                              flag_map={},
-                          ),
-                      'release':
-                          GcloudStorageMap(
-                              gcloud_command=[
-                                  'alpha', 'storage', 'objects', 'update',
-                                  '--no-temporary-hold'
-                              ],
-                              flag_map={},
-                          ),
-                  },
-                  flag_map={},
-              ),
-      },
-      flag_map={},
-  )
+  def get_gcloud_storage_args(self):
+    if self.args[0] == 'set':
+      gcloud_storage_map = GcloudStorageMap(
+          gcloud_command={
+              'set':
+                  GcloudStorageMap(
+                      gcloud_command=[
+                          'alpha', 'storage', 'buckets', 'update', '--retention-period={}s'.format(RetentionInSeconds(self.args[1]))
+                      ] + self.args[2:],  # Adds target bucket URLs.
+                      flag_map={}
+                  ),
+          },
+          flag_map={}
+      )
+      # Don't trigger unneeded translation now that complete command is above.
+      self.args = self.args[:1]
+    else:
+      gcloud_storage_map = GcloudStorageMap(
+          gcloud_command={
+              'clear':
+                  GcloudStorageMap(
+                      gcloud_command=[
+                          'alpha', 'storage', 'buckets', 'update', '--clear-retention-period'
+                      ],
+                      flag_map={},
+                  ),
+              'event':
+                  GcloudStorageMap(
+                      gcloud_command={
+                          'set':
+                              GcloudStorageMap(
+                                  gcloud_command=[
+                                      'alpha', 'storage', 'objects', 'update',
+                                      '--event-based-hold'
+                                  ],
+                                  flag_map={},
+                              ),
+                          'release':
+                              GcloudStorageMap(
+                                  gcloud_command=[
+                                      'alpha', 'storage', 'objects', 'update',
+                                      '--no-event-based-hold'
+                                  ],
+                                  flag_map={},
+                              ),
+                      },
+                      flag_map={},
+                  ),
+              'lock':
+                  GcloudStorageMap(
+                      gcloud_command=[
+                          'alpha', 'storage', 'buckets', 'update', '--lock-retention-period'
+                      ],
+                      flag_map={},
+                  ),
+              'temp':
+                  GcloudStorageMap(
+                      gcloud_command={
+                          'set':
+                              GcloudStorageMap(
+                                  gcloud_command=[
+                                      'alpha', 'storage', 'objects', 'update',
+                                      '--temporary-hold'
+                                  ],
+                                  flag_map={},
+                              ),
+                          'release':
+                              GcloudStorageMap(
+                                  gcloud_command=[
+                                      'alpha', 'storage', 'objects', 'update',
+                                      '--no-temporary-hold'
+                                  ],
+                                  flag_map={},
+                              ),
+                      },
+                      flag_map={},
+                  ),
+          },
+          flag_map={},
+      )
+    return super().get_gcloud_storage_args(gcloud_storage_map)
 
   def RunCommand(self):
     """Command entry point for the retention command."""
