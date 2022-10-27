@@ -1,3 +1,18 @@
+Release 5.16 (release date: 2022-10-27)
+======================================
+New Features
+------------------
+- Shim lifecycle command. (#1610)
+- Shim bucketpolicy only and ubla commands (#1608)
+ 
+Bug Fixes
+------------------
+- Fixed rsync -x test for Windows and updated docs to match (#1609)
+ 
+Other Changes
+------------------
+- Update google auth dependency for interactive mode, and url validation (#1614)
+
 Release 5.15 (release date: 2022-10-18)
 ======================================
 Bug Fixes
