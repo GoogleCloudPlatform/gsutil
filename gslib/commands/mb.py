@@ -255,6 +255,11 @@ class MbCommand(Command):
                   'enforced': '--public-access-prevention',
                   'inherited': None,
               }),
+          '--rpo':
+              GcloudStorageFlag({
+                  'enforced': '--rpo',
+                  'inherited': None,
+              }),
           _RETENTION_FLAG:
               GcloudStorageFlag('--retention-period'),
       },

@@ -103,12 +103,12 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('RPO only runs on GCS JSON API.')
   def test_get_returns_default_for_dual_region_bucket(self):
     bucket_uri = self.CreateBucket(location='us')
-    self._verify_get_returns_default_or_none(bucket_uri)
+    self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
 
   @SkipForXML('RPO only runs on GCS JSON API.')
-  def test_get_returns_none_for_regional_bucket(self):
+  def test_get_returns_default_for_regional_bucket(self):
     bucket_uri = self.CreateBucket(location='us-central1')
-    self.VerifyCommandGet(bucket_uri, 'rpo', 'None')
+    self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
 
   @SkipForXML('RPO only runs on GCS JSON API.')
   def test_set_and_get_async_turbo(self):
@@ -192,3 +192,15 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('command can only be used for GCS buckets', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('Flags disallowed for S3', stderr)
+    else:
+      self.assertIn('command can only be used for GCS Buckets', stderr)
+
+    if not self._use_gcloud_storage:
+      # gcloud storage uses a generic buckets describe command for this, and it
+      # would not print a result instead of erroring.
+      stderr = self.RunGsUtil(self._get_pap_cmd + [suri(bucket_uri)],
+                              return_stderr=True,
+                              expected_status=1)
+      self.assertIn('command can only be used for GCS Buckets', stderr)

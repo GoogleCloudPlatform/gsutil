@@ -28,6 +28,8 @@ from gslib.exception import NO_URLS_MATCHED_TARGET
 from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 
 VALID_RPO_VALUES = ('ASYNC_TURBO', 'DEFAULT')
 VALID_RPO_VALUES_STRING = '({})'.format('|'.join(VALID_RPO_VALUES))
@@ -80,6 +82,12 @@ _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 
+# Aliases to make these more likely to fit enforced one line.
+IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
+
+_GCLOUD_LIST_FORMAT = ('--format=value[separator=": "]'
+                       '(name.sub("^","gs://"),rpo)')
+
 
 class RpoCommand(Command):
   """Implements the gsutil rpo command."""
@@ -114,6 +122,48 @@ class RpoCommand(Command):
           'get': _get_help_text,
           'set': _set_help_text,
       },
+  )
+
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command={
+          'get':
+              GcloudStorageMap(
+                  gcloud_command=[
+                      'alpha', 'storage', 'buckets', 'list', _GCLOUD_LIST_FORMAT
+                  ],
+                  flag_map={},
+                  supports_output_translation=True,
+              ),
+          'set':
+              GcloudStorageMap(
+                  gcloud_command={
+                      'enforced':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha',
+                                  'storage',
+                                  'buckets',
+                                  'update',
+                                  '--rpo',
+                              ],
+                              flag_map={},
+                          ),
+                      'inherited':
+                          GcloudStorageMap(
+                              gcloud_command=[
+                                  'alpha',
+                                  'storage',
+                                  'buckets',
+                                  'update',
+                                  '--no-rpo',
+                              ],
+                              flag_map={},
+                          ),
+                  },
+                  flag_map={},
+              )
+      },
+      flag_map={},
   )
 
   def _ValidateBucketListingRefAndReturnBucketName(self, blr):
