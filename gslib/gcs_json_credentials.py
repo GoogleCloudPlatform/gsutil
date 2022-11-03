@@ -287,13 +287,13 @@ def _GetExternalAccountCredentials():
 
 
 def _GetExternalAccountAuthorizedUserCredentials():
-    external_account_authorized_user_filename = config.get('Credentials',
-        'gs_external_account_authorized_user_file', None)
-    if not external_account_authorized_user_filename:
-      return None
+  external_account_authorized_user_filename = config.get('Credentials',
+      'gs_external_account_authorized_user_file', None)
+  if not external_account_authorized_user_filename:
+    return None
 
-    return WrappedCredentials.for_external_account_authorized_user(
-        external_account_authorized_user_filename)
+  return WrappedCredentials.for_external_account_authorized_user(
+      external_account_authorized_user_filename)
 
 
 def _GetImpersonateServiceAccount():
