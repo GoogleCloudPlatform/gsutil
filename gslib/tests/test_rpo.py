@@ -87,19 +87,6 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
 class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
   """Integration tests for rpo command."""
 
-  # TODO: Delete this method once rpo get results are consistent
-  # from the backend, and replace this call with
-  # VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT').
-  # Currently, the rpo results are inconsistent
-  # and None is a valid default value for all the buckets.
-  # See b/197251750#comment19
-  def _verify_get_returns_default_or_none(self, bucket_uri):
-    """Checks if the rpo get command returns default."""
-    try:
-      self.VerifyCommandGet(bucket_uri, 'rpo', 'DEFAULT')
-    except AssertionError:
-      self.VerifyCommandGet(bucket_uri, 'rpo', 'None')
-
   @SkipForXML('RPO only runs on GCS JSON API.')
   def test_get_returns_default_for_dual_region_bucket(self):
     bucket_uri = self.CreateBucket(location='us')
@@ -195,12 +182,4 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
     if self._use_gcloud_storage:
       self.assertIn('Flags disallowed for S3', stderr)
     else:
-      self.assertIn('command can only be used for GCS Buckets', stderr)
-
-    if not self._use_gcloud_storage:
-      # gcloud storage uses a generic buckets describe command for this, and it
-      # would not print a result instead of erroring.
-      stderr = self.RunGsUtil(self._get_pap_cmd + [suri(bucket_uri)],
-                              return_stderr=True,
-                              expected_status=1)
       self.assertIn('command can only be used for GCS Buckets', stderr)
