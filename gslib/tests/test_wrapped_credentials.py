@@ -20,6 +20,7 @@ import httplib2
 
 from google.auth import aws
 from google.auth import external_account
+from google.auth import external_account_authorized_user
 from google.auth import identity_pool
 from google.auth import pluggable
 from gslib.tests import testcase
@@ -133,6 +134,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
             "access_token": ACCESS_TOKEN,
             "token_expiry": "2001-12-05T00:00:00Z",
             "_base": {
+                "type": "external_account",
                 "audience": "foo",
                 "subject_token_type": "bar",
                 "token_url": "https://sts.googleapis.com",
@@ -145,6 +147,69 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
 
     self.assertIsInstance(creds, WrappedCredentials)
     self.assertIsInstance(creds._base, identity_pool.Credentials)
+
+
+  @mock.patch.object(httplib2, "Http", autospec=True)
+  def testWrappedCredentialUsageHeadful(self, http):
+    http.return_value.request.return_value = (RESPONSE, CONTENT)
+    req = http.return_value.request
+
+    creds = WrappedCredentials(
+        external_account_authorized_user.Credentials(
+            audience="//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+            refresh_token="refreshToken",
+            token_url="https://sts.googleapis.com/v1/oauth/token",
+            token_info_url="https://sts.googleapis.com/v1/instrospect",
+            client_id="clientId",
+            client_secret="clientSecret"))
+
+    def side_effect(*args, **kwargs):
+      del args, kwargs  # Unused.
+      creds._base.token = ACCESS_TOKEN
+    creds._base.refresh = mock.Mock(side_effect=side_effect)
+
+    http = oauth2client.transport.get_http_object()
+    creds.authorize(http)
+    _, content = http.request(uri="google.com")
+    self.assertEquals(content, CONTENT)
+    creds._base.refresh.assert_called_once_with(mock.ANY)
+
+    # Make sure the default request gets called with the correct token.
+    req.assert_called_once_with("google.com",
+                                method="GET",
+                                headers=HeadersWithAuth(ACCESS_TOKEN),
+                                body=None,
+                                connection_type=mock.ANY,
+                                redirections=mock.ANY)
+
+  def testWrappedCredentialSerializationHeadful(self):
+    """Test logic for converting Wrapped Credentials to and from JSON for serialization."""
+    creds = WrappedCredentials(
+        external_account_authorized_user.Credentials(
+            audience="//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+            refresh_token="refreshToken",
+            token_url="https://sts.googleapis.com/v1/oauth/token",
+            token_info_url="https://sts.googleapis.com/v1/instrospect",
+            client_id="clientId",
+            client_secret="clientSecret"))
+    creds.access_token = ACCESS_TOKEN
+    creds.token_expiry = datetime.datetime(2001, 12, 5, 0, 0)
+    creds_json = creds.to_json()
+    json_values = json.loads(creds_json)
+    self.assertEquals(json_values["client_id"],
+        "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID")
+    self.assertEquals(json_values['access_token'], ACCESS_TOKEN)
+    self.assertEquals(json_values['token_expiry'], "2001-12-05T00:00:00Z")
+    self.assertEquals(json_values["_base"]["audience"], "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID")
+    self.assertEquals(json_values["_base"]["token_url"],
+                      "https://sts.googleapis.com/v1/oauth/token")
+    self.assertEquals(json_values["_base"]["token_info_url"],
+                      "https://sts.googleapis.com/v1/instrospect")
+
+    creds2 = WrappedCredentials.from_json(creds_json)
+    self.assertIsInstance(creds2, WrappedCredentials)
+    self.assertIsInstance(creds2._base, external_account_authorized_user.Credentials)
+    self.assertEquals(creds2.client_id, "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID")
 
   def testFromJsonAWSCredentials(self):
     creds = WrappedCredentials.from_json(
@@ -226,3 +291,18 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     self.assertIsInstance(creds, WrappedCredentials)
     self.assertIsInstance(creds._base, external_account.Credentials)
     self.assertIsInstance(creds._base, pluggable.Credentials)
+
+  def testFromJsonExternalAccountAuthorizedUserCredentials(self):
+    creds = WrappedCredentials.from_json(
+      json.dumps({
+        "_base": {
+          "type": "external_account_authorized_user",
+          "audience": "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+          "refresh_token": "refreshToken",
+          "token_url": "https://sts.googleapis.com/v1/oauth/token",
+          "token_info_url": "https://sts.googleapis.com/v1/instrospect",
+          "client_id": "clientId",
+          "client_secret": "clientSecret",
+        }
+      })
+    )

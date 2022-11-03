@@ -28,3 +28,4 @@ class CredTypes(object):
   GCE = "GCE"
   DEVSHELL = "Google Developer Shell"
   EXTERNAL_ACCOUNT = "External Account"
+  EXTERNAL_ACCOUNT_AUTHORIZED_USER = "External Account Authorized User"
