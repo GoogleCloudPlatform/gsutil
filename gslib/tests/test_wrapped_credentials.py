@@ -164,11 +164,11 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
             client_id="clientId",
             client_secret="clientSecret"))
 
-    def refresh_token(*args, **kwargs):
+    def _refresh_token_side_effect(*args, **kwargs):
       del args, kwargs  # Unused.
       creds._base.token = ACCESS_TOKEN
 
-    creds._base.refresh = mock.Mock(side_effect=refresh_token)
+    creds._base.refresh = mock.Mock(side_effect=_refresh_token_side_effect)
 
     http = oauth2client.transport.get_http_object()
     creds.authorize(http)
