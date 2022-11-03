@@ -82,8 +82,6 @@ _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 
-# Aliases to make these more likely to fit enforced one line.
-IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
 
 _GCLOUD_LIST_FORMAT = ('--format=value[separator=": "]'
                        '(name.sub("^","gs://"),rpo)')
