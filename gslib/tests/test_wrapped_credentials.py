@@ -71,6 +71,7 @@ class HeadersWithAuth(dict):
 
 class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
   """Test logic for interacting with Wrapped Credentials the way we intend to use them."""
+  maxDiff = None
 
   @mock.patch.object(httplib2, "Http", autospec=True)
   def testWrappedCredentialUsage(self, http):
@@ -149,7 +150,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     self.assertIsInstance(creds._base, identity_pool.Credentials)
 
   @mock.patch.object(httplib2, "Http", autospec=True)
-  def testWrappedCredentialUsageHeadful(self, http):
+  def testWrappedCredentialUsageExternalAccountAuthorizedUser(self, http):
     http.return_value.request.return_value = (RESPONSE, CONTENT)
     req = http.return_value.request
 
@@ -163,11 +164,11 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
             client_id="clientId",
             client_secret="clientSecret"))
 
-    def side_effect(*args, **kwargs):
+    def refresh_token(*args, **kwargs):
       del args, kwargs  # Unused.
       creds._base.token = ACCESS_TOKEN
 
-    creds._base.refresh = mock.Mock(side_effect=side_effect)
+    creds._base.refresh = mock.Mock(side_effect=refresh_token)
 
     http = oauth2client.transport.get_http_object()
     creds.authorize(http)
@@ -183,7 +184,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
                                 connection_type=mock.ANY,
                                 redirections=mock.ANY)
 
-  def testWrappedCredentialSerializationHeadful(self):
+  def testWrappedCredentialSerializationExternalAccountAuthorizedUser(self):
     """Test logic for converting Wrapped Credentials to and from JSON for serialization."""
     creds = WrappedCredentials(
         external_account_authorized_user.Credentials(
@@ -198,20 +199,60 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     creds.token_expiry = datetime.datetime(2001, 12, 5, 0, 0)
     creds_json = creds.to_json()
     json_values = json.loads(creds_json)
-    self.assertEquals(
-        json_values["client_id"],
-        "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID"
-    )
-    self.assertEquals(json_values['access_token'], ACCESS_TOKEN)
-    self.assertEquals(json_values['token_expiry'], "2001-12-05T00:00:00Z")
-    self.assertEquals(
-        json_values["_base"]["audience"],
-        "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID"
-    )
-    self.assertEquals(json_values["_base"]["token_url"],
-                      "https://sts.googleapis.com/v1/oauth/token")
-    self.assertEquals(json_values["_base"]["token_info_url"],
-                      "https://sts.googleapis.com/v1/instrospect")
+    expected_json_values = {
+        "_class":
+            "WrappedCredentials",
+        "_module":
+            "gslib.utils.wrapped_credentials",
+        "client_id":
+            "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+        "access_token":
+            ACCESS_TOKEN,
+        "token_expiry":
+            "2001-12-05T00:00:00Z",
+        "client_secret":
+            None,
+        "refresh_token":
+            None,
+        "id_token":
+            None,
+        "id_token_jwt":
+            None,
+        "invalid":
+            False,
+        "revoke_uri":
+            None,
+        "scopes": [],
+        "token_info_uri":
+            None,
+        "token_response":
+            None,
+        "token_uri":
+            None,
+        "user_agent":
+            None,
+        "_base": {
+            "type":
+                "external_account_authorized_user",
+            "audience":
+                "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+            "token":
+                ACCESS_TOKEN,
+            "expiry":
+                "2001-12-05T00:00:00Z",
+            "token_url":
+                "https://sts.googleapis.com/v1/oauth/token",
+            "token_info_url":
+                "https://sts.googleapis.com/v1/instrospect",
+            "refresh_token":
+                "refreshToken",
+            "client_id":
+                "clientId",
+            "client_secret":
+                "clientSecret",
+        }
+    }
+    self.assertEquals(json_values, expected_json_values)
 
     creds2 = WrappedCredentials.from_json(creds_json)
     self.assertIsInstance(creds2, WrappedCredentials)
@@ -323,3 +364,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
                     "clientSecret",
             }
         }))
+
+    self.assertIsInstance(creds, WrappedCredentials)
+    self.assertIsInstance(creds._base,
+                          external_account_authorized_user.Credentials)

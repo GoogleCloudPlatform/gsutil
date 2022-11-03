@@ -155,20 +155,17 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
 
 
 def _get_external_account_credentials_from_info(info):
-  try:
-    if info.get(
-        'subject_token_type') == 'urn:ietf:params:aws:token-type:aws4_request':
-      # Configuration corresponds to an AWS credentials.
-      return aws.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
-    elif (info.get('credential_source') is not None and
-          info.get('credential_source').get('executable') is not None):
-      # Configuration corresponds to pluggable credentials.
-      return pluggable.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
-    else:
-      # Configuration corresponds to an identity pool credentials.
-      return identity_pool.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
-  except (ValueError, TypeError, exceptions.RefreshError):
-    return None
+  if info.get(
+      'subject_token_type') == 'urn:ietf:params:aws:token-type:aws4_request':
+    # Configuration corresponds to an AWS credentials.
+    return aws.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
+  elif (info.get('credential_source') is not None and
+        info.get('credential_source').get('executable') is not None):
+    # Configuration corresponds to pluggable credentials.
+    return pluggable.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
+  else:
+    # Configuration corresponds to an identity pool credentials.
+    return identity_pool.Credentials.from_info(info, scopes=DEFAULT_SCOPES)
 
 
 def _get_external_account_credentials_from_file(filename):
@@ -178,10 +175,7 @@ def _get_external_account_credentials_from_file(filename):
 
 
 def _get_external_account_authorized_user_credentials_from_info(info):
-  try:
-    return external_account_authorized_user.Credentials.from_info(info)
-  except (ValueError, TypeError, exceptions.RefreshError):
-    return None
+  return external_account_authorized_user.Credentials.from_info(info)
 
 
 def _get_external_account_authorized_user_credentials_from_file(filename):
