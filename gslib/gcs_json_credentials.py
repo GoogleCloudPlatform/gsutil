@@ -214,7 +214,8 @@ def _CheckAndGetCredentials(logger):
     failed_cred_type = CredTypes.EXTERNAL_ACCOUNT
     external_account_creds = _GetExternalAccountCredentials()
     failed_cred_type = CredTypes.EXTERNAL_ACCOUNT_AUTHORIZED_USER
-    external_account_authorized_user_creds = _GetExternalAccountAuthorizedUserCredentials()
+    external_account_authorized_user_creds = _GetExternalAccountAuthorizedUserCredentials(
+    )
     failed_cred_type = CredTypes.GCE
     gce_creds = _GetGceCreds()
     failed_cred_type = CredTypes.DEVSHELL
@@ -287,8 +288,8 @@ def _GetExternalAccountCredentials():
 
 
 def _GetExternalAccountAuthorizedUserCredentials():
-  external_account_authorized_user_filename = config.get('Credentials',
-      'gs_external_account_authorized_user_file', None)
+  external_account_authorized_user_filename = config.get(
+      'Credentials', 'gs_external_account_authorized_user_file', None)
   if not external_account_authorized_user_filename:
     return None
 

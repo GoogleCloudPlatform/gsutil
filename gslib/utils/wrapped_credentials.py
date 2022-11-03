@@ -59,7 +59,8 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
       external_account_creds: subclass of google.auth.external_account.Credentials
     """
     if not isinstance(base_creds, external_account.Credentials):
-      if not isinstance(base_creds, external_account_authorized_user.Credentials):
+      if not isinstance(base_creds,
+                        external_account_authorized_user.Credentials):
         raise TypeError("Invalid Credentials")
     self._base = base_creds
     super(WrappedCredentials, self).__init__(access_token=self._base.token,
@@ -113,7 +114,8 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
 
   @classmethod
   def for_external_account_authorized_user(cls, filename):
-    creds = _get_external_account_authorized_user_credentials_from_file(filename)
+    creds = _get_external_account_authorized_user_credentials_from_file(
+        filename)
     return cls(creds)
 
   @classmethod
@@ -136,7 +138,8 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
     if base.get('type') == 'external_account':
       base_creds = _get_external_account_credentials_from_info(base)
     elif base.get('type') == 'external_account_authorized_user':
-      base_creds = _get_external_account_authorized_user_credentials_from_info(base)
+      base_creds = _get_external_account_authorized_user_credentials_from_info(
+          base)
     creds = cls(base_creds)
     # Inject token and expiry.
     creds.access_token = data.get("access_token")
@@ -173,16 +176,19 @@ def _get_external_account_credentials_from_file(filename):
     data = json.load(json_file)
     return _get_external_account_credentials_from_info(data)
 
+
 def _get_external_account_authorized_user_credentials_from_info(info):
   try:
     return external_account_authorized_user.Credentials.from_info(info)
   except (ValueError, TypeError, exceptions.RefreshError):
     return None
 
+
 def _get_external_account_authorized_user_credentials_from_file(filename):
   with io.open(filename, "r", encoding="utf-8") as json_file:
     data = json.load(json_file)
     return _get_external_account_authorized_user_credentials_from_info(data)
+
 
 def _parse_expiry(expiry):
   if expiry and isinstance(expiry, datetime.datetime):

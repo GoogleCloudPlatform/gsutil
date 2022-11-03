@@ -148,7 +148,6 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     self.assertIsInstance(creds, WrappedCredentials)
     self.assertIsInstance(creds._base, identity_pool.Credentials)
 
-
   @mock.patch.object(httplib2, "Http", autospec=True)
   def testWrappedCredentialUsageHeadful(self, http):
     http.return_value.request.return_value = (RESPONSE, CONTENT)
@@ -156,7 +155,8 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
 
     creds = WrappedCredentials(
         external_account_authorized_user.Credentials(
-            audience="//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+            audience=
+            "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
             refresh_token="refreshToken",
             token_url="https://sts.googleapis.com/v1/oauth/token",
             token_info_url="https://sts.googleapis.com/v1/instrospect",
@@ -166,6 +166,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     def side_effect(*args, **kwargs):
       del args, kwargs  # Unused.
       creds._base.token = ACCESS_TOKEN
+
     creds._base.refresh = mock.Mock(side_effect=side_effect)
 
     http = oauth2client.transport.get_http_object()
@@ -186,7 +187,8 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     """Test logic for converting Wrapped Credentials to and from JSON for serialization."""
     creds = WrappedCredentials(
         external_account_authorized_user.Credentials(
-            audience="//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+            audience=
+            "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
             refresh_token="refreshToken",
             token_url="https://sts.googleapis.com/v1/oauth/token",
             token_info_url="https://sts.googleapis.com/v1/instrospect",
@@ -196,11 +198,16 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     creds.token_expiry = datetime.datetime(2001, 12, 5, 0, 0)
     creds_json = creds.to_json()
     json_values = json.loads(creds_json)
-    self.assertEquals(json_values["client_id"],
-        "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID")
+    self.assertEquals(
+        json_values["client_id"],
+        "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID"
+    )
     self.assertEquals(json_values['access_token'], ACCESS_TOKEN)
     self.assertEquals(json_values['token_expiry'], "2001-12-05T00:00:00Z")
-    self.assertEquals(json_values["_base"]["audience"], "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID")
+    self.assertEquals(
+        json_values["_base"]["audience"],
+        "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID"
+    )
     self.assertEquals(json_values["_base"]["token_url"],
                       "https://sts.googleapis.com/v1/oauth/token")
     self.assertEquals(json_values["_base"]["token_info_url"],
@@ -208,8 +215,12 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
 
     creds2 = WrappedCredentials.from_json(creds_json)
     self.assertIsInstance(creds2, WrappedCredentials)
-    self.assertIsInstance(creds2._base, external_account_authorized_user.Credentials)
-    self.assertEquals(creds2.client_id, "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID")
+    self.assertIsInstance(creds2._base,
+                          external_account_authorized_user.Credentials)
+    self.assertEquals(
+        creds2.client_id,
+        "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID"
+    )
 
   def testFromJsonAWSCredentials(self):
     creds = WrappedCredentials.from_json(
@@ -294,15 +305,21 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
 
   def testFromJsonExternalAccountAuthorizedUserCredentials(self):
     creds = WrappedCredentials.from_json(
-      json.dumps({
-        "_base": {
-          "type": "external_account_authorized_user",
-          "audience": "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
-          "refresh_token": "refreshToken",
-          "token_url": "https://sts.googleapis.com/v1/oauth/token",
-          "token_info_url": "https://sts.googleapis.com/v1/instrospect",
-          "client_id": "clientId",
-          "client_secret": "clientSecret",
-        }
-      })
-    )
+        json.dumps({
+            "_base": {
+                "type":
+                    "external_account_authorized_user",
+                "audience":
+                    "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+                "refresh_token":
+                    "refreshToken",
+                "token_url":
+                    "https://sts.googleapis.com/v1/oauth/token",
+                "token_info_url":
+                    "https://sts.googleapis.com/v1/instrospect",
+                "client_id":
+                    "clientId",
+                "client_secret":
+                    "clientSecret",
+            }
+        }))
