@@ -71,7 +71,6 @@ class HeadersWithAuth(dict):
 
 class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
   """Test logic for interacting with Wrapped Credentials the way we intend to use them."""
-  maxDiff = None
 
   @mock.patch.object(httplib2, "Http", autospec=True)
   def testWrappedCredentialUsage(self, http):
