@@ -82,10 +82,7 @@ _DETAILED_HELP_TEXT = CreateHelpText(_SYNOPSIS, _DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 
-
-_GCLOUD_LIST_FORMAT = ('--format=value[separator=": "]'
-                       '(name.sub("^","gs://"),rpo)')
-
+_GCLOUD_LIST_FORMAT = ('--format=value[separator=": "]''(name.sub("^","gs://"),rpo)')
 
 class RpoCommand(Command):
   """Implements the gsutil rpo command."""
