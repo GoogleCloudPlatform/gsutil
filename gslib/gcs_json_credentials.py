@@ -213,12 +213,15 @@ def _CheckAndGetCredentials(logger):
     service_account_creds = _GetOauth2ServiceAccountCredentials()
     failed_cred_type = CredTypes.EXTERNAL_ACCOUNT
     external_account_creds = _GetExternalAccountCredentials()
+    failed_cred_type = CredTypes.EXTERNAL_ACCOUNT_AUTHORIZED_USER
+    external_account_authorized_user_creds = _GetExternalAccountAuthorizedUserCredentials(
+    )
     failed_cred_type = CredTypes.GCE
     gce_creds = _GetGceCreds()
     failed_cred_type = CredTypes.DEVSHELL
     devshell_creds = _GetDevshellCreds()
 
-    creds = user_creds or service_account_creds or gce_creds or external_account_creds or devshell_creds
+    creds = user_creds or service_account_creds or gce_creds or external_account_creds or external_account_authorized_user_creds or devshell_creds
 
     # Use one of the above credential types to impersonate, if configured.
     if _HasImpersonateServiceAccount() and creds:
@@ -282,6 +285,16 @@ def _GetExternalAccountCredentials():
     return None
 
   return WrappedCredentials.for_external_account(external_account_filename)
+
+
+def _GetExternalAccountAuthorizedUserCredentials():
+  external_account_authorized_user_filename = config.get(
+      'Credentials', 'gs_external_account_authorized_user_file', None)
+  if not external_account_authorized_user_filename:
+    return None
+
+  return WrappedCredentials.for_external_account_authorized_user(
+      external_account_authorized_user_filename)
 
 
 def _GetImpersonateServiceAccount():
