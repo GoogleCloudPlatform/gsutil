@@ -134,7 +134,7 @@ class RpoCommand(Command):
           'set':
               GcloudStorageMap(
                   gcloud_command={
-                      'enforced':
+                      'ASYNC_TURBO':
                           GcloudStorageMap(
                               gcloud_command=[
                                   'alpha',
@@ -145,7 +145,7 @@ class RpoCommand(Command):
                               ],
                               flag_map={},
                           ),
-                      'inherited':
+                      'DEFAULT':
                           GcloudStorageMap(
                               gcloud_command=[
                                   'alpha',
