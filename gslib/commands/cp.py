@@ -336,8 +336,8 @@ _RESUMABLE_TRANSFERS_TEXT = """
   uploads <https://cloud.google.com/storage/docs/resumable-uploads#gsutil>`_,
   except when performing streaming transfers. In the case of an interrupted
   download, a partially downloaded temporary file is visible in the destination
-  directory. Upon completion, the original file is deleted and replaced with the
-  downloaded contents.
+  directory with the suffix ``_.gstmp`` in its name. Upon completion, the
+  original file is deleted and replaced with the downloaded contents.
 
   Resumable transfers store state information in files under
   ~/.gsutil, named by the destination object or file.
@@ -484,8 +484,9 @@ _OPTIONS_TEXT = """
                  uploaded objects retain the ``Content-Type`` and name of the
                  original files.
 
-                 Note that if you want to use the top-level ``-m`` option to
-                 parallelize copies along with the ``-j/-J`` options, your
+                 Note that if you want to use `the top-level ``-m`` option
+                 <https://cloud.google.com/storage/docs/gsutil/addlhelp/GlobalCommandLineOptions>`_
+                 to parallelize copies along with the ``-j/-J`` options, your
                  performance may be bottlenecked by the
                  "max_upload_compression_buffer_size" boto config option,
                  which is set to 2 GiB by default. You can change this
