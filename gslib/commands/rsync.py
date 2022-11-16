@@ -731,11 +731,15 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
           'metadata/%s' % GID_ATTR,
           'metadata/%s' % UID_ATTR,
       ])
+    exclude_tuple = (
+        base_url_str,
+        cls.exclude_pattern) if cls.exclude_pattern is not None else None
+
     iterator = CreateWildcardIterator(
         wildcard,
         gsutil_api,
         project_id=cls.project_id,
-        exclude_tuple=(base_url_str, cls.exclude_pattern),
+        exclude_tuple=exclude_tuple,
         ignore_symlinks=cls.exclude_symlinks,
         logger=cls.logger).IterObjects(
             # Request just the needed fields, to reduce bandwidth usage.
