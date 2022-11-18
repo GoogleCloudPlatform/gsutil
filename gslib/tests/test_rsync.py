@@ -2779,9 +2779,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           set(['/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt']))
       got = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       self.assertEquals(got, want)
-    
+
     def _Check1():
-      _check_exclude_regex('data.[/\\\\].*\\.txt$', set(['/a', '/b', '/c', '/data1/ok']))
+      _check_exclude_regex('data.[/\\\\].*\\.txt$',
+                           set(['/a', '/b', '/c', '/data1/ok']))
+
     def _Check2():
       _check_exclude_regex('^data|[bc]$', set(['/a']))
 
