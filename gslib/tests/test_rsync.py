@@ -2766,32 +2766,28 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
+    def _check_exclude_regex(regex, want):
       """Tests rsync skips the excluded pattern."""
       bucket_uri = self.CreateBucket()
-      regex = 'data.[/\\\\].*\\.txt$'
       # Add a trailing slash to the source directory to ensure its removed.
       local = tmpdir + ('\\' if IS_WINDOWS else '/')
       self.RunGsUtil(['rsync', '-r', '-x', regex, local, suri(bucket_uri)])
 
-      listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
-      listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+      listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
       self.assertEquals(
-          listing1,
+          listing,
           set(['/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt']))
-      self.assertEquals(listing2, set(['/a', '/b', '/c', '/data1/ok']))
-
-    # Use @Retry as hedge against bucket listing eventual consistency.
-    @Retry(AssertionError, tries=3, timeout_secs=1)
+      got = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+      self.assertEquals(got, want)
+    
+    def _Check1():
+      _check_exclude_regex('data.[/\\\\].*\\.txt$', set(['/a', '/b', '/c', '/data1/ok']))
     def _Check2():
-      """Tests that a regex with a pipe works as expected."""
-      bucket_uri = self.CreateBucket()
-      regex = '.*\\.txt$|^[abc]'
-      self.RunGsUtil(['rsync', '-r', '-x', regex, tmpdir, suri(bucket_uri)])
-      listing = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
-      self.assertEquals(listing, set(['/data1/ok']))
+      _check_exclude_regex('^data|[bc]$', set(['/a']))
 
+    # Ensure the example exclude pattern from documentation works as expected.
     _Check1()
+    # Tests that a regex with a pipe works as expected.
     _Check2()
 
   @unittest.skipIf(IS_WINDOWS,
