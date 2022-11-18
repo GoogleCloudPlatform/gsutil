@@ -2786,10 +2786,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     def _Check2():
       """Tests that a regex with a pipe works as expected."""
       bucket_uri = self.CreateBucket()
-      regex = '.*\\.txt$|ok$'
+      regex = '.*\\.txt$|^[abc]'
       self.RunGsUtil(['rsync', '-r', '-x', regex, tmpdir, suri(bucket_uri)])
       listing = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
-      self.assertEquals(listing, set(['/a', '/b', '/c']))
+      self.assertEquals(listing, set(['/data1/ok']))
 
     _Check1()
     _Check2()

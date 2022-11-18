@@ -763,6 +763,8 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
         os.path.islink(url.object_name)):
       continue
     if cls.exclude_pattern:
+      # The wildcard_iterator will use the exclude pattern to exclude directories
+      # while this section excludes individual files.
       str_to_check = url.url_string[len(base_url_str):]
       if str_to_check.startswith(url.delim):
         str_to_check = str_to_check[1:]
