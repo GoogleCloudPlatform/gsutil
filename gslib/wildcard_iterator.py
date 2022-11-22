@@ -703,6 +703,8 @@ class FileWildcardIterator(WildcardIterator):
         # being iterated. See https://docs.python.org/3/library/os.html#os.walk
         if not self._ExcludeDir(full_dir_path):
           filtered_dirnames.append(dirname)
+        # If a symlink is excluded above we don't want to print 2 messages.
+        else:
           continue
         # This only prints a log message as os.walk() will not, by default,
         # walk down into symbolic links that resolve to directories.
