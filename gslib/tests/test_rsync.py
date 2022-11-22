@@ -2791,7 +2791,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       return stderr
 
     def _Check1():
-      """Ensure the example exclude pattern from documentation works as expected."""
+      """Ensure the example exclude pattern from the docs works as expected."""
       _check_exclude_regex('data.[/\\\\].*\\.txt$',
                            set(['/a', '/b', '/c', '/data1/ok']))
 
@@ -2804,7 +2804,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     _Check2()
 
     def _Check3():
-      """Tests that directories are skipped as expected."""
+      """Tests that directories are skipped from iteration as expected."""
       stderr = _check_exclude_regex(
           'data3',
           set(['/a', '/b', '/c', '/data1/ok', '/data1/a.txt', '/data2/b.txt']))
