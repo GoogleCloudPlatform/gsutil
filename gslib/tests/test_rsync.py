@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Integration tests for rsync command.PYTEST_DONT_REWRITE"""
+"""Integration tests for rsync command."""
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -2769,7 +2769,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _check_exclude_regex(exclude_regex, want, assert_text=None):
+    def _check_exclude_regex(exclude_regex, expected):
       """Tests rsync skips the excluded pattern."""
       bucket_uri = self.CreateBucket()
       # Add a trailing slash to the source directory to ensure its removed.
@@ -2777,10 +2777,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       stderr = self.RunGsUtil(
           ['rsync', '-r', '-x', exclude_regex, local,
            suri(bucket_uri)],
-          return_stderr=True,
-          return_stdout=True)
-      if assert_text:
-        self.assertNotIn(assert_text, stderr)
+          return_stderr=True)
 
       listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
       self.assertEquals(
@@ -2789,8 +2786,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
               '/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt',
               '/data3/data4/c.txt'
           ]))
-      got = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
-      self.assertEquals(got, want)
+      actual = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+      self.assertEquals(actual, expected)
+      return stderr
 
     def _Check1():
       """Ensure the example exclude pattern from documentation works as expected."""
@@ -2807,10 +2805,12 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     def _Check3():
       """Tests that directories are skipped as expected."""
-      _check_exclude_regex(
+      stderr = _check_exclude_regex(
           'data3',
-          set(['/a', '/b', '/c', '/data1/ok', '/data1/a.txt', '/data2/b.txt']),
-          'data4')
+          set(['/a', '/b', '/c', '/data1/ok', '/data1/a.txt', '/data2/b.txt']))
+      self.assertIn('Skipping excluded directory %s/data3...' % tmpdir, stderr)
+      self.assertNotIn('Skipping excluded directory %s/data3/data4...' % tmpdir,
+                       stderr)
 
     _Check3()
 

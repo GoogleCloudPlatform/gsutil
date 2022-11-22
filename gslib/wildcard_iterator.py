@@ -695,19 +695,16 @@ class FileWildcardIterator(WildcardIterator):
     # at yield time and print a more informative error message.
     for dirpath, dirnames, filenames in os.walk(six.ensure_text(directory),
                                                 topdown=True):
-      # Exclude directories in topdown mode to prevent excluded directories from
-      # being iterated over later.
-      if self.exclude_tuple is not None:
-        dirnames[:] = [
-            d for d in dirnames
-            if self._DirNotExcluded(os.path.join(dirpath, d))
-        ]
-
-      if self.logger:
-        for dirname in dirnames:
-          full_dir_path = os.path.join(dirpath, dirname)
-          if os.path.islink(full_dir_path):
-            self.logger.info('Skipping symlink directory "%s"', full_dir_path)
+      for dirname in list(dirnames):
+        full_dir_path = os.path.join(dirpath, dirname)
+        # Remove directories in place to prevent them and their children from
+        # being iterated. See https://docs.python.org/3/library/os.html#os.walk
+        if self.exclude_tuple is not None and self._ExcludeDir(full_dir_path):
+          dirnames.remove(dirname)
+        # This only prints a log message as os.walk() will not walk down into
+        # symbolic links that resolve to directories.
+        if self.logger and os.path.islink(full_dir_path):
+          self.logger.info('Skipping symlink directory "%s"', full_dir_path)
       for f in fnmatch.filter(filenames, wildcard):
         try:
           yield os.path.join(dirpath, FixWindowsEncodingIfNeeded(f))
@@ -742,7 +739,7 @@ class FileWildcardIterator(WildcardIterator):
               textwrap.wrap(_UNICODE_EXCEPTION_TEXT %
                             repr(os.path.join(dirpath, f)))))
 
-  def _DirNotExcluded(self, dir):
+  def _ExcludeDir(self, dir):
     """Check a directory to see if it should be excluded from os.walk.
     
     Args:
@@ -759,8 +756,7 @@ class FileWildcardIterator(WildcardIterator):
     if exclude_pattern.match(str_to_check):
       if self.logger:
         self.logger.info('Skipping excluded directory %s...', dir)
-      return False
-    return True
+      return True
 
   # pylint: disable=unused-argument
   def IterObjects(self, bucket_listing_fields=None):
