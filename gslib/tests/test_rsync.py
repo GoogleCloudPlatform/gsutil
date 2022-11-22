@@ -24,7 +24,6 @@ import re
 
 import six
 
-import crcmod
 from gslib.commands import rsync
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase

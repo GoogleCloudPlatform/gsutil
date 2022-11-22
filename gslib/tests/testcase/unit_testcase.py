@@ -353,9 +353,9 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
 
     Args:
       uri_or_str: StorageUri or string representing the wildcard string.
-      exclude_tuple: (exclude_pattern, base_url_str), where base_url_str is
-                     top-level URL string to list; exclude_pattern is a regex of
-                     paths to ignore during iteration.
+      exclude_tuple: (base_url, exclude_pattern), where base_url is
+                     top-level URL to list; exclude_pattern is a regex
+                     of paths to ignore during iteration.
       debug: debug level to pass to the underlying connection (0..3)
 
     Returns:

@@ -732,7 +732,7 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
           'metadata/%s' % UID_ATTR,
       ])
     exclude_tuple = (
-        base_url.url_string,
+        base_url,
         cls.exclude_pattern) if cls.exclude_pattern is not None else None
 
     iterator = CreateWildcardIterator(

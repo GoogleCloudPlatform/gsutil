@@ -33,6 +33,7 @@ import tempfile
 from gslib import wildcard_iterator
 from gslib.exception import InvalidUrlError
 from gslib.storage_url import ContainsWildcard
+from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetDummyProjectForUnitTest
@@ -505,7 +506,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
     """Tests that the exclude regex will omit a nested directory."""
     exp_uri_strs = self.root_files_uri_strs
     uri = self._test_storage_uri(suri(self.test_dir, '**'))
-    exclude_tuple = (self.test_dir, re.compile('dir1'))
+    exclude_tuple = (StorageUrlFromString(self.test_dir), re.compile('dir1'))
     actual_uri_strs = set(
         str(u)
         for u in self._test_wildcard_iterator(uri, exclude_tuple=exclude_tuple).

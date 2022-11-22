@@ -591,9 +591,9 @@ class FileWildcardIterator(WildcardIterator):
 
     Args:
       wildcard_url: FileUrl that contains the wildcard to iterate.
-      exclude_tuple: (exclude_pattern, base_url_str), where base_url_str is
-              top-level URL string to list; exclude_pattern is a regex of
-              paths to ignore during iteration.
+      exclude_tuple: (base_url, exclude_pattern), where base_url is
+                     top-level URL to list; exclude_pattern is a regex
+                     of paths to ignore during iteration.
       ignore_symlinks: If True, ignore symlinks during iteration.
       logger: logging.Logger used for outputting debug messages during
               iteration. If None, the root logger will be used.
@@ -703,8 +703,8 @@ class FileWildcardIterator(WildcardIterator):
         # being iterated. See https://docs.python.org/3/library/os.html#os.walk
         if not self._ExcludeDir(full_dir_path):
           filtered_dirnames.append(dirname)
-        # If a symlink is excluded above we don't want to print 2 messages.
         else:
+          # If a symlink is excluded above we don't want to print 2 messages.
           continue
         # This only prints a log message as os.walk() will not, by default,
         # walk down into symbolic links that resolve to directories.
@@ -758,9 +758,9 @@ class FileWildcardIterator(WildcardIterator):
     """
     if self.exclude_tuple is None:
       return False
-    (base_url_str, exclude_pattern) = self.exclude_tuple
+    (base_url, exclude_pattern) = self.exclude_tuple
     str_to_check = StorageUrlFromString(
-        dir).url_string[len(StorageUrlFromString(base_url_str).url_string):]
+        dir).url_string[len(base_url.url_string):]
     if str_to_check.startswith(self.wildcard_url.delim):
       str_to_check = str_to_check[1:]
     if exclude_pattern.match(str_to_check):
@@ -849,9 +849,9 @@ def CreateWildcardIterator(url_str,
                   matching the wildcard.  If false, yields just the live
                   object version.
     project_id: Project id to use for bucket listings.
-    exclude_tuple: (exclude_pattern, base_url_str), where base_url_str is
-                   top-level URL string to list; exclude_pattern is a regex of
-                   paths to ignore during iteration.
+    exclude_tuple: (base_url, exclude_pattern), where base_url is
+                   top-level URL to list; exclude_pattern is a regex
+                   of paths to ignore during iteration.
     ignore_symlinks: For FileUrls, ignore symlinks during iteration if true.
     logger: logging.Logger used for outputting debug messages during iteration.
             If None, the root logger will be used.
