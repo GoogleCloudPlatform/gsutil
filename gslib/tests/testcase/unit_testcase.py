@@ -171,7 +171,7 @@ class GsUtilUnitTestCase(base.GsUtilTestCase):
     _id = six.ensure_text(self.id())
     if self.is_debugging and stdout:
       print_to_fd('==== stdout {} ====\n'.format(_id), file=sys.stderr)
-      print_to_fd(stdout, file=sys.stderr)
+      print_to_fd(stdout, file=sys.stdout)
       print_to_fd('==== end stdout ====\n', file=sys.stderr)
     if self.is_debugging and stderr:
       print_to_fd('==== stderr {} ====\n'.format(_id), file=sys.stderr)
