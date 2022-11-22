@@ -732,7 +732,7 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
           'metadata/%s' % UID_ATTR,
       ])
     exclude_tuple = (
-        base_url_str,
+        base_url.url_string,
         cls.exclude_pattern) if cls.exclude_pattern is not None else None
 
     iterator = CreateWildcardIterator(
@@ -765,7 +765,7 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
     if cls.exclude_pattern:
       # The wildcard_iterator will use the exclude pattern to exclude directories
       # while this section excludes individual files.
-      str_to_check = url.url_string[len(base_url_str):]
+      str_to_check = url.url_string[len(base_url.url_string):]
       if str_to_check.startswith(url.delim):
         str_to_check = str_to_check[1:]
       if cls.exclude_pattern.match(str_to_check):

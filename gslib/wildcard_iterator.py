@@ -24,7 +24,6 @@ import glob
 import logging
 import os
 import re
-import sys
 import textwrap
 
 import six
@@ -651,15 +650,6 @@ class FileWildcardIterator(WildcardIterator):
     for filepath in filepaths:
       expanded_url = StorageUrlFromString(filepath)
       try:
-        if self.exclude_tuple is not None:
-          (base_url_str, exclude_pattern) = self.exclude_tuple
-          str_to_check = filepath[len(base_url_str):]
-          if str_to_check.startswith(self.wildcard_url.delim):
-            str_to_check = str_to_check[1:]
-          if exclude_pattern.match(str_to_check):
-            if self.logger:
-              self.logger.info('Skipping excluded path %s...', filepath)
-            continue
         if self.ignore_symlinks and os.path.islink(filepath):
           if self.logger:
             self.logger.info('Skipping symbolic link %s...', filepath)
@@ -703,7 +693,16 @@ class FileWildcardIterator(WildcardIterator):
     # originated on Windows) os.walk() will not attempt to decode and then die
     # with a "codec can't decode byte" error, and instead we can catch the error
     # at yield time and print a more informative error message.
-    for dirpath, dirnames, filenames in os.walk(six.ensure_text(directory)):
+    for dirpath, dirnames, filenames in os.walk(six.ensure_text(directory),
+                                                topdown=True):
+      # Exclude directories in topdown mode to prevent excluded directories from
+      # being iterated over later.
+      if self.exclude_tuple is not None:
+        dirnames[:] = [
+            d for d in dirnames
+            if self._DirNotExcluded(os.path.join(dirpath, d))
+        ]
+
       if self.logger:
         for dirname in dirnames:
           full_dir_path = os.path.join(dirpath, dirname)
@@ -742,6 +741,26 @@ class FileWildcardIterator(WildcardIterator):
           raise CommandException('\n'.join(
               textwrap.wrap(_UNICODE_EXCEPTION_TEXT %
                             repr(os.path.join(dirpath, f)))))
+
+  def _DirNotExcluded(self, dir):
+    """Check a directory to see if it should be excluded from os.walk.
+    
+    Args:
+      dir: String representing the directory to check.
+
+    Returns:
+      False if the directory should be excluded.
+    """
+    (base_url_str, exclude_pattern) = self.exclude_tuple
+    str_to_check = StorageUrlFromString(
+        dir).url_string[len(StorageUrlFromString(base_url_str).url_string):]
+    if str_to_check.startswith(self.wildcard_url.delim):
+      str_to_check = str_to_check[1:]
+    if exclude_pattern.match(str_to_check):
+      if self.logger:
+        self.logger.info('Skipping excluded directory %s...', dir)
+      return False
+    return True
 
   # pylint: disable=unused-argument
   def IterObjects(self, bucket_listing_fields=None):
