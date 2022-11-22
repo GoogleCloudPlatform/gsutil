@@ -24,7 +24,6 @@ import re
 
 import six
 
-import crcmod
 from gslib.commands import rsync
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
@@ -2760,28 +2759,59 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
   def test_dir_to_bucket_relative_minus_x(self):
     """Test that rsync -x option works with a relative regex per the docs."""
-    bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir(test_files=[
-        'a', 'b', 'c', ('data1', 'a.txt'), ('data1', 'ok'), ('data2', 'b.txt')
+        'a', 'b', 'c', ('data1',
+                        'a.txt'), ('data1',
+                                   'ok'), ('data2',
+                                           'b.txt'), ('data3', 'data4', 'c.txt')
     ])
 
     # Use @Retry as hedge against bucket listing eventual consistency.
     @Retry(AssertionError, tries=3, timeout_secs=1)
-    def _Check1():
+    def _check_exclude_regex(exclude_regex, expected):
       """Tests rsync skips the excluded pattern."""
-      regex = 'data.[/\\\\].*\\.txt$'
+      bucket_uri = self.CreateBucket()
       # Add a trailing slash to the source directory to ensure its removed.
       local = tmpdir + ('\\' if IS_WINDOWS else '/')
-      self.RunGsUtil(['rsync', '-r', '-x', regex, local, suri(bucket_uri)])
+      stderr = self.RunGsUtil(
+          ['rsync', '-r', '-x', exclude_regex, local,
+           suri(bucket_uri)],
+          return_stderr=True)
 
-      listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
-      listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+      listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
       self.assertEquals(
-          listing1,
-          set(['/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt']))
-      self.assertEquals(listing2, set(['/a', '/b', '/c', '/data1/ok']))
+          listing,
+          set([
+              '/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt',
+              '/data3/data4/c.txt'
+          ]))
+      actual = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+      self.assertEquals(actual, expected)
+      return stderr
+
+    def _Check1():
+      """Ensure the example exclude pattern from the docs works as expected."""
+      _check_exclude_regex('data.[/\\\\].*\\.txt$',
+                           set(['/a', '/b', '/c', '/data1/ok']))
 
     _Check1()
+
+    def _Check2():
+      """Tests that a regex with a pipe works as expected."""
+      _check_exclude_regex('^data|[bc]$', set(['/a']))
+
+    _Check2()
+
+    def _Check3():
+      """Tests that directories are skipped from iteration as expected."""
+      stderr = _check_exclude_regex(
+          'data3',
+          set(['/a', '/b', '/c', '/data1/ok', '/data1/a.txt', '/data2/b.txt']))
+      self.assertIn('Skipping excluded directory %s/data3...' % tmpdir, stderr)
+      self.assertNotIn('Skipping excluded directory %s/data3/data4...' % tmpdir,
+                       stderr)
+
+    _Check3()
 
   @unittest.skipIf(IS_WINDOWS,
                    "os.chmod() won't make file unreadable on Windows.")
