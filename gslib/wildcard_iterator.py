@@ -695,16 +695,22 @@ class FileWildcardIterator(WildcardIterator):
     # at yield time and print a more informative error message.
     for dirpath, dirnames, filenames in os.walk(six.ensure_text(directory),
                                                 topdown=True):
-      for dirname in list(dirnames):
+      filtered_dirnames = []
+
+      for dirname in dirnames:
         full_dir_path = os.path.join(dirpath, dirname)
-        # Remove directories in place to prevent them and their children from
+        # Removes directories in place to prevent them and their children from
         # being iterated. See https://docs.python.org/3/library/os.html#os.walk
-        if self.exclude_tuple is not None and self._ExcludeDir(full_dir_path):
-          dirnames.remove(dirname)
-        # This only prints a log message as os.walk() will not walk down into
-        # symbolic links that resolve to directories.
+        if not self._ExcludeDir(full_dir_path):
+          filtered_dirnames.append(dirname)
+          continue
+        # This only prints a log message as os.walk() will not, by default,
+        # walk down into symbolic links that resolve to directories.
         if self.logger and os.path.islink(full_dir_path):
           self.logger.info('Skipping symlink directory "%s"', full_dir_path)
+
+      dirnames[:] = filtered_dirnames
+
       for f in fnmatch.filter(filenames, wildcard):
         try:
           yield os.path.join(dirpath, FixWindowsEncodingIfNeeded(f))
@@ -748,6 +754,8 @@ class FileWildcardIterator(WildcardIterator):
     Returns:
       False if the directory should be excluded.
     """
+    if self.exclude_tuple is None:
+      return False
     (base_url_str, exclude_pattern) = self.exclude_tuple
     str_to_check = StorageUrlFromString(
         dir).url_string[len(StorageUrlFromString(base_url_str).url_string):]
