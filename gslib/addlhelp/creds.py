@@ -106,15 +106,16 @@ _DETAILED_HELP_TEXT = ("""
     For further information about account roles, see
     https://developers.google.com/console/help/#DifferentRoles
 
-  Google Compute Engine Internal Service Account:
+  Compute Engine Internal Service Account:
     This is the type of service account used for accounts hosted by App Engine
-    or Google Compute Engine. Such credentials are created automatically for
-    you on Google Compute Engine when you run the gcloud compute instances
-    creates command and the credentials can be controlled with the --scopes
+    or Compute Engine. Such credentials are created automatically for
+    you on Compute Engine when you run the `gcloud compute instances
+    create` command and the credentials can be controlled with the `--scopes`
     flag.
 
-    For more details about Google Compute Engine service accounts, see
-    https://developers.google.com/compute/docs/authentication;
+    For more details about using service account credentials for authenticating workloads
+    on Compute Engine, see
+    https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances;
 
     For more details about App Engine service accounts, see
     https://developers.google.com/appengine/docs/python/appidentity/overview
