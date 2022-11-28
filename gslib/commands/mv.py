@@ -63,10 +63,6 @@ _DETAILED_HELP_TEXT = ("""
 
     gsutil mv gs://my_bucket/oldprefix gs://my_bucket/newprefix
 
-  Note that when using ``mv`` to rename groups of objects with a common
-  prefix, you cannot specify the source URL using wildcards; you must spell
-  out the complete name.
-
   If you do a rename as specified above and you want to preserve ACLs, you
   should use the ``-p`` option (see OPTIONS).
 
