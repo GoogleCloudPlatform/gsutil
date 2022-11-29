@@ -57,6 +57,8 @@ from gslib.utils.iam_helper import IsEqualBindings
 from gslib.utils.iam_helper import PatchBindings
 from gslib.utils.iam_helper import SerializeBindingsTuple
 from gslib.utils.retry_util import Retry
+from gslib.utils.shim_util import GcloudStorageMap
+from gslib.utils.shim_util import GcloudStorageFlag
 
 _SET_SYNOPSIS = """
   gsutil iam set [-afRr] [-e <etag>] file url ...
@@ -243,6 +245,11 @@ IAM_CH_CONDITIONS_WORKAROUND_MSG = (
     '"iam set".')
 
 
+def _RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested):
+  if UrlsAreMixOfBucketsAndObjects(urls) and not recursion_requested:
+    raise CommandException('Cannot operate on a mix of buckets and objects.')
+
+
 def _PatchIamWrapper(cls, iter_result, thread_state):
   (serialized_bindings_tuples, expansion_result) = iter_result
   return cls.PatchIamHelper(
@@ -308,6 +315,55 @@ class IamCommand(Command):
           'ch': _ch_help_text,
       },
   )
+
+  def get_gcloud_storage_args(self):
+    sub_command = self.args.pop(0)
+    if sub_command == 'get':
+      if StorageUrlFromString(self.args[0]).IsObject():
+        command_group = 'objects'
+      else:
+        command_group = 'buckets'
+      gcloud_storage_map = GcloudStorageMap(gcloud_command=[
+          'alpha', 'storage', command_group, 'get-iam-policy', '--format=json'
+      ],
+                                            flag_map={})
+    elif sub_command == 'set':
+      gcloud_storage_map = GcloudStorageMap(
+          gcloud_command=[
+              'alpha', 'storage', None, 'set-iam-policy', '--format=json'
+          ],
+          flag_map={
+              '-a': GcloudStorageFlag('--all-versions'),
+              '-e': GcloudStorageFlag('--etag'),
+              # Hack to make gcloud recognize empty string value.
+              '_empty_etag': GcloudStorageFlag('--etag='),
+              '-f': GcloudStorageFlag('--continue-on-error'),
+              '-R': GcloudStorageFlag('--recursive'),
+              '-r': GcloudStorageFlag('--recursive'),
+          })
+      # Flags must be at the start of self.args to get parsed.
+      self.ParseSubOpts()
+      # Flags moved to self.sub_opts, leaving [POLICY-FILE, URLS...].
+      url_strings = self.args[1:]
+      url_objects = list(map(StorageUrlFromString, url_strings))
+
+      recurse = False
+      for i, (flag_key, flag_value) in enumerate(self.sub_opts):
+        if flag_key in ('-r', '-R'):
+          recurse = True
+        elif flag_key == '-e' and flag_value == '':
+          # Allow for empty string values.
+          self.sub_opts[i] = ('_empty_etag', '')
+      _RaiseErrorIfUrlsAreMixOfBucketsAndObjects(url_objects, recurse)
+
+      if recurse or url_objects[0].IsObject():
+        gcloud_storage_map.gcloud_command[2] = 'objects'
+      else:
+        gcloud_storage_map.gcloud_command[2] = 'buckets'
+      # Gsutil takes policy file then URLs, and gcloud storage does the reverse.
+      self.args = url_strings + self.args[:1]
+
+    return super().get_gcloud_storage_args(gcloud_storage_map)
 
   def GetIamHelper(self, storage_url, thread_state=None):
     """Gets an IAM policy for a single, resolved bucket / object URL.
@@ -529,9 +585,7 @@ class IamCommand(Command):
     threaded_wildcards = []
 
     surls = list(map(StorageUrlFromString, patterns))
-
-    if (UrlsAreMixOfBucketsAndObjects(surls) and not self.recursion_requested):
-      raise CommandException('Cannot operate on a mix of buckets and objects.')
+    _RaiseErrorIfUrlsAreMixOfBucketsAndObjects(surls, self.recursion_requested)
 
     for surl in surls:
       try:
@@ -653,9 +707,7 @@ class IamCommand(Command):
     threaded_wildcards = []
 
     surls = list(map(StorageUrlFromString, patterns))
-
-    if (UrlsAreMixOfBucketsAndObjects(surls) and not self.recursion_requested):
-      raise CommandException('Cannot operate on a mix of buckets and objects.')
+    _RaiseErrorIfUrlsAreMixOfBucketsAndObjects(surls, self.recursion_requested)
 
     for surl in surls:
       print(surl.url_string)
