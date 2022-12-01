@@ -48,6 +48,16 @@ _DETAILED_HELP_TEXT = ("""
   The gcloud storage CLI only supports a subset of gsutil commands. What follows
   is a list of commands supported by the shim with any differences in behavior
   noted.
+  
+  autoclass
+  ------------------------
+  
+  - Works as expected.
+  
+  bucketpolicyonly
+  ------------------------
+
+  - Works as expected.
 
   cat
   ------------------------
@@ -80,6 +90,11 @@ _DETAILED_HELP_TEXT = ("""
     format.
   - The encryption subcommand returns informational messages in a different
     format.
+
+  lifecycle
+  ------------------------
+
+  - Works as expected.
 
   logging
   ------------------------
@@ -142,6 +157,11 @@ _DETAILED_HELP_TEXT = ("""
   ------------------------
 
   - Includes a field "Storage class update time:" which may throw off tabbing.
+
+  ubla
+  ------------------------
+
+  - Works as expected.
 
   versioning
   ------------------------
