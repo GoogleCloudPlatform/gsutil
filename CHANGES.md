@@ -1,3 +1,19 @@
+Release 5.17 (release date: 2022-12-01)
+======================================
+New Features
+------------------
+- Shim autoclass command (#1618)
+- Updating WrappedCredentials to allow for External Account Authorized User Credentials (#1617)
+
+Bug Fixes
+------------------
+- Fix rsync -x test to address issue #1615 (#1629, #1623)
+
+Other Changes
+------------------
+- Pin httplib2 to 0.20.4 version (#1628)
+- Several documentation updates and clarifications.
+
 Release 5.16 (release date: 2022-10-27)
 ======================================
 New Features
