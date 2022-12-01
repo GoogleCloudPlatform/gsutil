@@ -2807,8 +2807,9 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       stderr = _check_exclude_regex(
           'data3',
           set(['/a', '/b', '/c', '/data1/ok', '/data1/a.txt', '/data2/b.txt']))
-      self.assertIn('Skipping excluded directory {}...'.format(
-          os.path.join(tmpdir, 'data3'), stderr))
+      self.assertIn(
+          'Skipping excluded directory {}...'.format(
+              os.path.join(tmpdir, 'data3')), stderr)
       self.assertNotIn(
           'Skipping excluded directory {}...'.format(
               os.path.join(tmpdir, 'data3', 'data4')), stderr)
