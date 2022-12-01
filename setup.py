@@ -41,7 +41,7 @@ requires = [
     'fasteners>=0.14.1',
     'gcs-oauth2-boto-plugin>=3.0',
     'google-apitools>=0.5.32',
-    'httplib2>=0.20.4',
+    'httplib2==0.20.4',
     'google-reauth>=0.1.0',
     # mock is part of the standard library in Python 3.3 onwards.
     # 3.0.5 is the last version that supports Python 3.3 or lower.
