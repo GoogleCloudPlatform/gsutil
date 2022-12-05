@@ -21,7 +21,9 @@ from __future__ import unicode_literals
 
 from collections import defaultdict
 import json
+import os
 
+from gslib.commands import iam
 from gslib.exception import CommandException
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
@@ -29,6 +31,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import UTF8
@@ -39,6 +42,11 @@ from gslib.utils.iam_helper import DiffBindings
 from gslib.utils.iam_helper import IsEqualBindings
 from gslib.utils.iam_helper import PatchBindings
 from gslib.utils.retry_util import Retry
+
+from six import add_move, MovedModule
+
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 bvle = apitools_messages.Policy.BindingsValueListEntry
 
@@ -925,7 +933,9 @@ class TestIamSet(TestIamIntegration):
       stderr = self.RunGsUtil(['iam', 'set', inpath, self.bucket.uri],
                               return_stderr=True,
                               expected_status=1)
-      self.assertIn('ArgumentException', stderr)
+      error_message = ('JSONDecodeError'
+                       if self._use_gcloud_storage else 'ArgumentException')
+      self.assertIn(error_message, stderr)
 
     # TODO(b/135780661): Remove retry after bug resolved
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -935,7 +945,9 @@ class TestIamSet(TestIamIntegration):
           ['iam', 'set', 'nonexistent/path', self.bucket.uri],
           return_stderr=True,
           expected_status=1)
-      self.assertIn('ArgumentException', stderr)
+      error_message = ('No such file or directory'
+                       if self._use_gcloud_storage else 'ArgumentException')
+      self.assertIn(error_message, stderr)
 
     _Check1()
     _Check2()
@@ -945,13 +957,17 @@ class TestIamSet(TestIamIntegration):
     stderr = self.RunGsUtil(['iam', 'get', self.nonexistent_bucket_name],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('CommandException', stderr)
+    error_message = ('AttributeError'
+                     if self._use_gcloud_storage else 'CommandException')
+    self.assertIn(error_message, stderr)
 
     stderr = self.RunGsUtil(
         ['iam', 'get', 'gs://%s' % self.nonexistent_bucket_name],
         return_stderr=True,
         expected_status=1)
-    self.assertIn('BucketNotFoundException', stderr)
+    error_message = ('not found'
+                     if self._use_gcloud_storage else 'BucketNotFoundException')
+    self.assertIn(error_message, stderr)
 
     # N.B.: The call to wildcard_iterator.WildCardIterator here will invoke
     # ListBucket, which only promises eventual consistency. We use @Retry here
@@ -963,7 +979,9 @@ class TestIamSet(TestIamIntegration):
       stderr = self.RunGsUtil(['iam', 'get', 'gs://*'],
                               return_stderr=True,
                               expected_status=1)
-      self.assertIn('CommandException', stderr)
+      error_message = ('The specified bucket is not valid'
+                       if self._use_gcloud_storage else 'CommandException')
+      self.assertIn(error_message, stderr)
 
     _Check()
 
@@ -1034,6 +1052,7 @@ class TestIamSet(TestIamIntegration):
 
     set_iam_string = self.RunGsUtil(['iam', 'get', self.bucket.uri],
                                     return_stdout=True)
+
     self.RunGsUtil([
         'iam', 'set', '-e',
         json.loads(set_iam_string)['etag'], self.old_bucket_iam_path,
@@ -1081,7 +1100,9 @@ class TestIamSet(TestIamIntegration):
     ],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('ArgumentException', stderr)
+    error_message = ('DecodeError'
+                     if self._use_gcloud_storage else 'ArgumentException')
+    self.assertIn(error_message, stderr)
 
   def test_set_mismatched_etag(self):
     """Tests setting mismatched etag raises an error."""
@@ -1099,7 +1120,9 @@ class TestIamSet(TestIamIntegration):
     ],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('PreconditionException', stderr)
+    error_message = ('pre-conditions you specified did not hold'
+                     if self._use_gcloud_storage else 'PreconditionException')
+    self.assertIn(error_message, stderr)
 
   def _create_multiple_objects(self):
     """Creates two versioned objects and return references to all versions.
@@ -1227,7 +1250,9 @@ class TestIamSet(TestIamIntegration):
                             expected_status=1)
 
     # The program has exited due to a bucket lookup 404.
-    self.assertIn('BucketNotFoundException', stderr)
+    error_message = ('not found'
+                     if self._use_gcloud_storage else 'BucketNotFoundException')
+    self.assertIn(error_message, stderr)
     set_iam_string = self.RunGsUtil(['iam', 'get', bucket.uri],
                                     return_stdout=True)
     set_iam_string2 = self.RunGsUtil(['iam', 'get', bucket2.uri],
@@ -1259,7 +1284,9 @@ class TestIamSet(TestIamIntegration):
                             expected_status=1)
 
     # The program asserts that an error has occured (due to 404).
-    self.assertIn('CommandException', stderr)
+    error_message = ('not found'
+                     if self._use_gcloud_storage else 'BucketNotFoundException')
+    self.assertIn(error_message, stderr)
 
     set_iam_string = self.RunGsUtil(['iam', 'get', bucket.uri],
                                     return_stdout=True)
@@ -1301,7 +1328,9 @@ class TestIamSet(TestIamIntegration):
       ],
                               return_stderr=True,
                               expected_status=1)
-      self.assertIn('BucketNotFoundException', stderr)
+      error_message = ('not found' if self._use_gcloud_storage else
+                       'BucketNotFoundException')
+      self.assertIn(error_message, stderr)
 
     # TODO(b/135780661): Remove retry after bug resolved
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -1393,3 +1422,136 @@ class TestIamSet(TestIamIntegration):
     self.assertEqualsPoliciesString(self.object_iam_string, reset_iam_string)
     self.assertIn(self.public_object_read_binding[0],
                   json.loads(set_iam_string)['bindings'])
+
+
+class TestIamShim(testcase.GsUtilUnitTestCase):
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_iam_get_object(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('iam', ['get', 'gs://bucket/object'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage objects get-iam-policy'
+             ' --format=json gs://bucket/object').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_iam_get_bucket(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('iam', ['get', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage buckets get-iam-policy'
+             ' --format=json gs://bucket').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_iam_set_object(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'iam', ['set', 'policy-file', 'gs://b/o1', 'gs://b/o2'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage objects set-iam-policy'
+             ' --format=json gs://b/o1 gs://b/o2 policy-file').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_iam_set_bucket(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'iam', ['set', 'policy-file', 'gs://b1', 'gs://b2'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
+             ' --format=json gs://b1 gs://b2 policy-file').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_iam_set_mix_of_bucket_and_objects_if_recursive(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'iam', ['set', '-r', 'policy-file', 'gs://b1', 'gs://b2/o'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage objects set-iam-policy'
+             ' --format=json --recursive gs://b1 gs://b2/o policy-file').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_raises_for_iam_set_mix_of_bucket_and_objects(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with self.assertRaisesRegex(
+            CommandException,
+            'Cannot operate on a mix of buckets and objects.'):
+          self.RunCommand('iam', ['set', 'policy-file', 'gs://b', 'gs://b/o'])
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_iam_set_handles_valid_etag(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'iam', ['set', '-e', 'abc=', 'policy-file', 'gs://b'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
+             ' --format=json --etag abc= gs://b policy-file').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_iam_set_handles_empty_etag(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'iam', ['set', '-e', '', 'policy-file', 'gs://b'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
+             ' --format=json --etag= gs://b policy-file').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
