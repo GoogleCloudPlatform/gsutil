@@ -333,13 +333,13 @@ class RetentionCommand(Command):
               'set':
                   GcloudStorageMap(
                       gcloud_command=[
-                          'alpha', 'storage', 'buckets', 'update', '--retention-period={}s'.format(RetentionInSeconds(self.args[1]))
+                          'alpha', 'storage', 'buckets', 'update',
+                          '--retention-period={}s'.format(
+                              RetentionInSeconds(self.args[1]))
                       ] + self.args[2:],  # Adds target bucket URLs.
-                      flag_map={}
-                  ),
+                      flag_map={}),
           },
-          flag_map={}
-      )
+          flag_map={})
       # Don't trigger unneeded translation now that complete command is above.
       self.args = self.args[:1]
     else:
@@ -348,7 +348,8 @@ class RetentionCommand(Command):
               'clear':
                   GcloudStorageMap(
                       gcloud_command=[
-                          'alpha', 'storage', 'buckets', 'update', '--clear-retention-period'
+                          'alpha', 'storage', 'buckets', 'update',
+                          '--clear-retention-period'
                       ],
                       flag_map={},
                   ),
@@ -374,10 +375,39 @@ class RetentionCommand(Command):
                       },
                       flag_map={},
                   ),
+              'event-default':
+                  GcloudStorageMap(
+                      gcloud_command={
+                          'set':
+                              GcloudStorageMap(
+                                  gcloud_command=[
+                                      'alpha', 'storage', 'buckets', 'update',
+                                      '--default-event-based-hold'
+                                  ],
+                                  flag_map={},
+                              ),
+                          'release':
+                              GcloudStorageMap(
+                                  gcloud_command=[
+                                      'alpha', 'storage', 'buckets', 'update',
+                                      '--no-default-event-based-hold'
+                                  ],
+                                  flag_map={},
+                              ),
+                      },
+                      flag_map={},
+                  ),
+              'get':
+                  GcloudStorageMap(gcloud_command=[
+                      'alpha', 'storage', 'buckets', 'describe',
+                      '--format=yaml(retentionPolicy)'
+                  ],
+                                   flag_map={}),
               'lock':
                   GcloudStorageMap(
                       gcloud_command=[
-                          'alpha', 'storage', 'buckets', 'update', '--lock-retention-period'
+                          'alpha', 'storage', 'buckets', 'update',
+                          '--lock-retention-period'
                       ],
                       flag_map={},
                   ),
