@@ -129,7 +129,7 @@ _DETAILED_HELP_TEXT = ("""
   (see ``gsutil help support``).
 
   To compile manually on macOS, you will first need to install
-  `XCode <https://developer.apple.com/xcode/>`_ and then run:
+  `Xcode <https://developer.apple.com/xcode/>`_ and then run:
 
     pip3 install -U crcmod
 
