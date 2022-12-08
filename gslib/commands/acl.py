@@ -39,6 +39,9 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils import acl_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.retry_util import Retry
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
+
 
 _SET_SYNOPSIS = """
   gsutil acl set [-f] [-r] [-a] <file-or-canned_acl_name> url...
@@ -292,6 +295,13 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
+_GET_COMMAND_BUCKET = GcloudStorageMap(
+  gcloud_command = ['alpha', 'storage', 'bucket'],
+  flag_map = GcloudStorageFlag('--acl-file'))
+
+_GET_COMMAND_OBJECT = GcloudStorageMap(
+  gcloud_command = ['alpha', 'storage', 'object'],
+  flag_map = GcloudStorageFlag('--acl-file'))
 
 def _ApplyExceptionHandler(cls, exception):
   cls.logger.error('Encountered a problem: %s', exception)
@@ -339,6 +349,44 @@ class AclCommand(Command):
           'ch': _ch_help_text
       },
   )
+  def get_command_for_buckets_or_objects(self, name_expansion_result):
+    url = name_expansion_result.expanded_storage_url 
+    if self.args[0]=='get':
+      if url.IsBucket():
+        gcloud_storage_map = GcloudStorageMap(
+          gcloud_command={'get': _GET_COMMAND_BUCKET,},flag_map={})
+      elif url.IsObject():
+        gcloud_storage_map = GcloudStorageMap(
+          gcloud_command={'get': _GET_COMMAND_OBJECT,},flag_map={})
+      gcloud_storage_map.gcloud_command['get'].gcloud_command += [
+        'describe', ('--format=json[acl]') ]
+
+    return gcloud_storage_map
+  
+  def set_command_for_buckets_or_objects(self, name_expansion_result):
+    url = name_expansion_result.expanded_storage_url
+    if url.IsBucket():
+      gcloud_command = ['alpha', 'storage','bucket'],
+    elif url.IsObject():
+      gcloud_command = ['alpha', 'storage','object']
+    if self.args[0]=='set':
+      gcloud_storage_map = GcloudStorageMap(gcloud_command,
+      flag_map ={
+        '-R': GcloudStorageFlag('--recursive'),
+        '-r': GcloudStorageFlag('--recursive'),
+        '-a': GcloudStorageFlag('--all-versions'),
+        '-f': GcloudStorageFlag('--continue-on-error'),}
+        )
+      CannedGCSacl=['private', 'public-read', 'project-private',
+                    'public-read-write', 'authenticated-read',
+                    'bucket-owner-read', 'bucket-owner-full-control'] 
+      if self.args[1] in CannedGCSacl:
+        gcloud_storage_map.gcloud_command['set'].gcloud_command += [
+              'update']
+    else:
+      gcloud_storage_map=gcloud_storage_map
+
+    return super().set_command_for_buckets_or_objects(gcloud_storage_map)
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
