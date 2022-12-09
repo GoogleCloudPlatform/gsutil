@@ -97,6 +97,11 @@ _DETAILED_HELP_TEXT = ("""
   - The encryption subcommand returns informational messages in a different
     format.
 
+  labels
+  ------------------------
+  - ``get`` subcommand prints "[]" instead of "gs://[bucket name] has no labels
+    configuration."
+
   lifecycle
   ------------------------
 
@@ -107,6 +112,7 @@ _DETAILED_HELP_TEXT = ("""
 
   - The get subcommand has different JSON spacing and doesn't print an
     informational message if no configuration is found.
+
 
   ls
   ------------------------
