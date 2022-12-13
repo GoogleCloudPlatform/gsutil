@@ -48,12 +48,12 @@ _DETAILED_HELP_TEXT = ("""
   The gcloud storage CLI only supports a subset of gsutil commands. What follows
   is a list of commands supported by the shim with any differences in behavior
   noted.
-  
+
   autoclass
   ------------------------
-  
+
   - Works as expected.
-  
+
   bucketpolicyonly
   ------------------------
 
@@ -68,6 +68,12 @@ _DETAILED_HELP_TEXT = ("""
   ------------------------
 
   - Works as expected.
+
+  cors
+  ------------------------
+
+  - ``get`` subcommand prints "[]" instead of "gs://[bucket name] has no CORS
+    configuration".
 
   cp
   ------------------------
