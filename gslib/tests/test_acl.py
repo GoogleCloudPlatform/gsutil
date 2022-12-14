@@ -20,21 +20,31 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import re
+import os
 
+from gslib.commands import acl
 from gslib.command import CreateOrGetGsutilLogger
 from gslib.cs_api_map import ApiSelector
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 from gslib.utils import acl_helper
 from gslib.utils.constants import UTF8
 from gslib.utils.retry_util import Retry
 from gslib.utils.translation_helper import AclTranslation
+
+from six import add_move, MovedModule
+
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'
 
@@ -760,3 +770,22 @@ class TestAclOldAlias(TestAcl):
   _get_acl_prefix = ['getacl']
   _set_defacl_prefix = ['setdefacl']
   _ch_acl_prefix = ['chacl']
+
+
+class TestAclShim(testcase.GsUtilUnitTestCase):
+
+  @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_acl_get_object(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('acl', ['get', 'gs://bucket/object'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage objects acl-file'
+             ' --format=json gs://bucket/object').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)

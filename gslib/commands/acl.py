@@ -296,11 +296,11 @@ _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
 _GET_COMMAND_BUCKET = GcloudStorageMap(
-  gcloud_command = ['alpha', 'storage', 'bucket'],
+  gcloud_command = ['alpha', 'storage', 'bucket', '--format=json'],
   flag_map = GcloudStorageFlag('--acl-file'))
 
 _GET_COMMAND_OBJECT = GcloudStorageMap(
-  gcloud_command = ['alpha', 'storage', 'object'],
+  gcloud_command = ['alpha', 'storage', 'object', '--format=json'],
   flag_map = GcloudStorageFlag('--acl-file'))
 
 def _ApplyExceptionHandler(cls, exception):
@@ -354,14 +354,14 @@ class AclCommand(Command):
     if self.args[0]=='get':
       if url.IsBucket():
         gcloud_storage_map = GcloudStorageMap(
-          gcloud_command={'get': _GET_COMMAND_BUCKET,},flag_map={})
+          gcloud_command={'get': _GET_COMMAND_BUCKET},flag_map={})
       elif url.IsObject():
         gcloud_storage_map = GcloudStorageMap(
-          gcloud_command={'get': _GET_COMMAND_OBJECT,},flag_map={})
+          gcloud_command={'get': _GET_COMMAND_OBJECT},flag_map={})
       gcloud_storage_map.gcloud_command['get'].gcloud_command += [
-        'describe', ('--format=json[acl]') ]
+        'describe', ('--format=json') ]
 
-    return gcloud_storage_map
+    return super().get_command_for_buckets_or_objects(gcloud_storage_map)
   
   def set_command_for_buckets_or_objects(self, name_expansion_result):
     url = name_expansion_result.expanded_storage_url
