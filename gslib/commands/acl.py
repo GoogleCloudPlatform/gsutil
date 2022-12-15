@@ -349,44 +349,44 @@ class AclCommand(Command):
           'ch': _ch_help_text
       },
   )
-  def get_command_for_buckets_or_objects(self, name_expansion_result):
-    url = name_expansion_result.expanded_storage_url 
-    if self.args[0]=='get':
-      if url.IsBucket():
-        gcloud_storage_map = GcloudStorageMap(
-          gcloud_command={'get': _GET_COMMAND_BUCKET},flag_map={})
-      elif url.IsObject():
-        gcloud_storage_map = GcloudStorageMap(
-          gcloud_command={'get': _GET_COMMAND_OBJECT},flag_map={})
-      gcloud_storage_map.gcloud_command['get'].gcloud_command += [
-        'describe', ('--format=json') ]
 
-    return super().get_command_for_buckets_or_objects(gcloud_storage_map)
-  
-  def set_command_for_buckets_or_objects(self, name_expansion_result):
-    url = name_expansion_result.expanded_storage_url
-    if url.IsBucket():
-      gcloud_command = ['alpha', 'storage','bucket'],
-    elif url.IsObject():
-      gcloud_command = ['alpha', 'storage','object']
-    if self.args[0]=='set':
-      gcloud_storage_map = GcloudStorageMap(gcloud_command,
-      flag_map ={
-        '-R': GcloudStorageFlag('--recursive'),
-        '-r': GcloudStorageFlag('--recursive'),
-        '-a': GcloudStorageFlag('--all-versions'),
-        '-f': GcloudStorageFlag('--continue-on-error'),}
-        )
-      CannedGCSacl=['private', 'public-read', 'project-private',
+  def get_gcloud_storage_args(self):
+    _CannedGcsAcl = ['private', 'public-read', 'project-private',
                     'public-read-write', 'authenticated-read',
-                    'bucket-owner-read', 'bucket-owner-full-control'] 
-      if self.args[1] in CannedGCSacl:
-        gcloud_storage_map.gcloud_command['set'].gcloud_command += [
-              'update']
-    else:
-      gcloud_storage_map=gcloud_storage_map
-
-    return super().set_command_for_buckets_or_objects(gcloud_storage_map)
+                    'bucket-owner-read', 'bucket-owner-full-control']
+    
+    sub_command = self.args.pop(0)
+    if sub_command == 'set':
+      if StorageUrlFromString(self.args[0]).IsObject():
+        command_group = 'objects'
+      else:
+        command_group = 'buckets'
+      if StorageUrlFromString(self.args[1]) in _CannedGcsAcl:
+        predef_acl= '--predefined-acl='+ str(self.args[1])
+      else: 
+        predef_acl='--acl-file='+ str(self.args[1])
+      gcloud_storage_map = GcloudStorageMap(gcloud_command={
+        'set': GcloudStorageMap(
+          gcloud_command=['alpha', 'storage', command_group, 'update', predef_acl],
+          flag_map={
+            'a': GcloudStorageFlag('--all-versions'),
+            'f': GcloudStorageFlag('--continue-on-error'),
+            'r': GcloudStorageFlag('--recursive'),
+            'R': GcloudStorageFlag('--recursive'),
+          })
+      }, flag_map={})
+    elif sub_command =='get':
+      if StorageUrlFromString(self.args[0]).IsObject():
+        command_group = 'objects'
+      else:
+        command_group = 'buckets'
+      gcloud_storage_map = GcloudStorageMap(gcloud_command={
+        'get': GcloudStorageMap(
+          gcloud_command=['alpha', 'storage', command_group, 'describe', '--format=json[acl]'],
+          flag_map={}
+          )}, flag_map={})
+          
+    return super().get_gcloud_storage_args(gcloud_storage_map)
 
   def _CalculateUrlsStartArg(self):
     if not self.args:

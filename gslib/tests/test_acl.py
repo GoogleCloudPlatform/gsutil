@@ -789,3 +789,20 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage objects acl-file'
              ' --format=json gs://bucket/object').format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+  
+  @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_acl_get_bucket(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('acl', ['get', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertDictEqual(mock_log_handler.messages, {})
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage buckets acl-file'
+             ' --format=json gs://bucket').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
