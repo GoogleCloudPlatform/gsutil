@@ -840,7 +840,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
         '--update-custom-metadata=cAsE=sEnSeTiVe',
         '--update-custom-metadata=gfoo=fake_goog_meta',
         '--update-custom-metadata=afoo=fake_amz_meta',
-        '--update-custom-headers=x-amz-afoo=fake_amz_custom_header',
+        '--additional-headers=x-amz-afoo=fake_amz_custom_header',
     ])
 
   @mock.patch.object(shim_util,
@@ -854,6 +854,15 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
   @mock.patch.object(shim_util,
                      'COMMANDS_SUPPORTING_ALL_HEADERS',
                      new={'fake_shim'})
+  def test_translate_custom_headers_handles_multiple_additional_headers(self):
+    flags = self._fake_command._translate_headers(
+        collections.OrderedDict([('header1', 'value1'), ('header2', 'value2')]))
+    self.assertCountEqual(
+        flags, ['--additional-headers=header1=value1,header2=value2'])
+
+  @mock.patch.object(shim_util,
+                     'COMMANDS_SUPPORTING_ALL_HEADERS',
+                     new={'fake_shim'})
   def test_translate_clear_headers_returns_correct_flags(self):
     flags = self._fake_command._translate_headers(
         {'Cache-Control': 'fake_Cache_Control'}, unset=True)
@@ -862,15 +871,18 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
   @mock.patch.object(shim_util,
                      'COMMANDS_SUPPORTING_ALL_HEADERS',
                      new={'fake_shim'})
-  def test_translate_headers_for_data_transfer_command_with_invalid_header(
+  def test_translate_headers_for_data_transfer_command_with_additional_header(
       self):
-    """Should raise error."""
-    self._fake_command.headers = {'invalid': 'value'}
-    with self.assertRaisesRegex(
-        exception.GcloudStorageTranslationError,
-        'Header cannot be translated to a gcloud storage equivalent flag.'
-        ' Invalid header: invalid:value'):
-      self._fake_command._translate_headers()
+    """Should log a warning."""
+    self._fake_command.headers = {'additional': 'header'}
+    with mock.patch.object(self._fake_command.logger, 'warn',
+                           autospec=True) as mock_warning:
+      self.assertEqual(self._fake_command._translate_headers(),
+                       ['--additional-headers=additional=header'])
+      mock_warning.assert_called_once_with(
+          'Header additional:header cannot be translated to a gcloud'
+          ' storage equivalent flag. It is being treated as an arbitrary'
+          ' request header.')
 
   @mock.patch.object(shim_util,
                      'PRECONDITONS_ONLY_SUPPORTED_COMMANDS',
@@ -907,13 +919,20 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
   @mock.patch.object(shim_util,
                      'PRECONDITONS_ONLY_SUPPORTED_COMMANDS',
                      new={'fake_shim'})
-  def test_translate_headers_for_precondition_supported_command_with_invalid_header(
+  def test_translate_headers_for_precondition_supported_command_with_additional_header(
       self):
     """Should be ignored and not raise any error."""
-    self._fake_command.headers = {'invalid': 'value'}
-    self.assertEqual(self._fake_command._translate_headers(), [])
+    self._fake_command.headers = {'additional': 'header'}
+    with mock.patch.object(self._fake_command.logger, 'warn',
+                           autospec=True) as mock_warning:
+      self.assertEqual(self._fake_command._translate_headers(),
+                       ['--additional-headers=additional=header'])
+      mock_warning.assert_called_once_with(
+          'Header additional:header cannot be translated to a gcloud'
+          ' storage equivalent flag. It is being treated as an arbitrary'
+          ' request header.')
 
-  def test_translate_headers_ignores_headers_for_commands_not_in_allowlist(
+  def test_translate_headers_only_uses_additional_headers_for_commands_not_in_allowlist(
       self):
     # Allowlist is defined by the shim_util.COMMANDS_SUPPORTING_ALL_HEADERS and
     # the shim_util.PRECONDITONS_ONLY_SUPPORTED_COMMANDS list.
@@ -926,8 +945,11 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
         'x-goog-if-generation-match': 'fake_gen_match',
         # Custom metadata. These should be ignored.
         'x-goog-meta-foo': 'fake_goog_meta',
+        # Additional header. Should be added.
+        'additional': 'header'
     }
-    self.assertEqual(self._fake_command._translate_headers(), [])
+    self.assertEqual(self._fake_command._translate_headers(),
+                     ['--additional-headers=additional=header'])
 
   @mock.patch.object(shim_util,
                      'PRECONDITONS_ONLY_SUPPORTED_COMMANDS',
@@ -993,7 +1015,6 @@ class TestGetFlagFromHeader(testcase.GsUtilUnitTestCase):
     headers_to_expected_flag_map = {
         'x-goog-meta-foo': '--remove-custom-metadata=foo',
         'x-amz-meta-foo': '--remove-custom-metadata=foo',
-        'x-amz-foo': '--remove-custom-headers=x-amz-foo',
     }
     for header, expected_flag in headers_to_expected_flag_map.items():
       result = shim_util.get_flag_from_header(header, 'fake_val', unset=True)

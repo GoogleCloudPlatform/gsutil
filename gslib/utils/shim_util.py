@@ -173,14 +173,6 @@ def get_flag_from_header(raw_header_key, header_value, unset=False):
         return '--update-custom-metadata={}={}'.format(metadata_key,
                                                        header_value)
 
-  if lowercase_header_key.startswith('x-amz-'):
-    # Send the entire header as it is.
-    if unset:
-      return '--remove-custom-headers=' + raw_header_key
-    else:
-      return '--update-custom-headers={}={}'.format(raw_header_key,
-                                                    header_value)
-
   return None
 
 
@@ -431,6 +423,7 @@ class GcloudStorageCommandMixin(object):
     flags = []
     # Accept custom headers or extract headers dict from Command class.
     headers_to_translate = headers if headers is not None else self.headers
+    additional_headers = []
     for raw_header_key, header_value in headers_to_translate.items():
       lowercase_header_key = raw_header_key.lower()
       if lowercase_header_key == 'x-goog-api-version':
@@ -438,17 +431,19 @@ class GcloudStorageCommandMixin(object):
         continue
       flag = get_flag_from_header(raw_header_key, header_value, unset=unset)
       if self.command_name in COMMANDS_SUPPORTING_ALL_HEADERS:
-        if flag is None:
-          raise exception.GcloudStorageTranslationError(
-              'Header cannot be translated to a gcloud storage equivalent'
-              ' flag. Invalid header: {}:{}'.format(raw_header_key,
-                                                    header_value))
-        else:
+        if flag:
           flags.append(flag)
       elif (self.command_name in PRECONDITONS_ONLY_SUPPORTED_COMMANDS and
             lowercase_header_key in PRECONDITIONS_HEADERS):
         flags.append(flag)
-      # We ignore the headers for all other cases, so does gsutil.
+      if not flag:
+        self.logger.warn('Header {}:{} cannot be translated to a gcloud storage'
+                         ' equivalent flag. It is being treated as an arbitrary'
+                         ' request header.'.format(raw_header_key,
+                                                   header_value))
+        additional_headers.append('{}={}'.format(raw_header_key, header_value))
+    if additional_headers:
+      flags.append('--additional-headers=' + ','.join(additional_headers))
     return flags
 
   def _translate_boto_config(self):
