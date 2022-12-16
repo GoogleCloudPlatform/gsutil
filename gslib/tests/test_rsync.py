@@ -2733,7 +2733,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Tests rsync works as expected."""
-      self.RunGsUtil(['rsync', '-d', '-x', 'obj[34]', tmpdir, suri(bucket_uri)])
+      self.RunGsUtil(['rsync', '-d', '-y', 'obj[34]', tmpdir, suri(bucket_uri)])
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
@@ -2757,6 +2757,38 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check2()
 
+  def test_dir_to_bucket_negative_lookahead_minus_x_vs_minus_y(self):
+    """Test that rsync -y excludes directories first, unlike -x."""
+    bucket_uri = self.CreateBucket()
+    tmpdir = self.CreateTempDir(test_files=[
+        'a', 'b', 'c', ('data1',
+                        'a.txt'), ('data1',
+                                   'ok'), ('data2',
+                                           'b.txt'), ('data3', 'data4', 'c.txt')
+    ])
+    self.RunGsUtil(
+        ['rsync', '-r', '-y', '^(?!.*\.txt$).*', tmpdir,
+         suri(bucket_uri)],
+        return_stderr=True)
+    listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
+    self.assertEquals(
+        listing,
+        set([
+            '/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt',
+            '/data3/data4/c.txt'
+        ]))
+    stderr = self.RunGsUtil(['ls', suri(bucket_uri, '**')],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('One or more URLs matched no objects', stderr)
+    self.RunGsUtil(
+        ['rsync', '-r', '-x', '^(?!.*\.txt$).*', tmpdir,
+         suri(bucket_uri)],
+        return_stderr=True)
+    actual = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+    self.assertEquals(
+        actual, set(['/data1/a.txt', '/data2/b.txt', '/data3/data4/c.txt']))
+
   def test_dir_to_bucket_relative_minus_x(self):
     """Test that rsync -x option works with a relative regex per the docs."""
     tmpdir = self.CreateTempDir(test_files=[
@@ -2771,22 +2803,26 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     def _check_exclude_regex(exclude_regex, expected):
       """Tests rsync skips the excluded pattern."""
       bucket_uri = self.CreateBucket()
-      # Add a trailing slash to the source directory to ensure its removed.
-      local = tmpdir + ('\\' if IS_WINDOWS else '/')
-      stderr = self.RunGsUtil(
-          ['rsync', '-r', '-x', exclude_regex, local,
-           suri(bucket_uri)],
-          return_stderr=True)
+      stderr = ''
+      # This tests both -x and -y since the commands are so similar to ensure
+      # they work identically for these cases.
+      for op in ('-x', '-y'):
+        # Add a trailing slash to the source directory to ensure its removed.
+        local = tmpdir + ('\\' if IS_WINDOWS else '/')
+        stderr += self.RunGsUtil(
+            ['rsync', '-r', op, exclude_regex, local,
+             suri(bucket_uri)],
+            return_stderr=True)
 
-      listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
-      self.assertEquals(
-          listing,
-          set([
-              '/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt',
-              '/data3/data4/c.txt'
-          ]))
-      actual = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
-      self.assertEquals(actual, expected)
+        listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
+        self.assertEquals(
+            listing,
+            set([
+                '/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt',
+                '/data3/data4/c.txt'
+            ]))
+        actual = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+        self.assertEquals(actual, expected)
       return stderr
 
     def _Check1():

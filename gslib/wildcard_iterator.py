@@ -758,7 +758,9 @@ class FileWildcardIterator(WildcardIterator):
     """
     if self.exclude_tuple is None:
       return False
-    (base_url, exclude_pattern) = self.exclude_tuple
+    (base_url, exclude_dirs, exclude_pattern) = self.exclude_tuple
+    if not exclude_dirs:
+      return False
     str_to_check = StorageUrlFromString(
         dir).url_string[len(base_url.url_string):]
     if str_to_check.startswith(self.wildcard_url.delim):
