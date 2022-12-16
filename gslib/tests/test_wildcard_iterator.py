@@ -516,7 +516,7 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
 
   def testExcludeTupleButExcludeDirFalse(self):
     """Tests that the exclude regex will be disabled by exlude_dirs False."""
-    exp_uri_strs = self.test_dir
+    exp_uri_strs = self.all_file_uri_strs
     uri = self._test_storage_uri(suri(self.test_dir, '**'))
     exclude_tuple = (StorageUrlFromString(self.test_dir), False,
                      re.compile('dir1'))
