@@ -529,23 +529,20 @@ _DETAILED_HELP_TEXT = ("""
                  character. When using Windows PowerShell, use ' instead of "
                  and surround the | character with ".
 
-  -y pattern     Similar to the -x option, but the command will first skip 
+  -y pattern     Similar to the -x option, but the command will first skip
                  directories/prefixes using the provided pattern and then
                  exclude files/objects using the same pattern. This is usually
-                 much faster, but will fail to work with with negative
-                 lookahead patterns and exclude clauses. For example, if you
-                 run the command:
+                 much faster, but won't work as intended with with negative
+                 lookahead patterns. For example, if you run the command:
 
-                   gsutil rsync -x "^(?!.*\.txt$).*" dir gs://my-bucket
+                   gsutil rsync -y "^(?!.*\.txt$).*" dir gs://my-bucket
 
-                 This would result in all files/objects being skipped except
-                 for those ending in .txt regardless of whether or not they
-                 appear in subdirectories. If the same pattern was used with
-                 the -y option, any subdirectories would first be excluded by
-                 the pattern (unless they ended in .txt) which would in turn
-                 mean any file/object ending in .txt in excluded subdirectories
-                 would also be excluded.
-                 
+                 This would first exclude all subdirectories unless they end in
+                 .txt before excluding all files except those ending in .txt.
+                 Running the same command with the -x option would result in all
+                 .txt files being included, regardless of whether they appear in
+                 subdirectories.
+
 """)
 # pylint: enable=anomalous-backslash-in-string
 
