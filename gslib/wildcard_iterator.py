@@ -749,12 +749,12 @@ class FileWildcardIterator(WildcardIterator):
 
   def _ExcludeDir(self, dir):
     """Check a directory to see if it should be excluded from os.walk.
-    
+
     Args:
       dir: String representing the directory to check.
 
     Returns:
-      False if the directory should be excluded.
+      True if the directory should be excluded.
     """
     if self.exclude_tuple is None:
       return False
