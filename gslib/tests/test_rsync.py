@@ -2707,8 +2707,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     _Check2()
 
-  def test_dir_to_bucket_minus_x(self):
-    """Tests that rsync -x option works correctly."""
+  def _test_dir_to_bucket_regex_paramaterized(self, flag):
+    """Tests that rsync regex exclusions work correctly."""
     # Create dir and bucket with 1 overlapping and 2 extra objects in each.
     tmpdir = self.CreateTempDir()
     bucket_uri = self.CreateBucket()
@@ -2733,7 +2733,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     @Retry(AssertionError, tries=3, timeout_secs=1)
     def _Check1():
       """Tests rsync works as expected."""
-      self.RunGsUtil(['rsync', '-d', '-y', 'obj[34]', tmpdir, suri(bucket_uri)])
+      self.RunGsUtil(['rsync', '-d', flag, 'obj[34]', tmpdir, suri(bucket_uri)])
       listing1 = TailSet(tmpdir, self.FlatListDir(tmpdir))
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
@@ -2751,14 +2751,22 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       self.assertEquals(
           NO_CHANGES,
           self.RunGsUtil(
-              ['rsync', '-d', '-x', 'obj[34]', tmpdir,
+              ['rsync', '-d', flag, 'obj[34]', tmpdir,
                suri(bucket_uri)],
               return_stderr=True))
 
     _Check2()
 
-  def test_dir_to_bucket_negative_lookahead_minus_x_vs_minus_y(self):
-    """Test that rsync -y excludes directories first, unlike -x."""
+  def test_dir_to_bucket_minus_x(self):
+    """Tests that rsync regex exclusions work correctly for -x."""
+    self._test_dir_to_bucket_regex_paramaterized('-x')
+
+  def test_dir_to_bucket_minus_y(self):
+    """Tests that rsync regex exclusions work correctly for -y."""
+    self._test_dir_to_bucket_regex_paramaterized('-y')
+
+  def _test_dir_to_bucket_regex_negative_lookahead(self, flag, includes):
+    """Tests if negative lookahead includes files/objects."""
     bucket_uri = self.CreateBucket()
     tmpdir = self.CreateTempDir(test_files=[
         'a', 'b', 'c', ('data1',
@@ -2767,7 +2775,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                                            'b.txt'), ('data3', 'data4', 'c.txt')
     ])
     self.RunGsUtil(
-        ['rsync', '-r', '-y', '^(?!.*\.txt$).*', tmpdir,
+        ['rsync', '-r', flag, '^(?!.*\.txt$).*', tmpdir,
          suri(bucket_uri)],
         return_stderr=True)
     listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
@@ -2777,20 +2785,26 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
             '/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt',
             '/data3/data4/c.txt'
         ]))
-    stderr = self.RunGsUtil(['ls', suri(bucket_uri, '**')],
-                            expected_status=1,
-                            return_stderr=True)
-    self.assertIn('One or more URLs matched no objects', stderr)
-    self.RunGsUtil(
-        ['rsync', '-r', '-x', '^(?!.*\.txt$).*', tmpdir,
-         suri(bucket_uri)],
-        return_stderr=True)
-    actual = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
-    self.assertEquals(
-        actual, set(['/data1/a.txt', '/data2/b.txt', '/data3/data4/c.txt']))
+    if includes:
+      actual = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+      self.assertEquals(
+          actual, set(['/data1/a.txt', '/data2/b.txt', '/data3/data4/c.txt']))
+    else:
+      stderr = self.RunGsUtil(['ls', suri(bucket_uri, '**')],
+                              expected_status=1,
+                              return_stderr=True)
+      self.assertIn('One or more URLs matched no objects', stderr)
 
-  def test_dir_to_bucket_relative_minus_x(self):
-    """Test that rsync -x option works with a relative regex per the docs."""
+  def test_dir_to_bucket_negative_lookahead_works_in_minus_x(self):
+    """Test that rsync -x negative lookahead includes objects/files."""
+    self._test_dir_to_bucket_regex_negative_lookahead('-x', includes=True)
+
+  def test_dir_to_bucket_negative_lookahead_breaks_in_minux_y(self):
+    """Test that rsync -y nevative lookahead does not includes objects/files."""
+    self._test_dir_to_bucket_regex_negative_lookahead('-y', includes=False)
+
+  def _test_dir_to_bucket_relative_regex_paramaterized(self, flag, skip_dirs):
+    """Test that rsync regex options work with a relative regex per the docs."""
     tmpdir = self.CreateTempDir(test_files=[
         'a', 'b', 'c', ('data1',
                         'a.txt'), ('data1',
@@ -2804,25 +2818,22 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       """Tests rsync skips the excluded pattern."""
       bucket_uri = self.CreateBucket()
       stderr = ''
-      # This tests both -x and -y since the commands are so similar to ensure
-      # they work identically for these cases.
-      for op in ('-x', '-y'):
-        # Add a trailing slash to the source directory to ensure its removed.
-        local = tmpdir + ('\\' if IS_WINDOWS else '/')
-        stderr += self.RunGsUtil(
-            ['rsync', '-r', op, exclude_regex, local,
-             suri(bucket_uri)],
-            return_stderr=True)
+      # Add a trailing slash to the source directory to ensure its removed.
+      local = tmpdir + ('\\' if IS_WINDOWS else '/')
+      stderr += self.RunGsUtil(
+          ['rsync', '-r', flag, exclude_regex, local,
+           suri(bucket_uri)],
+          return_stderr=True)
 
-        listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
-        self.assertEquals(
-            listing,
-            set([
-                '/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt',
-                '/data3/data4/c.txt'
-            ]))
-        actual = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
-        self.assertEquals(actual, expected)
+      listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
+      self.assertEquals(
+          listing,
+          set([
+              '/a', '/b', '/c', '/data1/a.txt', '/data1/ok', '/data2/b.txt',
+              '/data3/data4/c.txt'
+          ]))
+      actual = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
+      self.assertEquals(actual, expected)
       return stderr
 
     def _Check1():
@@ -2850,7 +2861,16 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
           'Skipping excluded directory {}...'.format(
               os.path.join(tmpdir, 'data3', 'data4')), stderr)
 
-    _Check3()
+    if skip_dirs:
+      _Check3()
+
+  def test_dir_to_bucket_relative_minus_x(self):
+    """Test that rsync -x option works with a relative regex per the docs."""
+    self._test_dir_to_bucket_relative_regex_paramaterized('-x', skip_dirs=False)
+
+  def test_dir_to_bucket_relative_minus_y(self):
+    """Test that rsync -y option works with a relative regex per the docs."""
+    self._test_dir_to_bucket_relative_regex_paramaterized('-y', skip_dirs=True)
 
   @unittest.skipIf(IS_WINDOWS,
                    "os.chmod() won't make file unreadable on Windows.")
