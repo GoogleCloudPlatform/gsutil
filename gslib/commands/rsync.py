@@ -528,6 +528,21 @@ _DETAILED_HELP_TEXT = ("""
                  use ^ as an escape character instead of \\ and escape the |
                  character. When using Windows PowerShell, use ' instead of "
                  and surround the | character with ".
+
+  -y pattern     Similar to the -x option, but the command will first skip
+                 directories/prefixes using the provided pattern and then
+                 exclude files/objects using the same pattern. This is usually
+                 much faster, but won't work as intended with with negative
+                 lookahead patterns. For example, if you run the command:
+
+                   gsutil rsync -y "^(?!.*\.txt$).*" dir gs://my-bucket
+
+                 This would first exclude all subdirectories unless they end in
+                 .txt before excluding all files except those ending in .txt.
+                 Running the same command with the -x option would result in all
+                 .txt files being included, regardless of whether they appear in
+                 subdirectories.
+
 """)
 # pylint: enable=anomalous-backslash-in-string
 
@@ -732,7 +747,7 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
           'metadata/%s' % UID_ATTR,
       ])
     exclude_tuple = (
-        base_url,
+        base_url, cls.exclude_dirs,
         cls.exclude_pattern) if cls.exclude_pattern is not None else None
 
     iterator = CreateWildcardIterator(
@@ -763,8 +778,8 @@ def _FieldedListingIterator(cls, gsutil_api, base_url_str, desc):
         os.path.islink(url.object_name)):
       continue
     if cls.exclude_pattern:
-      # The wildcard_iterator will use the exclude pattern to exclude directories
-      # while this section excludes individual files.
+      # The wildcard_iterator may optionally use the exclude pattern to exclude
+      # directories while this section excludes individual files.
       str_to_check = url.url_string[len(base_url.url_string):]
       if str_to_check.startswith(url.delim):
         str_to_check = str_to_check[1:]
@@ -1594,7 +1609,7 @@ class RsyncCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=2,
       max_args=2,
-      supported_sub_args='a:cCdenpPriRuUx:j:J',
+      supported_sub_args='a:cCdenpPriRuUx:y:j:J',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -1731,6 +1746,7 @@ class RsyncCommand(Command):
     self.preserve_posix_attrs = False
     self.compute_file_checksums = False
     self.dryrun = False
+    self.exclude_dirs = False
     self.exclude_pattern = None
     self.skip_old_files = False
     self.ignore_existing = False
@@ -1786,7 +1802,9 @@ class RsyncCommand(Command):
           self.ignore_existing = True
         elif o == '-U':
           self.skip_unsupported_objects = True
-        elif o == '-x':
+        elif o == '-x' or o == '-y':
+          if o == '-y':
+            self.exclude_dirs = True
           if not a:
             raise CommandException('Invalid blank exclude filter')
           try:

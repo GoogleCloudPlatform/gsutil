@@ -749,16 +749,18 @@ class FileWildcardIterator(WildcardIterator):
 
   def _ExcludeDir(self, dir):
     """Check a directory to see if it should be excluded from os.walk.
-    
+
     Args:
       dir: String representing the directory to check.
 
     Returns:
-      False if the directory should be excluded.
+      True if the directory should be excluded.
     """
     if self.exclude_tuple is None:
       return False
-    (base_url, exclude_pattern) = self.exclude_tuple
+    (base_url, exclude_dirs, exclude_pattern) = self.exclude_tuple
+    if not exclude_dirs:
+      return False
     str_to_check = StorageUrlFromString(
         dir).url_string[len(base_url.url_string):]
     if str_to_check.startswith(self.wildcard_url.delim):
