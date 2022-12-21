@@ -342,32 +342,36 @@ class AclCommand(Command):
           'ch': _ch_help_text
       },
   )
-
-  def get_gcloud_storage_args(self):
-    _CannedGcsAcl = ['private', 'public-read', 'project-private',
+  CannedGcsAcl = ['private', 'public-read', 'project-private',
                     'public-read-write', 'authenticated-read',
                     'bucket-owner-read', 'bucket-owner-full-control']
+  def get_gcloud_storage_args(self):
     if self.args[0] == 'get':
-      if StorageUrlFromString(self.args[1]).IsObject():
+      url = self.args[1]
+      object_or_bucket = StorageUrlFromString(url)
+      if object_or_bucket.IsObject():
         command_group = 'objects'
-      elif StorageUrlFromString(self.args[1]).IsBucket():
+      else:
         command_group = 'buckets'
       gcloud_storage_map = GcloudStorageMap(gcloud_command=[
-            'alpha', 'storage', command_group, 'describe', '--format=json'
+            'alpha', 'storage', command_group, 'describe', url, '--format=json[acl]'
         ],
                                               flag_map={})
+   
     elif self.args[0] == 'set':
-      if StorageUrlFromString(self.args[2]).IsBucket():
-        command_group = 'buckets'
-      elif StorageUrlFromString(self.args[2]).IsObject():
+      url = self.args[2]
+      object_or_bucket = StorageUrlFromString(url)
+      if object_or_bucket.IsObject():
         command_group = 'objects'
-      if self.args[1] in _CannedGcsAcl:
-        url_with_acl= '--predefined-acl=' + str(self.args[1])
-      elif self.args[1] not in _CannedGcsAcl:
-        url_with_acl='--acl-file=' + str(self.args[1])
+      else:
+        command_group = 'buckets'
+      if self.args[1] in AclCommand.CannedGcsAcl:
+        acl_flag= '--predefined-acl=' + str(self.args[1])
+      else:
+        acl_flag='--acl-file=' + str(self.args[1])
       gcloud_storage_map = GcloudStorageMap(gcloud_command={
         'set': GcloudStorageMap(
-          gcloud_command=['alpha', 'storage', command_group, 'update', url_with_acl],
+          gcloud_command=['alpha', 'storage', command_group, 'update', url, acl_flag],
           flag_map={
             'a': GcloudStorageFlag('--all-versions'),
             'f': GcloudStorageFlag('--continue-on-error'),

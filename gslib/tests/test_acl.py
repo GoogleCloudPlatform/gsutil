@@ -18,11 +18,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
-import random
 
 import re
 import os
-import traceback
+import random
 
 from gslib.commands import acl
 from gslib.command import CreateOrGetGsutilLogger
@@ -789,7 +788,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage objects describe'
-             ' --format=json get gs://bucket/object').format(
+             ' gs://bucket/object --format=json[acl] get gs://bucket/object').format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
   
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
@@ -806,7 +805,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         #self.assertDictEqual(mock_log_handler.messages, {})
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets describe'
-             ' --format=json get gs://bucket').format(
+             ' gs://bucket --format=json[acl] get gs://bucket').format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
   
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
@@ -823,7 +822,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage objects update'
-             ' --acl-file=acl-file').format(
+             ' gs://bucket/object --acl-file=acl-file').format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
@@ -840,15 +839,12 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets update'
-             ' --acl-file=acl-file').format(
+             ' gs://bucket --acl-file=acl-file').format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
   
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_predef_acl_set_object(self):
-    _CannedGcsAcl = ['private', 'public-read', 'project-private',
-                    'public-read-write', 'authenticated-read',
-                    'bucket-owner-read', 'bucket-owner-full-control']
-    random_canned_acl = random.choice(_CannedGcsAcl)
+    random_canned_acl = random.choice(acl.AclCommand.CannedGcsAcl)
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
@@ -861,14 +857,12 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage objects update'
-             ' --predefined-acl=' + random_canned_acl).format(
+             ' gs://bucket/object --predefined-acl=' + random_canned_acl).format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+  
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_predef_acl_set_bucket(self):
-    _CannedGcsAcl = ['private', 'public-read', 'project-private',
-                    'public-read-write', 'authenticated-read',
-                    'bucket-owner-read', 'bucket-owner-full-control']
-    random_canned_acl = random.choice(_CannedGcsAcl)
+    random_canned_acl = random.choice(acl.AclCommand.CannedGcsAcl)
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
@@ -881,5 +875,5 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets update'
-             ' --predefined-acl=' + random_canned_acl).format(
+             ' gs://bucket --predefined-acl=' + random_canned_acl).format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
