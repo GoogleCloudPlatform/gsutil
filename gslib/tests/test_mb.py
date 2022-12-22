@@ -134,12 +134,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                              suri(bucket_uri)],
                             expected_status=1,
                             return_stderr=True)
-    if self._use_gcloud_storage:
-      # The "s" from "second" is cut b/c "s" is a valid unit.
-      self.assertIn("Duration unit 'econd' must be preceded by a number",
-                    stderr)
-    else:
-      self.assertRegexpMatches(stderr, r'Incorrect retention period specified')
+    self.assertRegexpMatches(stderr, r'Incorrect retention period specified')
 
   def test_create_with_retention_on_s3_urls_fails(self):
     bucket_name = self.MakeTempName('bucket')
@@ -185,8 +180,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                             expected_status=1,
                             return_stderr=True)
     if self._use_gcloud_storage:
-      self.assertIn('Flag value not in translation map for --pap: invalid_arg',
-                    stderr)
+      self.assertIn(
+          'Flag value not in translation map for "--pap": invalid_arg', stderr)
     else:
       self.assertRegexpMatches(stderr, r'invalid_arg is not a valid value')
 
