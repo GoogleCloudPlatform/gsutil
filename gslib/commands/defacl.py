@@ -37,6 +37,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils import acl_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.retry_util import Retry
+from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 
 _SET_SYNOPSIS = """
@@ -189,6 +190,28 @@ class DefAclCommand(Command):
           'set': _set_help_text,
           'ch': _ch_help_text,
       },
+  )
+
+  gcloud_storage_map = GcloudStorageMap(
+      gcloud_command={
+          'get':
+              GcloudStorageMap(
+                  gcloud_command=[
+                      'storage', 'buckets', 'describe',
+                      '--format=multi(defaultObjectAcl:format=json)'
+                  ],
+                  flag_map={},
+              ),
+          # 'set':
+          #     GcloudStorageMap(
+          #         gcloud_command=[
+          #             'storage', 'buckets', 'update',
+          #             '--default-object-acl-file'
+          #         ],
+          #         flag_map={},
+          #     ),
+      },
+      flag_map={},
   )
 
   def _CalculateUrlsStartArg(self):
