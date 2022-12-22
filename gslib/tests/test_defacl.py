@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
 import re
 
 import six
@@ -26,6 +27,8 @@ from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as case
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'
 
@@ -215,6 +218,21 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     # Neither arguments nor subcommand.
     stderr = self.RunGsUtil(['defacl'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
+  
+  def test(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('defacl', ['get', 'gs://bucket/object'],
+                                           return_log_handler=True)
+        self.assertIn(
+            'Gcloud Storage Command: {} storage buckets describe --format=json[defaultObjectAcl] gs://bucket'
+            .format(
+                os.path.join('fake_dir', 'bin', 'gcloud')),
+            mock_log_handler.messages['info'])
 
 
 class TestDefaclOldAlias(TestDefacl):
