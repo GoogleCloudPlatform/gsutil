@@ -296,6 +296,10 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
+CannedGcsAcl = set(('private', 'public-read', 'project-private',
+                    'public-read-write', 'authenticated-read',
+                    'bucket-owner-read', 'bucket-owner-full-control'))
+
 def _ApplyExceptionHandler(cls, exception):
   cls.logger.error('Encountered a problem: %s', exception)
   cls.everything_set_okay = False
@@ -342,14 +346,12 @@ class AclCommand(Command):
           'ch': _ch_help_text
       },
   )
-  CannedGcsAcl = ['private', 'public-read', 'project-private',
-                    'public-read-write', 'authenticated-read',
-                    'bucket-owner-read', 'bucket-owner-full-control']
+
   def get_gcloud_storage_args(self):
     if self.args[0] == 'get':
       url = self.args[1]
-      object_or_bucket = StorageUrlFromString(url)
-      if object_or_bucket.IsObject():
+      object_or_bucket_url = StorageUrlFromString(url)
+      if object_or_bucket_url.IsObject():
         command_group = 'objects'
       else:
         command_group = 'buckets'
@@ -360,15 +362,15 @@ class AclCommand(Command):
    
     elif self.args[0] == 'set':
       url = self.args[2]
-      object_or_bucket = StorageUrlFromString(url)
-      if object_or_bucket.IsObject():
+      object_or_bucket_url = StorageUrlFromString(url)
+      if object_or_bucket_url.IsObject():
         command_group = 'objects'
       else:
         command_group = 'buckets'
-      if self.args[1] in AclCommand.CannedGcsAcl:
-        acl_flag= '--predefined-acl=' + str(self.args[1])
+      if self.args[1] in CannedGcsAcl:
+        acl_flag= '--predefined-acl=' + self.args[1]
       else:
-        acl_flag='--acl-file=' + str(self.args[1])
+        acl_flag='--acl-file=' + self.args[1]
       gcloud_storage_map = GcloudStorageMap(gcloud_command={
         'set': GcloudStorageMap(
           gcloud_command=['alpha', 'storage', command_group, 'update', url, acl_flag],

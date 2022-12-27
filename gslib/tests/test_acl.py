@@ -844,7 +844,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
   
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_predef_acl_set_object(self):
-    random_canned_acl = random.choice(acl.AclCommand.CannedGcsAcl)
+    random_canned_acl = random.choice(acl.CannedGcsAcl)
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
@@ -862,7 +862,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
   
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_predef_acl_set_bucket(self):
-    random_canned_acl = random.choice(acl.AclCommand.CannedGcsAcl)
+    random_canned_acl = random.choice(acl.CannedGcsAcl)
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
