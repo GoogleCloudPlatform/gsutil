@@ -296,9 +296,9 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
-CannedGcsAcl = set(('private', 'public-read', 'project-private',
+CANNED_GCS_ACLS = {'private', 'public-read', 'project-private',
                     'public-read-write', 'authenticated-read',
-                    'bucket-owner-read', 'bucket-owner-full-control'))
+                    'bucket-owner-read', 'bucket-owner-full-control'}
 
 def _ApplyExceptionHandler(cls, exception):
   cls.logger.error('Encountered a problem: %s', exception)
@@ -361,19 +361,23 @@ class AclCommand(Command):
                                               flag_map={})
    
     elif self.args[0] == 'set':
-      url = self.args[2]
-      object_or_bucket_url = StorageUrlFromString(url)
-      if object_or_bucket_url.IsObject():
+      if len(self.args[2:])>1:
+        url = self.args[2:]
+        object_or_bucket_url = [StorageUrlFromString(i) for i in url]
+      else:
+        url = (self.args[2])
+        object_or_bucket_url = [StorageUrlFromString(url)]
+      if object_or_bucket_url[0].IsObject():
         command_group = 'objects'
       else:
         command_group = 'buckets'
-      if self.args[1] in CannedGcsAcl:
+      if self.args[1] in CANNED_GCS_ACLS:
         acl_flag= '--predefined-acl=' + self.args[1]
       else:
         acl_flag='--acl-file=' + self.args[1]
       gcloud_storage_map = GcloudStorageMap(gcloud_command={
         'set': GcloudStorageMap(
-          gcloud_command=['alpha', 'storage', command_group, 'update', url, acl_flag],
+          gcloud_command=['alpha', 'storage', command_group, 'update'] + url +[acl_flag],
           flag_map={
             'a': GcloudStorageFlag('--all-versions'),
             'f': GcloudStorageFlag('--continue-on-error'),
@@ -383,6 +387,7 @@ class AclCommand(Command):
         }, 
                                               flag_map={})
     return super().get_gcloud_storage_args(gcloud_storage_map)
+
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
