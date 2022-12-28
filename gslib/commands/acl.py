@@ -363,7 +363,7 @@ class AclCommand(Command):
     elif self.args[0] == 'set':
       if len(self.args[2:])>1:
         url_list = self.args[2:]
-        object_or_bucket_url = [StorageUrlFromString(i) for i in url]
+        object_or_bucket_url = [StorageUrlFromString(i) for i in url_list]
       else:
         url_list =[self.args[2]]
         object_or_bucket_url = [StorageUrlFromString(self.args[2])]
