@@ -362,11 +362,11 @@ class AclCommand(Command):
    
     elif self.args[0] == 'set':
       if len(self.args[2:])>1:
-        url = self.args[2:]
+        url_list = self.args[2:]
         object_or_bucket_url = [StorageUrlFromString(i) for i in url]
       else:
-        url = (self.args[2])
-        object_or_bucket_url = [StorageUrlFromString(url)]
+        url_list =[self.args[2]]
+        object_or_bucket_url = [StorageUrlFromString(self.args[2])]
       if object_or_bucket_url[0].IsObject():
         command_group = 'objects'
       else:
@@ -377,7 +377,7 @@ class AclCommand(Command):
         acl_flag='--acl-file=' + self.args[1]
       gcloud_storage_map = GcloudStorageMap(gcloud_command={
         'set': GcloudStorageMap(
-          gcloud_command=['alpha', 'storage', command_group, 'update'] + url +[acl_flag],
+          gcloud_command=['alpha', 'storage', command_group, 'update'] + url_list +[acl_flag],
           flag_map={
             'a': GcloudStorageFlag('--all-versions'),
             'f': GcloudStorageFlag('--continue-on-error'),
