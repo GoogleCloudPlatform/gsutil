@@ -348,44 +348,44 @@ class AclCommand(Command):
   )
 
   def get_gcloud_storage_args(self):
-    if self.args[0] == 'get':
-      url = self.args[1]
-      object_or_bucket_url = StorageUrlFromString(url)
-      if object_or_bucket_url.IsObject():
+    sub_command = self.args.pop(0)
+    if sub_command == 'get':
+      if StorageUrlFromString(self.args[0]).IsObject():
         command_group = 'objects'
       else:
         command_group = 'buckets'
       gcloud_storage_map = GcloudStorageMap(gcloud_command=[
-            'alpha', 'storage', command_group, 'describe', url, '--format=json[acl]'
-        ],
-                                              flag_map={})
-   
-    elif self.args[0] == 'set':
-      if len(self.args[2:])>1:
-        url_list = self.args[2:]
+          'alpha', 'storage', command_group, 'describe', self.args[0], '--format=json[acl]'
+      ],
+                                            flag_map={})
+      self.args = self.args[:-1]
+    
+    elif sub_command == 'set':
+      if len(self.args[1:])>1:
+        url_list = self.args[1:]
         object_or_bucket_url = [StorageUrlFromString(i) for i in url_list]
       else:
-        url_list =[self.args[2]]
-        object_or_bucket_url = [StorageUrlFromString(self.args[2])]
-      if object_or_bucket_url[0].IsObject():
-        command_group = 'objects'
-      else:
+        url_list =[self.args[1]]
+        object_or_bucket_url = [StorageUrlFromString(self.args[1])]
+      if object_or_bucket_url[0].IsBucket():
         command_group = 'buckets'
-      if self.args[1] in CANNED_GCS_ACLS:
-        acl_flag= '--predefined-acl=' + self.args[1]
       else:
-        acl_flag='--acl-file=' + self.args[1]
-      gcloud_storage_map = GcloudStorageMap(gcloud_command={
-        'set': GcloudStorageMap(
-          gcloud_command=['alpha', 'storage', command_group, 'update'] + url_list +[acl_flag],
+        command_group = 'objects'
+      if self.args[0] in CANNED_GCS_ACLS:
+        acl_flag= '--predefined-acl=' + self.args[0]
+      else:
+        acl_flag='--acl-file=' + self.args[0]
+      gcloud_storage_map = GcloudStorageMap(
+          gcloud_command=[
+              'alpha', 'storage', command_group, 'update'] + url_list+  [acl_flag],
           flag_map={
-            'a': GcloudStorageFlag('--all-versions'),
-            'f': GcloudStorageFlag('--continue-on-error'),
-            'r': GcloudStorageFlag('--recursive'),
-            'R': GcloudStorageFlag('--recursive'),
+              '-a': GcloudStorageFlag('--all-versions'),
+              '-f': GcloudStorageFlag('--continue-on-error'),
+              '-R': GcloudStorageFlag('--recursive'),
+              '-r': GcloudStorageFlag('--recursive'),
           })
-        }, 
-                                              flag_map={})
+      self.args = self.args[:-2]
+
     return super().get_gcloud_storage_args(gcloud_storage_map)
 
 
