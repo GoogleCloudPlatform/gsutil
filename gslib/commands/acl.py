@@ -36,14 +36,13 @@ from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import UrlsAreForSingleProvider
-from gslib.storage_url import UrlsAreMixOfBucketsAndObjects
+from gslib.storage_url import RaiseErrorIfUrlsAreMixOfBucketsAndObjects
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils import acl_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.retry_util import Retry
 from gslib.utils.shim_util import GcloudStorageFlag
 from gslib.utils.shim_util import GcloudStorageMap
-
 
 _SET_SYNOPSIS = """
   gsutil acl set [-f] [-r] [-a] <file-or-canned_acl_name> url...
@@ -297,8 +296,13 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
-CANNED_GCS_ACLS = {'authenticatedRead','bucketOwnerFullControl', 'bucketOwnerRead',
-                    'private', 'projectPrivate', 'publicRead', 'publicReadWrite'}
+CANNED_GCS_ACLS = frozenset([
+    'authenticatedRead', 'bucketOwnerFullControl', 'bucketOwnerRead', 'private',
+    'projectPrivate', 'publicRead', 'publicReadWrite', 'authenticated-read',
+    'bucket-owner-full-control', 'bucket-owner-read', 'project-private',
+    'public-read', 'public-read-write'
+])
+
 
 def _ApplyExceptionHandler(cls, exception):
   cls.logger.error('Encountered a problem: %s', exception)
@@ -307,6 +311,7 @@ def _ApplyExceptionHandler(cls, exception):
 
 def _ApplyAclChangesWrapper(cls, url_or_expansion_result, thread_state=None):
   cls.ApplyAclChanges(url_or_expansion_result, thread_state=thread_state)
+
 
 class AclCommand(Command):
   """Implementation of gsutil acl command."""
@@ -354,41 +359,40 @@ class AclCommand(Command):
       else:
         command_group = 'buckets'
       gcloud_storage_map = GcloudStorageMap(gcloud_command=[
-          'alpha', 'storage', command_group, 'describe', self.args[0], '--format=json[acl]'
+          'alpha', 'storage', command_group, 'describe',
+          '--format=multi(acl:format=json)'
       ],
                                             flag_map={})
-      self.args = self.args[:-1]
-    
+
     elif sub_command == 'set':
-      if len(self.args[1:])>1:
-        url_list = self.args[1:]
-        object_or_bucket_url = [StorageUrlFromString(i) for i in url_list]
+      # Flags must be at the start of self.args to get parsed.
+      self.ParseSubOpts()
+      if self.args[0] in CANNED_GCS_ACLS:
+        acl_flag = '--predefined-acl=' + self.args.pop(0)
       else:
-        url_list =[self.args[1]]
-        object_or_bucket_url = [StorageUrlFromString(self.args[1])]
-      if object_or_bucket_url[0].IsBucket():
+        acl_flag = '--acl-file=' + self.args.pop(0)
+      object_or_bucket_urls = [StorageUrlFromString(i) for i in self.args]
+      recurse = False
+      for (flag_key, _) in self.sub_opts:
+        if flag_key in ('-r', '-R'):
+          recurse = True
+          break
+      RaiseErrorIfUrlsAreMixOfBucketsAndObjects(object_or_bucket_urls, recurse)
+      if object_or_bucket_urls[0].IsBucket() and not recurse:
         command_group = 'buckets'
       else:
         command_group = 'objects'
-      if self.args[0] in CANNED_GCS_ACLS:
-        acl_flag= '--predefined-acl=' + self.args[0]
-      else:
-        acl_flag='--acl-file=' + self.args[0]
       gcloud_storage_map = GcloudStorageMap(
-          gcloud_command=[
-              'alpha', 'storage', command_group, 'update'] + url_list +  [acl_flag],
+          gcloud_command=['alpha', 'storage', command_group, 'update'] +
+          [acl_flag],  #+ #url_list,
           flag_map={
               '-a': GcloudStorageFlag('--all-versions'),
               '-f': GcloudStorageFlag('--continue-on-error'),
               '-R': GcloudStorageFlag('--recursive'),
               '-r': GcloudStorageFlag('--recursive'),
           })
-      
-      args_to_be_removed = len(url_list) + 1 
-      self.args = self.args[:-args_to_be_removed]
 
     return super().get_gcloud_storage_args(gcloud_storage_map)
-
 
   def _CalculateUrlsStartArg(self):
     if not self.args:

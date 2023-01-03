@@ -24,6 +24,7 @@ import re
 import stat
 import sys
 
+from gslib.exception import CommandException
 from gslib.exception import InvalidUrlError
 from gslib.utils import system_util
 from gslib.utils import text_util
@@ -505,3 +506,9 @@ def UrlsAreMixOfBucketsAndObjects(urls):
   if all(url.IsCloudUrl() for url in urls):
     are_buckets = list(map(lambda x: x.IsBucket(), urls))
     return any(are_buckets) and not all(are_buckets)
+
+
+def RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested):
+  """Raises error if mix of buckets and objects adjusted for recursion."""
+  if UrlsAreMixOfBucketsAndObjects(urls) and not recursion_requested:
+    raise CommandException('Cannot operate on a mix of buckets and objects.')
