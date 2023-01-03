@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 
 from apitools.base.py import encoding
 from gslib import metrics
-
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import PreconditionException
@@ -371,6 +370,7 @@ class AclCommand(Command):
         acl_flag = '--predefined-acl=' + self.args.pop(0)
       else:
         acl_flag = '--acl-file=' + self.args.pop(0)
+      
       object_or_bucket_urls = [StorageUrlFromString(i) for i in self.args]
       recurse = False
       for (flag_key, _) in self.sub_opts:
@@ -378,13 +378,14 @@ class AclCommand(Command):
           recurse = True
           break
       RaiseErrorIfUrlsAreMixOfBucketsAndObjects(object_or_bucket_urls, recurse)
+      
       if object_or_bucket_urls[0].IsBucket() and not recurse:
         command_group = 'buckets'
       else:
         command_group = 'objects'
       gcloud_storage_map = GcloudStorageMap(
           gcloud_command=['alpha', 'storage', command_group, 'update'] +
-          [acl_flag],  #+ #url_list,
+          [acl_flag],
           flag_map={
               '-a': GcloudStorageFlag('--all-versions'),
               '-f': GcloudStorageFlag('--continue-on-error'),
