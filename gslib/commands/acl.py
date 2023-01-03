@@ -36,6 +36,7 @@ from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import UrlsAreForSingleProvider
+from gslib.storage_url import UrlsAreMixOfBucketsAndObjects
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils import acl_helper
 from gslib.utils.constants import NO_MAX
@@ -296,9 +297,8 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
-CANNED_GCS_ACLS = {'private', 'public-read', 'project-private',
-                    'public-read-write', 'authenticated-read',
-                    'bucket-owner-read', 'bucket-owner-full-control'}
+CANNED_GCS_ACLS = {'authenticatedRead','bucketOwnerFullControl', 'bucketOwnerRead',
+                    'private', 'projectPrivate', 'publicRead', 'publicReadWrite'}
 
 def _ApplyExceptionHandler(cls, exception):
   cls.logger.error('Encountered a problem: %s', exception)
@@ -307,7 +307,6 @@ def _ApplyExceptionHandler(cls, exception):
 
 def _ApplyAclChangesWrapper(cls, url_or_expansion_result, thread_state=None):
   cls.ApplyAclChanges(url_or_expansion_result, thread_state=thread_state)
-
 
 class AclCommand(Command):
   """Implementation of gsutil acl command."""
@@ -377,14 +376,16 @@ class AclCommand(Command):
         acl_flag='--acl-file=' + self.args[0]
       gcloud_storage_map = GcloudStorageMap(
           gcloud_command=[
-              'alpha', 'storage', command_group, 'update'] + url_list+  [acl_flag],
+              'alpha', 'storage', command_group, 'update'] + url_list +  [acl_flag],
           flag_map={
               '-a': GcloudStorageFlag('--all-versions'),
               '-f': GcloudStorageFlag('--continue-on-error'),
               '-R': GcloudStorageFlag('--recursive'),
               '-r': GcloudStorageFlag('--recursive'),
           })
-      self.args = self.args[:-2]
+      
+      args_to_be_removed = len(url_list) + 1 
+      self.args = self.args[:-args_to_be_removed]
 
     return super().get_gcloud_storage_args(gcloud_storage_map)
 
