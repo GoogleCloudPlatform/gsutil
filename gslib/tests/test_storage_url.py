@@ -137,14 +137,14 @@ class TestStorageUrl(base.GsUtilTestCase):
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b', 'f:o@o:o']))
     self.assertIsNone(storage_url.UrlsAreMixOfBucketsAndObjects(urls))
 
-  def test_urls_raise_error_if_mix_of_objects_and_buckets(self):
+  def test_urls_raise_error_if_bucket_followed_by_object(self):
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b1', 'gs://b/o']))
     with self.assertRaisesRegex(
             CommandException,
             'Cannot operate on a mix of buckets and objects.'):
       storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=False)
 
-  def test_urls_raise_error_if_objects_and_buckets_are_mixed_different(self):
+  def test_urls_raise_error_if_object_followed_by_bucket(self):
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b']))
     with self.assertRaisesRegex(
             CommandException,
@@ -155,19 +155,15 @@ class TestStorageUrl(base.GsUtilTestCase):
     # No error raised
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b1', 'gs://b/o']))
     storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=True)
-  
-  def test_not_raising_error_if_mix_objects_with_recursion(self):
-    urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b/p']))
-    self.assertFalse(storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=True))
 
-  def test_not_raising_error_if_mix_objects_without_recursion(self):
+  def test_not_raising_error_if_multiple_objects_without_recursion(self):
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b/p']))
     self.assertFalse(storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=False))
   
-  def test_not_raising_error_if_mix_buckets_with_recursion(self):
+  def test_not_raising_error_if_multiple_buckets_with_recursion(self):
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b/p']))
     self.assertFalse(storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=True))
   
-  def test_not_raising_error_if_mix_objects_with_recursion(self):
+  def test_not_raising_error_if_multiple_objects_with_recursion(self):
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b/p']))
-    self.assertFalse(storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=False))
+    self.assertFalse(storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=True))

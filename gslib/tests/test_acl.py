@@ -923,7 +923,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
         mock_log_handler = self.RunCommand('acl', [
-            'set', '-r', '-a', 'acl-file', 'gs://bucket', 'gs://bucket1',
+            'set', '-r', '-a', 'acl-file', 'gs://bucket', 'gs://bucket1/o',
             'gs://bucket2'
         ],
                                            return_log_handler=True)
@@ -931,7 +931,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage objects update'
              ' --acl-file=acl-file --recursive --all-versions gs://bucket'
-             ' gs://bucket1 gs://bucket2').format(
+             ' gs://bucket1/o gs://bucket2').format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
