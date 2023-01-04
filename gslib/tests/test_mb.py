@@ -231,15 +231,22 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
+    expected_status = 2 if self._use_gcloud_storage else 1
     # Location nam4 is used for dual-region.
     stderr = self.RunGsUtil(
         ['mb', '-l', 'nam4', '--rpo', 'incorrect_value',
          suri(bucket_uri)],
         return_stderr=True,
-        expected_status=1)
-    self.assertIn(
-        'Invalid value for --rpo. Must be one of: (ASYNC_TURBO|DEFAULT),'
-        ' provided: incorrect_value', stderr)
+        expected_status=expected_status)
+
+    if self._use_gcloud_storage:
+      self.assertIn(
+          '--recovery-point-objective: Invalid choice: \'incorrect_value\'',
+          stderr)
+    else:
+      self.assertIn(
+          'Invalid value for --rpo. Must be one of: (ASYNC_TURBO|DEFAULT),'
+          ' provided: incorrect_value', stderr)
 
   @SkipForXML(KMS_SKIP_MSG)
   @SkipForS3(KMS_SKIP_MSG)
@@ -418,3 +425,23 @@ class TestMbUnitTests(testcase.GsUtilUnitTestCase):
                        ' --retention-period 31557600s gs://fake-bucket').format(
                            os.path.join('fake_dir', 'bin', 'gcloud')),
                       info_lines)
+
+  @SkipForXML('The --rpo flag only works for GCS JSON API.')
+  def test_shim_translates_recovery_point_objective_flag(self):
+    fake_cloudsdk_dir = 'fake_dir'
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': fake_cloudsdk_dir,
+      }):
+        mock_log_handler = self.RunCommand(
+            'mb',
+            args=['--rpo', 'DEFAULT', 'gs://fake-bucket-1'],
+            return_log_handler=True)
+
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage'
+             ' buckets create --recovery-point-objective DEFAULT').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
