@@ -162,8 +162,8 @@ class TestStorageUrl(base.GsUtilTestCase):
   
   def test_not_raising_error_if_multiple_buckets_with_recursion(self):
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b/p']))
-    self.assertFalse(storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=True))
+    storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=True)
   
   def test_not_raising_error_if_multiple_objects_with_recursion(self):
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b/p']))
-    self.assertFalse(storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=True))
+    storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(urls, recursion_requested=True)
