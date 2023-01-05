@@ -93,10 +93,11 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': fake_cloudsdk_dir,
       }):
-        self.CreateBucket(bucket_name='fake-bucket-1')
-        mock_log_handler = self.RunCommand('rpo',
-                                           args=['get', 'gs://fake-bucket-1'],
-                                           return_log_handler=True)
+        self.CreateBucket(bucket_name='fake-bucket-get-rpo-1')
+        mock_log_handler = self.RunCommand(
+            'rpo',
+            args=['get', 'gs://fake-bucket-get-rpo-1'],
+            return_log_handler=True)
 
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage'
