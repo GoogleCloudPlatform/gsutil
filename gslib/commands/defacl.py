@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
+import os
 
 from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
@@ -192,27 +193,37 @@ class DefAclCommand(Command):
       },
   )
 
-  gcloud_storage_map = GcloudStorageMap(
-      gcloud_command={
-          'get':
-              GcloudStorageMap(
-                  gcloud_command=[
-                      'storage', 'buckets', 'describe',
-                      '--format=multi(defaultObjectAcl:format=json)'
-                  ],
-                  flag_map={},
-              ),
-          # 'set':
-          #     GcloudStorageMap(
-          #         gcloud_command=[
-          #             'storage', 'buckets', 'update',
-          #             '--default-object-acl-file'
-          #         ],
-          #         flag_map={},
-          #     ),
-      },
-      flag_map={},
-  )
+
+  def get_gcloud_storage_args(self):
+    sub_command = self.args.pop(0)
+    if sub_command == 'get':
+      gcloud_storage_map = GcloudStorageMap(
+          gcloud_command=[
+            'storage', 'buckets', 'describe',
+            '--format=multi(defaultObjectAcl:format=json)'
+        ],
+          flag_map={},
+        )
+
+    elif sub_command == 'set':
+      if (os.path.isfile(self.args[0])):
+        gcloud_storage_map = GcloudStorageMap(
+          gcloud_command=[
+            'storage', 'buckets', 'update',
+            '--predefined-default-object-acl'
+          ],
+          flag_map={},
+        )
+      else:
+        gcloud_storage_map = GcloudStorageMap(
+          gcloud_command=[
+            'storage', 'buckets', 'update',
+            '--default-object-acl-file'
+          ],
+          flag_map={},
+        )
+    return super().get_gcloud_storage_args(gcloud_storage_map)
+
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
