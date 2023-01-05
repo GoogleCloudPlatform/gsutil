@@ -86,8 +86,7 @@ GET_COMMAND = GcloudStorageMap(gcloud_command=[
     '--format=value[separator=": "](name.sub("^", "gs://"),'
     'rpo.yesno(no="None"))'
 ],
-                               flag_map={},
-                               supports_output_translation=True)
+                               flag_map={})
 
 
 class RpoCommand(Command):
