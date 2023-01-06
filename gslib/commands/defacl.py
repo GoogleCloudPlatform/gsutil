@@ -210,7 +210,7 @@ class DefAclCommand(Command):
         gcloud_storage_map = GcloudStorageMap(
           gcloud_command=[
             'storage', 'buckets', 'update',
-            '--default-object-acl-file'
+            '--default-object-acl-file=' + self.args.pop(0)
           ],
           flag_map={},
         )
@@ -218,7 +218,7 @@ class DefAclCommand(Command):
         gcloud_storage_map = GcloudStorageMap(
           gcloud_command=[
             'storage', 'buckets', 'update',
-            '--predefined-default-object-acl'
+            '--predefined-default-object-acl=' + self.args.pop(0)
           ],
           flag_map={},
         )
