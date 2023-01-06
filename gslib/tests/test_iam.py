@@ -1285,7 +1285,7 @@ class TestIamSet(TestIamIntegration):
 
     # The program asserts that an error has occured (due to 404).
     error_message = ('not found'
-                     if self._use_gcloud_storage else 'BucketNotFoundException')
+                     if self._use_gcloud_storage else 'CommandException')
     self.assertIn(error_message, stderr)
 
     set_iam_string = self.RunGsUtil(['iam', 'get', bucket.uri],
