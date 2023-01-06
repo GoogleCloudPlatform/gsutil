@@ -19,6 +19,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
+
 from apitools.base.py import encoding
 from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
@@ -35,10 +37,13 @@ from gslib.exception import CommandException
 from gslib.help_provider import CreateHelpText
 from gslib.storage_url import StorageUrlFromString
 from gslib.storage_url import UrlsAreForSingleProvider
+from gslib.storage_url import RaiseErrorIfUrlsAreMixOfBucketsAndObjects
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils import acl_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.retry_util import Retry
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 
 _SET_SYNOPSIS = """
   gsutil acl set [-f] [-r] [-a] <file-or-canned_acl_name> url...
@@ -152,7 +157,7 @@ _CH_DESCRIPTION = """
   such objects. For help doing this, see "gsutil help setmeta".
 
   Grant anyone on the internet WRITE access to the bucket example-bucket:
-  
+
   WARNING: this is not recommended as you will be responsible for the content
 
     gsutil acl ch -u AllUsers:W gs://example-bucket
@@ -292,7 +297,6 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
-
 def _ApplyExceptionHandler(cls, exception):
   cls.logger.error('Encountered a problem: %s', exception)
   cls.everything_set_okay = False
@@ -339,6 +343,50 @@ class AclCommand(Command):
           'ch': _ch_help_text
       },
   )
+
+  def get_gcloud_storage_args(self):
+    sub_command = self.args.pop(0)
+    if sub_command == 'get':
+      if StorageUrlFromString(self.args[0]).IsObject():
+        command_group = 'objects'
+      else:
+        command_group = 'buckets'
+      gcloud_storage_map = GcloudStorageMap(gcloud_command=[
+          'alpha', 'storage', command_group, 'describe',
+          '--format=multi(acl:format=json)'
+      ],
+                                            flag_map={})
+
+    elif sub_command == 'set':
+      # Flags must be at the start of self.args to get parsed.
+      self.ParseSubOpts()
+      if os.path.isfile(self.args[0]):
+        acl_flag = '--acl-file=' + self.args.pop(0)
+      else:  # Assume the string represents a predefined (canned) ACL.
+        acl_flag = '--predefined-acl=' + self.args.pop(0)
+      object_or_bucket_urls = [StorageUrlFromString(i) for i in self.args]
+      recurse = False
+      for (flag_key, _) in self.sub_opts:
+        if flag_key in ('-r', '-R'):
+          recurse = True
+          break
+      RaiseErrorIfUrlsAreMixOfBucketsAndObjects(object_or_bucket_urls, recurse)
+
+      if object_or_bucket_urls[0].IsBucket() and not recurse:
+        command_group = 'buckets'
+      else:
+        command_group = 'objects'
+      gcloud_storage_map = GcloudStorageMap(
+          gcloud_command=['alpha', 'storage', command_group, 'update'] +
+          [acl_flag],
+          flag_map={
+              '-a': GcloudStorageFlag('--all-versions'),
+              '-f': GcloudStorageFlag('--continue-on-error'),
+              '-R': GcloudStorageFlag('--recursive'),
+              '-r': GcloudStorageFlag('--recursive'),
+          })
+
+    return super().get_gcloud_storage_args(gcloud_storage_map)
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
