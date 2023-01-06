@@ -229,7 +229,6 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
   
 class TestDefaclShim(case.GsUtilUnitTestCase):
   
-
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_defacl_get(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
@@ -248,16 +247,7 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
 
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_set_defacl_file(self):
-    acl_string = '''[{
-      "entity": "project-owners-233984005590",
-      "etag": "CAE=",
-      "kind": "storage#objectAccessControl",
-      "projectTeam": {
-        "projectNumber": "233984005590",
-        "team": "owners"
-      },
-      "role": "OWNER"
-    }]'''
+    acl_string = 'acl_string'
     inpath = self.CreateTempFile(contents=acl_string.encode(UTF8))
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
@@ -283,13 +273,30 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
         mock_log_handler = self.RunCommand(
-            'defacl', ['set', 'predefined_acl', 'gs://b1', 'gs://b2'],
+            'defacl', ['set', 'bucket-owner-read', 'gs://b1', 'gs://b2'],
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} storage buckets update'
              ' --predefined-default-object-acl={} gs://b1 gs://b2').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), 'predefined_acl'), info_lines)
+                 os.path.join('fake_dir', 'bin', 'gcloud'), 'bucketOwnerRead'), info_lines)
+  
+  @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_predefined_xml_to_json(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'defacl', ['set', 'authenticated-read', 'gs://b1', 'gs://b2'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage buckets update'
+             ' --predefined-default-object-acl={} gs://b1 gs://b2').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud'), 'authenticatedRead'), info_lines)
 
 
 class TestDefaclOldAlias(TestDefacl):
