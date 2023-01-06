@@ -259,6 +259,8 @@ class MbCommand(Command):
               GcloudStorageFlag('--placement'),
           _RETENTION_FLAG:
               GcloudStorageFlag('--retention-period'),
+          '--rpo':
+              GcloudStorageFlag('--recovery-point-objective')
       },
   )
 
