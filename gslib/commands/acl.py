@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
+import os
 
 from apitools.base.py import encoding
 from gslib import metrics
@@ -295,13 +296,6 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
-CANNED_GCS_ACLS = frozenset([
-    'authenticatedRead', 'bucketOwnerFullControl', 'bucketOwnerRead', 'private',
-    'projectPrivate', 'publicRead', 'publicReadWrite', 'authenticated-read',
-    'bucket-owner-full-control', 'bucket-owner-read', 'project-private',
-    'public-read', 'public-read-write'
-])
-
 
 def _ApplyExceptionHandler(cls, exception):
   cls.logger.error('Encountered a problem: %s', exception)
@@ -366,11 +360,10 @@ class AclCommand(Command):
     elif sub_command == 'set':
       # Flags must be at the start of self.args to get parsed.
       self.ParseSubOpts()
-      if self.args[0] in CANNED_GCS_ACLS:
-        acl_flag = '--predefined-acl=' + self.args.pop(0)
-      else:
+      if os.path.isfile(self.args[0]):
         acl_flag = '--acl-file=' + self.args.pop(0)
-      
+      else:  # Assume the string represents a predefined (canned) ACL.
+        acl_flag = '--predefined-acl=' + self.args.pop(0)
       object_or_bucket_urls = [StorageUrlFromString(i) for i in self.args]
       recurse = False
       for (flag_key, _) in self.sub_opts:
