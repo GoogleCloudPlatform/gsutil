@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
+
 import os
 
 from gslib import metrics
@@ -193,7 +194,24 @@ class DefAclCommand(Command):
       },
   )
 
-
+  def _predefined_acl_xml_to_json(self, xml_string):
+    if xml_string == 'private':
+      return 'private'
+    elif xml_string == 'bucket-owner-read':
+      return 'bucketOwnerRead'
+    elif xml_string == 'bucket-owner-full-control':
+      return 'bucketOwnerFullControl'
+    elif xml_string == 'project-private':
+      return 'projectPrivate'
+    elif xml_string == 'authenticated-read':
+      return 'authenticatedRead'
+    elif xml_string == 'public-read':
+      return 'publicRead'
+    elif xml_string == 'public-read-write':
+      return 'publicReadWrite'
+    else:
+      return xml_string
+    
   def get_gcloud_storage_args(self):
     sub_command = self.args.pop(0)
     if sub_command == 'get':
@@ -218,12 +236,11 @@ class DefAclCommand(Command):
         gcloud_storage_map = GcloudStorageMap(
           gcloud_command=[
             'storage', 'buckets', 'update',
-            '--predefined-default-object-acl=' + self.args.pop(0)
+            '--predefined-default-object-acl=' + self._predefined_acl_xml_to_json(self.args.pop(0))
           ],
           flag_map={},
         )
     return super().get_gcloud_storage_args(gcloud_storage_map)
-
 
   def _CalculateUrlsStartArg(self):
     if not self.args:
