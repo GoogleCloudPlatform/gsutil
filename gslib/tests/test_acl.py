@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 
 import os
 import re
-from tempfile import tempdir
 
 from gslib.commands import acl
 from gslib.command import CreateOrGetGsutilLogger
@@ -179,7 +178,7 @@ class TestAcl(TestAclBase):
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri1],
                                 return_stdout=True)
 
-    # Change it to authenticated-read.ontents=acl_string
+    # Change it to authenticated-read.
     self.RunGsUtil(
         self._set_defacl_prefix +
         ['authenticated-read', suri(bucket_uri)])
@@ -741,9 +740,9 @@ class TestS3CompatibleAcl(TestAclBase):
 
 @SkipForGS('S3 ACLs accept XML and should not cause an XML warning.')
 class TestS3OnlyAcl(TestAclBase):
-  """ACL integration tests that work   # TODO: Format all test case names consistently.
-only for s3 URLs."""
+  """ACL integration tests that work only for s3 URLs."""
 
+  # TODO: Format all test case names consistently.
   def test_set_xml_acl(self):
     """Ensures XML content does not return an XML warning for S3."""
     obj_uri = suri(self.CreateObject(contents=b'foo'))

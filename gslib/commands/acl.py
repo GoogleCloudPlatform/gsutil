@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
+
 import os
 
 from apitools.base.py import encoding
@@ -156,7 +157,7 @@ _CH_DESCRIPTION = """
   such objects. For help doing this, see "gsutil help setmeta".
 
   Grant anyone on the internet WRITE access to the bucket example-bucket:
-  
+
   WARNING: this is not recommended as you will be responsible for the content
 
     gsutil acl ch -u AllUsers:W gs://example-bucket
@@ -296,7 +297,6 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
-
 def _ApplyExceptionHandler(cls, exception):
   cls.logger.error('Encountered a problem: %s', exception)
   cls.everything_set_okay = False
@@ -371,7 +371,7 @@ class AclCommand(Command):
           recurse = True
           break
       RaiseErrorIfUrlsAreMixOfBucketsAndObjects(object_or_bucket_urls, recurse)
-      
+
       if object_or_bucket_urls[0].IsBucket() and not recurse:
         command_group = 'buckets'
       else:
