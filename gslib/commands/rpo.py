@@ -88,6 +88,13 @@ GET_COMMAND = GcloudStorageMap(gcloud_command=[
 ],
                                flag_map={})
 
+SET_COMMAND = GcloudStorageMap(
+    gcloud_command=[
+        'storage', 'buckets', 'update', '--recovery-point-objective'
+    ],
+    flag_map={},
+)
+
 
 class RpoCommand(Command):
   """Implements the gsutil rpo command."""
@@ -127,6 +134,7 @@ class RpoCommand(Command):
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command={
           'get': GET_COMMAND,
+          'set': SET_COMMAND,
       },
       flag_map={},
   )

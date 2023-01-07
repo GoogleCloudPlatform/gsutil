@@ -297,6 +297,7 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 _ch_help_text = CreateHelpText(_CH_SYNOPSIS, _CH_DESCRIPTION)
 
+
 def _ApplyExceptionHandler(cls, exception):
   cls.logger.error('Encountered a problem: %s', exception)
   cls.everything_set_okay = False

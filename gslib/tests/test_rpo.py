@@ -106,6 +106,26 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
                            os.path.join('fake_dir', 'bin', 'gcloud')),
                       info_lines)
 
+  def test_shim_translates_recovery_point_objective_set_command(self):
+    fake_cloudsdk_dir = 'fake_dir'
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': fake_cloudsdk_dir,
+      }):
+        self.CreateBucket(bucket_name='fake-bucket-set-rpo')
+        mock_log_handler = self.RunCommand(
+            'rpo',
+            args=['set', 'DEFAULT', 'gs://fake-bucket-set-rpo'],
+            return_log_handler=True)
+
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage'
+             ' buckets update --recovery-point-objective DEFAULT').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+
 
 class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
   """Integration tests for rpo command."""
@@ -125,7 +145,7 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
 
   @SkipForXML('RPO only runs on GCS JSON API.')
   def test_get_returns_default_for_dual_region_bucket(self):
-    bucket_uri = self.CreateBucket(location='us')
+    bucket_uri = self.CreateBucket(location='nam4')
     self._verify_get_returns_default_or_none(bucket_uri)
 
   @SkipForXML('RPO only runs on GCS JSON API.')
