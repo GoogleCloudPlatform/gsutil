@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 import os
 
 from gslib import metrics
+from gslib import gcs_json_api
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import Preconditions
@@ -194,23 +195,6 @@ class DefAclCommand(Command):
       },
   )
 
-  def _predefined_acl_xml_to_json(self, xml_string):
-    if xml_string == 'private':
-      return 'private'
-    elif xml_string == 'bucket-owner-read':
-      return 'bucketOwnerRead'
-    elif xml_string == 'bucket-owner-full-control':
-      return 'bucketOwnerFullControl'
-    elif xml_string == 'project-private':
-      return 'projectPrivate'
-    elif xml_string == 'authenticated-read':
-      return 'authenticatedRead'
-    elif xml_string == 'public-read':
-      return 'publicRead'
-    elif xml_string == 'public-read-write':
-      return 'publicReadWrite'
-    else:
-      return xml_string
     
   def get_gcloud_storage_args(self):
     sub_command = self.args.pop(0)
@@ -224,19 +208,27 @@ class DefAclCommand(Command):
         )
 
     elif sub_command == 'set':
-      if (os.path.isfile(self.args[0])):
+      acl_file_or_predefined_acl = self.args.pop(0)
+      if (os.path.isfile(acl_file_or_predefined_acl)):
         gcloud_storage_map = GcloudStorageMap(
           gcloud_command=[
             'storage', 'buckets', 'update',
-            '--default-object-acl-file=' + self.args.pop(0)
+            '--default-object-acl-file=' + acl_file_or_predefined_acl
           ],
           flag_map={},
         )
-      else:
+      else: # check if is valid predefined ACL string
+        if acl_file_or_predefined_acl in (
+            gcs_json_api.FULL_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION):
+          predefined_acl = (
+              gcs_json_api.FULL_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION[
+                  acl_file_or_predefined_acl])
+        else:
+          predefined_acl = acl_file_or_predefined_acl
         gcloud_storage_map = GcloudStorageMap(
           gcloud_command=[
             'storage', 'buckets', 'update',
-            '--predefined-default-object-acl=' + self._predefined_acl_xml_to_json(self.args.pop(0))
+            '--predefined-default-object-acl=' + predefined_acl
           ],
           flag_map={},
         )
