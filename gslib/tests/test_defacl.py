@@ -282,7 +282,7 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
                  os.path.join('fake_dir', 'bin', 'gcloud'), 'bucketOwnerRead'), info_lines)
   
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
-  def test_shim_translates_predefined_xml_to_json(self):
+  def test_shim_translates_xml_predefined_defacl_for_set(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
