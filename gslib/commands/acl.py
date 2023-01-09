@@ -23,6 +23,7 @@ import os
 
 from apitools.base.py import encoding
 from gslib import metrics
+from gslib import gcs_json_api
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import PreconditionException
@@ -361,10 +362,19 @@ class AclCommand(Command):
     elif sub_command == 'set':
       # Flags must be at the start of self.args to get parsed.
       self.ParseSubOpts()
-      if os.path.isfile(self.args[0]):
-        acl_flag = '--acl-file=' + self.args.pop(0)
-      else:  # Assume the string represents a predefined (canned) ACL.
-        acl_flag = '--predefined-acl=' + self.args.pop(0)
+      acl_file_or_predefined_acl = self.args.pop(0)
+      if os.path.isfile(acl_file_or_predefined_acl):
+        acl_flag = '--acl-file=' + acl_file_or_predefined_acl
+      else:
+        if acl_file_or_predefined_acl in (
+            gcs_json_api.FULL_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION):
+          predefined_acl = (
+              gcs_json_api.FULL_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION[
+                  acl_file_or_predefined_acl])
+        else:
+          predefined_acl = acl_file_or_predefined_acl
+        acl_flag = '--predefined-acl=' + predefined_acl
+
       object_or_bucket_urls = [StorageUrlFromString(i) for i in self.args]
       recurse = False
       for (flag_key, _) in self.sub_opts:
