@@ -82,7 +82,11 @@ class TestAcl(TestAclBase):
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, obj_uri],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('ArgumentException', stderr)
+    if self._use_gcloud_storage:
+      error_text = 'JSONDecodeError'
+    else:
+      error_text = 'ArgumentException'
+    self.assertIn(error_text, stderr)
 
   def test_set_invalid_acl_bucket(self):
     """Ensures that invalid content returns a bad request error."""
@@ -91,7 +95,11 @@ class TestAcl(TestAclBase):
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, bucket_uri],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('ArgumentException', stderr)
+    if self._use_gcloud_storage:
+      error_text = 'JSONDecodeError'
+    else:
+      error_text = 'ArgumentException'
+    self.assertIn(error_text, stderr)
 
   def test_set_xml_acl_json_api_object(self):
     """Ensures XML content returns a bad request error and migration warning."""
@@ -100,8 +108,13 @@ class TestAcl(TestAclBase):
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, obj_uri],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('ArgumentException', stderr)
-    self.assertIn('XML ACL data provided', stderr)
+
+    if self._use_gcloud_storage:
+      self.assertIn('JSONDecodeError', stderr)
+      # XML not currently supported in gcloud storage.
+    else:
+      self.assertIn('ArgumentException', stderr)
+      self.assertIn('XML ACL data provided', stderr)
 
   def test_set_xml_acl_json_api_bucket(self):
     """Ensures XML content returns a bad request error and migration warning."""
@@ -110,8 +123,12 @@ class TestAcl(TestAclBase):
     stderr = self.RunGsUtil(self._set_acl_prefix + [inpath, bucket_uri],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('ArgumentException', stderr)
-    self.assertIn('XML ACL data provided', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('JSONDecodeError', stderr)
+      # XML not currently supported in gcloud storage.
+    else:
+      self.assertIn('ArgumentException', stderr)
+      self.assertIn('XML ACL data provided', stderr)
 
   def test_set_valid_acl_object(self):
     """Tests setting a valid ACL on an object."""
@@ -166,8 +183,11 @@ class TestAcl(TestAclBase):
                             ['not-a-canned-acl', obj_uri],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('CommandException', stderr)
-    self.assertIn('Invalid canned ACL', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('AttributeError', stderr)
+    else:
+      self.assertIn('CommandException', stderr)
+      self.assertIn('Invalid canned ACL', stderr)
 
   def test_set_valid_def_acl_bucket(self):
     """Ensures that valid default canned and XML ACLs works with get/set."""
@@ -709,7 +729,7 @@ class TestAcl(TestAclBase):
                           contents=b'foo'))
     acl_string = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
                                 return_stdout=True)
-    self.RunGsUtil(self._set_acl_prefix +
+    self.RunGsUtil(['-d'] + self._set_acl_prefix +
                    ['-f', 'public-read', obj_uri + 'foo2', obj_uri],
                    expected_status=1)
     acl_string2 = self.RunGsUtil(self._get_acl_prefix + [obj_uri],
@@ -818,10 +838,10 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
             'acl', ['set', inpath, 'gs://bucket/object'],
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} alpha storage objects update'
-                       ' --acl-file={}').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
-                      info_lines)
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage objects update'
+             ' --acl-file={}').format(os.path.join('fake_dir', 'bin', 'gcloud'),
+                                      inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_bucket(self):
@@ -876,6 +896,23 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
                       info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_xml_predefined_acl_for_set(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'acl', ['set', 'public-read', 'gs://bucket'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} alpha storage buckets update'
+                       ' --predefined-acl=publicRead gs://bucket').format(
+                           os.path.join('fake_dir', 'bin', 'gcloud')),
+                      info_lines)
+
+  @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_multiple_buckets_urls(self):
     inpath = self.CreateTempFile()
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
@@ -885,8 +922,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
         mock_log_handler = self.RunCommand('acl', [
-            'set', '-f', inpath, 'gs://bucket', 'gs://bucket1',
-            'gs://bucket2'
+            'set', '-f', inpath, 'gs://bucket', 'gs://bucket1', 'gs://bucket2'
         ],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
@@ -906,16 +942,16 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
         mock_log_handler = self.RunCommand('acl', [
-            'set', '-f', inpath, 'gs://bucket/object',
-            'gs://bucket/object1', 'gs://bucket/object2'
+            'set', '-f', inpath, 'gs://bucket/object', 'gs://bucket/object1',
+            'gs://bucket/object2'
         ],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage objects update'
-             ' --acl-file={} --continue-on-error gs://bucket/object'
-             ' gs://bucket/object1 gs://bucket/object2').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), inpath), info_lines)
+        self.assertIn(('Gcloud Storage Command: {} alpha storage objects update'
+                       ' --acl-file={} --continue-on-error gs://bucket/object'
+                       ' gs://bucket/object1 gs://bucket/object2').format(
+                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
+                      info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_multiple_buckets_urls_recursive_all_versions(
@@ -933,11 +969,11 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         ],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage objects update'
-             ' --acl-file={} --recursive --all-versions gs://bucket'
-             ' gs://bucket1/o gs://bucket2').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), inpath), info_lines)
+        self.assertIn(('Gcloud Storage Command: {} alpha storage objects update'
+                       ' --acl-file={} --recursive --all-versions gs://bucket'
+                       ' gs://bucket1/o gs://bucket2').format(
+                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
+                      info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_mix_buckets_and_objects_raises_error(self):

@@ -159,6 +159,27 @@ _ACL_FIELDS_SET = set([
     'items/owner',
     'owner',
 ])
+_BUCKET_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION = {
+    None: None,
+    'authenticated-read': 'authenticatedRead',
+    'private': 'private',
+    'project-private': 'projectPrivate',
+    'public-read': 'publicRead',
+    'public-read-write': 'publicReadWrite'
+}
+_OBJECT_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION = {
+    None: None,
+    'authenticated-read': 'authenticatedRead',
+    'bucket-owner-read': 'bucketOwnerRead',
+    'bucket-owner-full-control': 'bucketOwnerFullControl',
+    'private': 'private',
+    'project-private': 'projectPrivate',
+    'public-read': 'publicRead'
+}
+FULL_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION = _BUCKET_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION.copy(
+)
+FULL_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION.update(
+    _OBJECT_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION)
 
 # Fields that may be encrypted.
 _ENCRYPTED_HASHES_SET = set(['crc32c', 'md5Hash'])
@@ -2183,17 +2204,8 @@ class GcsJsonApi(CloudApi):
       corresponds to a flavor of *PredefinedAclValueValuesEnum and can be
       used as input to apitools requests that affect bucket access controls.
     """
-    # XML : JSON
-    translation_dict = {
-        None: None,
-        'authenticated-read': 'authenticatedRead',
-        'private': 'private',
-        'project-private': 'projectPrivate',
-        'public-read': 'publicRead',
-        'public-read-write': 'publicReadWrite'
-    }
-    if canned_acl_string in translation_dict:
-      return translation_dict[canned_acl_string]
+    if canned_acl_string in _BUCKET_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION:
+      return _BUCKET_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION[canned_acl_string]
     raise ArgumentException('Invalid canned ACL %s' % canned_acl_string)
 
   def _ObjectCannedAclToPredefinedAcl(self, canned_acl_string):
@@ -2207,18 +2219,8 @@ class GcsJsonApi(CloudApi):
       corresponds to a flavor of *PredefinedAclValueValuesEnum and can be
       used as input to apitools requests that affect object access controls.
     """
-    # XML : JSON
-    translation_dict = {
-        None: None,
-        'authenticated-read': 'authenticatedRead',
-        'bucket-owner-read': 'bucketOwnerRead',
-        'bucket-owner-full-control': 'bucketOwnerFullControl',
-        'private': 'private',
-        'project-private': 'projectPrivate',
-        'public-read': 'publicRead'
-    }
-    if canned_acl_string in translation_dict:
-      return translation_dict[canned_acl_string]
+    if canned_acl_string in _OBJECT_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION:
+      return _OBJECT_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION[canned_acl_string]
     raise ArgumentException('Invalid canned ACL %s' % canned_acl_string)
 
   def _ValidateHttpAccessTokenRefreshError(self, e):
