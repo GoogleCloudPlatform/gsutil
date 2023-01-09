@@ -217,7 +217,7 @@ class DefAclCommand(Command):
           ],
           flag_map={},
         )
-      else: # check if is valid predefined ACL string
+      else:
         if acl_file_or_predefined_acl in (
             gcs_json_api.FULL_PREDEFINED_ACL_XML_TO_JSON_TRANSLATION):
           predefined_acl = (
