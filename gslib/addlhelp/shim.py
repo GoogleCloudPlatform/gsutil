@@ -49,6 +49,11 @@ _DETAILED_HELP_TEXT = ("""
   is a list of commands supported by the shim with any differences in behavior
   noted.
 
+  acl
+  ------------------------
+
+  - The ``ch`` subcommand is not supported.
+
   autoclass
   ------------------------
 
@@ -84,6 +89,11 @@ _DETAILED_HELP_TEXT = ("""
   - The all-version flag (``-A``) silently enables sequential execution rather
     than raising an error.
 
+  defacl
+  ------------------------
+
+  - The ``ch`` subcommand is not supported.
+
   defstorageclass
   ------------------------
 
@@ -95,6 +105,12 @@ _DETAILED_HELP_TEXT = ("""
   - In gsutil, the `-m` and `-c` flags that affect which hashes are displayed
     are ignored for cloud objects. This is fixed for the shim and gcloud
     storage.
+
+  iam
+  ------------------------
+
+  - The ``ch`` subcommand is not supported.
+
 
   kms
   ------------------------
@@ -166,6 +182,11 @@ _DETAILED_HELP_TEXT = ("""
   ------------------------
 
   - ``$folder$`` delete markers are not supported.
+
+  rpo
+  ------------------------
+
+  - Works as expected.
 
   setmeta
   ------------------------
