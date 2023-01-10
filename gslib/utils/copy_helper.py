@@ -1486,6 +1486,33 @@ def ExpandUrlToSingleBlr(url_str,
   return (storage_url, treat_nonexistent_object_as_subdir)
 
 
+def TriggerReauthForDestinationProviderIfNecessary(gsutil_api, dst_url):
+  """Makes a request to the destination API provider to trigger reauth.
+
+  Addresses https://github.com/GoogleCloudPlatform/gsutil/issues/1639.
+
+  If an API call occurs in a child process, the library that handles
+  reauth will fail. We need to make at least one API call in the main
+  process to allow a user to reauthorize.
+
+  For cloud source URLs this already happens because the plurality of 
+  the name expansion iterator is checked in the main thread. For
+  cloud destination URLs, only some situations result in a similar API
+  call. In these situations, this function exits without performing an
+  API call. In others, this function performs an API call to trigger
+  reauth.
+  """
+  if not dst_url.IsCloudUrl():
+    # Reauth is not necessary for non-cloud URLs.
+    return
+
+  # Destination wildcards are expanded by an API call in the main process.
+  if ContainsWildcard(dst_url.url_string):
+    return
+
+  gsutil_api.GetBucket(dst_url.bucket_name, provider=dst_url.scheme)
+
+
 def FixWindowsNaming(src_url, dst_url):
   """Translates Windows pathnames to cloud pathnames.
 

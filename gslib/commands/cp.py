@@ -1107,6 +1107,9 @@ class CpCommand(Command):
         copy_helper_opts.daisy_chain,
     )
 
+    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+        self.gsutil_api, dst_url)
+
     seek_ahead_iterator = None
     # Cannot seek ahead with stdin args, since we can only iterate them
     # once without buffering in memory.

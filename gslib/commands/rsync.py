@@ -1696,6 +1696,9 @@ class RsyncCommand(Command):
     for signal_num in GetCaughtSignals():
       RegisterSignalHandler(signal_num, _HandleSignals)
 
+    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+        self.gsutil_api, dst_url)
+
     # Perform sync requests in parallel (-m) mode, if requested, using
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
