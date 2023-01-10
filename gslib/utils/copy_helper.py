@@ -1486,7 +1486,8 @@ def ExpandUrlToSingleBlr(url_str,
   return (storage_url, treat_nonexistent_object_as_subdir)
 
 
-def TriggerReauthForDestinationProviderIfNecessary(gsutil_api, dst_url):
+def TriggerReauthForDestinationProviderIfNecessary(gsutil_api, dst_url,
+                                                   parallelism_requested):
   """Makes a request to the destination API provider to trigger reauth.
 
   Addresses https://github.com/GoogleCloudPlatform/gsutil/issues/1639.
@@ -1496,20 +1497,34 @@ def TriggerReauthForDestinationProviderIfNecessary(gsutil_api, dst_url):
   process to allow a user to reauthorize.
 
   For cloud source URLs this already happens because the plurality of 
-  the name expansion iterator is checked in the main thread. For
+  the source name expansion iterator is checked in the main thread. For
   cloud destination URLs, only some situations result in a similar API
   call. In these situations, this function exits without performing an
   API call. In others, this function performs an API call to trigger
   reauth.
+
+  Args:
+    gsutil_api (CloudApiDelegator): API to use for the GetBucket call.
+    destination_url (CloudUrl): The destination of the transfer.
+    parallelism_requested (bool): True if the -m flag is provided, or
+      the transfer command uses a parallel override.
+  
+  Returns:
+    None, but performs an API call if necessary.
   """
+  # Reauth is not necessary for non-cloud destinations.
   if not dst_url.IsCloudUrl():
-    # Reauth is not necessary for non-cloud URLs.
     return
 
   # Destination wildcards are expanded by an API call in the main process.
   if ContainsWildcard(dst_url.url_string):
     return
 
+  # If gsutil executes sequentially, all calls will occur in the main process.
+  if not parallelism_requested:
+    return
+
+  # The specific API call is not important, but one must occur.
   gsutil_api.GetBucket(dst_url.bucket_name, provider=dst_url.scheme)
 
 
