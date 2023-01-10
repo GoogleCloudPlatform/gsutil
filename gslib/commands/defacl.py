@@ -21,8 +21,8 @@ from __future__ import unicode_literals
 
 import os
 
-from gslib import metrics
 from gslib import gcs_json_api
+from gslib import metrics
 from gslib.cloud_api import AccessDeniedException
 from gslib.cloud_api import BadRequestException
 from gslib.cloud_api import Preconditions
