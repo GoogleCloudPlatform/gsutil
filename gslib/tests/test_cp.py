@@ -4994,3 +4994,15 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     obj.metadata = CreateCustomMetadata(entries={UID_ATTR: USER_ID})
     ParseAndSetPOSIXAttributes(fpath, obj, False, True)
     mock_chown.assert_not_called()
+
+  @mock.patch(
+      'gslib.utils.copy_helper.TriggerReauthForDestinationProviderIfNecessary')
+  def test_cp_triggers_reauth(self, mock_trigger_reauth):
+    path = self.CreateTempFile(file_name=('foo'))
+    bucket_uri = self.CreateBucket()
+    self.RunCommand('cp', [path, suri(bucket_uri)])
+    mock_trigger_reauth.assert_called_once_with(
+        StorageUrlFromString(suri(bucket_uri)),
+        mock.ANY,  # Gsutil API.
+        False,  # Parallelism requested.
+    )

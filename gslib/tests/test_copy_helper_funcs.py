@@ -326,6 +326,36 @@ class TestCpFuncs(GsUtilUnitTestCase):
       self.assertTrue((uri.object_name, uri.generation) in expected_to_delete)
     self.assertEqual(len(expected_to_delete), len(existing_objects_to_delete))
 
+  def testReauthChallengeIsPerformed(self):
+    mock_api = mock.Mock(spec=CloudApi)
+    destination_url = StorageUrlFromString('gs://bucket')
+    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+        destination_url, mock_api, parallelism_requested=True)
+    mock_api.GetBucket.assert_called_once_with('bucket',
+                                               fields=['location'],
+                                               provider='gs')
+
+  def testReauthChallengeNotPerformedWithFileDestination(self):
+    mock_api = mock.Mock(spec=CloudApi)
+    destination_url = StorageUrlFromString('dir/file')
+    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+        destination_url, mock_api, parallelism_requested=True)
+    mock_api.GetBucket.assert_not_called()
+
+  def testReauthChallengeNotPerformedWhenDestinationContainsWildcard(self):
+    mock_api = mock.Mock(spec=CloudApi)
+    destination_url = StorageUrlFromString('gs://bucket*')
+    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+        destination_url, mock_api, parallelism_requested=True)
+    mock_api.GetBucket.assert_not_called()
+
+  def testReauthChallengeNotPerformedWithSequentialExecution(self):
+    mock_api = mock.Mock(spec=CloudApi)
+    destination_url = StorageUrlFromString('gs://bucket')
+    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+        destination_url, mock_api, parallelism_requested=False)
+    mock_api.GetBucket.assert_not_called()
+
   # pylint: disable=protected-access
   def testTranslateApitoolsResumableUploadException(self):
     """Tests that _TranslateApitoolsResumableUploadException works correctly."""

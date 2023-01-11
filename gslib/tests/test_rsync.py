@@ -21,11 +21,13 @@ from __future__ import unicode_literals
 
 import os
 import re
+from unittest import mock
 
 import six
 
 from gslib.commands import rsync
 from gslib.project_id import PopulateProjectId
+from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -103,6 +105,18 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
     # Decode accepts language-appropriate string type, returns unicode.
     self.assertEqual(rsync._DecodeUrl(six.ensure_str(encoded_url)),
                      six.ensure_text(decoded_url))
+
+  @mock.patch(
+      'gslib.utils.copy_helper.TriggerReauthForDestinationProviderIfNecessary')
+  def testRsyncTriggersReauth(self, mock_trigger_reauth):
+    path = self.CreateTempDir()
+    bucket_uri = self.CreateBucket()
+    self.RunCommand('rsync', [path, suri(bucket_uri)])
+    mock_trigger_reauth.assert_called_once_with(
+        StorageUrlFromString(suri(bucket_uri)),
+        mock.ANY,  # Gsutil API.
+        parallelism_requested=True,
+    )
 
 
 # TODO: Add inspection to the retry wrappers in this test suite where the state
