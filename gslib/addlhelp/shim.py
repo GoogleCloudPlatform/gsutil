@@ -110,6 +110,7 @@ _DETAILED_HELP_TEXT = ("""
   ------------------------
 
   - The ``ch`` subcommand is not supported.
+  - The ``-f`` flag will continue on any error, not just API errors.
 
 
   kms
@@ -135,7 +136,6 @@ _DETAILED_HELP_TEXT = ("""
 
   - The get subcommand has different JSON spacing and doesn't print an
     informational message if no configuration is found.
-
 
   ls
   ------------------------
