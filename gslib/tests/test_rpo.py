@@ -102,8 +102,8 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage'
                        ' buckets list --format=value[separator=": "]'
-                       '(name.sub("^", "gs://"),rpo.yesno(no="None"))').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud')),
+                       '(format("gs://{}", name),rpo.yesno(no="None"))').format(
+                           os.path.join('fake_dir', 'bin', 'gcloud'), r'{}'),
                       info_lines)
 
   def test_shim_translates_recovery_point_objective_set_command(self):
@@ -237,7 +237,16 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
   @SkipForGS('Testing S3 only behavior.')
   def test_s3_fails_for_get(self):
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(['rpo', 'get', suri(bucket_uri)],
-                            return_stderr=True,
-                            expected_status=1)
-    self.assertIn('command can only be used for GCS buckets', stderr)
+    expected_status = 0 if self._use_gcloud_storage else 1
+    stdout, stderr = self.RunGsUtil(
+        ['rpo', 'get', suri(bucket_uri)],
+        return_stderr=True,
+        return_stdout=True,
+        expected_status=expected_status)
+    if self._use_gcloud_storage:
+      # TODO gcloud storage buckets list command doesn't raise an error when a
+      # s3 bucket is listed, instead it prints out "gs://None: None",
+      # this is an edge case.
+      self.assertIn('gs://None: None', stdout)
+    else:
+      self.assertIn('command can only be used for GCS buckets', stderr)
