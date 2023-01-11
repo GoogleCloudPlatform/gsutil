@@ -1108,7 +1108,8 @@ class CpCommand(Command):
     )
 
     copy_helper.TriggerReauthForDestinationProviderIfNecessary(
-        self.gsutil_api, dst_url, self.parallel_operations)
+        dst_url, StorageUrlFromString(src_url_strs[0][0]), self.gsutil_api,
+        self.parallel_operations)
 
     seek_ahead_iterator = None
     # Cannot seek ahead with stdin args, since we can only iterate them

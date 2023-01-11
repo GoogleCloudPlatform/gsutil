@@ -1486,7 +1486,8 @@ def ExpandUrlToSingleBlr(url_str,
   return (storage_url, treat_nonexistent_object_as_subdir)
 
 
-def TriggerReauthForDestinationProviderIfNecessary(gsutil_api, dst_url,
+def TriggerReauthForDestinationProviderIfNecessary(destination_url,
+                                                   first_source_url, gsutil_api,
                                                    parallelism_requested):
   """Makes a request to the destination API provider to trigger reauth.
 
@@ -1504,8 +1505,9 @@ def TriggerReauthForDestinationProviderIfNecessary(gsutil_api, dst_url,
   reauth.
 
   Args:
+    destination_url (StorageUrl): The destination of the transfer.
+    first_source_url (StorageUrl): The first source of the transfer.
     gsutil_api (CloudApiDelegator): API to use for the GetBucket call.
-    destination_url (CloudUrl): The destination of the transfer.
     parallelism_requested (bool): True if the -m flag is provided, or
       the transfer command uses a parallel override.
   
@@ -1513,11 +1515,17 @@ def TriggerReauthForDestinationProviderIfNecessary(gsutil_api, dst_url,
     None, but performs an API call if necessary.
   """
   # Reauth is not necessary for non-cloud destinations.
-  if not dst_url.IsCloudUrl():
+  if not destination_url.IsCloudUrl():
+    return
+
+  # Source URLs are expanded in the main process, so we already interact
+  # with the relevant provider if its scheme is the same as the destination
+  # URL's.
+  if first_source_url.scheme == destination_url.scheme:
     return
 
   # Destination wildcards are expanded by an API call in the main process.
-  if ContainsWildcard(dst_url.url_string):
+  if ContainsWildcard(destination_url.url_string):
     return
 
   # If gsutil executes sequentially, all calls will occur in the main process.
@@ -1525,7 +1533,8 @@ def TriggerReauthForDestinationProviderIfNecessary(gsutil_api, dst_url,
     return
 
   # The specific API call is not important, but one must occur.
-  gsutil_api.GetBucket(dst_url.bucket_name, provider=dst_url.scheme)
+  gsutil_api.GetBucket(destination_url.bucket_name,
+                       provider=destination_url.scheme)
 
 
 def FixWindowsNaming(src_url, dst_url):

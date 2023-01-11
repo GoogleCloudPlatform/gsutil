@@ -1697,8 +1697,9 @@ class RsyncCommand(Command):
       RegisterSignalHandler(signal_num, _HandleSignals)
 
     copy_helper.TriggerReauthForDestinationProviderIfNecessary(
-        self.gsutil_api,
         dst_url,
+        src_url,
+        self.gsutil_api,
         parallelism_requested=True,  # rsync uses parallel_operations_override.
     )
 
