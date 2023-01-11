@@ -1486,8 +1486,7 @@ def ExpandUrlToSingleBlr(url_str,
   return (storage_url, treat_nonexistent_object_as_subdir)
 
 
-def TriggerReauthForDestinationProviderIfNecessary(destination_url,
-                                                   first_source_url, gsutil_api,
+def TriggerReauthForDestinationProviderIfNecessary(destination_url, gsutil_api,
                                                    parallelism_requested):
   """Makes a request to the destination API provider to trigger reauth.
 
@@ -1506,7 +1505,6 @@ def TriggerReauthForDestinationProviderIfNecessary(destination_url,
 
   Args:
     destination_url (StorageUrl): The destination of the transfer.
-    first_source_url (StorageUrl): The first source of the transfer.
     gsutil_api (CloudApiDelegator): API to use for the GetBucket call.
     parallelism_requested (bool): True if the -m flag is provided, or
       the transfer command uses a parallel override.
@@ -1516,12 +1514,6 @@ def TriggerReauthForDestinationProviderIfNecessary(destination_url,
   """
   # Reauth is not necessary for non-cloud destinations.
   if not destination_url.IsCloudUrl():
-    return
-
-  # Source URLs are expanded in the main process, so we already interact
-  # with the relevant provider if its scheme is the same as the destination
-  # URL's.
-  if first_source_url.scheme == destination_url.scheme:
     return
 
   # Destination wildcards are expanded by an API call in the main process.

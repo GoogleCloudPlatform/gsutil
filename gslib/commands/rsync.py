@@ -1698,7 +1698,6 @@ class RsyncCommand(Command):
 
     copy_helper.TriggerReauthForDestinationProviderIfNecessary(
         dst_url,
-        src_url,
         self.gsutil_api,
         parallelism_requested=True,  # rsync uses parallel_operations_override.
     )
