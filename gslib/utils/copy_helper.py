@@ -1525,8 +1525,10 @@ def TriggerReauthForDestinationProviderIfNecessary(destination_url, gsutil_api,
     return
 
   # The specific API call is not important, but one must occur.
-  gsutil_api.GetBucket(destination_url.bucket_name,
-                       provider=destination_url.scheme)
+  gsutil_api.GetBucket(
+      destination_url.bucket_name,
+      fields=['location'],  # Single field to limit XML API calls.
+      provider=destination_url.scheme)
 
 
 def FixWindowsNaming(src_url, dst_url):
