@@ -244,9 +244,7 @@ class TestRpoE2E(testcase.GsUtilIntegrationTestCase):
         return_stdout=True,
         expected_status=expected_status)
     if self._use_gcloud_storage:
-      # TODO gcloud storage buckets list command doesn't raise an error when a
-      # s3 bucket is listed, instead it prints out "gs://None: None",
-      # this is an edge case.
+      # TODO(b/265304295)
       self.assertIn('gs://None: None', stdout)
     else:
       self.assertIn('command can only be used for GCS buckets', stderr)
