@@ -1,3 +1,30 @@
+Release 5.18 (release date: 2023-01-12)
+======================================
+New Features
+------------------
+- Add shim support for DefAcl get & set (#1654)
+- Add shim support for rpo set (#1650)
+- Add shim support for the rpo flag in the mb command (#1649)
+- Add shim support for ACL commands (#1638)
+- Add shim support for custom dual regions (#1645)
+- Add shim support for the hash command (#1644)
+- Add rsync -y option to compliment -x (#1642)
+- Add shim support for retention commands (#1641)
+- Add shim support for additional headers (#1634)
+- Add shim support for labels commands (#1636)
+- Add shim support for CORS commands (#1635)
+- Add shim support for IAM commands (#1627)
+
+Bug Fixes
+------------------
+- Handle reauth challenges gracefully in transfer commands. (#1655)
+- Shim gsutil ls behavior of always attempting to fetch hashes. (#1640)
+
+Other Changes
+------------------
+- Add a warning about the deprecation of the OAuth2 flow. (#1658)
+- Several documentation updates and clarifications.
+
 Release 5.17 (release date: 2022-12-01)
 ======================================
 New Features
