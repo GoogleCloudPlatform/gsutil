@@ -874,6 +874,17 @@ class ConfigCommand(Command):
                                                ' ')
         self._CheckPrivateKeyFilePermissions(gs_service_key_file)
       elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
+        if not system_util.InvokedViaCloudSdk():
+          sys.stdout.write(
+              '\n********************************************************\n' +
+              textwrap.fill(
+                  "WARNING: The following authentication flow will fail on "
+                  "or after Febuary 1 2023. Tokens generated before this date "
+                  "will continue to work. To authenticate with your user "
+                  "account after this date, install gsutil via Cloud SDK and "
+                  "run \"gcloud auth login\"",
+                  width=55) +
+              '\n********************************************************\n\n')
         oauth2_client = oauth2_helper.OAuth2ClientFromBotoConfig(
             boto.config, cred_type)
         try:
