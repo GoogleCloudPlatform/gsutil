@@ -83,8 +83,8 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 
 GET_COMMAND = GcloudStorageMap(gcloud_command=[
     'storage', 'buckets', 'list',
-    '--format=value[separator=": "](format("gs://{}", name),'
-    'rpo.yesno(no="None"))'
+    '--format=value[separator=": "](name.sub("^", "gs://"),'
+    'rpo.yesno(no="None"))', '--raw'
 ],
                                flag_map={})
 

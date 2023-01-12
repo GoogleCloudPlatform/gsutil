@@ -241,10 +241,11 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
         mock_log_handler = self.RunCommand('defacl', ['get', 'gs://bucket'],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn((
-            'Gcloud Storage Command: {} storage buckets describe'
-            ' --format=multi(defaultObjectAcl:format=json) gs://bucket').format(
-                os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+        self.assertIn(('Gcloud Storage Command: {} storage buckets describe'
+                       ' --format=multi(defaultObjectAcl:format=json)'
+                       ' --raw gs://bucket').format(
+                           os.path.join('fake_dir', 'bin', 'gcloud')),
+                      info_lines)
 
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_set_defacl_file(self):

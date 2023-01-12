@@ -52,9 +52,9 @@ _GET_DESCRIPTION = """
 <B>GET</B>
   The ``get`` sub-command gets the current Autoclass configuration for a
   bucket. The returned configuration has the following fields:
-  
+
   ``enabled``: a boolean field indicating whether the feature is on or off.
-     
+
   ``toggleTime``: a timestamp indicating when the enabled field was set.
 """
 
@@ -118,7 +118,7 @@ class AutoclassCommand(Command):
               GcloudStorageMap(
                   gcloud_command=[
                       'alpha', 'storage', 'buckets', 'list',
-                      GCLOUD_FORMAT_STRING
+                      GCLOUD_FORMAT_STRING, '--raw'
                   ],
                   flag_map={},
                   supports_output_translation=True,

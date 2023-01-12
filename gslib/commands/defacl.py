@@ -201,7 +201,7 @@ class DefAclCommand(Command):
       gcloud_storage_map = GcloudStorageMap(
           gcloud_command=[
               'storage', 'buckets', 'describe',
-              '--format=multi(defaultObjectAcl:format=json)'
+              '--format=multi(defaultObjectAcl:format=json)', '--raw'
           ],
           flag_map={},
       )

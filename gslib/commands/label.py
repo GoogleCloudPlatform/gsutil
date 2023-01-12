@@ -184,7 +184,7 @@ class LabelCommand(Command):
           GcloudStorageMap(
               gcloud_command=[
                   'alpha', 'storage', 'buckets', 'describe',
-                  '--format=multi(labels:format=json)'
+                  '--format=multi(labels:format=json)', '--raw'
               ],
               flag_map={},
           ),

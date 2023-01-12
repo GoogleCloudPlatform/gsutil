@@ -123,7 +123,8 @@ class TestWebShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets describe'
-             ' --format=multi(website:format=json) gs://bucket').format(
+             ' --format=multi(website:format=json)'
+             ' --raw gs://bucket').format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
 
   @mock.patch.object(web.WebCommand, '_SetWeb', new=mock.Mock())

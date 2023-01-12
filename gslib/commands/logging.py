@@ -176,7 +176,7 @@ class LoggingCommand(Command):
               GcloudStorageMap(
                   gcloud_command=[
                       'alpha', 'storage', 'buckets', 'list',
-                      '--format=multi(logging:format=json)'
+                      '--format=multi(logging:format=json)', '--raw'
                   ],
                   flag_map={},
               ),

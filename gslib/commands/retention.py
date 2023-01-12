@@ -400,7 +400,7 @@ class RetentionCommand(Command):
               'get':
                   GcloudStorageMap(gcloud_command=[
                       'alpha', 'storage', 'buckets', 'describe',
-                      '--format=yaml(retentionPolicy)'
+                      '--format=yaml(retentionPolicy)', '--raw'
                   ],
                                    flag_map={}),
               'lock':
