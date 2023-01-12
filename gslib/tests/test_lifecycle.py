@@ -289,9 +289,9 @@ class TestLifecycleUnitTests(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets'
-             ' describe --format=multi(lifecycle:format=json) {}').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'),
-                 suri(bucket_uri)), info_lines)
+             ' describe --format=multi(lifecycle:format=json)'
+             ' --raw {}').format(os.path.join('fake_dir', 'bin', 'gcloud'),
+                                 suri(bucket_uri)), info_lines)
 
   @mock.patch('gslib.commands.lifecycle.LifecycleCommand._SetLifecycleConfig',
               new=mock.Mock())

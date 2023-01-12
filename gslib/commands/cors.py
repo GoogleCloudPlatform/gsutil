@@ -147,7 +147,7 @@ class CorsCommand(Command):
               GcloudStorageMap(
                   gcloud_command=[
                       'alpha', 'storage', 'buckets', 'describe',
-                      '--format=multi(cors:format=json)'
+                      '--format=multi(cors:format=json)', '--raw'
                   ],
                   flag_map={},
               ),

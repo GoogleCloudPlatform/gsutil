@@ -806,7 +806,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage objects describe'
-             ' --format=multi(acl:format=json) gs://bucket/object').format(
+             ' --format=multi(acl:format=json)'
+             ' --raw gs://bucket/object').format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
@@ -822,7 +823,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets describe'
-             ' --format=multi(acl:format=json) gs://bucket').format(
+             ' --format=multi(acl:format=json)'
+             ' --raw gs://bucket').format(
                  os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
