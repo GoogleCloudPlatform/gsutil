@@ -226,9 +226,10 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     # Neither arguments nor subcommand.
     stderr = self.RunGsUtil(['defacl'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
-  
+
+
 class TestDefaclShim(case.GsUtilUnitTestCase):
-  
+
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_defacl_get(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
@@ -240,10 +241,10 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
         mock_log_handler = self.RunCommand('defacl', ['get', 'gs://bucket'],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(
-            ('Gcloud Storage Command: {} storage buckets describe'
-             ' --format=multi(defaultObjectAcl:format=json) gs://bucket').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+        self.assertIn((
+            'Gcloud Storage Command: {} storage buckets describe'
+            ' --format=multi(defaultObjectAcl:format=json) gs://bucket').format(
+                os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
 
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_set_defacl_file(self):
@@ -259,11 +260,11 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
             'defacl', ['set', inpath, 'gs://b1', 'gs://b2'],
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(
-            ('Gcloud Storage Command: {} storage buckets update'
-             ' --default-object-acl-file={} gs://b1 gs://b2').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), inpath), info_lines)
-  
+        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                       ' --default-object-acl-file={} gs://b1 gs://b2').format(
+                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
+                      info_lines)
+
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_set_predefined_defacl(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
@@ -279,8 +280,9 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} storage buckets update'
              ' --predefined-default-object-acl={} gs://b1 gs://b2').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), 'bucketOwnerRead'), info_lines)
-  
+                 os.path.join('fake_dir', 'bin', 'gcloud'),
+                 'bucketOwnerRead'), info_lines)
+
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_xml_predefined_defacl_for_set(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
@@ -296,7 +298,8 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} storage buckets update'
              ' --predefined-default-object-acl={} gs://b1 gs://b2').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), 'authenticatedRead'), info_lines)
+                 os.path.join('fake_dir', 'bin', 'gcloud'),
+                 'authenticatedRead'), info_lines)
 
 
 class TestDefaclOldAlias(TestDefacl):

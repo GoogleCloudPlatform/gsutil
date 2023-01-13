@@ -50,7 +50,7 @@ _SET_DESCRIPTION = """
 
 _GET_DESCRIPTION = """
 <B>GET</B>
-  The ``get`` sub-command gets the current autoclass configuration for a
+  The ``get`` sub-command gets the current Autoclass configuration for a
   bucket. The returned configuration has the following fields:
   
   ``enabled``: a boolean field indicating whether the feature is on or off.
