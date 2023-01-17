@@ -195,27 +195,26 @@ class DefAclCommand(Command):
       },
   )
 
-    
   def get_gcloud_storage_args(self):
     sub_command = self.args.pop(0)
     if sub_command == 'get':
       gcloud_storage_map = GcloudStorageMap(
           gcloud_command=[
-            'storage', 'buckets', 'describe',
-            '--format=multi(defaultObjectAcl:format=json)'
-        ],
+              'storage', 'buckets', 'describe',
+              '--format=multi(defaultObjectAcl:format=json)'
+          ],
           flag_map={},
-        )
+      )
 
     elif sub_command == 'set':
       acl_file_or_predefined_acl = self.args.pop(0)
       if (os.path.isfile(acl_file_or_predefined_acl)):
         gcloud_storage_map = GcloudStorageMap(
-          gcloud_command=[
-            'storage', 'buckets', 'update',
-            '--default-object-acl-file=' + acl_file_or_predefined_acl
-          ],
-          flag_map={},
+            gcloud_command=[
+                'storage', 'buckets', 'update',
+                '--default-object-acl-file=' + acl_file_or_predefined_acl
+            ],
+            flag_map={},
         )
       else:
         if acl_file_or_predefined_acl in (
@@ -226,11 +225,11 @@ class DefAclCommand(Command):
         else:
           predefined_acl = acl_file_or_predefined_acl
         gcloud_storage_map = GcloudStorageMap(
-          gcloud_command=[
-            'storage', 'buckets', 'update',
-            '--predefined-default-object-acl=' + predefined_acl
-          ],
-          flag_map={},
+            gcloud_command=[
+                'storage', 'buckets', 'update',
+                '--predefined-default-object-acl=' + predefined_acl
+            ],
+            flag_map={},
         )
     return super().get_gcloud_storage_args(gcloud_storage_map)
 

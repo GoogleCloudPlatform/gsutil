@@ -532,7 +532,7 @@ _DETAILED_HELP_TEXT = ("""
   -y pattern     Similar to the -x option, but the command will first skip
                  directories/prefixes using the provided pattern and then
                  exclude files/objects using the same pattern. This is usually
-                 much faster, but won't work as intended with with negative
+                 much faster, but won't work as intended with negative
                  lookahead patterns. For example, if you run the command:
 
                    gsutil rsync -y "^(?!.*\.txt$).*" dir gs://my-bucket
@@ -541,7 +541,7 @@ _DETAILED_HELP_TEXT = ("""
                  .txt before excluding all files except those ending in .txt.
                  Running the same command with the -x option would result in all
                  .txt files being included, regardless of whether they appear in
-                 subdirectories.
+                 subdirectories that end in .txt.
 
 """)
 # pylint: enable=anomalous-backslash-in-string

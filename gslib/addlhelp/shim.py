@@ -102,8 +102,8 @@ _DETAILED_HELP_TEXT = ("""
   hash
   ------------------------
 
-  - In gsutil, the `-m` and `-c` flags that affect which hashes are displayed
-    are ignored for cloud objects. This is fixed for the shim and gcloud
+  - In gsutil, the ``-m`` and ``-c`` flags that affect which hashes are displayed
+    are ignored for cloud objects. This behavior is fixed for the shim and gcloud
     storage.
 
   iam
