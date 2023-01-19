@@ -81,7 +81,7 @@ MACOS_WARNING = (
 )
 
 if IS_OSX:
-  NO_CHANGES = ('Building synchronization state...\n' + MACOS_WARNING +
+  NO_CHANGES = (MACOS_WARNING + 'Building synchronization state...\n'
                 'Starting synchronization...\n')
 else:
   NO_CHANGES = (
@@ -375,6 +375,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     """
     # Create 2 buckets where the source and destination have 2 objects each with
     # the same name and content, where mtime is only set on src_bucket.
+    self.maxDiff = None
     src_bucket = self.CreateBucket()
     dst_bucket = self.CreateBucket()
     self.CreateObject(bucket_uri=src_bucket,
