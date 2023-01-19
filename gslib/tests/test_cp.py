@@ -43,6 +43,7 @@ from boto.exception import ResumableTransferDisposition
 from boto.exception import StorageResponseError
 from boto.storage_uri import BucketStorageUri
 
+from gslib import command
 from gslib import exception
 from gslib import name_expansion
 from gslib.cloud_api import ResumableUploadStartOverException
@@ -4998,6 +4999,8 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
   @mock.patch(
       'gslib.utils.copy_helper.TriggerReauthForDestinationProviderIfNecessary')
   @mock.patch('gslib.command.Command._GetProcessAndThreadCount')
+  @mock.patch('gslib.command.Command.Apply',
+              new=mock.Mock(spec=command.Command.Apply))
   def test_cp_triggers_reauth(self, mock_get_process_and_thread_count,
                               mock_trigger_reauth):
     path = self.CreateTempFile(file_name=('foo'))
@@ -5012,9 +5015,8 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
         6,  # Worker count.
     )
 
-    mock_get_process_and_thread_count.assert_has_calls([
-        mock.call(process_count=None,
-                  thread_count=None,
-                  parallel_operations_override=None),
-        mock.call(None, None, None),  # Called in Command.Apply.
-    ])
+    mock_get_process_and_thread_count.assert_called_once_with(
+        process_count=None,
+        thread_count=None,
+        parallel_operations_override=None,
+    )

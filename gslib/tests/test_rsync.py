@@ -110,6 +110,8 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
   @mock.patch(
       'gslib.utils.copy_helper.TriggerReauthForDestinationProviderIfNecessary')
   @mock.patch('gslib.command.Command._GetProcessAndThreadCount')
+  @mock.patch('gslib.command.Command.Apply',
+              new=mock.Mock(spec=command.Command.Apply))
   def testRsyncTriggersReauth(self, mock_get_process_and_thread_count,
                               mock_trigger_reauth):
     path = self.CreateTempDir()
@@ -124,15 +126,12 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
         worker_count=6,
     )
 
-    mock_get_process_and_thread_count.assert_has_calls([
-        mock.call(process_count=None,
-                  thread_count=None,
-                  parallel_operations_override=command.Command.
-                  ParallelOverrideReason.SPEED),
-        mock.call(None, None, command.Command.ParallelOverrideReason.SPEED
-                 ),  # Called in Command.Apply.
-        mock.call(None, None, None),  # Called in Command.Apply.
-    ])
+    mock_get_process_and_thread_count.assert_called_once_with(
+        process_count=None,
+        thread_count=None,
+        parallel_operations_override=command.Command.ParallelOverrideReason.
+        SPEED,
+    )
 
 
 # TODO: Add inspection to the retry wrappers in this test suite where the state
