@@ -1699,7 +1699,8 @@ class RsyncCommand(Command):
     process_count, thread_count = self._GetProcessAndThreadCount(
         process_count=None,
         thread_count=None,
-        parallel_operations_override=self.ParallelOverrideReason.SPEED)
+        parallel_operations_override=self.ParallelOverrideReason.SPEED,
+        print_macos_warning=False)
     copy_helper.TriggerReauthForDestinationProviderIfNecessary(
         dst_url,
         self.gsutil_api,

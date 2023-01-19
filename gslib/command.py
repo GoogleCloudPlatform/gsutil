@@ -1317,8 +1317,11 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
     StorageUri.provider_pool = {}
     StorageUri.connection = None
 
-  def _GetProcessAndThreadCount(self, process_count, thread_count,
-                                parallel_operations_override):
+  def _GetProcessAndThreadCount(self,
+                                process_count,
+                                thread_count,
+                                parallel_operations_override,
+                                print_macos_warning=True):
     """Determines the values of process_count and thread_count.
 
     These values are used for parallel operations.
@@ -1333,6 +1336,8 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
       parallel_operations_override: Used to override self.parallel_operations.
                                     This allows the caller to safely override
                                     the top-level flag for a single call.
+      print_macos_warning: Print a warning about parallel processing on MacOS
+                           if true.
 
     Returns:
       (process_count, thread_count): The number of processes and threads to use,
@@ -1369,7 +1374,7 @@ class Command(HelpProvider, GcloudStorageCommandMixin):
                '"parallel_process_count = 1".') %
               (os_name, ', '.join(GetFriendlyConfigFilePaths())))))
     is_main_thread = self.recursive_apply_level == 0
-    if os_name == 'macOS' and process_count > 1 and is_main_thread:
+    if print_macos_warning and os_name == 'macOS' and process_count > 1 and is_main_thread:
       self.logger.info(
           'If you experience problems with multiprocessing on MacOS, they '
           'might be related to https://bugs.python.org/issue33725. You can '

@@ -131,6 +131,7 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
         thread_count=None,
         parallel_operations_override=command.Command.ParallelOverrideReason.
         SPEED,
+        print_macos_warning=False,
     )
 
 

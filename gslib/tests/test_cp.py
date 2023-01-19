@@ -5019,4 +5019,5 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
         process_count=None,
         thread_count=None,
         parallel_operations_override=None,
+        print_macos_warning=False,
     )

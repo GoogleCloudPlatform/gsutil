@@ -1110,7 +1110,8 @@ class CpCommand(Command):
     process_count, thread_count = self._GetProcessAndThreadCount(
         process_count=None,
         thread_count=None,
-        parallel_operations_override=None)
+        parallel_operations_override=None,
+        print_macos_warning=False)
     copy_helper.TriggerReauthForDestinationProviderIfNecessary(
         dst_url, self.gsutil_api, process_count * thread_count)
 
