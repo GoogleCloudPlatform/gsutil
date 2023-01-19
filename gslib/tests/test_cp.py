@@ -4997,12 +4997,24 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
 
   @mock.patch(
       'gslib.utils.copy_helper.TriggerReauthForDestinationProviderIfNecessary')
-  def test_cp_triggers_reauth(self, mock_trigger_reauth):
+  @mock.patch('gslib.command.Command._GetProcessAndThreadCount')
+  def test_cp_triggers_reauth(self, mock_get_process_and_thread_count,
+                              mock_trigger_reauth):
     path = self.CreateTempFile(file_name=('foo'))
     bucket_uri = self.CreateBucket()
+    mock_get_process_and_thread_count.return_value = 2, 3
+
     self.RunCommand('cp', [path, suri(bucket_uri)])
+
     mock_trigger_reauth.assert_called_once_with(
         StorageUrlFromString(suri(bucket_uri)),
         mock.ANY,  # Gsutil API.
-        False,  # Parallelism requested.
+        6,  # Worker count.
     )
+
+    mock_get_process_and_thread_count.assert_has_calls([
+        mock.call(process_count=None,
+                  thread_count=None,
+                  parallel_operations_override=None),
+        mock.call(None, None, None),  # Called in Command.Apply.
+    ])

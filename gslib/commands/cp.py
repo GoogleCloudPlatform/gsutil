@@ -1107,8 +1107,12 @@ class CpCommand(Command):
         copy_helper_opts.daisy_chain,
     )
 
+    process_count, thread_count = self._GetProcessAndThreadCount(
+        process_count=None,
+        thread_count=None,
+        parallel_operations_override=None)
     copy_helper.TriggerReauthForDestinationProviderIfNecessary(
-        dst_url, self.gsutil_api, self.parallel_operations)
+        dst_url, self.gsutil_api, process_count * thread_count)
 
     seek_ahead_iterator = None
     # Cannot seek ahead with stdin args, since we can only iterate them

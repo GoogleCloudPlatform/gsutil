@@ -1696,10 +1696,14 @@ class RsyncCommand(Command):
     for signal_num in GetCaughtSignals():
       RegisterSignalHandler(signal_num, _HandleSignals)
 
+    process_count, thread_count = self._GetProcessAndThreadCount(
+        process_count=None,
+        thread_count=None,
+        parallel_operations_override=self.ParallelOverrideReason.SPEED)
     copy_helper.TriggerReauthForDestinationProviderIfNecessary(
         dst_url,
         self.gsutil_api,
-        parallelism_requested=True,  # rsync uses parallel_operations_override.
+        worker_count=process_count * thread_count,
     )
 
     # Perform sync requests in parallel (-m) mode, if requested, using

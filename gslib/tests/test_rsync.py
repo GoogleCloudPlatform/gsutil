@@ -25,6 +25,7 @@ from unittest import mock
 
 import six
 
+from gslib import command
 from gslib.commands import rsync
 from gslib.project_id import PopulateProjectId
 from gslib.storage_url import StorageUrlFromString
@@ -108,15 +109,30 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
 
   @mock.patch(
       'gslib.utils.copy_helper.TriggerReauthForDestinationProviderIfNecessary')
-  def testRsyncTriggersReauth(self, mock_trigger_reauth):
+  @mock.patch('gslib.command.Command._GetProcessAndThreadCount')
+  def testRsyncTriggersReauth(self, mock_get_process_and_thread_count,
+                              mock_trigger_reauth):
     path = self.CreateTempDir()
     bucket_uri = self.CreateBucket()
+    mock_get_process_and_thread_count.return_value = 2, 3
+
     self.RunCommand('rsync', [path, suri(bucket_uri)])
+
     mock_trigger_reauth.assert_called_once_with(
         StorageUrlFromString(suri(bucket_uri)),
         mock.ANY,  # Gsutil API.
-        parallelism_requested=True,
+        worker_count=6,
     )
+
+    mock_get_process_and_thread_count.assert_has_calls([
+        mock.call(process_count=None,
+                  thread_count=None,
+                  parallel_operations_override=command.Command.
+                  ParallelOverrideReason.SPEED),
+        mock.call(None, None, command.Command.ParallelOverrideReason.SPEED
+                 ),  # Called in Command.Apply.
+        mock.call(None, None, None),  # Called in Command.Apply.
+    ])
 
 
 # TODO: Add inspection to the retry wrappers in this test suite where the state

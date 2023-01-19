@@ -32,6 +32,7 @@ import mimetypes
 from operator import attrgetter
 import os
 import pickle
+import pyu2f
 import random
 import re
 import shutil
@@ -1487,7 +1488,7 @@ def ExpandUrlToSingleBlr(url_str,
 
 
 def TriggerReauthForDestinationProviderIfNecessary(destination_url, gsutil_api,
-                                                   parallelism_requested):
+                                                   worker_count):
   """Makes a request to the destination API provider to trigger reauth.
 
   Addresses https://github.com/GoogleCloudPlatform/gsutil/issues/1639.
@@ -1506,12 +1507,19 @@ def TriggerReauthForDestinationProviderIfNecessary(destination_url, gsutil_api,
   Args:
     destination_url (StorageUrl): The destination of the transfer.
     gsutil_api (CloudApiDelegator): API to use for the GetBucket call.
-    parallelism_requested (bool): True if the -m flag is provided, or
-      the transfer command uses a parallel override.
+    worker_count (int): If greater than 1, assume that parallel execution
+      is used. Technically, reauth challenges can be answered in the main
+      process, but they may be triggered multiple times if multithreading
+      is used.
   
   Returns:
     None, but performs an API call if necessary.
   """
+  # Only perform this check if the user has opted in.
+  if not config.getbool(
+      'GSUtil', 'trigger_reauth_challenge_for_parallel_operations', False):
+    return
+
   # Reauth is not necessary for non-cloud destinations.
   if not destination_url.IsCloudUrl():
     return
@@ -1521,14 +1529,21 @@ def TriggerReauthForDestinationProviderIfNecessary(destination_url, gsutil_api,
     return
 
   # If gsutil executes sequentially, all calls will occur in the main process.
-  if not parallelism_requested:
+  if worker_count == 1:
     return
 
-  # The specific API call is not important, but one must occur.
-  gsutil_api.GetBucket(
-      destination_url.bucket_name,
-      fields=['location'],  # Single field to limit XML API calls.
-      provider=destination_url.scheme)
+  try:
+    # The specific API call is not important, but one must occur.
+    gsutil_api.GetBucket(
+        destination_url.bucket_name,
+        fields=['location'],  # Single field to limit XML API calls.
+        provider=destination_url.scheme)
+  except Exception as e:
+    if isinstance(e, pyu2f.errors.PluginError):
+      raise
+
+    # Other exceptions can be ignored. The purpose was just to trigger
+    # a reauth challenge.
 
 
 def FixWindowsNaming(src_url, dst_url):
