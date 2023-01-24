@@ -690,6 +690,61 @@ def _ListUrlRootFunc(cls, args_tuple, thread_state=None):
     cls.non_retryable_listing_failures = 1
   out_file.close()
 
+def _SortWorker(cls, args_tuple, thread_state=None):
+  # print(args_tuple)
+  in_iter, chunk_file, final = args_tuple
+  with io.open(chunk_file, mode='w+', encoding=constants.UTF8) as chunk_fd:
+    if final:
+      current_chunk = heapq.merge(*(io.open(f, encoding=constants.UTF8) for f in in_iter))
+      chunk_fd.writelines(current_chunk)
+    else:
+      current_chunk = sorted(in_iter)
+      chunk_fd.write(six.text_type(''.join(current_chunk)))
+
+def args_iter2(cls, base_src_url, sorted_list_src_file_name, base_dst_url, sorted_list_dst_file_name, thread_state=None):
+  gsutil_api = GetCloudApiInstance(cls, thread_state=thread_state)
+  buffer_size = config.getint('GSUtil', 'rsync_buffer_lines', 32000)
+  for base_url_str, out_filename, desc in [
+      (
+          base_src_url.url_string,
+          sorted_list_src_file_name,
+          'source',
+      ),
+      (
+          base_dst_url.url_string,
+          sorted_list_dst_file_name,
+          'destination',
+      ),
+  ]:
+    chunk_files = []
+    field_listing_iterator = _FieldedListingIterator(cls, gsutil_api, base_url_str, desc)
+
+    try:
+      while True:
+        in_iter = list(islice(field_listing_iterator, buffer_size))
+        if not in_iter:
+          break
+        chunk_file = '%s-%06i' % (out_filename, len(chunk_files))
+        chunk_files.append(chunk_file)
+        yield (in_iter, chunk_file, False)
+    except IOError as e:
+      if e.errno == errno.EMFILE:
+        raise CommandException('\n'.join(
+            textwrap.wrap(
+                'Synchronization failed because too many open file handles were '
+                'needed while building synchronization state. Please see the '
+                'comments about rsync_buffer_lines in your .boto config file for a '
+                'possible way to address this problem.')))
+      raise
+    finally:
+      yield (chunk_files, out_filename, True)
+      for chunk_file in chunk_files:
+        try:
+          os.remove(chunk_file)
+        except Exception as e:  # pylint: disable=broad-except
+          logging.debug(
+              'Failed to remove rsync chunk file "%s". Got an error:\n%s',
+              chunk_file, e)
 
 def _LocalDirIterator(base_url):
   """A generator that yields a BLR for each file in a local directory.
@@ -1018,8 +1073,10 @@ class _DiffIterator(object):
     command_obj.non_retryable_listing_failures = 0
     shared_attrs = ['non_retryable_listing_failures']
     command_obj.Apply(
-        _ListUrlRootFunc,
-        args_iter,
+        _SortWorker,
+        args_iter2(command_obj, self.base_src_url, self.sorted_list_src_file_name, self.base_dst_url, self.sorted_list_dst_file_name),
+        # _ListUrlRootFunc,
+        # args_iter,
         _RootListingExceptionHandler,
         shared_attrs,
         arg_checker=DummyArgChecker,
@@ -1706,6 +1763,7 @@ class RsyncCommand(Command):
     # configured number of parallel processes and threads. Otherwise,
     # perform requests with sequential function calls in current process.
     diff_iterator = _DiffIterator(self, src_url, dst_url)
+    return
 
     # For estimation purposes, create a SeekAheadIterator based on the
     # source and destination files generated when creating the diff iterator.
