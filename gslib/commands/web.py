@@ -162,7 +162,7 @@ class WebCommand(Command):
               GcloudStorageMap(
                   gcloud_command=[
                       'alpha', 'storage', 'buckets', 'describe',
-                      '--format=multi(website:format=json)'
+                      '--format=multi(website:format=json)', '--raw'
                   ],
                   flag_map={},
                   supports_output_translation=True,

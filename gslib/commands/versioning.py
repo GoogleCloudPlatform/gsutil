@@ -120,7 +120,7 @@ class VersioningCommand(Command):
                       'name'
                       '.sub("^", "gs://").sub("$", ": "),'
                       'versioning.enabled'
-                      '.yesno("Enabled", "Suspended"))'
+                      '.yesno("Enabled", "Suspended"))', '--raw'
                   ],
                   flag_map={},
                   supports_output_translation=True,

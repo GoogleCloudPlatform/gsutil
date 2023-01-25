@@ -102,7 +102,8 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage'
                        ' buckets list --format=value[separator=": "]'
-                       '(format("gs://{}", name),rpo.yesno(no="None"))').format(
+                       '(format("gs://{}", name),rpo.yesno(no="None"))'
+                       ' --raw').format(
                            os.path.join('fake_dir', 'bin', 'gcloud'), r'{}'),
                       info_lines)
 

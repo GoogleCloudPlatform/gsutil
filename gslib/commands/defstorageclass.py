@@ -80,7 +80,8 @@ SHIM_GET_COMMAND_MAP = GcloudStorageMap(
         # The url_string for buckets ends with a slash.
         # Substitute the last slash with a colon.
         '--format=value[separator=\": \"](name.sub("^", "gs://"),'
-        'storageClass)'
+        'storageClass)',
+        '--raw'
     ],
     flag_map={},
 )
