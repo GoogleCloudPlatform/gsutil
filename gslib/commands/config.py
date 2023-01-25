@@ -537,6 +537,9 @@ content_language = en
 # settings.
 #stet_config_path = ~/.config/my_config.yaml
 
+# Adds an API call before parallel operations that triggers a reauth challenge.
+#trigger_reauth_challenge_for_parallel_operations = False
+
 """ % {
     'hash_fast_else_fail': CHECK_HASH_IF_FAST_ELSE_FAIL,
     'hash_fast_else_skip': CHECK_HASH_IF_FAST_ELSE_SKIP,

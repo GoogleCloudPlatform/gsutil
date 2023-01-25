@@ -23,6 +23,7 @@ import collections
 import datetime
 import logging
 import os
+import pyu2f
 from apitools.base.py import exceptions as apitools_exceptions
 
 from gslib.bucket_listing_ref import BucketListingObject
@@ -329,32 +330,88 @@ class TestCpFuncs(GsUtilUnitTestCase):
   def testReauthChallengeIsPerformed(self):
     mock_api = mock.Mock(spec=CloudApi)
     destination_url = StorageUrlFromString('gs://bucket')
-    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
-        destination_url, mock_api, parallelism_requested=True)
+
+    with SetBotoConfigForTest([
+        ('GSUtil', 'trigger_reauth_challenge_for_parallel_operations', 'True')
+    ]):
+      copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+          destination_url, mock_api, worker_count=2)
+
     mock_api.GetBucket.assert_called_once_with('bucket',
                                                fields=['location'],
                                                provider='gs')
 
+  def testReauthChallengeIsNotPerformedByDefault(self):
+    mock_api = mock.Mock(spec=CloudApi)
+    destination_url = StorageUrlFromString('gs://bucket')
+
+    copy_helper.TriggerReauthForDestinationProviderIfNecessary(destination_url,
+                                                               mock_api,
+                                                               worker_count=2)
+
+    mock_api.GetBucket.assert_not_called()
+
   def testReauthChallengeNotPerformedWithFileDestination(self):
     mock_api = mock.Mock(spec=CloudApi)
     destination_url = StorageUrlFromString('dir/file')
-    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
-        destination_url, mock_api, parallelism_requested=True)
+
+    with SetBotoConfigForTest([
+        ('GSUtil', 'trigger_reauth_challenge_for_parallel_operations', 'True')
+    ]):
+      copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+          destination_url, mock_api, worker_count=2)
+
     mock_api.GetBucket.assert_not_called()
 
   def testReauthChallengeNotPerformedWhenDestinationContainsWildcard(self):
     mock_api = mock.Mock(spec=CloudApi)
     destination_url = StorageUrlFromString('gs://bucket*')
-    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
-        destination_url, mock_api, parallelism_requested=True)
+
+    with SetBotoConfigForTest([
+        ('GSUtil', 'trigger_reauth_challenge_for_parallel_operations', 'True')
+    ]):
+      copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+          destination_url, mock_api, worker_count=2)
+
     mock_api.GetBucket.assert_not_called()
 
   def testReauthChallengeNotPerformedWithSequentialExecution(self):
     mock_api = mock.Mock(spec=CloudApi)
     destination_url = StorageUrlFromString('gs://bucket')
-    copy_helper.TriggerReauthForDestinationProviderIfNecessary(
-        destination_url, mock_api, parallelism_requested=False)
+
+    with SetBotoConfigForTest([
+        ('GSUtil', 'trigger_reauth_challenge_for_parallel_operations', 'True')
+    ]):
+      copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+          destination_url, mock_api, worker_count=1)
     mock_api.GetBucket.assert_not_called()
+
+  def testReauthChallengeRaisesReauthError(self):
+    mock_api = mock.Mock(spec=CloudApi)
+    mock_api.GetBucket.side_effect = pyu2f.errors.PluginError('Reauth error')
+    destination_url = StorageUrlFromString('gs://bucket')
+
+    with SetBotoConfigForTest([
+        ('GSUtil', 'trigger_reauth_challenge_for_parallel_operations', 'True')
+    ]):
+      with self.assertRaisesRegex(pyu2f.errors.PluginError, 'Reauth error'):
+        copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+            destination_url, mock_api, worker_count=2)
+
+  def testReauthChallengeSilencesOtherErrors(self):
+    mock_api = mock.Mock(spec=CloudApi)
+    mock_api.GetBucket.side_effect = Exception
+    destination_url = StorageUrlFromString('gs://bucket')
+
+    with SetBotoConfigForTest([
+        ('GSUtil', 'trigger_reauth_challenge_for_parallel_operations', 'True')
+    ]):
+      copy_helper.TriggerReauthForDestinationProviderIfNecessary(
+          destination_url, mock_api, worker_count=2)
+
+    mock_api.GetBucket.assert_called_once_with('bucket',
+                                               fields=['location'],
+                                               provider='gs')
 
   # pylint: disable=protected-access
   def testTranslateApitoolsResumableUploadException(self):
