@@ -1,3 +1,14 @@
+Release 5.19 (release date: 2023-01-26)
+======================================
+Bug Fixes
+------------------
+- Make reauth check opt-in and silence non-auth-related exceptions. (#1664)
+- Fix rpo get shim for s3 buckets (#1659)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 5.18 (release date: 2023-01-12)
 ======================================
 New Features
