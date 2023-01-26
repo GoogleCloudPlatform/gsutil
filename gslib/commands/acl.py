@@ -157,16 +157,10 @@ _CH_DESCRIPTION = """
   Cache-Control header of "Cache-Control:private, max-age=0, no-transform" on
   such objects. For help doing this, see "gsutil help setmeta".
 
-  Grant anyone on the internet WRITE access to the bucket example-bucket:
+  Grant the user john.doe@example.com READ access to all objects
+  in example-bucket that begin with folder/:
 
-  WARNING: this is not recommended as you will be responsible for the content
-
-    gsutil acl ch -u AllUsers:W gs://example-bucket
-
-  Grant the user john.doe@example.com WRITE access to the bucket
-  example-bucket:
-
-    gsutil acl ch -u john.doe@example.com:WRITE gs://example-bucket
+    gsutil acl ch -r -u john.doe@example.com:R gs://example-bucket/folder/
 
   Grant the group admins@example.com OWNER access to all jpg files in
   example-bucket:
@@ -193,13 +187,6 @@ _CH_DESCRIPTION = """
   Note that removing a project requires you to reference the project by
   its number (which you can see with the acl get command) as opposed to its
   project ID string.
-
-  Grant the user with the specified canonical ID READ access to all objects
-  in example-bucket that begin with folder/:
-
-    gsutil acl ch -r \\
-      -u 84fac329bceSAMPLE777d5d22b8SAMPLE785ac2SAMPLE2dfcf7c4adf34da46:R \\
-      gs://example-bucket/folder/
 
   Grant the service account foo@developer.gserviceaccount.com WRITE access to
   the bucket example-bucket:
