@@ -484,7 +484,7 @@ _OPTIONS_TEXT = """
                  uploaded objects retain the ``Content-Type`` and name of the
                  original files.
 
-                 Note that if you want to use `the top-level ``-m`` option
+                 Note that if you want to use the ``-m`` `top-level option
                  <https://cloud.google.com/storage/docs/gsutil/addlhelp/GlobalCommandLineOptions>`_
                  to parallelize copies along with the ``-j/-J`` options, your
                  performance may be bottlenecked by the
