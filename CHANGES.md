@@ -1,3 +1,8 @@
+Release 5.20 (release date: 2023-02-02)
+======================================
+Other Changes
+------------------
+- Small help updates to acl examples and the cp -j flag (#1667)
 Release 5.19 (release date: 2023-01-26)
 ======================================
 Bug Fixes
