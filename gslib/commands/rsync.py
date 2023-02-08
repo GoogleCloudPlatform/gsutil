@@ -417,10 +417,8 @@ _DETAILED_HELP_TEXT = ("""
                  ignored. Note that gsutil does not follow directory symlinks,
                  regardless of whether -e is specified.
 
-  -i             This forces rsync to skip any files which exist on the destination
-                 and have a modified time that is newer than the source file.
-                 (If an existing destination file has a modification time equal to
-                 the source file's, it will be updated if the sizes are different.)
+  -i             Skip copying any files that already exist at the destination,
+                 regardless of their modification time.
 
   -j <ext,...>   Applies gzip transport encoding to any file upload whose
                  extension matches the -j extension list. This is useful when
