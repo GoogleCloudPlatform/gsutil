@@ -64,6 +64,7 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', None),
         ('Credentials', 'gs_oauth2_refresh_token', None),
         ('Credentials', 'gs_external_account_file', None),
+        ('Credentials', 'gs_external_account_authorized_user_file', None),
         ('Credentials', 'gs_service_client_id', None),
         ('Credentials', 'gs_service_key_file', None),
     ]):
@@ -78,6 +79,7 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', None),
         ('Credentials', 'gs_oauth2_refresh_token', None),
         ('Credentials', 'gs_external_account_file', None),
+        ('Credentials', 'gs_external_account_authorized_user_file', None),
         ('Credentials', 'gs_service_client_id', None),
         ('Credentials', 'gs_service_key_file', None),
     ]):
@@ -92,6 +94,7 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', "?????"),
         ('Credentials', 'gs_oauth2_refresh_token', None),
         ('Credentials', 'gs_external_account_file', None),
+        ('Credentials', 'gs_external_account_authorized_user_file', None),
         ('Credentials', 'gs_service_client_id', None),
         ('Credentials', 'gs_service_key_file', None),
     ]):
@@ -106,6 +109,7 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', None),
         ('Credentials', 'gs_oauth2_refresh_token', "?????"),
         ('Credentials', 'gs_external_account_file', None),
+        ('Credentials', 'gs_external_account_authorized_user_file', None),
         ('Credentials', 'gs_service_client_id', None),
         ('Credentials', 'gs_service_key_file', None),
     ]):
@@ -120,6 +124,22 @@ class TestBotoUtil(testcase.GsUtilUnitTestCase):
         ('Credentials', 'aws_secret_access_key', None),
         ('Credentials', 'gs_oauth2_refresh_token', None),
         ('Credentials', 'gs_external_account_file', "?????"),
+        ('Credentials', 'gs_external_account_authorized_user_file', None),
+        ('Credentials', 'gs_service_client_id', None),
+        ('Credentials', 'gs_service_key_file', None),
+    ]):
+      self.assertTrue(boto_util.HasConfiguredCredentials())
+
+  @mock.patch.object(boto.auth, 'get_auth_handler', return_value=None)
+  def testHasConfiguredCredentialsExternalAuthorizedUserCreds(self, _):
+    with SetBotoConfigForTest([
+        ('Credentials', 'gs_access_key_id', None),
+        ('Credentials', 'gs_secret_access_key', None),
+        ('Credentials', 'aws_access_key_id', None),
+        ('Credentials', 'aws_secret_access_key', None),
+        ('Credentials', 'gs_oauth2_refresh_token', None),
+        ('Credentials', 'gs_external_account_file', None),
+        ('Credentials', 'gs_external_account_authorized_user_file', "?????"),
         ('Credentials', 'gs_service_client_id', None),
         ('Credentials', 'gs_service_key_file', None),
     ]):
