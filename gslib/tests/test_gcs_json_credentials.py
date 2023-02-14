@@ -66,7 +66,7 @@ def getBotoCredentialsConfig(
       ("Credentials", "gs_oauth2_refresh_token", user_account_creds),
       ("GoogleCompute", "service_account", gce_creds),
       ("Credentials", "gs_external_account_file", external_account_creds),
-      ("Credentials", "gs_external_account_authorized_file", external_account_authorized_user_creds)
+      ("Credentials", "gs_external_account_authorized_user_file", external_account_authorized_user_creds)
   ])
   return config
 
@@ -188,7 +188,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
   @mock.patch.object(WrappedCredentials,
                      "__init__",
                      side_effect=ValueError(ERROR_MESSAGE))
-  def testExternalAccountAuthorizedUser(self, _):
+  def testExternalAccountAuthorizedUserFailure(self, _):
     contents = pkgutil.get_data(
         "gslib", "tests/test_data/test_external_account_authorized_user_credentials.json")
     tmpfile = self.CreateTempFile(contents=contents)
