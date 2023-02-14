@@ -36,6 +36,7 @@ import six
 from six.moves import configparser
 from six.moves import range
 
+from google.auth import exceptions
 import gslib.exception
 from gslib.exception import CommandException
 from gslib.exception import ControlCException
@@ -760,6 +761,18 @@ def _RunNamedCommandAndHandleExceptions(command_runner,
     else:
       _OutputAndExit('You must re-authenticate with your SAML IdP. '
                      'Please run\n$ gsutil config')
+  except exceptions.OAuthError as e:
+    if system_util.InvokedViaCloudSdk():
+      _OutputAndExit(
+          'Your credentials are invalid. '
+          'Please run\n$ gcloud auth login',
+          exception=e)
+    else:
+      _OutputAndExit(
+          'Your credentials are invalid. For more help, see '
+          '"gsutil help creds", or re-run the gsutil config command (see '
+          '"gsutil help config").',
+          exception=e)
   except Exception as e:  # pylint: disable=broad-except
     config_paths = ', '.join(boto_util.GetFriendlyConfigFilePaths())
     # Check for two types of errors related to service accounts. These errors
