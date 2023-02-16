@@ -47,8 +47,8 @@ _DETAILED_HELP_TEXT = ("""
   ``gsutil rsync`` commands validate that the checksum of the source
   file/object matches the checksum of the destination file/object. If the
   checksums do not match, gsutil will delete the invalid copy and print a
-  warning message. This very rarely happens, but if it does, please contact
-  gs-team@google.com.
+  warning message. This very rarely happens, but if it does, you should
+  retry the operation.
 
 
 <B>CONFIGURATION</B>
