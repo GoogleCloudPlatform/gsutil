@@ -125,7 +125,6 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     params = [
         ('hmac create', 'requires a service account',
          'argument SERVICE_ACCOUNT: Must be specified'),
-        ('hmac create -u email', 'requires a service account', ''),
         ('hmac create -p proj', 'requires a service account',
          'argument SERVICE_ACCOUNT: Must be specified'),
         ('hmac delete', 'requires an Access ID',
@@ -140,18 +139,13 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
          'unrecognized arguments'),
         ('hmac update keyname', 'state flag must be supplied',
          'Exactly one of (--activate | --deactivate) must be specified.'),
-        ('hmac update -s KENTUCKY', 'state flag value must be one of', ''),
         ('hmac update -s INACTIVE', 'requires an Access ID',
          'argument ACCESS_ID: Must be specified'),
         ('hmac update -s INACTIVE -p proj', 'requires an Access ID',
          'argument ACCESS_ID: Must be specified'),
     ]
     for command, gsutil_error_substr, gcloud_error_substr in params:
-      flag_cannot_be_mapped_to_shim = not gcloud_error_substr
-      if self._use_gcloud_storage and flag_cannot_be_mapped_to_shim:
-        continue
-      else:
-        expected_status = 2 if self._use_gcloud_storage else 1
+      expected_status = 2 if self._use_gcloud_storage else 1
 
       stderr = self.RunGsUtil(command.split(),
                               return_stderr=True,
@@ -161,6 +155,21 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
         self.assertIn(gcloud_error_substr, stderr)
       else:
         self.assertIn(gsutil_error_substr, stderr)
+
+  def test_malformed_commands_that_cannot_be_translated_using_the_shim(self):
+    if self._use_gcloud_storage:
+      raise unittest.SkipTest('These commands cannot be translated using the'
+                              ' shim')
+
+    params = [
+        ('hmac create -u email', 'requires a service account'),
+        ('hmac update -s KENTUCKY', 'state flag value must be one of'),
+    ]
+    for command, gsutil_error_substr in params:
+      stderr = self.RunGsUtil(command.split(),
+                              return_stderr=True,
+                              expected_status=1)
+      self.assertIn(gsutil_error_substr, stderr)
 
   @unittest.skipUnless(SERVICE_ACCOUNT,
                        'Test requires service account configuration.')
@@ -407,14 +416,9 @@ class TestHmacXmlIntegration(testcase.GsUtilIntegrationTestCase):
 
 class TestHmacUnit(testcase.GsUtilUnitTestCase):
 
-  @mock.patch.object(cloud_api_delegator.CloudApiDelegator,
-                     'CreateHmacKey',
-                     autospec=True)
-  def test_shim_translates_hmac_create_command(self, mock_create_hmac_key):
+  @mock.patch.object(hmac.HmacCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_hmac_create_command(self):
     fake_cloudsdk_dir = 'fake_dir'
-    mock_create_hmac_key.return_value = apitools_messages.HmacKey(
-        metadata=apitools_messages.HmacKeyMetadata(accessId='access_id'),
-        secret='secret')
     service_account = (
         'test.service.account@test_project.iam.gserviceaccount.com')
     project = 'test_project'
@@ -435,15 +439,11 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
                                         'gcloud'), hmac._CREATE_COMMAND_FORMAT,
                            project, service_account), info_lines)
 
-  @mock.patch.object(cloud_api_delegator.CloudApiDelegator,
-                     'DeleteHmacKey',
-                     autospec=True)
-  def test_shim_translates_delete_command(self, mock_delete_hmac_key):
+  @mock.patch.object(hmac.HmacCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_delete_command(self):
     fake_cloudsdk_dir = 'fake_dir'
     project = 'test-project'
     access_id = 'fake123456789'
-    mock_delete_hmac_key.return_value = (
-        apitools_messages.HmacKeysDeleteResponse())
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
@@ -460,10 +460,8 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
                            os.path.join('fake_dir', 'bin', 'gcloud'), project,
                            access_id), info_lines)
 
-  @mock.patch.object(cloud_api_delegator.CloudApiDelegator,
-                     'GetHmacKey',
-                     autospec=True)
-  def test_shim_translates_get_commannd(self, mock_get_hmac_key):
+  @mock.patch.object(hmac.HmacCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_get_commannd(self):
     fake_cloudsdk_dir = 'fake_dir'
     project = 'test-project'
     access_id = 'fake123456789'
@@ -485,86 +483,106 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
                            hmac._DESCRIBE_COMMAND_FORMAT, project, access_id),
                       info_lines)
 
-  @mock.patch.object(cloud_api_delegator.CloudApiDelegator,
-                     'ListHmacKeys',
-                     autospec=True)
-  def test_shim_translates_hmac_list_command(self, mock_list_hmac_keys):
+  @mock.patch.object(hmac.HmacCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_hmac_list_command_using_short_format(self):
     fake_cloudsdk_dir = 'fake_dir'
     project = 'test-project'
     service_account = (
         'test.service.account@test_project.iam.gserviceaccount.com')
-    command_expected_list_command_format = (([
-        'list', '-a', '-u', service_account, '-p', project
-    ], ('Gcloud Storage Command: {} alpha storage'
-        ' hmac list {} --all --service-account {} --project {}').format(
-            os.path.join('fake_dir', 'bin', 'gcloud'),
-            hmac._LIST_COMMAND_SHORT_FORMAT, service_account, project)), ([
-                'list', '-a', '-u', service_account, '-l', '-p', project
-            ], ('Gcloud Storage Command: {} alpha storage'
-                ' hmac list {} --all --service-account {} --long --project {}'
-               ).format(os.path.join('fake_dir', 'bin',
-                                     'gcloud'), hmac._DESCRIBE_COMMAND_FORMAT,
-                        service_account, project)))
-    hmac_key = apitools_messages.HmacKeyMetadata(
-        accessId='fake123456789',
-        projectId='test-project',
-        serviceAccountEmail=service_account,
-        state='ACTIVE',
-        timeCreated=datetime.datetime(2020, 1, 1, 00, 16, 00),
-        updated=datetime.datetime(2020, 1, 1, 00, 16, 00),
-        etag='ABCDEFGHIK=')
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': fake_cloudsdk_dir,
       }):
-        for (command, expected) in command_expected_list_command_format:
-          mock_list_hmac_keys.return_value = iter([hmac_key])
-          mock_log_handler = self.RunCommand('hmac',
-                                             args=command,
-                                             return_log_handler=True)
-          info_lines = '\n'.join(mock_log_handler.messages['info'])
-          self.assertIn(expected, info_lines)
+        mock_log_handler = self.RunCommand(
+            'hmac',
+            args=['list', '-a', '-u', service_account, '-p', project],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage'
+             ' hmac list {} --all --service-account {} --project {}').format(
+                 os.path.join('fake_dir', 'bin',
+                              'gcloud'), hmac._LIST_COMMAND_SHORT_FORMAT,
+                 service_account, project), info_lines)
 
-  @mock.patch.object(cloud_api_delegator.CloudApiDelegator,
-                     'UpdateHmacKey',
-                     autospec=True)
-  def test_shim_translates_hmac_update_command(self, mock_update_hmac_key):
+  @mock.patch.object(hmac.HmacCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_hmac_list_command_using_long_format(self):
+    fake_cloudsdk_dir = 'fake_dir'
+    project = 'test-project'
+    service_account = (
+        'test.service.account@test_project.iam.gserviceaccount.com')
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': fake_cloudsdk_dir,
+      }):
+        mock_log_handler = self.RunCommand(
+            'hmac',
+            args=['list', '-a', '-u', service_account, '-l', '-p', project],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage'
+             ' hmac list {} --all --service-account {} --long --project {}'
+            ).format(os.path.join('fake_dir', 'bin',
+                                  'gcloud'), hmac._DESCRIBE_COMMAND_FORMAT,
+                     service_account, project), info_lines)
+
+  @mock.patch.object(hmac.HmacCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_hmac_update_command_when_active_state_option_is_passed(
+      self):
     fake_cloudsdk_dir = 'fake_dir'
     etag = 'ABCDEFGHIK='
     project = 'test-project'
     access_id = 'fake123456789'
 
-    option_expected_state_flag = (('INACTIVE', 'deactivate'), ('ACTIVE',
-                                                               'activate'))
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': fake_cloudsdk_dir,
       }):
-        for (option, expected_state_flag) in option_expected_state_flag:
-          mock_update_hmac_key.return_value = apitools_messages.HmacKeyMetadata(
-              accessId=access_id,
-              projectId=project,
-              serviceAccountEmail=(
-                  'test.service.account@test_project.iam.gserviceaccount.com'),
-              state=option,
-              timeCreated=datetime.datetime(2020, 1, 1, 00, 16, 00),
-              updated=datetime.datetime(2020, 1, 1, 00, 16, 00),
-              etag=etag)
-          mock_log_handler = self.RunCommand('hmac',
-                                             args=[
-                                                 'update', '-e', etag, '-p',
-                                                 project, '-s', option,
-                                                 access_id
-                                             ],
-                                             return_log_handler=True)
-          info_lines = '\n'.join(mock_log_handler.messages['info'])
-          self.assertIn(
-              ('Gcloud Storage Command: {} alpha storage'
-               ' hmac update {} --etag {} --project {} --{} {}').format(
-                   os.path.join('fake_dir', 'bin',
-                                'gcloud'), hmac._DESCRIBE_COMMAND_FORMAT, etag,
-                   project, expected_state_flag, access_id), info_lines)
+        mock_log_handler = self.RunCommand('hmac',
+                                           args=[
+                                               'update', '-e', etag, '-p',
+                                               project, '-s', 'ACTIVE',
+                                               access_id
+                                           ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} alpha storage'
+                       ' hmac update {} --etag {} --project {} --{} {}').format(
+                           os.path.join('fake_dir', 'bin', 'gcloud'),
+                           hmac._DESCRIBE_COMMAND_FORMAT, etag, project,
+                           'activate', access_id), info_lines)
+
+  @mock.patch.object(hmac.HmacCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_hmac_update_command_when_inactive_state_option_is_passed(
+      self):
+    fake_cloudsdk_dir = 'fake_dir'
+    etag = 'ABCDEFGHIK='
+    project = 'test-project'
+    access_id = 'fake123456789'
+
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': fake_cloudsdk_dir,
+      }):
+        mock_log_handler = self.RunCommand('hmac',
+                                           args=[
+                                               'update', '-e', etag, '-p',
+                                               project, '-s', 'INACTIVE',
+                                               access_id
+                                           ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} alpha storage'
+                       ' hmac update {} --etag {} --project {} --{} {}').format(
+                           os.path.join('fake_dir', 'bin', 'gcloud'),
+                           hmac._DESCRIBE_COMMAND_FORMAT, etag, project,
+                           'deactivate', access_id), info_lines)

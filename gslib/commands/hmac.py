@@ -32,8 +32,8 @@ from gslib.help_provider import CreateHelpText
 from gslib.metrics import LogCommandParams
 from gslib.project_id import PopulateProjectId
 from gslib.utils.cloud_api_helper import GetCloudApiInstance
-from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.text_util import InsistAscii
 
 _CREATE_SYNOPSIS = """
@@ -213,7 +213,7 @@ _CREATE_COMMAND_FORMAT = ('--format=value[separator="\n"]'
                           'format("Secret:      {}", secret))')
 _DESCRIBE_COMMAND_FORMAT = (
     '--format=value[separator="\n"](format("Access ID {}:", accessId),'
-    'format("\tState: {}", "State", state),'
+    'format("\tState: {}", state),'
     'format("\tService Account: {}", serviceAccountEmail),'
     'format("\tProject: {}", projectId),'
     'format("\tTime Created: {}",'
@@ -318,17 +318,6 @@ class HmacCommand(Command):
           'update': _update_help_text,
       })
 
-  gcloud_storage_map = GcloudStorageMap(
-      gcloud_command={
-          'create': CREATE_COMMAND,
-          'delete': DELETE_COMMAND,
-          'update': UPDATE_COMMAND,
-          'get': GET_COMMAND,
-          'list': LIST_COMMAND
-      },
-      flag_map={},
-  )
-
   def get_gcloud_storage_args(self):
     if self.args[0] == 'list' and '-l' in self.args:
       gcloud_storage_map = GcloudStorageMap(
@@ -336,7 +325,16 @@ class HmacCommand(Command):
           flag_map={},
       )
     else:
-      gcloud_storage_map = HmacCommand.gcloud_storage_map
+      gcloud_storage_map = GcloudStorageMap(
+          gcloud_command={
+              'create': CREATE_COMMAND,
+              'delete': DELETE_COMMAND,
+              'update': UPDATE_COMMAND,
+              'get': GET_COMMAND,
+              'list': LIST_COMMAND
+          },
+          flag_map={},
+      )
 
     return super().get_gcloud_storage_args(gcloud_storage_map)
 
