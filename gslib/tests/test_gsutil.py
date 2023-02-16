@@ -78,45 +78,33 @@ class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
       _fix_google_module()
       self.assertFalse(mock_reload.called)
 
-  @unittest.skipUnless(
-      FIX_GOOGLE_MODULE_FUNCTION_AVAILABLE,
-      'The gsutil.py file is not available for certain installations like pip.')
-  def test_translates_oauth_error_cloudsdk(self):
+  @mock.patch.object(system_util, 'InvokedViaCloudSdk', autospec=True)
+  @mock.patch.object(gslib.__main__, '_OutputAndExit', autospec=True)
+  def test_translates_oauth_error_cloudsdk(self, mock_output_and_exit,
+                                           mock_invoke_via_cloud_sdk):
+    mock_invoke_via_cloud_sdk.return_value = True
     command_runner = CommandRunner()
     with mock.patch.object(command_runner, 'RunNamedCommand') as mock_run:
-      mock_run.side_effect = google_auth_exceptions.OAuthError(mock.Mock())
-      system_util.InvokedViaCloudSdk = mock.Mock(side_effect=(True,))
-
-      def output_and_exit_side(message, exception):
-        del exception
-        self.assertEqual(
-            'Your credentials are invalid. Please run\n$ gcloud auth login',
-            message)
-
-      gslib.__main__._OutputAndExit = mock.Mock(
-          side_effect=output_and_exit_side)
-
+      fake_error = google_auth_exceptions.OAuthError('fake error message')
+      mock_run.side_effect = fake_error
       gslib.__main__._RunNamedCommandAndHandleExceptions(command_runner,
                                                          command_name='fake')
+      mock_output_and_exit.assert_called_once_with(
+          'Your credentials are invalid. Please run\n$ gcloud auth login',
+          fake_error)
 
-  @unittest.skipUnless(
-      FIX_GOOGLE_MODULE_FUNCTION_AVAILABLE,
-      'The gsutil.py file is not available for certain installations like pip.')
-  def test_translates_oauth_error_standalone(self):
+  @mock.patch.object(system_util, 'InvokedViaCloudSdk', autospec=True)
+  @mock.patch.object(gslib.__main__, '_OutputAndExit', autospec=True)
+  def test_translates_oauth_error_standalone(self, mock_output_and_exit,
+                                             mock_invoke_via_cloud_sdk):
+    mock_invoke_via_cloud_sdk.return_value = False
     command_runner = CommandRunner()
     with mock.patch.object(command_runner, 'RunNamedCommand') as mock_run:
-      mock_run.side_effect = google_auth_exceptions.OAuthError(mock.Mock())
-      system_util.InvokedViaCloudSdk = mock.Mock(side_effect=(False,))
-
-      def output_and_exit_side(message, exception):
-        del exception
-        self.assertEqual(
-            'Your credentials are invalid. For more help, see '
-            '"gsutil help creds", or re-run the gsutil config command (see '
-            '"gsutil help config").', message)
-
-      gslib.__main__._OutputAndExit = mock.Mock(
-          side_effect=output_and_exit_side)
-
+      fake_error = google_auth_exceptions.OAuthError('fake error message')
+      mock_run.side_effect = fake_error
       gslib.__main__._RunNamedCommandAndHandleExceptions(command_runner,
                                                          command_name='fake')
+      mock_output_and_exit.assert_called_once_with(
+          'Your credentials are invalid. For more help, see '
+          '"gsutil help creds", or re-run the gsutil config command (see '
+          '"gsutil help config").', fake_error)
