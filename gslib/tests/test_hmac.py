@@ -159,7 +159,7 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
   def test_malformed_commands_that_cannot_be_translated_using_the_shim(self):
     if self._use_gcloud_storage:
       raise unittest.SkipTest('These commands cannot be translated using the'
-                              ' shim')
+                              ' shim.')
 
     params = [
         ('hmac create -u email', 'requires a service account'),
