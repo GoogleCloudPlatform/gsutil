@@ -22,6 +22,9 @@ from __future__ import unicode_literals
 import importlib
 import unittest
 from unittest import mock
+from google.auth import exceptions as google_auth_exceptions
+from gslib.command_runner import CommandRunner
+from gslib.utils import system_util
 
 import gslib
 import gslib.tests.testcase as testcase
@@ -74,3 +77,46 @@ class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
     with mock.patch.dict('sys.modules', {}, clear=True):
       _fix_google_module()
       self.assertFalse(mock_reload.called)
+
+  @unittest.skipUnless(
+      FIX_GOOGLE_MODULE_FUNCTION_AVAILABLE,
+      'The gsutil.py file is not available for certain installations like pip.')
+  def test_translates_oauth_error_cloudsdk(self):
+    command_runner = CommandRunner()
+    with mock.patch.object(command_runner, 'RunNamedCommand') as mock_run:
+      mock_run.side_effect = google_auth_exceptions.OAuthError(mock.Mock())
+      system_util.InvokedViaCloudSdk = mock.Mock(side_effect=(True,))
+
+      def output_and_exit_side(message, exception):
+        del exception
+        self.assertEqual(
+            'Your credentials are invalid. Please run\n$ gcloud auth login',
+            message)
+
+      gslib.__main__._OutputAndExit = mock.Mock(
+          side_effect=output_and_exit_side)
+
+      gslib.__main__._RunNamedCommandAndHandleExceptions(command_runner,
+                                                         command_name='fake')
+
+  @unittest.skipUnless(
+      FIX_GOOGLE_MODULE_FUNCTION_AVAILABLE,
+      'The gsutil.py file is not available for certain installations like pip.')
+  def test_translates_oauth_error_standalone(self):
+    command_runner = CommandRunner()
+    with mock.patch.object(command_runner, 'RunNamedCommand') as mock_run:
+      mock_run.side_effect = google_auth_exceptions.OAuthError(mock.Mock())
+      system_util.InvokedViaCloudSdk = mock.Mock(side_effect=(False,))
+
+      def output_and_exit_side(message, exception):
+        del exception
+        self.assertEqual(
+            'Your credentials are invalid. For more help, see '
+            '"gsutil help creds", or re-run the gsutil config command (see '
+            '"gsutil help config").', message)
+
+      gslib.__main__._OutputAndExit = mock.Mock(
+          side_effect=output_and_exit_side)
+
+      gslib.__main__._RunNamedCommandAndHandleExceptions(command_runner,
+                                                         command_name='fake')
