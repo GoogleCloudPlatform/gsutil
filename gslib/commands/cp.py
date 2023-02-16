@@ -263,59 +263,9 @@ _CHECKSUM_VALIDATION_TEXT = """
 
 
 <B>CHECKSUM VALIDATION</B>
-  At the end of every upload or download, the ``gsutil cp`` command validates that
-  the checksum it computes for the source file matches the checksum that
-  the service computes. If the checksums do not match, gsutil deletes the
-  corrupted object and prints a warning message. If this happens, contact
-  gs-team@google.com.
-
-  If you know the MD5 of a file before uploading, you can specify it in the
-  Content-MD5 header, which enables the cloud storage service to reject the
-  upload if the MD5 doesn't match the value computed by the service. For
-  example:
-
-    % gsutil hash obj
-    Hashing     obj:
-    Hashes [base64] for obj:
-            Hash (crc32c):          lIMoIw==
-            Hash (md5):             VgyllJgiiaRAbyUUIqDMmw==
-
-    % gsutil -h Content-MD5:VgyllJgiiaRAbyUUIqDMmw== cp obj gs://your-bucket/obj
-    Copying file://obj [Content-Type=text/plain]...
-    Uploading   gs://your-bucket/obj:                                182 b/182 B
-
-  If the checksums don't match, the service rejects the upload and
-  gsutil prints a message like:
-
-    BadRequestException: 400 Provided MD5 hash "VgyllJgiiaRAbyUUIqDMmw=="
-    doesn't match calculated MD5 hash "7gyllJgiiaRAbyUUIqDMmw==".
-
-  Specifying the Content-MD5 header has several advantages:
-
-  1. It prevents the corrupted object from becoming visible. If you don't
-     specify the header, the object is visible for 1-3 seconds before gsutil deletes
-     it.
-
-  2. If an object already exists with the given name, specifying the
-     Content-MD5 header prevents the existing object from being replaced.
-     Otherwise, the existing object is replaced by the corrupted object and
-     deleted a few seconds later.
-
-  3. If you don't specify the Content-MD5 header, it's possible for the gsutil
-     process to complete the upload but then be interrupted or fail before it can
-     delete the corrupted object, leaving the corrupted object in the cloud.
-
-  4. It supports a customer-to-service integrity check handoff. For example,
-     if you have a content production pipeline that generates data to be
-     uploaded to the cloud along with checksums of that data, specifying the
-     MD5 computed by your content pipeline when you run ``gsutil cp`` ensures
-     that the checksums match all the way through the process. This way, you can
-     detect if data gets corrupted on your local disk between the time it was written
-     by your content pipeline and the time it was uploaded to Google Cloud
-     Storage.
-
-  NOTE: The Content-MD5 header is ignored for composite objects, which only have
-  a CRC32C checksum.
+  gsutil automatically performs checksum validation for copies to and from Cloud
+  Storage. For more information, see `Hashes and ETags
+  <https://cloud.google.com/storage/docs/hashes-etags#cli>`_.
 """
 
 _RETRY_HANDLING_TEXT = """
@@ -324,7 +274,7 @@ _RETRY_HANDLING_TEXT = """
   during a particular copy or delete operation, or if a failure isn't retryable,
   the ``cp`` command skips that object and moves on. If any failures were not
   successfully retried by the end of the copy run, the ``cp`` command reports the
-  number of failures, and exits with a non-zero status.
+  number of failures and exits with a non-zero status.
 
   For details about gsutil's overall retry handling, see `Retry strategy
   <https://cloud.google.com/storage/docs/retry-strategy#tools>`_.
