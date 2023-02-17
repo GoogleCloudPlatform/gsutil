@@ -52,6 +52,7 @@ def getBotoCredentialsConfig(
     user_account_creds=None,
     gce_creds=None,
     external_account_creds=None,
+    external_account_authorized_user_creds=None,
 ):
   config = []
   if service_account_creds:
@@ -65,6 +66,7 @@ def getBotoCredentialsConfig(
       ("Credentials", "gs_oauth2_refresh_token", user_account_creds),
       ("GoogleCompute", "service_account", gce_creds),
       ("Credentials", "gs_external_account_file", external_account_creds),
+      ("Credentials", "gs_external_account_authorized_user_file", external_account_authorized_user_creds)
   ])
   return config
 
@@ -173,6 +175,30 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
           gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
         self.assertIn(ERROR_MESSAGE, str(exc.exception))
         self.assertIn(CredTypes.EXTERNAL_ACCOUNT, logger.output[0])
+
+  def testExternalAccountAuthorizedUserCredential(self):
+    contents = pkgutil.get_data(
+        "gslib", "tests/test_data/test_external_account_authorized_user_credentials.json")
+    tmpfile = self.CreateTempFile(contents=contents)
+    with SetBotoConfigForTest(
+        getBotoCredentialsConfig(external_account_authorized_user_creds=tmpfile)):
+      client = gcs_json_api.GcsJsonApi(None, None, None, None)
+      self.assertIsInstance(client.credentials, WrappedCredentials)
+
+  @mock.patch.object(WrappedCredentials,
+                     "__init__",
+                     side_effect=ValueError(ERROR_MESSAGE))
+  def testExternalAccountAuthorizedUserFailure(self, _):
+    contents = pkgutil.get_data(
+        "gslib", "tests/test_data/test_external_account_authorized_user_credentials.json")
+    tmpfile = self.CreateTempFile(contents=contents)
+    with SetBotoConfigForTest(
+        getBotoCredentialsConfig(external_account_authorized_user_creds=tmpfile)):
+      with self.assertLogs() as logger:
+        with self.assertRaises(Exception) as exc:
+          gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+        self.assertIn(ERROR_MESSAGE, str(exc.exception))
+        self.assertIn(CredTypes.EXTERNAL_ACCOUNT_AUTHORIZED_USER, logger.output[0])
 
   def testOauth2ServiceAccountAndOauth2UserCredential(self):
     with SetBotoConfigForTest(
