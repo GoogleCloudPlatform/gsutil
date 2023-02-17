@@ -58,18 +58,26 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
     Args:
       external_account_creds: subclass of google.auth.external_account.Credentials
     """
-    if not isinstance(base_creds, external_account.Credentials):
-      if not isinstance(base_creds,
-                        external_account_authorized_user.Credentials):
-        raise TypeError("Invalid Credentials")
     self._base = base_creds
-    super(WrappedCredentials, self).__init__(access_token=self._base.token,
-                                             client_id=self._base._audience,
-                                             client_secret=None,
-                                             refresh_token=None,
-                                             token_expiry=self._base.expiry,
-                                             token_uri=None,
-                                             user_agent=None)
+    if isinstance(base_creds, external_account.Credentials):
+      super(WrappedCredentials, self).__init__(access_token=self._base.token,
+                                              client_id=self._base._audience,
+                                              client_secret=None,
+                                              refresh_token=None,
+                                              token_expiry=self._base.expiry,
+                                              token_uri=None,
+                                              user_agent=None)
+    elif isinstance(base_creds,
+                        external_account_authorized_user.Credentials):
+      super(WrappedCredentials, self).__init__(access_token=self._base.token,
+                                              client_id=self._base._audience,
+                                              client_secret=self._base.client_secret,
+                                              refresh_token=self._base.refresh_token,
+                                              token_expiry=self._base.expiry,
+                                              token_uri=None,
+                                              user_agent=None)
+    else:
+      raise TypeError("Invalid Credentials")
 
   def _do_refresh_request(self, http):
     self._base.refresh(requests.Request())

@@ -210,9 +210,9 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
         "token_expiry":
             "2001-12-05T00:00:00Z",
         "client_secret":
-            None,
+            "clientSecret",
         "refresh_token":
-            None,
+            "refreshToken",
         "id_token":
             None,
         "id_token_jwt":
