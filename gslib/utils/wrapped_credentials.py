@@ -70,7 +70,7 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
     elif isinstance(base_creds,
                         external_account_authorized_user.Credentials):
       super(WrappedCredentials, self).__init__(access_token=self._base.token,
-                                              client_id=self._base._audience,
+                                              client_id=self._base.client_id,
                                               client_secret=self._base.client_secret,
                                               refresh_token=self._base.refresh_token,
                                               token_expiry=self._base.expiry,
