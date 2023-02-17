@@ -19,11 +19,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import boto
-import datetime
 import os
 import re
 
-from gslib import cloud_api_delegator
 from gslib.commands import hmac
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
@@ -32,7 +30,6 @@ from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
-from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.retry_util import Retry
 
 from six import add_move, MovedModule
