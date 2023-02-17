@@ -37,16 +37,18 @@ _DETAILED_HELP_TEXT = ("""
   `crcmod <https://pypi.python.org/pypi/crcmod>`_.
 
   The crcmod module contains a pure-Python implementation of CRC32C, but using
-  it results in very poor performance. A Python C extension is also provided by
-  crcmod, which requires compiling into a binary module for use. gsutil ships
-  with a precompiled crcmod C extension for macOS; for other platforms, see
-  the installation instructions below.
+  it results in slow checksum computation and subsequently very poor
+  performance. A Python C extension is also provided by crcmod, which requires
+  compiling into a binary module for use. gsutil ships with a precompiled
+  crcmod C extension for macOS; for other platforms, see the installation
+  instructions below.
 
-  At the end of each copy operation, the ``gsutil cp`` and ``gsutil rsync``
-  commands validate that the checksum of the source file/object matches the
-  checksum of the destination file/object. If the checksums do not match,
-  gsutil will delete the invalid copy and print a warning message. This very
-  rarely happens, but if it does, please contact gs-team@google.com.
+  At the end of each copy operation, the ``gsutil cp``, ``gsutil mv``, and
+  ``gsutil rsync`` commands validate that the checksum of the source
+  file/object matches the checksum of the destination file/object. If the
+  checksums do not match, gsutil will delete the invalid copy and print a
+  warning message. This very rarely happens, but if it does, you should
+  retry the operation.
 
 
 <B>CONFIGURATION</B>

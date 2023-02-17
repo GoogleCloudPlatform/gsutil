@@ -275,13 +275,7 @@ _DETAILED_HELP_TEXT = ("""
 
 
 
-<B>CHECKSUM VALIDATION AND FAILURE HANDLING</B>
-  At the end of every upload or download, the gsutil rsync command validates
-  that the checksum of the source file/object matches the checksum of the
-  destination file/object. If the checksums do not match, gsutil deletes
-  the invalid copy and print a warning message. This very rarely happens, but
-  if it does, please contact gs-team@google.com.
-
+<B>FAILURE HANDLING</B>
   The rsync command retries failures when it is useful to do so, but if
   enough failures happen during a particular copy or delete operation, or if
   a failure isn't retryable, the overall command fails.
@@ -338,21 +332,6 @@ _DETAILED_HELP_TEXT = ("""
   the `Options section
   <https://cloud.google.com/storage/docs/gsutil/commands/rsync#options>`_ to
   learn how.
-
-
-<B>SLOW CHECKSUMS</B>
-  If you find that CRC32C checksum computation runs slowly, this is likely
-  because you don't have a compiled CRC32c on your system. Try running:
-
-    gsutil ver -l
-
-  If the output contains:
-
-    compiled crcmod: False
-
-  you are running a Python library for computing CRC32C, which is much slower
-  than using the compiled code. For information on getting a compiled CRC32C
-  implementation, see 'gsutil help crc32c'.
 
 
 <B>LIMITATIONS</B>
