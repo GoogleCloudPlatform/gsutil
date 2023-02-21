@@ -58,18 +58,26 @@ class WrappedCredentials(oauth2client.client.OAuth2Credentials):
     Args:
       external_account_creds: subclass of google.auth.external_account.Credentials
     """
-    if not isinstance(base_creds, external_account.Credentials):
-      if not isinstance(base_creds,
-                        external_account_authorized_user.Credentials):
-        raise TypeError("Invalid Credentials")
     self._base = base_creds
+    if isinstance(base_creds, external_account.Credentials):
+      client_id = self._base._audience
+      client_secret = None
+      refresh_token = None
+    elif isinstance(base_creds,
+                        external_account_authorized_user.Credentials):
+      client_id = self._base.client_id
+      client_secret = self._base.client_secret
+      refresh_token = self._base.refresh_token
+    else:
+      raise TypeError("Invalid Credentials")
+
     super(WrappedCredentials, self).__init__(access_token=self._base.token,
-                                             client_id=self._base._audience,
-                                             client_secret=None,
-                                             refresh_token=None,
-                                             token_expiry=self._base.expiry,
-                                             token_uri=None,
-                                             user_agent=None)
+                                            client_id=client_id,
+                                            client_secret=client_secret,
+                                            refresh_token=refresh_token,
+                                            token_expiry=self._base.expiry,
+                                            token_uri=None,
+                                            user_agent=None)
 
   def _do_refresh_request(self, http):
     self._base.refresh(requests.Request())

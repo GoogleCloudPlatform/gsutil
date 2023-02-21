@@ -204,15 +204,15 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
         "_module":
             "gslib.utils.wrapped_credentials",
         "client_id":
-            "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+            "clientId",
         "access_token":
             ACCESS_TOKEN,
         "token_expiry":
             "2001-12-05T00:00:00Z",
         "client_secret":
-            None,
+            "clientSecret",
         "refresh_token":
-            None,
+            "refreshToken",
         "id_token":
             None,
         "id_token_jwt":
@@ -259,7 +259,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
                           external_account_authorized_user.Credentials)
     self.assertEquals(
         creds2.client_id,
-        "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID"
+        "clientId"
     )
 
   def testFromJsonAWSCredentials(self):
