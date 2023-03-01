@@ -1,8 +1,25 @@
+Release 5.21 (release date: 2023-03-01)
+======================================
+New Features
+------------------
+- Add shim for hmac command (#1670)
+
+Bug Fixes
+------------------
+- Fix external_account_authorized_user implementation in wrapped_credentials.py + update google-auth dependency (#1674)
+- Fix error message for external account authorized user credentials (#1671)
+- Handles OAuthException from google-auth (#1672)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications.
+
 Release 5.20 (release date: 2023-02-02)
 ======================================
 Other Changes
 ------------------
 - Small help updates to acl examples and the cp -j flag (#1667)
+
 Release 5.19 (release date: 2023-01-26)
 ======================================
 Bug Fixes
