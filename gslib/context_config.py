@@ -27,6 +27,7 @@ from boto import config
 
 import gslib
 from gslib import exception
+from gslib.utils import boto_util
 from gslib.utils import execution_util
 
 # Maintain a single context configuration.
@@ -194,7 +195,8 @@ class _ContextConfig(object):
 
     # Generates certificate and deletes it afterwards.
     atexit.register(self._unprovision_client_cert)
-    self.client_cert_path = os.path.join(gslib.GSUTIL_DIR, 'caa_cert.pem')
+    self.client_cert_path = os.path.join(boto_util.GetGsutilStateDir(),
+                                         'caa_cert.pem')
     try:
       # Certs provisioned using endpoint verification are stored as a
       # single file holding both the public certificate and the private key.

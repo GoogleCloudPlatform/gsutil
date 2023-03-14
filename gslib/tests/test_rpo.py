@@ -100,12 +100,12 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
 
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} storage'
-                       ' buckets list --format=value[separator=": "]'
-                       '(format("gs://{}", name),rpo.yesno(no="None"))'
-                       ' --raw').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'), r'{}'),
-                      info_lines)
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage'
+             ' buckets list --format=value[separator=": "]'
+             '(format("gs://{}", name),rpo.yesno(no="None"))'
+             ' --raw').format(os.path.join('fake_dir', 'bin', 'gcloud'),
+                              r'{}'), info_lines)
 
   def test_shim_translates_recovery_point_objective_set_command(self):
     fake_cloudsdk_dir = 'fake_dir'
