@@ -732,8 +732,6 @@ class ConfigCommand(Command):
   # pylint: disable=dangerous-default-value,too-many-statements
   def _WriteBotoConfigFile(self,
                            config_file,
-                           launch_browser=True,
-                           oauth2_scopes=[constants.Scopes.CLOUD_PLATFORM],
                            cred_type=CredTypes.OAUTH2_USER_ACCOUNT,
                            configure_auth=True):
     """Creates a boto config file interactively.
@@ -745,14 +743,9 @@ class ConfigCommand(Command):
     Args:
       config_file: File object to which the resulting config file will be
           written.
-      launch_browser: In the OAuth2 approval flow, attempt to open a browser
-          window and navigate to the approval URL.
-      oauth2_scopes: A list of OAuth2 scopes to request authorization for, when
-          using OAuth2.
       cred_type: There are three options:
         - for HMAC, ask the user for access key and secret
-        - for OAUTH2_USER_ACCOUNT, walk the user through OAuth2 approval flow
-          and produce a config with an oauth2_refresh_token credential.
+        - for OAUTH2_USER_ACCOUNT, raise an error
         - for OAUTH2_SERVICE_ACCOUNT, prompt the user for OAuth2 for service
           account email address and private key file (and if the file is a .p12
           file, the password for that file).
@@ -848,14 +841,6 @@ class ConfigCommand(Command):
           else:
             config_file.write('gs_service_key_file_password = %s\n\n' %
                               gs_service_key_file_password)
-      elif cred_type == CredTypes.OAUTH2_USER_ACCOUNT:
-        config_file.write(
-            '# Google OAuth2 credentials (for "gs://" URIs):\n'
-            '# The following OAuth2 account is authorized for scope(s):\n')
-        for scope in oauth2_scopes:
-          config_file.write('#     %s\n' % scope)
-        config_file.write('gs_oauth2_refresh_token = %s\n\n' %
-                          oauth2_refresh_token)
       else:
         config_file.write(
             '# To add Google OAuth2 credentials ("gs://" URIs), '
@@ -951,35 +936,6 @@ class ConfigCommand(Command):
     # Write the config file GSUtil section that includes the default
     # project ID input from the user.
     if not system_util.InvokedViaCloudSdk():
-      if launch_browser:
-        sys.stdout.write(
-            'Attempting to launch a browser to open the Google Cloud Console '
-            'at URL: %s\n\n'
-            '[Note: due to a Python bug, you may see a spurious error message '
-            '"object is not\ncallable [...] in [...] Popen.__del__" which can '
-            'be ignored.]\n\n' % GOOG_CLOUD_CONSOLE_URI)
-        sys.stdout.write(
-            'In your browser you should see the Cloud Console. Find the '
-            'project you will\nuse, and then copy the Project ID string from '
-            'the second '
-            'column. Older projects do\nnot have Project ID strings. For such '
-            'projects, click the project and then copy the\nProject Number '
-            'listed under that project.\n\n')
-        if not webbrowser.open(GOOG_CLOUD_CONSOLE_URI, new=1, autoraise=True):
-          sys.stdout.write(
-              'Launching browser appears to have failed; please navigate a '
-              'browser to the following URL:\n%s\n' % GOOG_CLOUD_CONSOLE_URI)
-        # Short delay; webbrowser.open on linux insists on printing out a
-        # message which we don't want to run into the prompt for the auth code.
-        time.sleep(2)
-      else:
-        sys.stdout.write(
-            '\nPlease navigate your browser to %s,\nthen find the project '
-            'you will use, and copy the Project ID string from the\nsecond '
-            'column. Older projects do not have Project ID strings. For such '
-            'projects,\n click the project and then copy the Project Number '
-            'listed under that project.\n\n' % GOOG_CLOUD_CONSOLE_URI)
-
       default_project_id = input('What is your project-id? ').strip()
       project_id_section_prelude = """
 # 'default_project_id' specifies the default Google Cloud Storage project ID to
@@ -1003,9 +959,7 @@ class ConfigCommand(Command):
 
   def RunCommand(self):
     """Command entry point for the config command."""
-    scopes = []
     cred_type = CredTypes.OAUTH2_USER_ACCOUNT
-    launch_browser = False
     output_file_name = None
     has_a = False
     has_e = False
@@ -1014,25 +968,13 @@ class ConfigCommand(Command):
       if opt == '-a':
         cred_type = CredTypes.HMAC
         has_a = True
-      elif opt == '-b':
-        launch_browser = True
       elif opt == '-e':
         cred_type = CredTypes.OAUTH2_SERVICE_ACCOUNT
         has_e = True
-      elif opt == '-f':
-        scopes.append(constants.Scopes.FULL_CONTROL)
       elif opt == '-n':
         configure_auth = False
       elif opt == '-o':
         output_file_name = opt_arg
-      elif opt == '-r':
-        scopes.append(constants.Scopes.READ_ONLY)
-      elif opt == '--reauth':
-        scopes.append(constants.Scopes.REAUTH)
-      elif opt == '-s':
-        scopes.append(opt_arg)
-      elif opt == '-w':
-        scopes.append(constants.Scopes.READ_WRITE)
       else:
         self.RaiseInvalidArgumentException()
 
@@ -1078,10 +1020,6 @@ class ConfigCommand(Command):
               'OAuth2 credentials from the Cloud SDK by default. To make sure '
               'the HMAC credentials are used, run: "gcloud config set '
               'pass_credentials_to_gsutil false".')) + '\n\n')
-
-    if not scopes:
-      scopes.append(constants.Scopes.CLOUD_PLATFORM)
-      scopes.append(constants.Scopes.REAUTH)
 
     default_config_path_bak = None
     if not output_file_name:
@@ -1130,8 +1068,6 @@ class ConfigCommand(Command):
     RegisterSignalHandler(signal.SIGINT, _CleanupHandler)
     try:
       self._WriteBotoConfigFile(output_file,
-                                launch_browser=launch_browser,
-                                oauth2_scopes=scopes,
                                 cred_type=cred_type,
                                 configure_auth=configure_auth)
     except Exception as e:
