@@ -79,8 +79,8 @@ _DETAILED_HELP_TEXT = ("""
   user account credentials for authentication. However, user account credentials
   are no longer supported for standalone gsutil. For this reason, running the
   default ``gsutil config`` command fails, and using any of the following flags
-  causes the command to fail: ``-b``, ``-f``, ``-r``, ``--reauth``, ``-r -s``,
-  ``-r -w``. When using standalone gsutil, it's recommended that you use
+  causes the command to fail: ``-b``, ``-f``, ``-r``, ``--reauth``, ``-s``,
+  ``-w``. When using standalone gsutil, it's recommended that you use
   service account credentials via the ``-e`` flag.
 
   The ``gsutil config`` command obtains access credentials for Cloud Storage and
@@ -128,7 +128,7 @@ _DETAILED_HELP_TEXT = ("""
   further information on service account authentication.
 
   If you want to use credentials based on access key and secret (the older
-  authentication method before OAuth2 was supported), see the -a option in
+  authentication method before OAuth2 was supported), see the ``-a`` option in
   the OPTIONS section.
 
   If you wish to use gsutil with other providers (or to copy data back and
@@ -789,7 +789,7 @@ class ConfigCommand(Command):
         raise CommandException(
             'The user account authentication flow no longer works as of '
             'Febuary 1, 2023. Tokens generated before this date will '
-            'continue to work. To authenticate with your user account '
+            'continue to work. To authenticate with your user account, '
             'install gsutil via Cloud SDK and run "gcloud auth login"')
       elif cred_type == CredTypes.HMAC:
         got_creds = False
