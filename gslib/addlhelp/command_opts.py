@@ -138,10 +138,11 @@ _DETAILED_HELP_TEXT = ("""
               processes, and the number of failed operations (if any) are
               reported as an exception at the end of the command's execution.
 
-  -o          Set/override values in the boto configuration value, in the format
-              <section>:<name>=<value>, e.g. gsutil -o "Boto:proxy=host" ...
-              This will not pass the option to gsutil integration tests, which
-              run in a separate process.
+  -o          Set/override values in the `boto configuration file
+              <https://cloud.google.com/storage/docs/boto-gsutil>`_, in the
+              format ``<section>:<name>=<value>``. For examnple,
+              ``gsutil -o "GSUtil:parallel_thread_count=4" ...``. This does not
+              pass the option to gsutil integration tests.
 
   -q          Causes gsutil to perform operations quietly, i.e., without
               reporting progress indicators of files being copied or removed,
