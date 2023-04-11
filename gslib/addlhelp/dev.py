@@ -98,7 +98,7 @@ _DETAILED_HELP_TEXT = ("""
      If you made changes to boto, please run the boto tests. For these tests you
      need to use HMAC credentials (from gsutil config -a), because the boto test
      suite doesn't import the OAuth2 handler. You'll also need to install some
-     python modules. Change directories into the boto root directory at
+     Python modules. Change directories into the boto root directory at
      third_party/boto and run:
 
        pip install -r requirements.txt
