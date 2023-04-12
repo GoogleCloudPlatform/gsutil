@@ -1,3 +1,10 @@
+Release 5.22 (release date: 2023-04-12)
+======================================
+Other Changes
+------------------
+- Modified gsutil config to reflect the recent OAuth2 flow deprecation.
+- Several documentation updates and clarifications.
+
 Release 5.21 (release date: 2023-03-01)
 ======================================
 New Features
