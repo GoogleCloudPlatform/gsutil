@@ -68,8 +68,8 @@ _DETAILED_HELP_TEXT = ("""
   ``check_hashes`` variable in your `boto configuration file
   <https://cloud.google.com/storage/docs/boto-gsutil>`_. For details on this
   variable, see the surrounding comments in your boto configuration file. If
-  ``check_hashes`` is not present in your configuration file, rerun
-  ``gsutil config`` to regenerate the file.
+  ``check_hashes`` is not present in your configuration file, regenerate the
+  file by running ``gsutil config`` with the appropriate ``-e`` or ``-a`` flag.
 
 
 <B>INSTALLATION</B>
