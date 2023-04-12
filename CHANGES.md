@@ -1,4 +1,4 @@
-Release 5.22 (release date: 2023-04-12)
+Release 5.23 (release date: 2023-04-12)
 ======================================
 Other Changes
 ------------------

@@ -85,7 +85,7 @@ _DETAILED_HELP_TEXT = ("""
 
   The ``gsutil config`` command obtains access credentials for Cloud Storage and
   writes a `boto/gsutil configuration file
-  <https://cloud.devsite.corp.google.com/storage/docs/boto-gsutil>`_ containing
+  <https://cloud.google.com/storage/docs/boto-gsutil>`_ containing
   the obtained credentials along with a number of other configuration-
   controllable values.
 
