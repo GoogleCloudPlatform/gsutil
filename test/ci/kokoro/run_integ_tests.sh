@@ -68,10 +68,6 @@ function install_pyenv {
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init --path)"
   fi
-  pyenv update
-  # To address pyenv issue: See b/187701234#comment12.
-  cd ~/.pyenv/plugins/python-build/../.. && git pull && \
-     git checkout 783870759566a77d09b426e0305bc0993a522765 && cd -
 }
 
 function install_python {
@@ -105,6 +101,7 @@ function update_submodules {
   # Most dependencies are included in gsutil via submodules. We need to
   # tell git to grab our dependencies' source before we can depend on them.
   cd "$GSUTIL_SRC"
+  git config --global --add safe.directory '*'
   git submodule update --init --recursive
 }
 
