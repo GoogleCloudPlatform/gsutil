@@ -1003,7 +1003,7 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
 
     for relative_path_string in ['.', '.' + os.sep, '..', '..' + os.sep]:
       with self.subTest(relative_path_string=relative_path_string):
-        with self.assertRaisesRegex(Exception, 'InvalidUrlError'):
+        with self.assertRaises(InvalidUrlError):
           self.RunCommand('cp', [
               '-R',
               src_dir,
