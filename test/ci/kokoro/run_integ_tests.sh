@@ -41,6 +41,8 @@ export BOTO_PATH="$BOTO_CONFIG"
 if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   export LANG=C.UTF-8
   export LC_ALL=C.UTF-8
+  useradd -m -s /bin/bash tester
+  su tester
 elif [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
