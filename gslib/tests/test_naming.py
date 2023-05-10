@@ -1002,13 +1002,14 @@ class GsutilNamingTests(testcase.GsUtilUnitTestCase):
     dst_bucket_uri = self.CreateBucket(test_objects=['dst_subdir/existing_obj'])
 
     for relative_path_string in ['.', '.' + os.sep, '..', '..' + os.sep]:
-      with self.assertRaises(InvalidUrlError):
-        self.RunCommand('cp', [
-            '-R',
-            src_dir,
-            relative_path_string,
-            suri(dst_bucket_uri, 'dst_subdir'),
-        ])
+      with self.subTest(relative_path_string=relative_path_string):
+        with self.assertRaises(InvalidUrlError):
+          self.RunCommand('cp', [
+              '-R',
+              src_dir,
+              relative_path_string,
+              suri(dst_bucket_uri, 'dst_subdir'),
+          ])
 
   def testRecursiveCopyObjsAndFilesToNonExistentBucketSubDir(self):
     """Tests recursive copy of objs + files to non-existent bucket subdir."""
