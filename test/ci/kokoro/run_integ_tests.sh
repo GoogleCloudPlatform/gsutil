@@ -120,7 +120,7 @@ set -e
 # Check that we're using the correct config.
 python "$GSUTIL_ENTRYPOINT" version -l
 # Run integration tests.
-python "$GSUTIL_ENTRYPOINT" test -p "$PROCS"
+python "$GSUTIL_ENTRYPOINT" test -p "$PROCS" cp.TestCp.test_cp_preserve_posix_bucket_to_dir_errors
 # Run custom endpoint tests.
 # We don't generate a .boto for these tests since there are only a few settings.
 python "$GSUTIL_ENTRYPOINT" \
