@@ -39,7 +39,7 @@ if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   export LANG=C.UTF-8
   export LC_ALL=C.UTF-8
   useradd -m -s /bin/bash tester
-  su tester
+  # su tester
   su - tester echo $UID
   id -u
   sudo -u tester id -u
