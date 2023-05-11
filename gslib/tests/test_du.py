@@ -153,15 +153,11 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
           ['du', '-s', suri(bucket_uri1),
            suri(bucket_uri2)],
           return_stdout=True)
-      if self._use_gcloud_storage:
-        end_character = '/'
-      else:
-        end_character = ''
       self.assertSetEqual(
           set(stdout.splitlines()),
           set([
-              '%-11s  %s' % (18, suri(bucket_uri1)) + end_character,
-              '%-11s  %s' % (18, suri(bucket_uri2)) + end_character,
+              '%-11s  %s' % (18, suri(bucket_uri1)),
+              '%-11s  %s' % (18, suri(bucket_uri2)),
           ]))
 
     _Check()
