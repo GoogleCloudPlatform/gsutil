@@ -42,6 +42,7 @@ if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   useradd -m -s /bin/bash tester
   su tester
   echo $UID
+  su - tester echo $UID
 elif [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
