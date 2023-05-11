@@ -221,8 +221,12 @@ class _ContextConfig(object):
       sections = _split_pem_into_sections(command_stdout_string, self.logger)
       with open(cert_path, 'w+') as f:
         f.write(sections['CERTIFICATE'])
-        f.write(sections['ENCRYPTED PRIVATE KEY'])
-      self.client_cert_password = sections['PASSPHRASE'].splitlines()[1]
+        if 'ENCRYPTED PRIVATE KEY' in sections:
+          f.write(sections['ENCRYPTED PRIVATE KEY'])
+          self.client_cert_password = sections['PASSPHRASE'].splitlines()[1]
+        else:
+          f.write(sections['PRIVATE KEY'])
+          self.client_cert_password = None
     except (exception.ExternalBinaryError, OSError) as e:
       raise CertProvisionError(e)
     except KeyError as e:
