@@ -199,37 +199,22 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     creds_json = creds.to_json()
     json_values = json.loads(creds_json)
     expected_json_values = {
-        "_class":
-            "WrappedCredentials",
-        "_module":
-            "gslib.utils.wrapped_credentials",
-        "client_id":
-            "clientId",
-        "access_token":
-            ACCESS_TOKEN,
-        "token_expiry":
-            "2001-12-05T00:00:00Z",
-        "client_secret":
-            "clientSecret",
-        "refresh_token":
-            "refreshToken",
-        "id_token":
-            None,
-        "id_token_jwt":
-            None,
-        "invalid":
-            False,
-        "revoke_uri":
-            None,
+        "_class": "WrappedCredentials",
+        "_module": "gslib.utils.wrapped_credentials",
+        "client_id": "clientId",
+        "access_token": ACCESS_TOKEN,
+        "token_expiry": "2001-12-05T00:00:00Z",
+        "client_secret": "clientSecret",
+        "refresh_token": "refreshToken",
+        "id_token": None,
+        "id_token_jwt": None,
+        "invalid": False,
+        "revoke_uri": None,
         "scopes": [],
-        "token_info_uri":
-            None,
-        "token_response":
-            None,
-        "token_uri":
-            None,
-        "user_agent":
-            None,
+        "token_info_uri": None,
+        "token_response": None,
+        "token_uri": None,
+        "user_agent": None,
         "_base": {
             "type":
                 "external_account_authorized_user",
@@ -257,10 +242,7 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     self.assertIsInstance(creds2, WrappedCredentials)
     self.assertIsInstance(creds2._base,
                           external_account_authorized_user.Credentials)
-    self.assertEquals(
-        creds2.client_id,
-        "clientId"
-    )
+    self.assertEquals(creds2.client_id, "clientId")
 
   def testFromJsonAWSCredentials(self):
     creds = WrappedCredentials.from_json(
