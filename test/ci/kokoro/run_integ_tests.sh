@@ -27,10 +27,10 @@ if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   id -u
   # sudo -u tester id -u
   # runuser -l tester -c "id -u"
-  sudo -u tester /src/gsutil/test/ci/kokoro/run_integ_tests_helper.sh
+  sudo -u tester bash "/src/gsutil/test/ci/kokoro/run_integ_tests_helper.sh"
 elif [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
-  /src/gsutil/test/ci/kokoro/run_integ_tests_helper.sh
+  bash "/src/gsutil/test/ci/kokoro/run_integ_tests_helper.sh"
 fi
 
