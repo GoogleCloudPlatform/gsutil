@@ -419,6 +419,7 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
   @mock.patch.object(subprocess, 'Popen')
   def test_writes_and_deletes_unencrypted_certificate_file_without_storing_password(
       self, mock_Popen, mock_remove, mock_open):
+    """This is the format used by gcloud by default."""
     mock_command_process = mock.Mock()
     mock_command_process.returncode = 0
     mock_command_process.communicate.return_value = (FULL_CERT.encode(), None)
