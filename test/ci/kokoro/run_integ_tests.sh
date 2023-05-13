@@ -16,6 +16,8 @@
 # Doc: https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html#The-Set-Builtin
 set -xu
 
+HELPER_PATH="/tmpfs/src/github/src/gsutil/test/ci/kokoro/run_integ_tests_helper.sh"
+
 # Set the locale to utf-8 for macos b/154863917 and linux
 # https://github.com/GoogleCloudPlatform/gsutil/pull/1692
 if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
@@ -27,10 +29,10 @@ if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   id -u
   # sudo -u tester id -u
   # runuser -l tester -c "id -u"
-  sudo -u tester bash "/src/gsutil/test/ci/kokoro/run_integ_tests_helper.sh"
+  sudo -u tester bash "$HELPER_PATH"
 elif [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
-  bash "/src/gsutil/test/ci/kokoro/run_integ_tests_helper.sh"
+  bash "$HELPER_PATH"
 fi
 
