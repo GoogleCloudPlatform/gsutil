@@ -30,6 +30,8 @@ if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   id tester
   # sudo -u tester id -u
   # runuser -l tester -c "id -u"
+  chown tester: /tmpfs/src/.boto_json
+  chown tester: /root
   sudo -E -u tester bash "$HELPER_PATH"
 elif [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   export LANG=en_US.UTF-8
