@@ -24,9 +24,10 @@ if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   export LANG=C.UTF-8
   export LC_ALL=C.UTF-8
   useradd -m -s /bin/bash tester
+  adduser tester sudo
   # su tester
   # su - tester echo $UID
-  id -u
+  id tester
   # sudo -u tester id -u
   # runuser -l tester -c "id -u"
   sudo -E -u tester bash "$HELPER_PATH"
