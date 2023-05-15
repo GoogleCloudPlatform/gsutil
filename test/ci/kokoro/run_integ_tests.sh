@@ -29,10 +29,10 @@ if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   id -u
   # sudo -u tester id -u
   # runuser -l tester -c "id -u"
-  sudo -E -u tester source "$HELPER_PATH"
+  sudo -E -u tester bash "$HELPER_PATH"
 elif [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
-  source "$HELPER_PATH"
+  bash "$HELPER_PATH"
 fi
 
