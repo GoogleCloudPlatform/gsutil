@@ -32,23 +32,6 @@ GSUTIL_ENTRYPOINT="$GSUTIL_SRC/gsutil.py"
 CFG_GENERATOR="$GSUTIL_SRC/test/ci/kokoro/config_generator.sh"
 BOTO_CONFIG="/tmpfs/src/.boto_$API"
 
-
-# Set the locale to utf-8 for macos b/154863917 and linux
-# https://github.com/GoogleCloudPlatform/gsutil/pull/1692
-if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
-  export LANG=C.UTF-8
-  export LC_ALL=C.UTF-8
-  # useradd -m -s /bin/bash tester
-  # su tester
-  # su - tester echo $UID
-  id -u
-  # sudo -u tester id -u
-  # runuser -l tester -c "id -u"
-elif [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
-  export LANG=en_US.UTF-8
-  export LC_ALL=en_US.UTF-8
-fi
-
 # gsutil looks for this environment variable to find .boto config
 # https://cloud.google.com/storage/docs/boto-gsutil
 export BOTO_PATH="$BOTO_CONFIG"

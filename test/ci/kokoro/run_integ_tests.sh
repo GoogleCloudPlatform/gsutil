@@ -23,13 +23,11 @@ HELPER_PATH="/tmpfs/src/github/src/gsutil/test/ci/kokoro/run_integ_tests_helper.
 if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   export LANG=C.UTF-8
   export LC_ALL=C.UTF-8
+  # Kokoro for linux runs in a Docker container as root, which causes
+  # few tests to fail. See b/281868063.
+  # Add a new user. -m creates the home directory and -s sets the login shell.
   useradd -m -s /bin/bash tester
-  adduser tester sudo
-  # su tester
-  # su - tester echo $UID
-  id tester
-  # sudo -u tester id -u
-  # runuser -l tester -c "id -u"
+
   chown -hR tester: /tmpfs/src/
   chown -hR tester: /root/
   sudo -E -u tester bash "$HELPER_PATH"
