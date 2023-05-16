@@ -28,8 +28,13 @@ if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   # Add a new user. -m creates the home directory and -s sets the login shell.
   useradd -m -s /bin/bash tester
 
+  # Make this user the owner of /tmpfs/src and /root dirs so that restricted
+  # files can be accessed.
   chown -hR tester: /tmpfs/src/
   chown -hR tester: /root/
+
+  # Call the script as the new user.
+  # -E: Preserve the environment variables.
   sudo -E -u tester bash "$HELPER_PATH"
 elif [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
   export LANG=en_US.UTF-8
