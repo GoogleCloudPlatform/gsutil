@@ -610,8 +610,9 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       }
     else:
       headers = {}
+      if not bucket_policy_only:
+        headers['x-amz-object-ownership'] = 'ObjectWriter'
 
-    #
     @Retry(StorageResponseError, tries=7, timeout_secs=1)
     def _CreateBucketWithExponentialBackoff():
       """Creates a bucket, retrying with exponential backoff on error.
@@ -646,6 +647,13 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     if versioning_enabled:
       bucket_uri.configure_versioning(True)
+
+    if provider != 'gs' and not public_access_prevention:
+      xml_body = ('<?xml version="1.0" encoding="UTF-8"?>'
+                  '<PublicAccessBlockConfiguration>'
+                  '<BlockPublicAcls>False</BlockPublicAcls>'
+                  '</PublicAccessBlockConfiguration>')
+      bucket_uri.set_subresource('publicAccessBlock', xml_body)
 
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,
