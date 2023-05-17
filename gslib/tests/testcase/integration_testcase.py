@@ -611,6 +611,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     else:
       headers = {}
       if not bucket_policy_only:
+        # S3 test account settings disable ACLs by default,
+        # but they should be re-enabled if requested.
         headers['x-amz-object-ownership'] = 'ObjectWriter'
 
     @Retry(StorageResponseError, tries=7, timeout_secs=1)
@@ -649,6 +651,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       bucket_uri.configure_versioning(True)
 
     if provider != 'gs' and not public_access_prevention:
+      # S3 test account settings enable public access prevention
+      # by default, so we should disable it if requested.
       xml_body = ('<?xml version="1.0" encoding="UTF-8"?>'
                   '<PublicAccessBlockConfiguration>'
                   '<BlockPublicAcls>False</BlockPublicAcls>'
