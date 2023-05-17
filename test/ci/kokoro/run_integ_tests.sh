@@ -26,9 +26,8 @@ if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
   # Kokoro for linux runs in a Docker container as root, which causes
   # few tests to fail. See b/281868063.
   # Add a new user.
-  # -m: Create the home directory.
   # -s: Set the login shell.
-  useradd -m -s /bin/bash tester
+  useradd -s /bin/bash tester
 
   # Make this user the owner of /tmpfs/src and /root dirs so that restricted
   # files can be accessed.
