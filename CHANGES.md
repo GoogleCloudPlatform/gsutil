@@ -1,3 +1,20 @@
+Release 5.24 (release date: 2023-05-17)
+======================================
+New Features
+------------------
+- Add shim support for du. (#1699)
+- Make state directory for mTLS certs configurable. (#1680)
+
+Bug Fixes
+------------------
+- mTLS: Add support for certificates without passphrase. (#1700)
+- Fix SSL missing error by updating Linux Python 3.5 version. (#1692)
+
+Other Changes
+------------------
+- Update google auth library to latest version. (#1689)
+- Several documentation updates and clarifications.
+
 Release 5.23 (release date: 2023-04-12)
 ======================================
 Other Changes
