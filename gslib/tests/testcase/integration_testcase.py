@@ -610,8 +610,11 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       }
     else:
       headers = {}
+      if not bucket_policy_only:
+        # S3 test account settings disable ACLs by default,
+        # but they should be re-enabled if requested.
+        headers['x-amz-object-ownership'] = 'ObjectWriter'
 
-    #
     @Retry(StorageResponseError, tries=7, timeout_secs=1)
     def _CreateBucketWithExponentialBackoff():
       """Creates a bucket, retrying with exponential backoff on error.
@@ -646,6 +649,15 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
 
     if versioning_enabled:
       bucket_uri.configure_versioning(True)
+
+    if provider != 'gs' and not public_access_prevention:
+      # S3 test account settings enable public access prevention
+      # by default, so we should disable it if requested.
+      xml_body = ('<?xml version="1.0" encoding="UTF-8"?>'
+                  '<PublicAccessBlockConfiguration>'
+                  '<BlockPublicAcls>False</BlockPublicAcls>'
+                  '</PublicAccessBlockConfiguration>')
+      bucket_uri.set_subresource('publicAccessBlock', xml_body)
 
     for i in range(test_objects):
       self.CreateObject(bucket_uri=bucket_uri,
