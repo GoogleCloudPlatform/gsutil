@@ -36,16 +36,6 @@ BOTO_CONFIG="/tmpfs/src/.boto_$API"
 # https://cloud.google.com/storage/docs/boto-gsutil
 export BOTO_PATH="$BOTO_CONFIG"
 
-# Set the locale to utf-8 for macos b/154863917 and linux
-# https://github.com/GoogleCloudPlatform/gsutil/pull/1692
-if [[ $KOKORO_JOB_NAME =~ "linux" ]]; then
-  export LANG=C.UTF-8
-  export LC_ALL=C.UTF-8
-elif [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
-  export LANG=en_US.UTF-8
-  export LC_ALL=en_US.UTF-8
-fi
-
 function preferred_python_release {
   if [[ $PYVERSION =~ "3.5" && $KOKORO_JOB_NAME =~ "linux" ]]; then
     # The latest version of certain dependencies break with Python 3.5.2 or
