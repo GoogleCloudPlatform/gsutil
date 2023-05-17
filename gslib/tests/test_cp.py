@@ -278,7 +278,7 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
                          gid=gid,
                          mode=mode)
     stderr = cls.RunGsUtil([
-        'cp' if is_cp else 'mv', '-P',
+        '-D', 'cp' if is_cp else 'mv', '-P',
         suri(bucket_uri, obj.object_name), tmpdir
     ],
                            expected_status=1,
