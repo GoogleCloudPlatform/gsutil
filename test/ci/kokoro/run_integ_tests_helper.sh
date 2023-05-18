@@ -110,8 +110,8 @@ set -e
 # Check that we're using the correct config.
 python "$GSUTIL_ENTRYPOINT" version -l
 # Run integration tests.
-# python "$GSUTIL_ENTRYPOINT" test -p "$PROCS"
-python "$GSUTIL_ENTRYPOINT" test -p "$PROCS" "cp.TestCp.test_gzip_transport_encoded_parallel_upload_resumable"
+python "$GSUTIL_ENTRYPOINT" test -p "$PROCS" cp
+# python "$GSUTIL_ENTRYPOINT" test -p "$PROCS" "cp.TestCp.test_gzip_transport_encoded_parallel_upload_resumable"
 # Run custom endpoint tests.
 # We don't generate a .boto for these tests since there are only a few settings.
 python "$GSUTIL_ENTRYPOINT" \
