@@ -34,7 +34,8 @@ VALID_CMEK_RE = LazyWrapper(
     lambda: re.compile('projects/([^/]+)/'
                        'locations/([a-zA-Z0-9_-]{1,63})/'
                        'keyRings/([a-zA-Z0-9_-]{1,63})/'
-                       'cryptoKeys/([a-zA-Z0-9_-]{1,63})$'))
+                       'cryptoKeys/([a-zA-Z0-9_-]{1,63})/'
+                       'cryptoKeyVersions/([0-9]{1,63})$'))
 
 
 class CryptoKeyType(object):
@@ -168,7 +169,7 @@ def ValidateCMEK(key):
     raise CommandException(
         'Invalid KMS key name: "%s".\nKMS keys should follow the format '
         '"projects/<project-id>/locations/<location>/keyRings/<keyring>/'
-        'cryptoKeys/<key-name>"' % key)
+        'cryptoKeys/<key-name>/cryptoKeyVersions/<version-number>"' % key)
 
 
 def _CalculateSha256FromString(input_string):
