@@ -159,7 +159,7 @@ class TestKmsSubcommandsFailWhenXmlForced(testcase.GsUtilIntegrationTestCase):
       ('Credentials', 'gs_secret_access_key', 'dummysecret'),
   ]
   dummy_keyname = ('projects/my-project/locations/us-central1/'
-                   'keyRings/my-keyring/cryptoKeys/my-key/cryptoKeyVersions/1')
+                   'keyRings/my-keyring/cryptoKeys/my-key')
 
   def DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(self, subcommand):
     with SetBotoConfigForTest(self.boto_config_hmac_auth_only):
@@ -191,7 +191,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil kms."""
 
   dummy_keyname = ('projects/my-project/locations/us-central1/'
-                   'keyRings/my-keyring/cryptoKeys/my-key/cryptoKeyVersions/1')
+                   'keyRings/my-keyring/cryptoKeys/my-key')
 
   @mock.patch(
       'gslib.cloud_api_delegator.CloudApiDelegator.GetProjectServiceAccount')
