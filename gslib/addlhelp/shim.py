@@ -140,7 +140,7 @@ _DETAILED_HELP_TEXT = ("""
   ls
   ------------------------
 
-  - Works as expected.
+  - `ls -L` output uses spaces instead of tabs.
 
   mb
   ------------------------
