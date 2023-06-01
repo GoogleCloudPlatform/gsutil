@@ -491,8 +491,8 @@ class GcloudStorageCommandMixin(object):
         elif key == 'https_validate_certificates' and not value:
           env_vars['CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION'] = True
         # Skip mapping GS HMAC auth keys if gsutil wouldn't use them.
-        elif (not boto_util.UsingGsHmac() and
-              key in ('gs_access_key_id', 'gs_secret_access_key')):
+        elif (key in ('gs_access_key_id', 'gs_secret_access_key') and
+              not boto_util.UsingGsHmac()):
           self.logger.debug('The boto config field {}:{} skipped translation'
                             ' to the gcloud storage equivalent as it would'
                             ' have been unused in gsutil.'.format(
