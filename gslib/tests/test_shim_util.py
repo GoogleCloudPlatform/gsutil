@@ -1177,7 +1177,8 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       }
       self.assertEqual(env_vars, expected_env_vars)
 
-  def test_boto_config_translation_for_supported_fields(self):
+  @mock.patch.object(boto_util, 'UsingGsHmac', return_value=True)
+  def test_boto_config_translation_for_supported_fields(self, _):
     with _mock_boto_config({
         'Credentials': {
             'aws_access_key_id':
