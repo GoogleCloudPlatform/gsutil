@@ -27,6 +27,8 @@ import subprocess
 
 from boto import config
 from gslib import exception
+from gslib.cs_api_map import ApiSelector
+from gslib.exception import CommandException
 from gslib.utils import boto_util
 from gslib.utils import constants
 
@@ -590,6 +592,12 @@ class GcloudStorageCommandMixin(object):
               ' You can make gsutil use the same credentials by running:\n'
               '{} config set pass_credentials_to_gsutil True'.format(
                   gcloud_binary_path))
+        elif (boto_util.UsingGsHmac and
+              ApiSelector.XML not in self.command_spec.gs_api_support):
+          raise CommandException(
+              'Requested to use "gcloud storage" with Cloud Storage XML API'
+              ' HMAC credentials but the "{}" command can only be used'
+              ' with the Cloud Storage JSON API.'.format(self.command_name))
         else:
           self._print_gcloud_storage_command_info(gcloud_storage_command,
                                                   env_variables)

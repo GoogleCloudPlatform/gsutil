@@ -32,6 +32,7 @@ from gslib import command_argument
 from gslib import exception
 from gslib.commands import version
 from gslib.commands import test
+from gslib.cs_api_map import ApiSelector
 from gslib.tests import testcase
 from gslib.utils import boto_util
 from gslib.utils import constants
@@ -507,6 +508,24 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             ' gcloud. You can make gsutil use the same credentials'
             ' by running:\n'
             'fake_dir.bin.gcloud config set pass_credentials_to_gsutil True'):
+          self._fake_command.translate_to_gcloud_storage_if_requested()
+
+  @mock.patch.object(boto_util, 'UsingGsHmac', return_value=True)
+  def test_raises_error_if_using_gs_hmac_without_xml_support(self, _):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                                    ('GSUtil', 'hidden_shim_mode',
+                                     'no_fallback')]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+      }):
+        self._fake_command.command_spec = command.Command.CreateCommandSpec(
+            'fake_shim', gs_api_support=[ApiSelector.JSON])
+        with self.assertRaisesRegex(
+            exception.CommandException,
+            'CommandException: Requested to use "gcloud storage" with Cloud'
+            ' Storage XML API HMAC credentials but the "fake_shim" command can'
+            ' only be used with the Cloud Storage JSON API.'):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
   def test_raises_error_if_gcloud_storage_map_missing(self):
