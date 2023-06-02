@@ -1156,26 +1156,18 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       flags, _ = self._fake_command._translate_boto_config()
       self.assertEqual(flags, ['--decryption-keys=key1,key12,key100'])
 
-  @mock.patch.object(boto_util, 'UsingGsHmac')
-  def test_gs_hmac_auth_env_set_correctly(self, mock_using_gs_hmac):
+  @mock.patch.object(boto_util, 'UsingGsHmac', return_value=False)
+  def test_gs_hmac_auth_env_when_not_using_gs_hmac(self, mock_using_gs_hmac):
     with _mock_boto_config({
         'Credentials': {
-            'gs_access_key_id': 'unmapped',
-            'gs_secret_access_key': 'mapped',
+            'gs_access_key_id': 'foo',
+            'gs_secret_access_key': 'bar',
         }
     }):
-      # Another use case that would have been good for parameterized.
-      # UsingGsHmac ultimately controls whether the gs HMAC creds
-      # are mapped, so the first key, gs_access_key_id, will not be
-      # mapped, while the second, gs_secret_access_key will.
-      mock_using_gs_hmac.side_effect = [False, True]
       flags, env_vars = self._fake_command._translate_boto_config()
       self.assertEqual(mock_using_gs_hmac.call_count, 2)
       self.assertEqual(flags, [])
-      expected_env_vars = {
-          'CLOUDSDK_STORAGE_GS_XML_SECRET_ACCESS_KEY': 'mapped'
-      }
-      self.assertEqual(env_vars, expected_env_vars)
+      self.assertEqual(env_vars, {})
 
   @mock.patch.object(boto_util, 'UsingGsHmac', return_value=True)
   def test_boto_config_translation_for_supported_fields(self, _):
