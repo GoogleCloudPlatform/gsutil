@@ -32,7 +32,9 @@ from gslib import command_argument
 from gslib import exception
 from gslib.commands import version
 from gslib.commands import test
+from gslib.cs_api_map import ApiSelector
 from gslib.tests import testcase
+from gslib.utils import boto_util
 from gslib.utils import constants
 from gslib.utils import shim_util
 from gslib.tests import util
@@ -506,6 +508,24 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
             ' gcloud. You can make gsutil use the same credentials'
             ' by running:\n'
             'fake_dir.bin.gcloud config set pass_credentials_to_gsutil True'):
+          self._fake_command.translate_to_gcloud_storage_if_requested()
+
+  @mock.patch.object(boto_util, 'UsingGsHmac', return_value=True)
+  def test_raises_error_if_using_gs_hmac_without_xml_support(self, _):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                                    ('GSUtil', 'hidden_shim_mode',
+                                     'no_fallback')]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+      }):
+        self._fake_command.command_spec = command.Command.CreateCommandSpec(
+            'fake_shim', gs_api_support=[ApiSelector.JSON])
+        with self.assertRaisesRegex(
+            exception.CommandException,
+            'CommandException: Requested to use "gcloud storage" with Cloud'
+            ' Storage XML API HMAC credentials but the "fake_shim" command can'
+            ' only be used with the Cloud Storage JSON API.'):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
   def test_raises_error_if_gcloud_storage_map_missing(self):
@@ -1155,12 +1175,33 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       flags, _ = self._fake_command._translate_boto_config()
       self.assertEqual(flags, ['--decryption-keys=key1,key12,key100'])
 
-  def test_boto_config_translation_for_supported_fields(self):
+  @mock.patch.object(boto_util, 'UsingGsHmac', return_value=False)
+  def test_gs_hmac_auth_env_when_not_using_gs_hmac(self, mock_using_gs_hmac):
     with _mock_boto_config({
         'Credentials': {
-            'aws_access_key_id': 'AWS_ACCESS_KEY_ID_value',
-            'aws_secret_access_key': 'AWS_SECRET_ACCESS_KEY_value',
-            'use_client_certificate': True,
+            'gs_access_key_id': 'foo',
+            'gs_secret_access_key': 'bar',
+        }
+    }):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(mock_using_gs_hmac.call_count, 2)
+      self.assertEqual(flags, [])
+      self.assertEqual(env_vars, {})
+
+  @mock.patch.object(boto_util, 'UsingGsHmac', return_value=True)
+  def test_boto_config_translation_for_supported_fields(self, _):
+    with _mock_boto_config({
+        'Credentials': {
+            'aws_access_key_id':
+                'AWS_ACCESS_KEY_ID_value',
+            'aws_secret_access_key':
+                'AWS_SECRET_ACCESS_KEY_value',
+            'gs_access_key_id':
+                'CLOUDSDK_STORAGE_GS_XML_ACCESS_KEY_ID_value',
+            'gs_secret_access_key':
+                'CLOUDSDK_STORAGE_GS_XML_SECRET_ACCESS_KEY_value',
+            'use_client_certificate':
+                True,
         },
         'Boto': {
             'proxy': 'CLOUDSDK_PROXY_ADDRESS_value',
@@ -1195,31 +1236,60 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       self.maxDiff = None
       self.assertDictEqual(
           env_vars, {
-              'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_value',
-              'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_value',
-              'CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE': True,
-              'CLOUDSDK_PROXY_ADDRESS': 'CLOUDSDK_PROXY_ADDRESS_value',
-              'CLOUDSDK_PROXY_ADDRESS': 'CLOUDSDK_PROXY_ADDRESS_value',
-              'CLOUDSDK_PROXY_TYPE': 'CLOUDSDK_PROXY_TYPE_value',
-              'CLOUDSDK_PROXY_PORT': 'CLOUDSDK_PROXY_PORT_value',
-              'CLOUDSDK_PROXY_USERNAME': 'CLOUDSDK_PROXY_USERNAME_value',
-              'CLOUDSDK_PROXY_PASSWORD': 'CLOUDSDK_PROXY_PASSWORD_value',
-              'CLOUDSDK_PROXY_RDNS': 'CLOUDSDK_PROXY_RDNS_value',
-              'CLOUDSDK_CORE_HTTP_TIMEOUT': 'HTTP_TIMEOUT_value',
-              'CLOUDSDK_CORE_CUSTOM_CA_CERTS_FILE': 'CA_CERTS_FILE_value',
-              'CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION': True,
-              'CLOUDSDK_STORAGE_BASE_RETRY_DELAY': 'BASE_RETRY_DELAY_value',
-              'CLOUDSDK_STORAGE_MAX_RETRIES': 'MAX_RETRIES_value',
-              'CLOUDSDK_STORAGE_CHECK_HASHES': 'CHECK_HASHES_value',
-              'CLOUDSDK_CORE_PROJECT': 'CLOUDSDK_CORE_PROJECT_value',
-              'CLOUDSDK_CORE_DISABLE_USAGE_REPORTING': 'USAGE_REPORTING_value',
-              'CLOUDSDK_STORAGE_USE_MAGICFILE': 'USE_MAGICFILE_value',
-              'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD': '100M',
-              'CLOUDSDK_STORAGE_RESUMABLE_THRESHOLD': '256K',
-              'CLOUDSDK_AUTH_CLIENT_ID': 'CLOUDSDK_AUTH_CLIENT_ID_value',
-              'CLOUDSDK_AUTH_CLIENT_SECRET': 'AUTH_CLIENT_SECRET_value',
-              'CLOUDSDK_AUTH_AUTH_HOST': 'CLOUDSDK_AUTH_AUTH_HOST_value',
-              'CLOUDSDK_AUTH_TOKEN_HOST': 'CLOUDSDK_AUTH_TOKEN_HOST_value',
+              'AWS_ACCESS_KEY_ID':
+                  'AWS_ACCESS_KEY_ID_value',
+              'AWS_SECRET_ACCESS_KEY':
+                  'AWS_SECRET_ACCESS_KEY_value',
+              'CLOUDSDK_STORAGE_GS_XML_ACCESS_KEY_ID':
+                  'CLOUDSDK_STORAGE_GS_XML_ACCESS_KEY_ID_value',
+              'CLOUDSDK_STORAGE_GS_XML_SECRET_ACCESS_KEY':
+                  'CLOUDSDK_STORAGE_GS_XML_SECRET_ACCESS_KEY_value',
+              'CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE':
+                  True,
+              'CLOUDSDK_PROXY_ADDRESS':
+                  'CLOUDSDK_PROXY_ADDRESS_value',
+              'CLOUDSDK_PROXY_ADDRESS':
+                  'CLOUDSDK_PROXY_ADDRESS_value',
+              'CLOUDSDK_PROXY_TYPE':
+                  'CLOUDSDK_PROXY_TYPE_value',
+              'CLOUDSDK_PROXY_PORT':
+                  'CLOUDSDK_PROXY_PORT_value',
+              'CLOUDSDK_PROXY_USERNAME':
+                  'CLOUDSDK_PROXY_USERNAME_value',
+              'CLOUDSDK_PROXY_PASSWORD':
+                  'CLOUDSDK_PROXY_PASSWORD_value',
+              'CLOUDSDK_PROXY_RDNS':
+                  'CLOUDSDK_PROXY_RDNS_value',
+              'CLOUDSDK_CORE_HTTP_TIMEOUT':
+                  'HTTP_TIMEOUT_value',
+              'CLOUDSDK_CORE_CUSTOM_CA_CERTS_FILE':
+                  'CA_CERTS_FILE_value',
+              'CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION':
+                  True,
+              'CLOUDSDK_STORAGE_BASE_RETRY_DELAY':
+                  'BASE_RETRY_DELAY_value',
+              'CLOUDSDK_STORAGE_MAX_RETRIES':
+                  'MAX_RETRIES_value',
+              'CLOUDSDK_STORAGE_CHECK_HASHES':
+                  'CHECK_HASHES_value',
+              'CLOUDSDK_CORE_PROJECT':
+                  'CLOUDSDK_CORE_PROJECT_value',
+              'CLOUDSDK_CORE_DISABLE_USAGE_REPORTING':
+                  'USAGE_REPORTING_value',
+              'CLOUDSDK_STORAGE_USE_MAGICFILE':
+                  'USE_MAGICFILE_value',
+              'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD':
+                  '100M',
+              'CLOUDSDK_STORAGE_RESUMABLE_THRESHOLD':
+                  '256K',
+              'CLOUDSDK_AUTH_CLIENT_ID':
+                  'CLOUDSDK_AUTH_CLIENT_ID_value',
+              'CLOUDSDK_AUTH_CLIENT_SECRET':
+                  'AUTH_CLIENT_SECRET_value',
+              'CLOUDSDK_AUTH_AUTH_HOST':
+                  'CLOUDSDK_AUTH_AUTH_HOST_value',
+              'CLOUDSDK_AUTH_TOKEN_HOST':
+                  'CLOUDSDK_AUTH_TOKEN_HOST_value',
           })
 
   def test_missing_mappging_gets_ignored(self):

@@ -27,6 +27,9 @@ import subprocess
 
 from boto import config
 from gslib import exception
+from gslib.cs_api_map import ApiSelector
+from gslib.exception import CommandException
+from gslib.utils import boto_util
 from gslib.utils import constants
 
 
@@ -75,6 +78,10 @@ _BOTO_CONFIG_MAP = {
             'AWS_ACCESS_KEY_ID',
         'aws_secret_access_key':
             'AWS_SECRET_ACCESS_KEY',
+        'gs_access_key_id':
+            'CLOUDSDK_STORAGE_GS_XML_ACCESS_KEY_ID',
+        'gs_secret_access_key':
+            'CLOUDSDK_STORAGE_GS_XML_SECRET_ACCESS_KEY',
         'use_client_certificate':
             'CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE',
     },
@@ -485,6 +492,13 @@ class GcloudStorageCommandMixin(object):
                                 section_name, key))
         elif key == 'https_validate_certificates' and not value:
           env_vars['CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION'] = True
+        # Skip mapping GS HMAC auth keys if gsutil wouldn't use them.
+        elif (key in ('gs_access_key_id', 'gs_secret_access_key') and
+              not boto_util.UsingGsHmac()):
+          self.logger.debug('The boto config field {}:{} skipped translation'
+                            ' to the gcloud storage equivalent as it would'
+                            ' have been unused in gsutil.'.format(
+                                section_name, key))
         else:
           env_var = _BOTO_CONFIG_MAP.get(section_name, {}).get(key, None)
           if env_var is not None:
@@ -578,6 +592,12 @@ class GcloudStorageCommandMixin(object):
               ' You can make gsutil use the same credentials by running:\n'
               '{} config set pass_credentials_to_gsutil True'.format(
                   gcloud_binary_path))
+        elif (boto_util.UsingGsHmac() and
+              ApiSelector.XML not in self.command_spec.gs_api_support):
+          raise CommandException(
+              'Requested to use "gcloud storage" with Cloud Storage XML API'
+              ' HMAC credentials but the "{}" command can only be used'
+              ' with the Cloud Storage JSON API.'.format(self.command_name))
         else:
           self._print_gcloud_storage_command_info(gcloud_storage_command,
                                                   env_variables)
