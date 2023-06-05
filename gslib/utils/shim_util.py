@@ -592,7 +592,7 @@ class GcloudStorageCommandMixin(object):
               ' You can make gsutil use the same credentials by running:\n'
               '{} config set pass_credentials_to_gsutil True'.format(
                   gcloud_binary_path))
-        elif (boto_util.UsingGsHmac and
+        elif (boto_util.UsingGsHmac() and
               ApiSelector.XML not in self.command_spec.gs_api_support):
           raise CommandException(
               'Requested to use "gcloud storage" with Cloud Storage XML API'
