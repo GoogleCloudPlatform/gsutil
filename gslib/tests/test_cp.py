@@ -48,6 +48,7 @@ from gslib import exception
 from gslib import name_expansion
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
+from gslib.commands.cp import ShimTranslatePredefinedAclSubOptForCopy
 from gslib.cs_api_map import ApiSelector
 from gslib.daisy_chain_wrapper import _DEFAULT_DOWNLOAD_CHUNK_SIZE
 from gslib.discard_messages_queue import DiscardMessagesQueue
@@ -4954,28 +4955,6 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     self.assertIn('Found no hashes to validate object upload',
                   warning_messages[0])
 
-  def test_shim_translates_flags(self):
-    bucket_uri = self.CreateBucket()
-    fpath = self.CreateTempFile(contents=b'abcd')
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
-                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
-      with SetEnvironmentForTest({
-          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
-          'CLOUDSDK_ROOT_DIR': 'fake_dir',
-      }):
-        mock_log_handler = self.RunCommand('cp', [
-            '-e', '-n', '-r', '-R', '-s', 'some-class', '-v', fpath,
-            suri(bucket_uri)
-        ],
-                                           return_log_handler=True)
-        info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(
-            'Gcloud Storage Command: {} alpha storage cp'
-            ' --ignore-symlinks --no-clobber -r -r --storage-class some-class'
-            ' --print-created-message {} {}'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud'), fpath,
-                suri(bucket_uri)), info_lines)
-
   @unittest.skipIf(IS_WINDOWS, 'POSIX attributes not available on Windows.')
   @mock.patch('os.geteuid', new=mock.Mock(return_value=0))
   @mock.patch.object(os, 'chown', autospec=True)
@@ -5021,3 +5000,33 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
         parallel_operations_override=None,
         print_macos_warning=False,
     )
+
+  def test_translates_predefined_acl_sub_opts(self):
+    sub_opts = [('--flag-key', 'flag-value'), ('-a', 'public-read'),
+                ('-a', 'does-not-exist')]
+    ShimTranslatePredefinedAclSubOptForCopy(sub_opts)
+    self.assertEqual(sub_opts, [('--flag-key', 'flag-value'),
+                                ('-a', 'publicRead'), ('-a', 'does-not-exist')])
+
+  def test_shim_translates_flags(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=b'abcd')
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('cp', [
+            '-e', '-n', '-r', '-R', '-s', 'some-class', '-v', '-a',
+            'public-read', fpath,
+            suri(bucket_uri)
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            'Gcloud Storage Command: {} alpha storage cp'
+            ' --ignore-symlinks --no-clobber -r -r --storage-class some-class'
+            ' --print-created-message --predefined-acl publicRead {} {}'.format(
+                os.path.join('fake_dir', 'bin', 'gcloud'), fpath,
+                suri(bucket_uri)), info_lines)

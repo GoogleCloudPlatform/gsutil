@@ -30,6 +30,7 @@ from boto import config
 from gslib import command
 from gslib import command_argument
 from gslib import exception
+from gslib.commands import rsync
 from gslib.commands import version
 from gslib.commands import test
 from gslib.cs_api_map import ApiSelector
@@ -678,6 +679,55 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         self.assertNotIn('CLOUDSDK_STORAGE_THREAD_COUNT',
                          self._fake_command._translated_env_variables)
 
+  def test_parallel_operations_false_but_parallelism_turned_on_for_rsync(self):
+    command = rsync.RsyncCommand(command_runner=mock.ANY,
+                                 args=['arg1', 'arg2'],
+                                 headers={},
+                                 debug=0,
+                                 trace_token=None,
+                                 parallel_operations=False,
+                                 bucket_storage_uri_class=mock.ANY,
+                                 gsutil_api_class_map_factory=mock.MagicMock())
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                                    ('GSUtil', 'hidden_shim_mode',
+                                     'no_fallback')]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        command.translate_to_gcloud_storage_if_requested()
+        self.assertNotIn('CLOUDSDK_STORAGE_PROCESS_COUNT',
+                         command._translated_env_variables)
+        self.assertNotIn('CLOUDSDK_STORAGE_THREAD_COUNT',
+                         command._translated_env_variables)
+
+  def test_parallelism_turned_on_for_rsync_unless_boto_set_sequential(self):
+    with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                                    ('GSUtil', 'hidden_shim_mode',
+                                     'no_fallback'),
+                                    ('GSUtil', 'parallel_process_count', '1'),
+                                    ('GSUtil', 'thread_process_count', '1')]):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        command = rsync.RsyncCommand(
+            command_runner=mock.ANY,
+            args=['arg1', 'arg2'],
+            headers={},
+            debug=0,
+            trace_token=None,
+            parallel_operations=False,
+            bucket_storage_uri_class=mock.ANY,
+            gsutil_api_class_map_factory=mock.MagicMock())
+        command.translate_to_gcloud_storage_if_requested()
+        self.assertEqual(
+            command._translated_env_variables['CLOUDSDK_STORAGE_PROCESS_COUNT'],
+            '1')
+        self.assertEqual(
+            command._translated_env_variables['CLOUDSDK_STORAGE_THREAD_COUNT'],
+            '1')
+
   def test_debug_value_4_adds_log_http_flag(self):
     # Debug level 4 represents the -DD option.
     with _mock_boto_config({
@@ -1223,6 +1273,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
             'use_magicfile': 'USE_MAGICFILE_value',
             'parallel_composite_upload_threshold': '100M',
             'resumable_threshold': '256K',
+            'rsync_buffer_lines': '32000',
         },
         'OAuth2': {
             'client_id': 'CLOUDSDK_AUTH_CLIENT_ID_value',
@@ -1240,12 +1291,12 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
                   'AWS_ACCESS_KEY_ID_value',
               'AWS_SECRET_ACCESS_KEY':
                   'AWS_SECRET_ACCESS_KEY_value',
+              'CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE':
+                  True,
               'CLOUDSDK_STORAGE_GS_XML_ACCESS_KEY_ID':
                   'CLOUDSDK_STORAGE_GS_XML_ACCESS_KEY_ID_value',
               'CLOUDSDK_STORAGE_GS_XML_SECRET_ACCESS_KEY':
                   'CLOUDSDK_STORAGE_GS_XML_SECRET_ACCESS_KEY_value',
-              'CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE':
-                  True,
               'CLOUDSDK_PROXY_ADDRESS':
                   'CLOUDSDK_PROXY_ADDRESS_value',
               'CLOUDSDK_PROXY_ADDRESS':
@@ -1282,6 +1333,8 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
                   '100M',
               'CLOUDSDK_STORAGE_RESUMABLE_THRESHOLD':
                   '256K',
+              'CLOUDSDK_STORAGE_RSYNC_LIST_CHUNK_SIZE':
+                  '32000',
               'CLOUDSDK_AUTH_CLIENT_ID':
                   'CLOUDSDK_AUTH_CLIENT_ID_value',
               'CLOUDSDK_AUTH_CLIENT_SECRET':

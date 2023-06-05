@@ -930,6 +930,24 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                 ]):
         return self.json_api.GetObjectMetadata(bucket_name, object_name)
 
+  def GetObjectMetadataWithFields(self, bucket_name, object_name, fields):
+    """Retrieves and verifies an object's metadata attribute.
+
+    Args:
+      bucket_name: The name of the bucket the object is in.
+      object_name: The name of the object itself.
+      fields: List of attributes strings. Custom attributes begin "metadata/".
+
+    Returns:
+      Apitools object.
+    """
+    gsutil_api = (self.json_api
+                  if self.default_provider == 'gs' else self.xml_api)
+    return gsutil_api.GetObjectMetadata(bucket_name,
+                                        object_name,
+                                        provider=self.default_provider,
+                                        fields=fields)
+
   def VerifyObjectCustomAttribute(self,
                                   bucket_name,
                                   object_name,
@@ -949,12 +967,8 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       None
     """
-    gsutil_api = (self.json_api
-                  if self.default_provider == 'gs' else self.xml_api)
-    metadata = gsutil_api.GetObjectMetadata(bucket_name,
-                                            object_name,
-                                            provider=self.default_provider,
-                                            fields=['metadata/%s' % attr_name])
+    metadata = self.GetObjectMetadataWithFields(
+        bucket_name, object_name, fields=['metadata/%s' % attr_name])
     attr_present, value = GetValueFromObjectCustomMetadata(
         metadata, attr_name, default_value=expected_value)
     self.assertEqual(expected_present, attr_present)
