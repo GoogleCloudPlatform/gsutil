@@ -110,6 +110,8 @@ _BOTO_CONFIG_MAP = {
             'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_THRESHOLD',
         'resumable_threshold':
             'CLOUDSDK_STORAGE_RESUMABLE_THRESHOLD',
+        'rsync_buffer_lines':
+            'CLOUDSDK_STORAGE_RSYNC_LIST_CHUNK_SIZE',
     },
     'OAuth2': {
         'client_id': 'CLOUDSDK_AUTH_CLIENT_ID',
@@ -408,7 +410,10 @@ class GcloudStorageCommandMixin(object):
       top_level_flags.append('--impersonate-service-account=' +
                              constants.IMPERSONATE_SERVICE_ACCOUNT)
     # TODO(b/208294509) Add --perf-trace-token translation.
-    if not self.parallel_operations:
+    should_use_rsync_override = self.command_name == 'rsync' and not (
+        config.get('GSUtil', 'parallel_process_count') == '1' and
+        config.get('GSUtil', 'thread_process_count') == '1')
+    if not (self.parallel_operations or should_use_rsync_override):
       # TODO(b/208301084) Set the --sequential flag instead.
       env_variables['CLOUDSDK_STORAGE_THREAD_COUNT'] = '1'
       env_variables['CLOUDSDK_STORAGE_PROCESS_COUNT'] = '1'

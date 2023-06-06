@@ -42,6 +42,7 @@ from gslib.cloud_api import NotFoundException
 from gslib.cloud_api import ServiceException
 from gslib.command import Command
 from gslib.command import DummyArgChecker
+from gslib.commands.cp import ShimTranslatePredefinedAclSubOptForCopy
 from gslib.command_argument import CommandArgument
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
@@ -92,6 +93,8 @@ from gslib.utils.posix_util import WarnInvalidValue
 from gslib.utils.posix_util import WarnNegativeAttribute
 from gslib.utils.rsync_util import DiffAction
 from gslib.utils.rsync_util import RsyncDiffToApply
+from gslib.utils.shim_util import GcloudStorageFlag
+from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils.translation_helper import CopyCustomMetadata
 from gslib.utils.unit_util import CalculateThroughput
@@ -1602,6 +1605,51 @@ class RsyncCommand(Command):
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
+
+  def get_gcloud_storage_args(self):
+    ShimTranslatePredefinedAclSubOptForCopy(self.sub_opts)
+
+    gcloud_command = ['alpha', 'storage', 'rsync']
+    flag_keys = [flag for flag, _ in self.sub_opts]
+    if '-e' not in flag_keys:
+      gcloud_command += ['--no-ignore-symlinks']
+      self.logger.warn(
+          'By default, gsutil copies file symlinks, but, by default, this'
+          ' command (run via the gcloud storage shim) does not copy any'
+          ' symlinks.')
+    if '-P' in flag_keys:
+      _, (source_path, destination_path) = self.ParseSubOpts(
+          should_update_sub_opts_and_args=False)
+      if (StorageUrlFromString(source_path).IsCloudUrl() and
+          StorageUrlFromString(destination_path).IsFileUrl()):
+        self.logger.warn(
+            'For preserving POSIX with rsync downloads, gsutil aborts if a'
+            ' single download will result in invalid destination POSIX.'
+            ' However, this command (run via the gcloud storage shim) will'
+            ' skip invalid copies and still perform valid copies.')
+
+    gcloud_storage_map = GcloudStorageMap(
+        gcloud_command=gcloud_command,
+        flag_map={
+            '-a': GcloudStorageFlag('--predefined-acl'),
+            '-c': GcloudStorageFlag('--checksums-only'),
+            '-C': GcloudStorageFlag('--continue-on-error'),
+            '-d': GcloudStorageFlag('--delete-unmatched-destination-objects'),
+            '-e': GcloudStorageFlag('--ignore-symlinks'),
+            '-i': GcloudStorageFlag('--no-clobber'),
+            '-J': GcloudStorageFlag('--gzip-in-flight-all'),
+            '-j': GcloudStorageFlag('--gzip-in-flight'),
+            '-n': GcloudStorageFlag('--dry-run'),
+            '-P': GcloudStorageFlag('--preserve-posix'),
+            '-p': GcloudStorageFlag('--preserve-acl'),
+            '-R': GcloudStorageFlag('--recursive'),
+            '-r': GcloudStorageFlag('--recursive'),
+            '-U': GcloudStorageFlag('--skip-unsupported'),
+            '-u': GcloudStorageFlag('--skip-if-dest-has-newer-mtime'),
+            '-x': GcloudStorageFlag('--exclude'),
+        },
+    )
+    return super().get_gcloud_storage_args(gcloud_storage_map)
 
   def _InsistContainer(self, url_str, treat_nonexistent_object_as_subdir):
     """Sanity checks that URL names an existing container.
