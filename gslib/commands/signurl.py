@@ -412,10 +412,10 @@ class UrlSignCommand(Command):
       flag_map={
           '-m': GcloudStorageFlag('--http-verb'),
           '-d': GcloudStorageFlag('--duration'),
-          '-b': GcloudStorageFlag('--query-params=userProject'),
-          '-c': GcloudStorageFlag('--headers=content-type'),
+          '-b': GcloudStorageFlag('--query-params=userProject='),
+          '-c': GcloudStorageFlag('--headers=content-type='),
           '-r': GcloudStorageFlag('--region'),
-          '-p': GcloudStorageFlag('--private-key-password')
+          '-p': GcloudStorageFlag('--private-key-password'),
       },
   )
 
@@ -423,18 +423,24 @@ class UrlSignCommand(Command):
     self._COMMAND_MAP.gcloud_command += ['--private-key-file=' + self.args[0]]
     self.args = self.args[1:]
 
-    retention_arg_idx = 0
-    while retention_arg_idx < len(self.sub_opts):
-      if self.sub_opts[retention_arg_idx][0] == '-d':
-        break
-      retention_arg_idx += 1
-    if retention_arg_idx < len(self.sub_opts):
+    duration_arg_idx = None
+    http_verb_arg_idx = None
+    for i, (flag, _) in enumerate(self.sub_opts):
+      if flag == '-d':
+        duration_arg_idx = i
+      elif flag == '-m':
+        http_verb_arg_idx = i
+    if duration_arg_idx is not None:
       # Convert duration to seconds, which gcloud can handle.
       seconds = str(
           int(
               _DurationToTimeDelta(
-                  self.sub_opts[retention_arg_idx][1]).total_seconds())) + 's'
-      self.sub_opts[retention_arg_idx] = ('-d', seconds)
+                  self.sub_opts[duration_arg_idx][1]).total_seconds())) + 's'
+      self.sub_opts[duration_arg_idx] = ('-d', seconds)
+    if http_verb_arg_idx is not None:
+      if self.sub_opts[http_verb_arg_idx][1] == 'RESUMABLE':
+        self.sub_opts[http_verb_arg_idx] = ('-m', 'POST')
+        self._COMMAND_MAP.gcloud_command += ['--headers=x-goog-resumable=start']
     return super().get_gcloud_storage_args(self._COMMAND_MAP)
 
   def _ParseAndCheckSubOpts(self):

@@ -231,7 +231,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
   def testShimTranslatesDurationFlag(self):
     key_path = self._GetJSONKsFile()
     cmd = [
-        '-D', 'signurl', '-d', '2m', '-r', 'US', key_path, 'gs://bucket/object'
+        '-D', 'signurl', '-d', '2m', '-m', 'RESUMABLE', '-r', 'US', key_path,
+        'gs://bucket/object'
     ]
 
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
@@ -248,7 +249,9 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
             'alpha storage sign-url'
             ' --format=csv[separator="\\t"](resource, http_verb, expiration, signed_url)'
             ' --private-key-file={}'
+            ' --headers=x-goog-resumable=start'
             ' --duration 120s'
+            ' --http-verb POST'
             ' --region US'
             ' gs://bucket/object'.format(key_path), stderr)
 
