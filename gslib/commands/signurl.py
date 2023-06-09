@@ -46,6 +46,7 @@ from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.utils import constants
 from gslib.utils.boto_util import GetNewHttp
+from gslib.utils.shim_util import GcloudStorageMap, GcloudStorageFlag
 from gslib.utils.signurl_helper import CreatePayload, GetFinalUrl
 
 try:
@@ -402,6 +403,39 @@ class UrlSignCommand(Command):
       help_text=_DETAILED_HELP_TEXT,
       subcommand_help_text={},
   )
+
+  _COMMAND_MAP = GcloudStorageMap(
+      gcloud_command=[
+          'alpha', 'storage', 'sign-url',
+          '--format=csv[separator="\\t"](resource, http_verb, expiration, signed_url)'
+      ],
+      flag_map={
+          '-m': GcloudStorageFlag('--http-verb'),
+          '-d': GcloudStorageFlag('--duration'),
+          '-b': GcloudStorageFlag('--query-params=userProject'),
+          '-c': GcloudStorageFlag('--headers=content-type'),
+          '-r': GcloudStorageFlag('--region'),
+          '-p': GcloudStorageFlag('--private-key-password')
+      },
+  )
+
+  def get_gcloud_storage_args(self):
+    self._COMMAND_MAP.gcloud_command += ['--private-key-file=' + self.args[0]]
+    self.args = self.args[1:]
+
+    retention_arg_idx = 0
+    while retention_arg_idx < len(self.sub_opts):
+      if self.sub_opts[retention_arg_idx][0] == '-d':
+        break
+      retention_arg_idx += 1
+    if retention_arg_idx < len(self.sub_opts):
+      # Convert duration to seconds, which gcloud can handle.
+      seconds = str(
+          int(
+              _DurationToTimeDelta(
+                  self.sub_opts[retention_arg_idx][1]).total_seconds())) + 's'
+      self.sub_opts[retention_arg_idx] = ('-d', seconds)
+    return super().get_gcloud_storage_args(self._COMMAND_MAP)
 
   def _ParseAndCheckSubOpts(self):
     # Default argument values

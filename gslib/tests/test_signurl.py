@@ -35,6 +35,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import (SkipForS3, SkipForXML)
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 import gslib.tests.signurl_signatures as sigs
 from oauth2client import client
@@ -86,11 +87,18 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
 
   def testSignUrlInvalidDuration(self):
     """Tests signurl fails with out of bounds value for valid duration."""
+    if self._use_gcloud_storage:
+      expected_status = 2
+    else:
+      expected_status = 1
     stderr = self.RunGsUtil(['signurl', '-d', '123d', 'ks_file', 'gs://uri'],
                             return_stderr=True,
-                            expected_status=1)
-    self.assertIn('CommandException: Max valid duration allowed is 7 days',
-                  stderr)
+                            expected_status=expected_status)
+    if self._use_gcloud_storage:
+      self.assertIn('value must be less than or equal to 7d', stderr)
+    else:
+      self.assertIn('CommandException: Max valid duration allowed is 7 days',
+                    stderr)
 
   def testSignUrlInvalidDurationWithUseServiceAccount(self):
     """Tests signurl with -u flag fails duration > 12 hours."""
@@ -217,7 +225,32 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['signurl', self._GetKsFile(), 'gs://'],
                    expected_status=1,
                    stdin='notasecret')
-    self.RunGsUtil(['signurl', 'file://tmp/abc'], expected_status=1)
+    self.RunGsUtil(['signurl', 'file://tmp/abc', 'gs://bucket'],
+                   expected_status=1)
+
+  def testShimTranslatesDurationFlag(self):
+    key_path = self._GetJSONKsFile()
+    cmd = [
+        '-D', 'signurl', '-d', '2m', '-r', 'US', key_path, 'gs://bucket/object'
+    ]
+
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        stdout, stderr = self.RunGsUtil(cmd,
+                                        return_stdout=True,
+                                        return_stderr=True)
+        self.maxDiff = None
+        self.assertIn(
+            'alpha storage sign-url'
+            ' --format=csv[separator="\\t"](resource, http_verb, expiration, signed_url)'
+            ' --private-key-file={}'
+            ' --duration 120s'
+            ' --region US'
+            ' gs://bucket/object'.format(key_path), stderr)
 
 
 @unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
