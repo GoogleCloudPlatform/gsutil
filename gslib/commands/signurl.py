@@ -407,9 +407,9 @@ class UrlSignCommand(Command):
   _COMMAND_MAP = GcloudStorageMap(
       gcloud_command=[
           'alpha', 'storage', 'sign-url',
-          '--format=csv[separator="\\t"](resource:label=URL,'
+          '--format=csv[separator="\\t"](resource:label="URL",'
           ' http_verb:label="HTTP Method",'
-          ' expiration:label=Expiration,'
+          ' expiration:label="Expiration",'
           ' signed_url:label="Signed URL")'
       ],
       flag_map={

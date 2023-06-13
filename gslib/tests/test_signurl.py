@@ -248,7 +248,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
         self.maxDiff = None
         self.assertIn(
             'alpha storage sign-url'
-            ' --format=csv[separator="\\t"](resource:label=URL, http_verb:label="HTTP Method", expiration:label=Expiration, signed_url:label="Signed URL")'
+            ' --format=csv[separator="\\t"](resource:label="URL", http_verb:label="HTTP Method", expiration:label="Expiration", signed_url:label="Signed URL")'
             ' --private-key-file={}'
             ' --headers=x-goog-resumable=start'
             ' --duration 120s'
