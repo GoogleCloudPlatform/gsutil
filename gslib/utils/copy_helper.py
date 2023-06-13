@@ -1497,7 +1497,7 @@ def TriggerReauthForDestinationProviderIfNecessary(destination_url, gsutil_api,
   reauth will fail. We need to make at least one API call in the main
   process to allow a user to reauthorize.
 
-  For cloud source URLs this already happens because the plurality of 
+  For cloud source URLs this already happens because the plurality of
   the source name expansion iterator is checked in the main thread. For
   cloud destination URLs, only some situations result in a similar API
   call. In these situations, this function exits without performing an
@@ -1511,7 +1511,7 @@ def TriggerReauthForDestinationProviderIfNecessary(destination_url, gsutil_api,
       is used. Technically, reauth challenges can be answered in the main
       process, but they may be triggered multiple times if multithreading
       is used.
-  
+
   Returns:
     None, but performs an API call if necessary.
   """

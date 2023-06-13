@@ -533,17 +533,17 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     src_bucket = self.CreateBucket()
     dst_bucket = self.CreateBucket()
     self.CreateObject(bucket_uri=src_bucket,
-                                    object_name='obj1',
-                                    contents=b'OBJ1')
+                      object_name='obj1',
+                      contents=b'OBJ1')
     self.CreateObject(bucket_uri=src_bucket,
-                                    object_name='subdir/obj2',
-                                    contents=b'subdir/obj2')
+                      object_name='subdir/obj2',
+                      contents=b'subdir/obj2')
     self.CreateObject(bucket_uri=src_bucket,
                       object_name='.obj3',
                       contents=b'.obj3')
     self.CreateObject(bucket_uri=src_bucket,
-                                    object_name='subdir/obj4',
-                                    contents=b'subdir/obj4')
+                      object_name='subdir/obj4',
+                      contents=b'subdir/obj4')
     self.CreateObject(bucket_uri=src_bucket,
                       object_name='obj6',
                       contents=b'OBJ6',
@@ -1968,9 +1968,8 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
         self.assertRegex(stderr, BuildErrorRegex(obj13, POSIX_UID_ERROR))
         self.assertRegex(stderr, BuildErrorRegex(obj14, POSIX_GID_ERROR))
         self.assertRegex(stderr, BuildErrorRegex(obj15, POSIX_GID_ERROR))
-        self.assertRegex(stderr,
-            BuildErrorRegex(obj16,
-                            POSIX_INSUFFICIENT_ACCESS_ERROR))
+        self.assertRegex(
+            stderr, BuildErrorRegex(obj16, POSIX_INSUFFICIENT_ACCESS_ERROR))
         self.assertRegex(stderr, BuildErrorRegex(obj17, POSIX_MODE_ERROR))
         self.assertRegex(stderr, BuildErrorRegex(obj18, POSIX_MODE_ERROR))
         self.assertRegex(stderr, BuildErrorRegex(obj19, POSIX_MODE_ERROR))
