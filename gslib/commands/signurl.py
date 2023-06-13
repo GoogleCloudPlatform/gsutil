@@ -407,13 +407,16 @@ class UrlSignCommand(Command):
   _COMMAND_MAP = GcloudStorageMap(
       gcloud_command=[
           'alpha', 'storage', 'sign-url',
-          '--format=csv[separator="\\t"](resource, http_verb, expiration, signed_url)'
+          '--format=csv[separator="\\t"](resource:label=URL,'
+          ' http_verb:label="HTTP Method",'
+          ' expiration:label=Expiration,'
+          ' signed_url:label="Signed URL")'
       ],
       flag_map={
           '-m': GcloudStorageFlag('--http-verb'),
           '-d': GcloudStorageFlag('--duration'),
-          '-b': GcloudStorageFlag('--query-params=userProject='),
-          '-c': GcloudStorageFlag('--headers=content-type='),
+          '-b': GcloudStorageFlag('--query-params'),
+          '-c': GcloudStorageFlag('--headers'),
           '-r': GcloudStorageFlag('--region'),
           '-p': GcloudStorageFlag('--private-key-password'),
       },
@@ -425,11 +428,19 @@ class UrlSignCommand(Command):
 
     duration_arg_idx = None
     http_verb_arg_idx = None
+    content_type_arg_idx = None
+    billing_project_arg_idx = None
+
     for i, (flag, _) in enumerate(self.sub_opts):
       if flag == '-d':
         duration_arg_idx = i
       elif flag == '-m':
         http_verb_arg_idx = i
+      elif flag == '-c':
+        content_type_arg_idx = i
+      elif flag == '-b':
+        billing_project_arg_idx = i
+
     if duration_arg_idx is not None:
       # Convert duration to seconds, which gcloud can handle.
       seconds = str(
@@ -437,10 +448,22 @@ class UrlSignCommand(Command):
               _DurationToTimeDelta(
                   self.sub_opts[duration_arg_idx][1]).total_seconds())) + 's'
       self.sub_opts[duration_arg_idx] = ('-d', seconds)
+
     if http_verb_arg_idx is not None:
       if self.sub_opts[http_verb_arg_idx][1] == 'RESUMABLE':
         self.sub_opts[http_verb_arg_idx] = ('-m', 'POST')
         self._COMMAND_MAP.gcloud_command += ['--headers=x-goog-resumable=start']
+
+    if content_type_arg_idx is not None:
+      content_type_value = self.sub_opts[content_type_arg_idx][1]
+      self.sub_opts[content_type_arg_idx] = ('-c', 'content-type=' +
+                                             content_type_value)
+
+    if billing_project_arg_idx is not None:
+      project_value = self.sub_opts[billing_project_arg_idx][1]
+      self.sub_opts[billing_project_arg_idx] = ('-b',
+                                                'userProject=' + project_value)
+
     return super().get_gcloud_storage_args(self._COMMAND_MAP)
 
   def _ParseAndCheckSubOpts(self):

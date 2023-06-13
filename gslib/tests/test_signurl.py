@@ -228,10 +228,11 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['signurl', 'file://tmp/abc', 'gs://bucket'],
                    expected_status=1)
 
-  def testShimTranslatesDurationFlag(self):
+  def testShimTranslatesFlags(self):
     key_path = self._GetJSONKsFile()
     cmd = [
-        '-D', 'signurl', '-d', '2m', '-m', 'RESUMABLE', '-r', 'US', key_path,
+        '-D', 'signurl', '-d', '2m', '-m', 'RESUMABLE', '-r', 'US', '-b',
+        'project', '-c', 'application/octet-stream', key_path,
         'gs://bucket/object'
     ]
 
@@ -247,12 +248,14 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
         self.maxDiff = None
         self.assertIn(
             'alpha storage sign-url'
-            ' --format=csv[separator="\\t"](resource, http_verb, expiration, signed_url)'
+            ' --format=csv[separator="\\t"](resource:label=URL, http_verb:label="HTTP Method", expiration:label=Expiration, signed_url:label="Signed URL")'
             ' --private-key-file={}'
             ' --headers=x-goog-resumable=start'
             ' --duration 120s'
             ' --http-verb POST'
             ' --region US'
+            ' --query-params userProject=project'
+            ' --headers content-type=application/octet-stream'
             ' gs://bucket/object'.format(key_path), stderr)
 
 
