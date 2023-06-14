@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 from datetime import datetime
 from datetime import timedelta
+import os
 import pkgutil
 
 import boto
@@ -227,36 +228,6 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
                    stdin='notasecret')
     self.RunGsUtil(['signurl', 'file://tmp/abc', 'gs://bucket'],
                    expected_status=1)
-
-  def testShimTranslatesFlags(self):
-    key_path = self._GetJSONKsFile()
-    cmd = [
-        '-D', 'signurl', '-d', '2m', '-m', 'RESUMABLE', '-r', 'US', '-b',
-        'project', '-c', 'application/octet-stream', key_path,
-        'gs://bucket/object'
-    ]
-
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
-                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
-      with SetEnvironmentForTest({
-          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
-          'CLOUDSDK_ROOT_DIR': 'fake_dir',
-      }):
-        stdout, stderr = self.RunGsUtil(cmd,
-                                        return_stdout=True,
-                                        return_stderr=True)
-        self.maxDiff = None
-        self.assertIn(
-            'alpha storage sign-url'
-            ' --format=csv[separator="\\t"](resource:label="URL", http_verb:label="HTTP Method", expiration:label="Expiration", signed_url:label="Signed URL")'
-            ' --private-key-file={}'
-            ' --headers=x-goog-resumable=start'
-            ' --duration 120s'
-            ' --http-verb POST'
-            ' --region US'
-            ' --query-params userProject=project'
-            ' --headers content-type=application/octet-stream'
-            ' gs://bucket/object'.format(key_path), stderr)
 
 
 @unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
@@ -589,3 +560,31 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           content_type='',
           billing_project='myproject')
     self.assertEquals(expected, signed_url)
+
+  def testShimTranslatesFlags(self):
+    key_contents = pkgutil.get_data('gslib', 'tests/test_data/test.json')
+    key_path = self.CreateTempFile(contents=key_contents)
+
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('signurl', [
+            '-d', '2m', '-m', 'RESUMABLE', '-r', 'US', '-b', 'project', '-c',
+            'application/octet-stream', key_path, 'gs://bucket/object'
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            'alpha storage sign-url'
+            ' --format=csv[separator="\\t"](resource:label="URL", http_verb:label="HTTP Method", expiration:label="Expiration", signed_url:label="Signed URL")'
+            ' --private-key-file={}'
+            ' --headers=x-goog-resumable=start'
+            ' --duration 120s'
+            ' --http-verb POST'
+            ' --region US'
+            ' --query-params userProject=project'
+            ' --headers content-type=application/octet-stream'
+            ' gs://bucket/object'.format(key_path), info_lines)

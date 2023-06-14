@@ -23,6 +23,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import calendar
+import copy
 from datetime import datetime
 from datetime import timedelta
 import getpass
@@ -423,6 +424,9 @@ class UrlSignCommand(Command):
   )
 
   def get_gcloud_storage_args(self):
+    original_args = copy.deepcopy(self.args)
+    original_sub_opts = copy.deepcopy(self.sub_opts)
+
     self._COMMAND_MAP.gcloud_command += ['--private-key-file=' + self.args[0]]
     self.args = self.args[1:]
 
@@ -464,7 +468,13 @@ class UrlSignCommand(Command):
       self.sub_opts[billing_project_arg_idx] = ('-b',
                                                 'userProject=' + project_value)
 
-    return super().get_gcloud_storage_args(self._COMMAND_MAP)
+    gcloud_command = super().get_gcloud_storage_args(self._COMMAND_MAP)
+
+    # Ensures dry run mode works correctly, as flag translation requires 
+    # mutating command state.
+    self.args = original_args
+    self.sub_opts = original_sub_opts
+    return gcloud_command
 
   def _ParseAndCheckSubOpts(self):
     # Default argument values
