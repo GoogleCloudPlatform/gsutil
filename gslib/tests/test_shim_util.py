@@ -1155,6 +1155,22 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
                   'https://foo_host:1234/storage/v2',
           })
 
+  def test_gcs_json_endpoint_translation_with_schema_in_host(self):
+    with _mock_boto_config({
+        'Credentials': {
+            'gs_json_host': 'http://foo_host',
+            'gs_json_port': '1234',
+            'json_api_version': 'v2',
+        }
+    }):
+      flags, env_vars = self._fake_command._translate_boto_config()
+      self.assertEqual(flags, [])
+      self.assertEqual(
+          env_vars, {
+              'CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE':
+                  'http://foo_host:1234/storage/v2',
+          })
+
   def test_gcs_json_endpoint_translation_with_missing_port(self):
     with _mock_boto_config({
         'Credentials': {
