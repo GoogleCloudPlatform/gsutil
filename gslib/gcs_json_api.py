@@ -278,6 +278,12 @@ class GcsJsonApi(CloudApi):
             'gs_json_host and gs_json_port to match your desired endpoint.' %
             gs_host)
 
+    self.http_base = 'https://'
+    if gs_json_host and \
+      (gs_json_host.startswith('http://') \
+       or gs_json_host.startswith('https://')):
+      self.http_base = ''
+
     gs_json_port = config.get('Credentials', 'gs_json_port', None)
 
     if not gs_json_port:

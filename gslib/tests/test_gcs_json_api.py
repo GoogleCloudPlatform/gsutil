@@ -63,9 +63,17 @@ class TestGcsJsonApi(testcase.GsUtilUnitTestCase):
     with SetBotoConfigForTest([('Credentials', 'gs_json_host', 'host')]):
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertEqual(client.host_base, 'host')
+      self.assertEqual(client.http_base, 'https://')
+  
+  def testSetsCustomJsonHostWithSchema(self):
+    with SetBotoConfigForTest([('Credentials', 'gs_json_host', 'http://host')]):
+      client = gcs_json_api.GcsJsonApi(None, None, None, None)
+      self.assertEqual(client.host_base, 'http://host')
+      self.assertEqual(client.http_base, '')
 
   def testSetsDefaultHost(self):
     with SetBotoConfigForTest([('Credentials', 'gs_json_host', None),
                                ('Credentials', 'gs_host', None)]):
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertEqual(client.host_base, gcs_json_api.DEFAULT_HOST)
+      self.assertEqual(client.http_base, 'https://')

@@ -254,10 +254,14 @@ def _get_gcloud_binary_path():
 def _get_gcs_json_endpoint_from_boto_config(config):
   gs_json_host = config.get('Credentials', 'gs_json_host')
   if gs_json_host:
+    http_base = '' \
+      if gs_json_host.startswith('http://') \
+        or gs_json_host.startswith('https://') \
+      else 'https://'
     gs_json_port = config.get('Credentials', 'gs_json_port')
     port = ':' + gs_json_port if gs_json_port else ''
     json_api_version = config.get('Credentials', 'json_api_version', 'v1')
-    return 'https://{}{}/storage/{}'.format(gs_json_host, port,
+    return '{}{}{}/storage/{}'.format(http_base,gs_json_host, port,
                                             json_api_version)
   return None
 
