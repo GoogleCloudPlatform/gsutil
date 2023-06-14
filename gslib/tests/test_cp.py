@@ -5030,3 +5030,5 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
             ' --print-created-message --predefined-acl publicRead {} {}'.format(
                 os.path.join('fake_dir', 'bin', 'gcloud'), fpath,
                 suri(bucket_uri)), info_lines)
+        warn_lines = '\n'.join(mock_log_handler.messages['warning'])
+        self.assertIn('Use the -m flag to enable parallelism', warn_lines)
