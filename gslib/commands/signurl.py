@@ -23,6 +23,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import calendar
+import copy
 from datetime import datetime
 from datetime import timedelta
 import getpass
@@ -404,26 +405,18 @@ class UrlSignCommand(Command):
       subcommand_help_text={},
   )
 
-  _COMMAND_MAP = GcloudStorageMap(
-      gcloud_command=[
-          'alpha', 'storage', 'sign-url',
-          '--format=csv[separator="\\t"](resource:label="URL",'
-          ' http_verb:label="HTTP Method",'
-          ' expiration:label="Expiration",'
-          ' signed_url:label="Signed URL")'
-      ],
-      flag_map={
-          '-m': GcloudStorageFlag('--http-verb'),
-          '-d': GcloudStorageFlag('--duration'),
-          '-b': GcloudStorageFlag('--query-params'),
-          '-c': GcloudStorageFlag('--headers'),
-          '-r': GcloudStorageFlag('--region'),
-          '-p': GcloudStorageFlag('--private-key-password'),
-      },
-  )
-
   def get_gcloud_storage_args(self):
-    self._COMMAND_MAP.gcloud_command += ['--private-key-file=' + self.args[0]]
+    # TODO (b/287273841): Replace `copy` with a better pattern for
+    # translating flag values.
+    original_args = copy.deepcopy(self.args)
+    original_sub_opts = copy.deepcopy(self.sub_opts)
+    gcloud_command = [
+        'alpha', 'storage', 'sign-url',
+        '--format=csv[separator="\\t"](resource:label="URL",'
+        ' http_verb:label="HTTP Method",'
+        ' expiration:label="Expiration",'
+        ' signed_url:label="Signed URL")', '--private-key-file=' + self.args[0]
+    ]
     self.args = self.args[1:]
 
     duration_arg_idx = None
@@ -452,7 +445,7 @@ class UrlSignCommand(Command):
     if http_verb_arg_idx is not None:
       if self.sub_opts[http_verb_arg_idx][1] == 'RESUMABLE':
         self.sub_opts[http_verb_arg_idx] = ('-m', 'POST')
-        self._COMMAND_MAP.gcloud_command += ['--headers=x-goog-resumable=start']
+        gcloud_command += ['--headers=x-goog-resumable=start']
 
     if content_type_arg_idx is not None:
       content_type_value = self.sub_opts[content_type_arg_idx][1]
@@ -464,7 +457,24 @@ class UrlSignCommand(Command):
       self.sub_opts[billing_project_arg_idx] = ('-b',
                                                 'userProject=' + project_value)
 
-    return super().get_gcloud_storage_args(self._COMMAND_MAP)
+    fully_translated_command = super().get_gcloud_storage_args(
+        GcloudStorageMap(gcloud_command=gcloud_command,
+                         flag_map={
+                             '-m': GcloudStorageFlag('--http-verb'),
+                             '-d': GcloudStorageFlag('--duration'),
+                             '-b': GcloudStorageFlag('--query-params'),
+                             '-c': GcloudStorageFlag('--headers'),
+                             '-r': GcloudStorageFlag('--region'),
+                             '-p': GcloudStorageFlag('--private-key-password'),
+                         }))
+
+    # Ensures dry run mode works correctly, as flag translation requires
+    # mutating command state.
+    # TODO(b/287273841): Refactor so that there's a better pattern for
+    # translating flag values.
+    self.args = original_args
+    self.sub_opts = original_sub_opts
+    return fully_translated_command
 
   def _ParseAndCheckSubOpts(self):
     # Default argument values
