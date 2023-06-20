@@ -149,7 +149,7 @@ _CH_DESCRIPTION = """
 
   Grant anyone on the internet READ access to the object example-object:
 
-    gsutil acl ch -u AllUsers:R gs://example-bucket/example-object
+    gsutil acl ch -u allUsers:R gs://example-bucket/example-object
 
   NOTE: By default, publicly readable objects are served with a Cache-Control
   header allowing such objects to be cached for 3600 seconds. If you need to
@@ -241,12 +241,12 @@ _CH_DESCRIPTION = """
   "-g power-users@example.com:O". Groups may also be specified as a full
   domain, as in "-g my-company.com:r".
 
-  AllAuthenticatedUsers and AllUsers are specified directly, as
-  in "-g AllUsers:R" or "-g AllAuthenticatedUsers:O". These are case
+  allAuthenticatedUsers and allUsers are specified directly, as
+  in "-g allUsers:R" or "-g allAuthenticatedUsers:O". These are case
   insensitive, and may be shortened to "all" and "allauth", respectively.
 
   Removing roles is specified with the -d flag and an ID, email
-  address, domain, or one of AllUsers or AllAuthenticatedUsers.
+  address, domain, or one of allUsers or allAuthenticatedUsers.
 
   Many entities' roles can be specified on the same command line, allowing
   bundled changes to be executed in a single run. This will reduce the number of
