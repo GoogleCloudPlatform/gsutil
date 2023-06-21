@@ -1,3 +1,43 @@
+Release 5.25 (release date: 2023-06-21)
+======================================
+New Features
+------------------
+- Rsync shim (#1696)
+- Adding support for HMAC auth to the shim (#1708)
+Add shim support for signurl (#1714)
+
+Bug Fixes
+------------------
+- Fix SSL missing error by updating Linux Python 3.5 version. (#1692)
+- Fix test failures on Linux after docker migration (#1702)
+- Updating to include latest boto changes, addressing #1695 (#1715)
+- Fixes failing invalid source parent test (#1716)
+- Fix dry run mode for signurl shim (#1718)
+
+Other Changes
+------------------
+- Add warning that shim does not support parallelism override (#1719)
+- Update acl.py to use snake case "allUsers" and "allAuthenticatedUsers" (#1720)
+
+
+- Release 5.24 (release date: 2023-05-17)
+======================================
+New Features
+------------------
+- Add shim support for du. (#1699)
+- Make state directory for mTLS certs configurable. (#1680)
+
+Bug Fixes
+------------------
+- mTLS: Add support for certificates without passphrase. (#1700)
+- Fix SSL missing error by updating Linux Python 3.5 version. (#1692)
+
+Other Changes
+------------------
+- Update google auth library to latest version. (#1689)
+- Several documentation updates and clarifications.
+- Several documentation updates and clarifications.
+
 Release 5.24 (release date: 2023-05-17)
 ======================================
 New Features
