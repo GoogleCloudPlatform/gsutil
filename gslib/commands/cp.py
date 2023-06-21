@@ -740,6 +740,10 @@ class CpCommand(Command):
   )
 
   def get_gcloud_storage_args(self):
+    self.logger.warn(
+        "Unlike pure gsutil, this shim won't run composite uploads and sliced"
+        ' downloads in parallel by default. Use the -m flag to enable'
+        ' parallelism (i.e. "gsutil -m cp ...").')
     ShimTranslatePredefinedAclSubOptForCopy(self.sub_opts)
     gcloud_storage_map = GcloudStorageMap(
         gcloud_command=['alpha', 'storage', 'cp'],
