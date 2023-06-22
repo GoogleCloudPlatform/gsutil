@@ -120,7 +120,7 @@ _DESCRIPTION = """
   `Usage and storage log format
   <https://cloud.google.com/storage/docs/access-logs#format>`_.
   
-  The <code>logging</code> command has two sub-commands:
+  The ``logging`` command has two sub-commands:
 """ + _SET_DESCRIPTION + _GET_DESCRIPTION + """
 
 <B>OPTIONS</B>
