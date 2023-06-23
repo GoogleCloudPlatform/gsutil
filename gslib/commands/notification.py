@@ -510,8 +510,12 @@ class NotificationCommand(Command):
           'list':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'notifications', 'list',
-                      _GCLOUD_LIST_FORMAT, '--raw'
+                      'alpha',
+                      'storage',
+                      'buckets',
+                      'notifications',
+                      'list',
+                      _GCLOUD_LIST_FORMAT,
                   ],
                   flag_map={},
                   supports_output_translation=True,

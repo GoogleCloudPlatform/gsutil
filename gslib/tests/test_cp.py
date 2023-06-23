@@ -147,8 +147,8 @@ if not IS_WINDOWS:
 # (status_code, error_prefix, error_substring)
 _GCLOUD_STORAGE_GZIP_FLAG_CONFLICT_OUTPUT = (
     2, 'ERROR',
-    'At most one of --gzip-in-flight-all | --gzip-in-flight-extensions |'
-    ' --gzip-local-all | --gzip-local-extensions can be specified')
+    'At most one of --gzip-in-flight | --gzip-in-flight-all | --gzip-local |'
+    ' --gzip-local-all can be specified')
 
 
 def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
@@ -3804,7 +3804,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(file_name='looks-zipped.gz', contents=b'foo')
     stderr = self.RunGsUtil([
-        '-D', '-d', '-h', 'content-type:application/gzip', 'cp', '-J',
+        '-DD', '-h', 'content-type:application/gzip', 'cp', '-J',
         suri(fpath),
         suri(bucket_uri, 'foo')
     ],

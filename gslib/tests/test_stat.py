@@ -191,7 +191,8 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
     # Stat object with key should return unencrypted hashes.
     with SetBotoConfigForTest([('GSUtil', 'encryption_key',
                                 TEST_ENCRYPTION_KEY1)]):
-      stdout = self.RunGsUtil(['stat', suri(object_uri)], return_stdout=True)
+      stdout = self.RunGsUtil(['stat', suri(object_uri)],
+                              return_stdout=True)
       self.assertIn(TEST_ENCRYPTION_CONTENT1_MD5, stdout)
       self.assertIn(TEST_ENCRYPTION_CONTENT1_CRC32C, stdout)
       self.assertIn(TEST_ENCRYPTION_KEY1_SHA256_B64.decode('ascii'), stdout)

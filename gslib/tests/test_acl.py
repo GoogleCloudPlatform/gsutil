@@ -83,7 +83,7 @@ class TestAcl(TestAclBase):
                             return_stderr=True,
                             expected_status=1)
     if self._use_gcloud_storage:
-      error_text = 'JSONDecodeError'
+      error_text = 'Found invalid JSON/YAML file'
     else:
       error_text = 'ArgumentException'
     self.assertIn(error_text, stderr)
@@ -96,7 +96,7 @@ class TestAcl(TestAclBase):
                             return_stderr=True,
                             expected_status=1)
     if self._use_gcloud_storage:
-      error_text = 'JSONDecodeError'
+      error_text = 'Found invalid JSON/YAML file'
     else:
       error_text = 'ArgumentException'
     self.assertIn(error_text, stderr)
@@ -110,7 +110,7 @@ class TestAcl(TestAclBase):
                             expected_status=1)
 
     if self._use_gcloud_storage:
-      self.assertIn('JSONDecodeError', stderr)
+      self.assertIn('Found invalid JSON/YAML file', stderr)
       # XML not currently supported in gcloud storage.
     else:
       self.assertIn('ArgumentException', stderr)
@@ -124,7 +124,7 @@ class TestAcl(TestAclBase):
                             return_stderr=True,
                             expected_status=1)
     if self._use_gcloud_storage:
-      self.assertIn('JSONDecodeError', stderr)
+      self.assertIn('Found invalid JSON/YAML file', stderr)
       # XML not currently supported in gcloud storage.
     else:
       self.assertIn('ArgumentException', stderr)

@@ -933,7 +933,7 @@ class TestIamSet(TestIamIntegration):
       stderr = self.RunGsUtil(['iam', 'set', inpath, self.bucket.uri],
                               return_stderr=True,
                               expected_status=1)
-      error_message = ('JSONDecodeError'
+      error_message = ('Found invalid JSON/YAML file'
                        if self._use_gcloud_storage else 'ArgumentException')
       self.assertIn(error_message, stderr)
 
@@ -979,7 +979,7 @@ class TestIamSet(TestIamIntegration):
       stderr = self.RunGsUtil(['iam', 'get', 'gs://*'],
                               return_stderr=True,
                               expected_status=1)
-      error_message = ('The specified bucket is not valid'
+      error_message = ('must match a single cloud resource'
                        if self._use_gcloud_storage else 'CommandException')
       self.assertIn(error_message, stderr)
 

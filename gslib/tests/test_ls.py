@@ -1107,7 +1107,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucketWithRetentionPolicy(
         retention_period_in_seconds=1)
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegex(stdout, r'Retention Policy\:\t*Present')
+    self.assertRegex(stdout, r'Retention Policy\:\s*Present')
     # Clearing Retention Policy on the bucket.
     self.RunGsUtil(['retention', 'clear', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
