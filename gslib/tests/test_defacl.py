@@ -85,7 +85,10 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
          suri(bucket)],
         return_stderr=True,
         expected_status=1)
-    self.assertIn('WRITER cannot be set as a default object ACL', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('WRITER is not a valid value', stderr)
+    else:
+      self.assertIn('WRITER cannot be set as a default object ACL', stderr)
 
   def testChangeDefaultAclEmpty(self):
     """Tests adding and removing an entry from an empty default object ACL."""
@@ -302,6 +305,28 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
                  os.path.join('fake_dir', 'bin', 'gcloud'),
                  'authenticatedRead'), info_lines)
 
+  @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_changes_defacls_for_user(self):
+    # The helper function this behavior relies on is tested more
+    # thoroughly in test_acl.py.
+    inpath = self.CreateTempFile()
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('defacl', [
+            'ch', '-f', '-u', 'user@example.com:R', 'gs://bucket1'
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} alpha storage buckets update'
+            ' --continue-on-error'
+            ' --add-default-object-acl-grant entity=user-user@example.com,role=READER'
+            ' gs://bucket1').format(
+                 os.path.join('fake_dir', 'bin', 'gcloud'), inpath), info_lines)
 
 class TestDefaclOldAlias(TestDefacl):
   _defacl_ch_prefix = ['chdefacl']
