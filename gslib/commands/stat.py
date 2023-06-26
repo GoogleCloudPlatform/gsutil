@@ -130,7 +130,8 @@ class StatCommand(Command):
           'storage',
           'objects',
           'list',
-          '--stat'
+          '--fetch-encrypted-object-hashes',
+          '--stat',
       ],
       flag_map={},
   )

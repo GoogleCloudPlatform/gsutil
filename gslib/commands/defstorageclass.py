@@ -86,7 +86,9 @@ SHIM_GET_COMMAND_MAP = GcloudStorageMap(
     flag_map={},
 )
 SHIM_SET_COMMAND_MAP = GcloudStorageMap(
-    gcloud_command='alpha storage buckets update --default-storage-class',
+    gcloud_command=[
+        'alpha', 'storage', 'buckets', 'update', '--default-storage-class'
+    ],
     flag_map={},
 )
 
