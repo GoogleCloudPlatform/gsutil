@@ -348,7 +348,7 @@ class TestAcl(TestAclBase):
     self.assertNotRegex(json_text, test_regex)
 
   def testAclChangeWithGroupEmail(self):
-    test_regex = self._MakeScopeRegex('READER', 'group',
+    test_regex = self._MakeScopeRegex('OWNER', 'group',
                                       self.GROUP_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(self.sample_uri)],
                                return_stdout=True)
@@ -357,7 +357,7 @@ class TestAcl(TestAclBase):
     self.RunGsUtil(
         self._ch_acl_prefix +
         ['-g', self.GROUP_TEST_ADDRESS +
-         ':r', suri(self.sample_uri)])
+         ':fc', suri(self.sample_uri)])
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(self.sample_uri)],
                                return_stdout=True)
     self.assertRegex(json_text, test_regex)

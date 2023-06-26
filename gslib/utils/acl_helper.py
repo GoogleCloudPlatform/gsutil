@@ -189,16 +189,12 @@ class AclChange(object):
 
   def GetEntity(self):
     """Gets an appropriate entity string for an ACL grant."""
-    if self.scope_type == 'UserById':
+    if self.scope_type in ('UserById', 'UserByEmail'):
       return self.user_entity_prefix + self.identifier
-    elif self.scope_type == 'GroupById':
+    elif self.scope_type in ('GroupById', 'GroupByEmail'):
       return self.group_entity_prefix + self.identifier
     elif self.scope_type == 'Project':
       return self.project_entity_prefix + self.identifier
-    elif self.scope_type == 'UserByEmail':
-      return self.user_entity_prefix + self.identifier
-    elif self.scope_type == 'GroupByEmail':
-      return self.group_entity_prefix + self.identifier
     elif self.scope_type == 'GroupByDomain':
       return self.domain_entity_prefix + self.identifier
     elif self.scope_type == 'AllAuthenticatedUsers':
@@ -213,15 +209,9 @@ class AclChange(object):
     """Adds an entry to current_acl."""
     entity = self.GetEntity()
     entry = entry_class(role=self.perm, entity=entity)
-    if self.scope_type == 'UserById':
+    if self.scope_type in ('UserById', 'GroupById', 'Project'):
       entry.entityId = self.identifier
-    elif self.scope_type == 'GroupById':
-      entry.entityId = self.identifier
-    elif self.scope_type == 'Project':
-      entry.entityId = self.identifier
-    elif self.scope_type == 'UserByEmail':
-      entry.email = self.identifier
-    elif self.scope_type == 'GroupByEmail':
+    elif self.scope_type in ('UserByEmail', 'GroupByEmail'):
       entry.email = self.identifier
     elif self.scope_type == 'GroupByDomain':
       entry.domain = self.identifier
@@ -336,7 +326,7 @@ def translate_sub_opts_for_shim(sub_opts):
       '-p': ChangeType.PROJECT,
       '-u': ChangeType.USER,
   }
-  for n, (flag, value) in enumerate(sub_opts):
+  for (flag, value) in sub_opts:
     if flag in scope_type_from_flag:
       change = AclChange(value, scope_type=scope_type_from_flag[flag])
       new_value = 'entity={},role={}'.format(change.GetEntity(), change.perm)

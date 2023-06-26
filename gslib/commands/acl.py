@@ -334,7 +334,7 @@ class AclCommand(Command):
   )
 
   def _get_shim_command_group(self):
-    object_or_bucket_urls = [StorageUrlFromString(i) for i in self.args]
+    object_or_bucket_urls = [StorageUrlFromString(url) for url in self.args]
     recurse = False
     for (flag_key, _) in self.sub_opts:
       if flag_key in ('-r', '-R'):
