@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 from collections import defaultdict
 import json
 import os
+import subprocess
 
 from gslib.commands import iam
 from gslib.exception import CommandException
@@ -227,106 +228,110 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
 
   def test_patch_bindings_grant(self):
     """Tests patching a grant binding."""
-    base = [
+    base_list = [
         bvle(role='a', members=['user:foo@bar.com']),
         bvle(role='b', members=['user:foo@bar.com']),
         bvle(role='c', members=['user:foo@bar.com']),
     ]
-    diff = [
+    base = BindingsToDict(base_list)
+    diff_list = [
         bvle(role='d', members=['user:foo@bar.com']),
     ]
-    expected = base + diff
-    res = PatchBindings(base, BindingsTuple(True, diff))
-    self.assertTrue(IsEqualBindings(res, expected))
+    diff = BindingsToDict(diff_list)
+    expected = BindingsToDict(base_list + diff_list)
+    res = PatchBindings(base, diff, True)
+    self.assertEqual(res, expected)
 
   def test_patch_bindings_remove(self):
     """Tests patching a remove binding."""
-    base = [
+    base = BindingsToDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
-    diff = [
+    ])
+    diff = BindingsToDict([
         bvle(members=['user:foo@bar.com'], role='a'),
-    ]
-    expected = [
+    ])
+    expected = BindingsToDict([
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
+    ])
 
-    res = PatchBindings(base, BindingsTuple(False, diff))
-    self.assertTrue(IsEqualBindings(res, expected))
+    res = PatchBindings(base, diff, False)
+    self.assertEqual(res, expected)
 
   def test_patch_bindings_remove_all(self):
     """Tests removing all roles from a member."""
-    base = [
+    base = BindingsToDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
-    diff = [
+    ])
+    diff = BindingsToDict([
         bvle(members=['user:foo@bar.com'], role=''),
-    ]
-    res = PatchBindings(base, BindingsTuple(False, diff))
-    self.assertEquals(res, [])
+    ])
+    res = PatchBindings(base, diff, False)
+    self.assertEqual(res, {})
 
-    diff = [
+    diff = BindingsToDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
+    ])
 
-    res = PatchBindings(base, BindingsTuple(False, diff))
-    self.assertEquals(res, [])
+    res = PatchBindings(base, diff, False)
+    self.assertEqual(res, {})
 
   def test_patch_bindings_multiple_users(self):
     """Tests expected behavior when multiple users exist."""
-    expected = [
+    expected = BindingsToDict([
         bvle(members=['user:fii@bar.com'], role='b'),
-    ]
-    base = [
+    ])
+    base = BindingsToDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com', 'user:fii@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
-    diff = [
+    ])
+    diff = BindingsToDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
-    res = PatchBindings(base, BindingsTuple(False, diff))
-    self.assertTrue(IsEqualBindings(res, expected))
+    ])
+    res = PatchBindings(base, diff, False)
+    self.assertEqual(res, expected)
 
   def test_patch_bindings_grant_all_users(self):
     """Tests a public member grant."""
-    base = [
+    base = BindingsToDict([
         bvle(role='a', members=['user:foo@bar.com']),
         bvle(role='b', members=['user:foo@bar.com']),
         bvle(role='c', members=['user:foo@bar.com']),
-    ]
-    diff = [
+    ])
+    diff = BindingsToDict([
         bvle(role='a', members=['allUsers']),
-    ]
-    expected = [
+    ])
+    expected = BindingsToDict([
         bvle(role='a', members=['allUsers', 'user:foo@bar.com']),
         bvle(role='b', members=['user:foo@bar.com']),
         bvle(role='c', members=['user:foo@bar.com']),
-    ]
+    ])
 
-    res = PatchBindings(base, BindingsTuple(True, diff))
-    self.assertTrue(IsEqualBindings(res, expected))
+    res = PatchBindings(base, diff, True)
+    self.assertEqual(res, expected)
 
   def test_patch_bindings_public_member_overwrite(self):
     """Tests public member vs. public member interaction."""
-    base = [
+    base_list = [
         bvle(role='a', members=['allUsers']),
     ]
-    diff = [
+    base = BindingsToDict(base_list)
+    diff_list = [
         bvle(role='a', members=['allAuthenticatedUsers']),
     ]
+    diff = BindingsToDict(diff_list)
 
-    res = PatchBindings(base, BindingsTuple(True, diff))
-    self.assertTrue(IsEqualBindings(res, base + diff))
+    res = PatchBindings(base, diff, True)
+    self.assertEqual(res, BindingsToDict(base_list + diff_list))
 
   def test_valid_public_member_single_role(self):
     """Tests parsing single role (case insensitive)."""
@@ -708,7 +713,10 @@ class TestIamCh(TestIamIntegration):
     ],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('BucketNotFoundException', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('not found: 404.', stderr)
+    else:
+      self.assertIn('BucketNotFoundException', stderr)
 
     bucket_iam_string = self.RunGsUtil(['iam', 'get', self.bucket.uri],
                                        return_stdout=True)
@@ -727,7 +735,10 @@ class TestIamCh(TestIamIntegration):
     ],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('CommandException', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('not found: 404.', stderr)
+    else:
+      self.assertIn('CommandException', stderr)
 
     bucket_iam_string = self.RunGsUtil(['iam', 'get', self.bucket.uri],
                                        return_stdout=True)
@@ -749,7 +760,10 @@ class TestIamCh(TestIamIntegration):
       ],
                               return_stderr=True,
                               expected_status=1)
-      self.assertIn('BucketNotFoundException', stderr)
+      if self._use_gcloud_storage:
+        self.assertIn('not found: 404.', stderr)
+      else:
+        self.assertIn('BucketNotFoundException', stderr)
 
     # TODO(b/135780661): Remove retry after bug resolved
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -934,7 +948,7 @@ class TestIamSet(TestIamIntegration):
       stderr = self.RunGsUtil(['iam', 'set', inpath, self.bucket.uri],
                               return_stderr=True,
                               expected_status=1)
-      error_message = ('Found invalid JSON/YAML file'
+      error_message = ('Found invalid JSON/YAML'
                        if self._use_gcloud_storage else 'ArgumentException')
       self.assertIn(error_message, stderr)
 
@@ -1556,3 +1570,486 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
              ' --format=json --etag= gs://b policy-file').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
+
+  def _get_run_call(self,
+                    command,
+                    env=mock.ANY,
+                    stdin=None,
+                    stderr=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    text=True):
+    return mock.call(command,
+                     env=env,
+                     input=stdin,
+                     stderr=stderr,
+                     stdout=stdout,
+                     text=text)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_adds_updates_and_deletes_bucket_policies(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'preserved-role',
+            'members': ['allUsers'],
+        }, {
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers', 'user:deleted-user@example.com'],
+        }, {
+            'role': 'roles/storage.deleted-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'preserved-role',
+            'members': ['allUsers'],
+        }, {
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      get_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy))
+      set_process = subprocess.CompletedProcess(args=[], returncode=0)
+      mock_run.side_effect = [get_process, set_process]
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand('iam', [
+            'ch', 'allAuthenticatedUsers:modified-role', '-d',
+            'user:deleted-user@example.com', '-d', 'allUsers:deleted-role',
+            'gs://b'
+        ])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'buckets',
+              'get-iam-policy', 'gs://b/', '--format=json'
+          ]),
+          self._get_run_call([
+              'fake_dir/bin/gcloud',
+              'alpha',
+              'storage',
+              'buckets',
+              'set-iam-policy',
+              'gs://b/',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy))
+      ])
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_updates_bucket_policies_for_multiple_urls(self, mock_run):
+    original_policy1 = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['user:test-user1@example.com'],
+        }]
+    }
+    original_policy2 = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['user:test-user2@example.com'],
+        }]
+    }
+    new_policy1 = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'user:test-user1@example.com'],
+        }]
+    }
+    new_policy2 = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'user:test-user2@example.com'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      get_process1 = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy1))
+      get_process2 = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy2))
+      set_process = subprocess.CompletedProcess(args=[], returncode=0)
+      mock_run.side_effect = [
+          get_process1, set_process, get_process2, set_process
+      ]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand(
+            'iam',
+            ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b1', 'gs://b2'])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'buckets',
+              'get-iam-policy', 'gs://b1/', '--format=json'
+          ]),
+          self._get_run_call([
+              'fake_dir/bin/gcloud',
+              'alpha',
+              'storage',
+              'buckets',
+              'set-iam-policy',
+              'gs://b1/',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy1)),
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'buckets',
+              'get-iam-policy', 'gs://b2/', '--format=json'
+          ]),
+          self._get_run_call([
+              'fake_dir/bin/gcloud',
+              'alpha',
+              'storage',
+              'buckets',
+              'set-iam-policy',
+              'gs://b2/',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy2))
+      ])
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_updates_object_policies(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout='gs://b/o')
+      get_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy))
+      set_process = subprocess.CompletedProcess(args=[], returncode=0)
+      mock_run.side_effect = [ls_process, get_process, set_process]
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand(
+            'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call(
+              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o']),
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
+              'get-iam-policy', 'gs://b/o', '--format=json'
+          ]),
+          self._get_run_call([
+              'fake_dir/bin/gcloud',
+              'alpha',
+              'storage',
+              'objects',
+              'set-iam-policy',
+              'gs://b/o',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy))
+      ])
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_expands_urls_with_recursion_and_ignores_container_headers(
+      self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    ls_output = ('gs://b/dir/:\n'
+                 'gs://b/dir/:\n'
+                 'gs://b/dir/o\n'
+                 '\n'
+                 'gs://b/dir2/:\n'
+                 'gs://b/dir2/o\n')
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout=ls_output)
+      get_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy))
+      set_process = subprocess.CompletedProcess(args=[], returncode=0)
+      mock_run.side_effect = [ls_process] + [get_process, set_process] * 3
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand(
+            'iam',
+            ['ch', '-r', 'allAuthenticatedUsers:modified-role', 'gs://b'])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', '-r', 'gs://b/'
+          ]),
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
+              'get-iam-policy', 'gs://b/dir/:', '--format=json'
+          ]),
+          self._get_run_call([
+              'fake_dir/bin/gcloud',
+              'alpha',
+              'storage',
+              'objects',
+              'set-iam-policy',
+              'gs://b/dir/:',
+              '-',
+          ],
+                             stdin=mock.ANY),
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
+              'get-iam-policy', 'gs://b/dir/o', '--format=json'
+          ]),
+          self._get_run_call([
+              'fake_dir/bin/gcloud',
+              'alpha',
+              'storage',
+              'objects',
+              'set-iam-policy',
+              'gs://b/dir/o',
+              '-',
+          ],
+                             stdin=mock.ANY),
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
+              'get-iam-policy', 'gs://b/dir2/o', '--format=json'
+          ]),
+          self._get_run_call([
+              'fake_dir/bin/gcloud',
+              'alpha',
+              'storage',
+              'objects',
+              'set-iam-policy',
+              'gs://b/dir2/o',
+              '-',
+          ],
+                             stdin=mock.ANY)
+      ])
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_raises_ls_error(self, mock_run):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=1,
+                                               stderr='An error.')
+      mock_run.side_effect = [ls_process]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with self.assertRaisesRegex(CommandException, 'An error.'):
+          self.RunCommand(
+              'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
+        self.assertEqual(mock_run.call_count, 1)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_raises_get_error(self, mock_run):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout='gs://b/o')
+      get_process = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='An error.')
+      mock_run.side_effect = [ls_process, get_process]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with self.assertRaisesRegex(CommandException, 'An error.'):
+          self.RunCommand(
+              'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
+        self.assertEqual(mock_run.call_count, 2)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_raises_set_error(self, mock_run):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout='gs://b/o')
+      get_process = subprocess.CompletedProcess(args=[],
+                                                returncode=0,
+                                                stdout='{"bindings": []}')
+      set_process = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='An error.')
+      mock_run.side_effect = [ls_process, get_process, set_process]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with self.assertRaisesRegex(CommandException, 'An error.'):
+          self.RunCommand(
+              'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
+        self.assertEqual(mock_run.call_count, 3)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_continues_on_ls_error(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=1,
+                                               stderr='An error.')
+      ls_process2 = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stdout='Another error.')
+      mock_run.side_effect = [ls_process, ls_process2]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand('iam', [
+            'ch', '-f', 'allAuthenticatedUsers:modified-role', 'gs://b/o1',
+            'gs://b/o2'
+        ])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call(
+              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o1']),
+          self._get_run_call(
+              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o2']),
+      ])
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_continues_on_get_error(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout='gs://b/o1')
+      get_process = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='An error.')
+      ls_process2 = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stdout='Another error.')
+      mock_run.side_effect = [ls_process, get_process, ls_process2]
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand('iam', [
+            'ch', '-f', 'allAuthenticatedUsers:modified-role', 'gs://b/o1',
+            'gs://b/o2'
+        ])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call(
+              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o1']),
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
+              'get-iam-policy', 'gs://b/o1', '--format=json'
+          ]),
+          self._get_run_call(
+              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o2']),
+      ])
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_continues_on_set_error(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout='gs://b/o1')
+      get_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy))
+      set_process = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='An error.')
+      ls_process2 = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stdout='Another error.')
+      mock_run.side_effect = [ls_process, get_process, set_process, ls_process2]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand('iam', [
+            'ch', '-f', 'allAuthenticatedUsers:modified-role', 'gs://b/o1',
+            'gs://b/o2'
+        ])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call(
+              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o1']),
+          self._get_run_call([
+              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
+              'get-iam-policy', 'gs://b/o1', '--format=json'
+          ]),
+          self._get_run_call([
+              'fake_dir/bin/gcloud',
+              'alpha',
+              'storage',
+              'objects',
+              'set-iam-policy',
+              'gs://b/o1',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy)),
+          self._get_run_call(
+              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o2']),
+      ])
