@@ -1144,17 +1144,16 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
       }):
         # Non-exhaustive set of strings allowed by gsutil's regex.
         for identifier in ['all', 'allUsers', 'AllUsers']:
-          with self.subTest(identifier=identifier):
-            mock_log_handler = self.RunCommand(
-                'acl', ['ch', '-g', identifier + ':O', 'gs://bucket1/o'],
-                return_log_handler=True)
-            info_lines = '\n'.join(mock_log_handler.messages['info'])
-            self.assertIn(
-                ('Gcloud Storage Command: {} alpha storage objects update'
-                 ' --add-acl-grant entity=allUsers,role=OWNER'
-                 ' gs://bucket1/o').format(
-                     os.path.join('fake_dir', 'bin', 'gcloud'),
-                     inpath), info_lines)
+          mock_log_handler = self.RunCommand(
+              'acl', ['ch', '-g', identifier + ':O', 'gs://bucket1/o'],
+              return_log_handler=True)
+          info_lines = '\n'.join(mock_log_handler.messages['info'])
+          self.assertIn(
+              ('Gcloud Storage Command: {} alpha storage objects update'
+                ' --add-acl-grant entity=allUsers,role=OWNER'
+                ' gs://bucket1/o').format(
+                    os.path.join('fake_dir', 'bin', 'gcloud'),
+                    inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_changes_acls_for_all_authenticated_users(self):
@@ -1169,17 +1168,16 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         for identifier in [
             'allauth', 'allAuthenticatedUsers', 'AllAuthenticatedUsers'
         ]:
-          with self.subTest(identifier=identifier):
-            mock_log_handler = self.RunCommand(
-                'acl', ['ch', '-g', identifier + ':O', 'gs://bucket1/o'],
-                return_log_handler=True)
-            info_lines = '\n'.join(mock_log_handler.messages['info'])
-            self.assertIn(
-                ('Gcloud Storage Command: {} alpha storage objects update'
-                 ' --add-acl-grant entity=allAuthenticatedUsers,role=OWNER'
-                 ' gs://bucket1/o').format(
-                     os.path.join('fake_dir', 'bin', 'gcloud'),
-                     inpath), info_lines)
+          mock_log_handler = self.RunCommand(
+              'acl', ['ch', '-g', identifier + ':O', 'gs://bucket1/o'],
+              return_log_handler=True)
+          info_lines = '\n'.join(mock_log_handler.messages['info'])
+          self.assertIn(
+              ('Gcloud Storage Command: {} alpha storage objects update'
+                ' --add-acl-grant entity=allAuthenticatedUsers,role=OWNER'
+                ' gs://bucket1/o').format(
+                    os.path.join('fake_dir', 'bin', 'gcloud'),
+                    inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_deletes_acls(self):
@@ -1215,17 +1213,16 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
       }):
         # Non-exhaustive set of strings allowed by gsutil's regex.
         for identifier in ['all', 'allUsers', 'AllUsers']:
-          with self.subTest(identifier=identifier):
-            mock_log_handler = self.RunCommand(
-                'acl', ['ch', '-d', identifier, 'gs://bucket1/o'],
-                return_log_handler=True)
-            info_lines = '\n'.join(mock_log_handler.messages['info'])
-            self.assertIn(
-                ('Gcloud Storage Command: {} alpha storage objects update'
-                 ' --remove-acl-grant AllUsers'
-                 ' gs://bucket1/o').format(
-                     os.path.join('fake_dir', 'bin', 'gcloud'),
-                     inpath), info_lines)
+          mock_log_handler = self.RunCommand(
+              'acl', ['ch', '-d', identifier, 'gs://bucket1/o'],
+              return_log_handler=True)
+          info_lines = '\n'.join(mock_log_handler.messages['info'])
+          self.assertIn(
+              ('Gcloud Storage Command: {} alpha storage objects update'
+                ' --remove-acl-grant AllUsers'
+                ' gs://bucket1/o').format(
+                    os.path.join('fake_dir', 'bin', 'gcloud'),
+                    inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_removes_acls_for_all_authenticated_users(self):
@@ -1240,14 +1237,13 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         for identifier in [
             'allauth', 'allAuthenticatedUsers', 'AllAuthenticatedUsers'
         ]:
-          with self.subTest(identifier=identifier):
-            mock_log_handler = self.RunCommand(
-                'acl', ['ch', '-d', identifier, 'gs://bucket1/o'],
-                return_log_handler=True)
-            info_lines = '\n'.join(mock_log_handler.messages['info'])
-            self.assertIn(
-                ('Gcloud Storage Command: {} alpha storage objects update'
-                 ' --remove-acl-grant AllAuthenticatedUsers'
-                 ' gs://bucket1/o').format(
-                     os.path.join('fake_dir', 'bin', 'gcloud'),
-                     inpath), info_lines)
+          mock_log_handler = self.RunCommand(
+              'acl', ['ch', '-d', identifier, 'gs://bucket1/o'],
+              return_log_handler=True)
+          info_lines = '\n'.join(mock_log_handler.messages['info'])
+          self.assertIn(
+              ('Gcloud Storage Command: {} alpha storage objects update'
+                ' --remove-acl-grant AllAuthenticatedUsers'
+                ' gs://bucket1/o').format(
+                    os.path.join('fake_dir', 'bin', 'gcloud'),
+                    inpath), info_lines)
