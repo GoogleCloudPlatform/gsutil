@@ -215,13 +215,15 @@ _CREATE_COMMAND_FORMAT = ('--format=value[separator="' +
                           'format("Secret:      {}", secret))')
 _DESCRIBE_COMMAND_FORMAT = (
     '--format=value[separator="' + shim_util.get_format_flag_newline() +
-    '"](format("Access ID {}:", accessId),' + 'format("\tState: {}", state),' +
-    'format("\tService Account: {}", serviceAccountEmail),' +
-    'format("\tProject: {}", projectId),' + 'format("\tTime Created: {}",' +
+    '"](format("Access ID {}:", accessId),' +
+    'format("\tState:                 {}", state),' +
+    'format("\tService Account:       {}", serviceAccountEmail),' +
+    'format("\tProject:               {}", projectId),' +
+    'format("\tTime Created:          {}",' +
     ' timeCreated.date(format="%a %d %b %Y %H:%M:%S GMT")),' +
-    'format("\tTime Last Updated: {}",' +
+    'format("\tTime Last Updated:     {}",' +
     ' updated.date(format="%a %d %b %Y %H:%M:%S GMT")),' +
-    'format("\tEtag: {}", etag))')
+    'format("\tEtag:                  {}", etag))')
 
 _LIST_COMMAND_SHORT_FORMAT = (
     '--format=table[no-heading](format("{} ", accessId),'
