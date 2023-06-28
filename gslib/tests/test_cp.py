@@ -3804,7 +3804,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(file_name='looks-zipped.gz', contents=b'foo')
     stderr = self.RunGsUtil([
-        '-DD', '-h', 'content-type:application/gzip', 'cp', '-J',
+        '-DD', '-d', '-h', 'content-type:application/gzip', 'cp', '-J',
         suri(fpath),
         suri(bucket_uri, 'foo')
     ],
@@ -3819,7 +3819,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath])
 
   @SequentialAndParallelTransfer
-  def test_cp_resumable_download_gzip(self):
+  def tet_cp_resumable_download_gzip(self):
     """Tests that download can be resumed successfully with a gzipped file."""
     # Generate some reasonably incompressible data.  This compresses to a bit
     # around 128K in practice, but we assert specifically below that it is

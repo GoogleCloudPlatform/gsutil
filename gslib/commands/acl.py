@@ -333,6 +333,20 @@ class AclCommand(Command):
       },
   )
 
+  def _get_shim_command_group(self):
+    object_or_bucket_urls = [StorageUrlFromString(url) for url in self.args]
+    recurse = False
+    for (flag_key, _) in self.sub_opts:
+      if flag_key in ('-r', '-R'):
+        recurse = True
+        break
+    RaiseErrorIfUrlsAreMixOfBucketsAndObjects(object_or_bucket_urls, recurse)
+
+    if object_or_bucket_urls[0].IsBucket() and not recurse:
+      return 'buckets'
+    else:
+      return 'objects'
+
   def get_gcloud_storage_args(self):
     sub_command = self.args.pop(0)
     if sub_command == 'get':
@@ -362,22 +376,30 @@ class AclCommand(Command):
           predefined_acl = acl_file_or_predefined_acl
         acl_flag = '--predefined-acl=' + predefined_acl
 
-      object_or_bucket_urls = [StorageUrlFromString(i) for i in self.args]
-      recurse = False
-      for (flag_key, _) in self.sub_opts:
-        if flag_key in ('-r', '-R'):
-          recurse = True
-          break
-      RaiseErrorIfUrlsAreMixOfBucketsAndObjects(object_or_bucket_urls, recurse)
+      command_group = self._get_shim_command_group()
 
-      if object_or_bucket_urls[0].IsBucket() and not recurse:
-        command_group = 'buckets'
-      else:
-        command_group = 'objects'
       gcloud_storage_map = GcloudStorageMap(
           gcloud_command=['alpha', 'storage', command_group, 'update'] +
           [acl_flag],
           flag_map={
+              '-a': GcloudStorageFlag('--all-versions'),
+              '-f': GcloudStorageFlag('--continue-on-error'),
+              '-R': GcloudStorageFlag('--recursive'),
+              '-r': GcloudStorageFlag('--recursive'),
+          })
+
+    elif sub_command == 'ch':
+      self.ParseSubOpts()
+      self.sub_opts = acl_helper.translate_sub_opts_for_shim(self.sub_opts)
+      command_group = self._get_shim_command_group()
+
+      gcloud_storage_map = GcloudStorageMap(
+          gcloud_command=['alpha', 'storage', command_group, 'update'],
+          flag_map={
+              '-g': GcloudStorageFlag('--add-acl-grant'),
+              '-p': GcloudStorageFlag('--add-acl-grant'),
+              '-u': GcloudStorageFlag('--add-acl-grant'),
+              '-d': GcloudStorageFlag('--remove-acl-grant'),
               '-a': GcloudStorageFlag('--all-versions'),
               '-f': GcloudStorageFlag('--continue-on-error'),
               '-R': GcloudStorageFlag('--recursive'),

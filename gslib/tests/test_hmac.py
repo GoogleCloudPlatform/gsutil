@@ -46,7 +46,7 @@ SERVICE_ACCOUNT = _LoadServiceAccount('test_hmac_service_account')
 ALT_SERVICE_ACCOUNT = _LoadServiceAccount('test_hmac_alt_service_account')
 LIST_SERVICE_ACCOUNT = _LoadServiceAccount('test_hmac_list_service_account')
 
-MAX_SA_HMAC_KEYS = 5
+MAX_SA_HMAC_KEYS = 10
 
 
 class KeyLimitError(Exception):

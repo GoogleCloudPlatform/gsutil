@@ -40,6 +40,7 @@ from gslib.third_party.storage_apitools import storage_v1_messages as apitools_m
 from gslib.utils import acl_helper
 from gslib.utils.constants import NO_MAX
 from gslib.utils.retry_util import Retry
+from gslib.utils.shim_util import GcloudStorageFlag
 from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.translation_helper import PRIVATE_DEFAULT_OBJ_ACL
 
@@ -231,6 +232,21 @@ class DefAclCommand(Command):
             ],
             flag_map={},
         )
+
+    elif sub_command == 'ch':
+      self.ParseSubOpts()
+      self.sub_opts = acl_helper.translate_sub_opts_for_shim(self.sub_opts)
+
+      gcloud_storage_map = GcloudStorageMap(
+          gcloud_command=['alpha', 'storage', 'buckets', 'update'],
+          flag_map={
+              '-g': GcloudStorageFlag('--add-default-object-acl-grant'),
+              '-p': GcloudStorageFlag('--add-default-object-acl-grant'),
+              '-u': GcloudStorageFlag('--add-default-object-acl-grant'),
+              '-d': GcloudStorageFlag('--remove-default-object-acl-grant'),
+              '-f': GcloudStorageFlag('--continue-on-error'),
+          })
+
     return super().get_gcloud_storage_args(gcloud_storage_map)
 
   def _CalculateUrlsStartArg(self):
