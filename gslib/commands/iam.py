@@ -467,7 +467,7 @@ class IamCommand(Command):
 
         set_process = self._run_gcloud_subprocess(
             ['alpha', 'storage', resource_type, 'set-iam-policy', url, '-'],
-            stdin=json.dumps(policy))
+            stdin=json.dumps(policy, sort_keys=True))
         if set_process.returncode:
           return_code = 1
 

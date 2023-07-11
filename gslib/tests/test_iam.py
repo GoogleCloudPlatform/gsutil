@@ -1638,7 +1638,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
               'gs://b/',
               '-',
           ],
-                             stdin=json.dumps(new_policy))
+                             stdin=json.dumps(new_policy, sort_keys=True))
       ])
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
@@ -1700,7 +1700,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
               'gs://b1/',
               '-',
           ],
-                             stdin=json.dumps(new_policy1)),
+                             stdin=json.dumps(new_policy1, sort_keys=True)),
           self._get_run_call([
               'fake_dir/bin/gcloud', 'alpha', 'storage', 'buckets',
               'get-iam-policy', 'gs://b2/', '--format=json'
@@ -1714,7 +1714,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
               'gs://b2/',
               '-',
           ],
-                             stdin=json.dumps(new_policy2))
+                             stdin=json.dumps(new_policy2, sort_keys=True))
       ])
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
@@ -1763,7 +1763,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
               'gs://b/o',
               '-',
           ],
-                             stdin=json.dumps(new_policy))
+                             stdin=json.dumps(new_policy, sort_keys=True))
       ])
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
@@ -2049,7 +2049,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
               'gs://b/o1',
               '-',
           ],
-                             stdin=json.dumps(new_policy)),
+                             stdin=json.dumps(new_policy, sort_keys=True)),
           self._get_run_call(
               ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o2']),
       ])
