@@ -71,6 +71,7 @@ from gslib.utils.constants import UTF8
 from gslib.utils.ls_helper import PrintFullInfoAboutObject
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils import shim_util
 
 from six import add_move, MovedModule
 
@@ -204,7 +205,7 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
             'Gcloud Storage Command: {} alpha storage ls'
             ' --fetch-encrypted-object-hashes'
             ' -r -r -l -L -b -e -a --readable-sizes --project  foo'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud')),
+                shim_util._get_gcloud_binary_path('fake_dir')),
             mock_log_handler.messages['info'])
 
 

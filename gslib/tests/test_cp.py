@@ -123,6 +123,7 @@ from gslib.utils.unit_util import HumanReadableToBytes
 from gslib.utils.unit_util import MakeHumanReadable
 from gslib.utils.unit_util import ONE_KIB
 from gslib.utils.unit_util import ONE_MIB
+from gslib.utils import shim_util
 
 import six
 from six.moves import http_client
@@ -5028,7 +5029,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
             'Gcloud Storage Command: {} alpha storage cp'
             ' --ignore-symlinks --no-clobber -r -r --storage-class some-class'
             ' --print-created-message --predefined-acl publicRead {} {}'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud'), fpath,
+                shim_util._get_gcloud_binary_path('fake_dir'), fpath,
                 suri(bucket_uri)), info_lines)
         warn_lines = '\n'.join(mock_log_handler.messages['warning'])
         self.assertIn('Use the -m flag to enable parallelism', warn_lines)

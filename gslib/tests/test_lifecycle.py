@@ -34,6 +34,7 @@ from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 from gslib.utils.retry_util import Retry
 from gslib.utils.translation_helper import LifecycleTranslation
+from gslib.utils import shim_util
 
 
 @SkipForS3('Lifecycle command is only supported for gs:// URLs')
@@ -290,7 +291,7 @@ class TestLifecycleUnitTests(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets'
              ' describe --format=multi(lifecycle:format=json)'
-             ' --raw {}').format(os.path.join('fake_dir', 'bin', 'gcloud'),
+             ' --raw {}').format(shim_util._get_gcloud_binary_path('fake_dir'),
                                  suri(bucket_uri)), info_lines)
 
   @mock.patch('gslib.commands.lifecycle.LifecycleCommand._SetLifecycleConfig',
@@ -314,5 +315,5 @@ class TestLifecycleUnitTests(testcase.GsUtilUnitTestCase):
         self.assertIn(('Gcloud Storage Command: {} alpha storage buckets'
                        ' update --lifecycle-file=fake-lifecycle-config.json'
                        ' gs://fake-bucket1 gs://fake-bucket2').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud')),
+                           shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)

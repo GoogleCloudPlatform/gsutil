@@ -29,6 +29,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 
 WEBCFG_FULL = json.loads('{"notFoundPage": "404", "mainPageSuffix": "main"}\n')
 WEBCFG_MAIN = json.loads('{"mainPageSuffix": "main"}\n')
@@ -125,7 +126,7 @@ class TestWebShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage buckets describe'
              ' --format=multi(website:format=json)'
              ' --raw gs://bucket').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(web.WebCommand, '_SetWeb', new=mock.Mock())
   def test_shim_translates_set_command(self):
@@ -148,7 +149,7 @@ class TestWebShim(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets update'
              ' --web-error-page 404 --web-main-page-suffix main gs://bucket'
-            ).format(os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+            ).format(shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(web.WebCommand, '_SetWeb', new=mock.Mock())
   def test_shim_translates_clear_command(self):
@@ -161,11 +162,11 @@ class TestWebShim(testcase.GsUtilUnitTestCase):
         mock_log_handler = self.RunCommand('web', ['set', 'gs://bucket'],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage buckets update'
-             ' --clear-web-error-page --clear-web-main-page-suffix'
-             ' gs://bucket').format(os.path.join('fake_dir', 'bin',
-                                                 'gcloud')), info_lines)
+        self.assertIn(('Gcloud Storage Command: {} alpha storage buckets update'
+                       ' --clear-web-error-page --clear-web-main-page-suffix'
+                       ' gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
 
 
 class TestWebOldAlias(TestWeb):

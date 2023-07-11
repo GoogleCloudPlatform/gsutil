@@ -35,6 +35,7 @@ from gslib.tests.util import unittest
 from gslib.utils.boto_util import UsingCrcmodExtension
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils import shim_util
 
 
 class TestMvUnitTests(testcase.GsUtilUnitTestCase):
@@ -123,7 +124,7 @@ class TestMvUnitTests(testcase.GsUtilUnitTestCase):
         self.assertIn(
             'Gcloud Storage Command: {} alpha storage mv'
             ' --predefined-acl publicRead {} {}'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud'), fpath,
+                shim_util._get_gcloud_binary_path('fake_dir'), fpath,
                 suri(bucket_uri)), info_lines)
 
 

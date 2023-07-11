@@ -30,6 +30,7 @@ from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 
 from six import add_move, MovedModule
 
@@ -104,7 +105,7 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} storage'
              ' buckets list --format=value[separator=": "]'
              '(format("gs://{}", name),rpo.yesno(no="None"))'
-             ' --raw').format(os.path.join('fake_dir', 'bin', 'gcloud'),
+             ' --raw').format(shim_util._get_gcloud_binary_path('fake_dir'),
                               r'{}'), info_lines)
 
   def test_shim_translates_recovery_point_objective_set_command(self):
@@ -125,7 +126,7 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} storage'
              ' buckets update --recovery-point-objective DEFAULT').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
 
 class TestRpoE2E(testcase.GsUtilIntegrationTestCase):

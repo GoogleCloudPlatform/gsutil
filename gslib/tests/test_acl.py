@@ -40,6 +40,7 @@ from gslib.utils import acl_helper
 from gslib.utils.constants import UTF8
 from gslib.utils.retry_util import Retry
 from gslib.utils.translation_helper import AclTranslation
+from gslib.utils import shim_util
 
 from six import add_move, MovedModule
 
@@ -348,8 +349,7 @@ class TestAcl(TestAclBase):
     self.assertNotRegex(json_text, test_regex)
 
   def testAclChangeWithGroupEmail(self):
-    test_regex = self._MakeScopeRegex('OWNER', 'group',
-                                      self.GROUP_TEST_ADDRESS)
+    test_regex = self._MakeScopeRegex('OWNER', 'group', self.GROUP_TEST_ADDRESS)
     json_text = self.RunGsUtil(self._get_acl_prefix + [suri(self.sample_uri)],
                                return_stdout=True)
     self.assertNotRegex(json_text, test_regex)
@@ -840,7 +840,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage objects describe'
              ' --format=multi(acl:format=json)'
              ' --raw gs://bucket/object').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_get_bucket(self):
@@ -857,7 +857,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage buckets describe'
              ' --format=multi(acl:format=json)'
              ' --raw gs://bucket').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_object(self):
@@ -872,10 +872,10 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
             'acl', ['set', inpath, 'gs://bucket/object'],
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage objects update'
-             ' --acl-file={}').format(os.path.join('fake_dir', 'bin', 'gcloud'),
-                                      inpath), info_lines)
+        self.assertIn(('Gcloud Storage Command: {} alpha storage objects update'
+                       ' --acl-file={}').format(
+                           shim_util._get_gcloud_binary_path('fake_dir'),
+                           inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_bucket(self):
@@ -892,8 +892,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} alpha storage buckets update'
                        ' --acl-file={} gs://bucket').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
-                      info_lines)
+                           shim_util._get_gcloud_binary_path('fake_dir'),
+                           inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_predefined_acl_set_object(self):
@@ -909,7 +909,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} alpha storage objects update'
                        ' --predefined-acl=private gs://bucket/object'.format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'))),
+                           shim_util._get_gcloud_binary_path('fake_dir'))),
                       info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
@@ -926,7 +926,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} alpha storage buckets update'
                        ' --predefined-acl=private gs://bucket').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud')),
+                           shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
@@ -943,7 +943,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} alpha storage buckets update'
                        ' --predefined-acl=publicRead gs://bucket').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud')),
+                           shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
@@ -963,8 +963,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         self.assertIn(('Gcloud Storage Command: {} alpha storage buckets update'
                        ' --acl-file={} --continue-on-error'
                        ' gs://bucket gs://bucket1 gs://bucket2').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
-                      info_lines)
+                           shim_util._get_gcloud_binary_path('fake_dir'),
+                           inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_multiple_objects_urls(self):
@@ -984,8 +984,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         self.assertIn(('Gcloud Storage Command: {} alpha storage objects update'
                        ' --acl-file={} --continue-on-error gs://bucket/object'
                        ' gs://bucket/object1 gs://bucket/object2').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
-                      info_lines)
+                           shim_util._get_gcloud_binary_path('fake_dir'),
+                           inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_multiple_buckets_urls_recursive_all_versions(
@@ -1006,8 +1006,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         self.assertIn(('Gcloud Storage Command: {} alpha storage objects update'
                        ' --acl-file={} --recursive --all-versions gs://bucket'
                        ' gs://bucket1/o gs://bucket2').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
-                      info_lines)
+                           shim_util._get_gcloud_binary_path('fake_dir'),
+                           inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_mix_buckets_and_objects_raises_error(self):
@@ -1041,7 +1041,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage buckets update'
              ' --add-acl-grant entity=user-user@example.com,role=READER'
              ' gs://bucket1 gs://bucket2').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), inpath), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir'),
+                 inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_changes_object_acls_for_user(self):
@@ -1061,7 +1062,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage objects update'
              ' --add-acl-grant entity=user-user@example.com,role=READER'
              ' gs://bucket1/o gs://bucket2/o').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), inpath), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir'),
+                 inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_raises_error_for_mix_of_objects_and_buckets(self):
@@ -1093,7 +1095,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage objects update'
              ' --add-acl-grant entity=group-group@example.com,role=WRITER'
              ' gs://bucket1/o').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), inpath), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir'),
+                 inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_changes_acls_for_domain(self):
@@ -1111,8 +1114,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         self.assertIn(('Gcloud Storage Command: {} alpha storage objects update'
                        ' --add-acl-grant entity=domain-example.com,role=OWNER'
                        ' gs://bucket1/o').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
-                      info_lines)
+                           shim_util._get_gcloud_binary_path('fake_dir'),
+                           inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_changes_acls_for_project(self):
@@ -1131,7 +1134,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage objects update'
              ' --add-acl-grant entity=project-owners-example,role=OWNER'
              ' gs://bucket1/o').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud'), inpath), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir'),
+                 inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_changes_acls_for_all_users(self):
@@ -1150,10 +1154,10 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
           info_lines = '\n'.join(mock_log_handler.messages['info'])
           self.assertIn(
               ('Gcloud Storage Command: {} alpha storage objects update'
-                ' --add-acl-grant entity=allUsers,role=OWNER'
-                ' gs://bucket1/o').format(
-                    os.path.join('fake_dir', 'bin', 'gcloud'),
-                    inpath), info_lines)
+               ' --add-acl-grant entity=allUsers,role=OWNER'
+               ' gs://bucket1/o').format(
+                   shim_util._get_gcloud_binary_path('fake_dir'),
+                   inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_changes_acls_for_all_authenticated_users(self):
@@ -1174,10 +1178,10 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
           info_lines = '\n'.join(mock_log_handler.messages['info'])
           self.assertIn(
               ('Gcloud Storage Command: {} alpha storage objects update'
-                ' --add-acl-grant entity=allAuthenticatedUsers,role=OWNER'
-                ' gs://bucket1/o').format(
-                    os.path.join('fake_dir', 'bin', 'gcloud'),
-                    inpath), info_lines)
+               ' --add-acl-grant entity=allAuthenticatedUsers,role=OWNER'
+               ' gs://bucket1/o').format(
+                   shim_util._get_gcloud_binary_path('fake_dir'),
+                   inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_deletes_acls(self):
@@ -1199,8 +1203,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
                        ' --remove-acl-grant user@example.com'
                        ' --remove-acl-grant user1@example.com'
                        ' gs://bucket1/o').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'), inpath),
-                      info_lines)
+                           shim_util._get_gcloud_binary_path('fake_dir'),
+                           inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_removes_acls_for_all_users(self):
@@ -1219,10 +1223,10 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
           info_lines = '\n'.join(mock_log_handler.messages['info'])
           self.assertIn(
               ('Gcloud Storage Command: {} alpha storage objects update'
-                ' --remove-acl-grant AllUsers'
-                ' gs://bucket1/o').format(
-                    os.path.join('fake_dir', 'bin', 'gcloud'),
-                    inpath), info_lines)
+               ' --remove-acl-grant AllUsers'
+               ' gs://bucket1/o').format(
+                   shim_util._get_gcloud_binary_path('fake_dir'),
+                   inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_removes_acls_for_all_authenticated_users(self):
@@ -1243,7 +1247,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
           info_lines = '\n'.join(mock_log_handler.messages['info'])
           self.assertIn(
               ('Gcloud Storage Command: {} alpha storage objects update'
-                ' --remove-acl-grant AllAuthenticatedUsers'
-                ' gs://bucket1/o').format(
-                    os.path.join('fake_dir', 'bin', 'gcloud'),
-                    inpath), info_lines)
+               ' --remove-acl-grant AllAuthenticatedUsers'
+               ' gs://bucket1/o').format(
+                   shim_util._get_gcloud_binary_path('fake_dir'),
+                   inpath), info_lines)

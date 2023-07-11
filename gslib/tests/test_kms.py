@@ -33,6 +33,7 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.utils.retry_util import Retry
+from gslib.utils import shim_util
 
 
 @SkipForS3('gsutil does not support KMS operations for S3 buckets.')
@@ -283,8 +284,8 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
         self.assertIn(
             'Gcloud Storage Command: {} alpha storage service-agent'
             ' --project foo --authorize-cmek {}'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud'), self.dummy_keyname),
-            info_lines)
+                shim_util._get_gcloud_binary_path('fake_dir'),
+                self.dummy_keyname), info_lines)
 
   def test_shim_translates_clear_encryption_key(self):
     bucket_uri = self.CreateBucket()
@@ -302,8 +303,8 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
         self.assertIn(
             'Gcloud Storage Command: {} alpha storage buckets update'
             ' --clear-default-encryption-key {}'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud'), suri(bucket_uri)),
-            info_lines)
+                shim_util._get_gcloud_binary_path('fake_dir'),
+                suri(bucket_uri)), info_lines)
 
   @mock.patch(
       'gslib.cloud_api_delegator.CloudApiDelegator.GetProjectServiceAccount')
@@ -332,8 +333,8 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
         self.assertIn(
             'Gcloud Storage Command: {} alpha storage buckets update'
             '  --default-encryption-key {} {}'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud'), self.dummy_keyname,
-                suri(bucket_uri)), info_lines)
+                shim_util._get_gcloud_binary_path('fake_dir'),
+                self.dummy_keyname, suri(bucket_uri)), info_lines)
 
   def test_shim_translates_displays_encryption_key(self):
     bucket_uri = self.CreateBucket()
@@ -351,7 +352,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
             'Gcloud Storage Command: {} alpha storage buckets describe '
             '--format=value[separator=\": \"](name, encryption'
             '.defaultKmsKeyName.yesno(no="No default encryption key."))'
-            ' --raw {}'.format(os.path.join('fake_dir', 'bin', 'gcloud'),
+            ' --raw {}'.format(shim_util._get_gcloud_binary_path('fake_dir'),
                                suri(bucket_uri)), info_lines)
 
   @mock.patch(
@@ -372,5 +373,5 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             'Gcloud Storage Command: {} alpha storage service-agent'
-            ' --project foo'.format(os.path.join('fake_dir', 'bin', 'gcloud')),
-            info_lines)
+            ' --project foo'.format(
+                shim_util._get_gcloud_binary_path('fake_dir')), info_lines)

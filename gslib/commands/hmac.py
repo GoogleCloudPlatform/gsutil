@@ -35,6 +35,7 @@ from gslib.utils.cloud_api_helper import GetCloudApiInstance
 from gslib.utils.shim_util import GcloudStorageFlag
 from gslib.utils.shim_util import GcloudStorageMap
 from gslib.utils.text_util import InsistAscii
+from gslib.utils import shim_util
 
 _CREATE_SYNOPSIS = """
   gsutil hmac create [-p <project>] <service_account_email>
@@ -208,18 +209,18 @@ def _KeyMetadataOutput(metadata):
   return message
 
 
-_CREATE_COMMAND_FORMAT = ('--format=value[separator="\n"]'
-                          '(format("Access ID:   {}", metadata.accessId),'
+_CREATE_COMMAND_FORMAT = ('--format=value[separator="' +
+                          shim_util.get_format_flag_newline() + '"](' +
+                          'format("Access ID:   {}", metadata.accessId),' +
                           'format("Secret:      {}", secret))')
 _DESCRIBE_COMMAND_FORMAT = (
-    '--format=value[separator="\n"](format("Access ID {}:", accessId),'
-    'format("\tState: {}", state),'
-    'format("\tService Account: {}", serviceAccountEmail),'
-    'format("\tProject: {}", projectId),'
-    'format("\tTime Created: {}",'
-    ' timeCreated.date(format="%a %d %b %Y %H:%M:%S GMT")),'
-    'format("\tTime Last Updated: {}",'
-    ' updated.date(format="%a %d %b %Y %H:%M:%S GMT")),'
+    '--format=value[separator="' + shim_util.get_format_flag_newline() +
+    '"](format("Access ID {}:", accessId),' + 'format("\tState: {}", state),' +
+    'format("\tService Account: {}", serviceAccountEmail),' +
+    'format("\tProject: {}", projectId),' + 'format("\tTime Created: {}",' +
+    ' timeCreated.date(format="%a %d %b %Y %H:%M:%S GMT")),' +
+    'format("\tTime Last Updated: {}",' +
+    ' updated.date(format="%a %d %b %Y %H:%M:%S GMT")),' +
     'format("\tEtag: {}", etag))')
 
 _LIST_COMMAND_SHORT_FORMAT = (

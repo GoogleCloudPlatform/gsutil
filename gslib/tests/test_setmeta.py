@@ -34,6 +34,7 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 from gslib.utils.retry_util import Retry
+from gslib.utils import shim_util
 
 if six.PY3:
   long = int
@@ -330,4 +331,4 @@ class TestSetMetaShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage objects update'
              ' --recursive --clear-cache-control'
              ' --content-type=fake-content-type gs://bucket/object').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
