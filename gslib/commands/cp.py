@@ -373,7 +373,7 @@ _COPYING_SPECIAL_FILES_TEXT = """
 
 _OPTIONS_TEXT = """
 <B>OPTIONS</B>
-  -a canned_acl  Applies the specific ``canned_acl`` to uploaded objects. See
+  -a predef_acl  Applies the specific predefined ACL to uploaded objects. See
                  "gsutil help acls" for further details.
 
   -A             Copy all source versions from a source bucket or folder.
