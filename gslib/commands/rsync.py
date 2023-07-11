@@ -366,7 +366,7 @@ _DETAILED_HELP_TEXT = ("""
      checksums or perform partial replacements.
 
 <B>OPTIONS</B>
-  -a canned_acl  Sets named canned_acl when uploaded objects created. See
+  -a predef-acl  Sets the specified predefined ACL on uploaded objects. See
                  "gsutil help acls" for further details. Note that rsync will
                  decide whether or not to perform a copy based only on object
                  size and modification time, not current ACL state. Also see the
