@@ -515,7 +515,7 @@ class IamCommand(Command):
         policy['bindings'] = [{
             'role': r,
             'members': sorted(list(m))
-        } for r, m in six.iteritems(bindings)]
+        } for r, m in sorted(six.iteritems(bindings))]
 
         set_process = self._run_ch_subprocess(
             ['alpha', 'storage', resource_type, 'set-iam-policy', url, '-'],
