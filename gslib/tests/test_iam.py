@@ -1571,6 +1571,23 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
              ' --format=json --etag= gs://b policy-file').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_warns_with_dry_run_mode_for_iam_ch(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('iam',
+                                           ['ch', '-d', 'allUsers', 'gs://b'],
+                                           return_log_handler=True)
+        warning_lines = '\n'.join(mock_log_handler.messages['warning'])
+        self.assertIn(
+            'The shim maps iam ch commands to several gcloud storage commands,'
+            ' which cannot be determined without running gcloud storage.',
+            warning_lines)
+
   def _get_run_call(self,
                     command,
                     env=mock.ANY,
@@ -1626,11 +1643,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'buckets',
-              'get-iam-policy', 'gs://b/', '--format=json'
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'buckets', 'get-iam-policy', 'gs://b/', '--format=json'
           ]),
           self._get_run_call([
-              'fake_dir/bin/gcloud',
+              os.path.join('fake_dir', 'bin', 'gcloud'),
               'alpha',
               'storage',
               'buckets',
@@ -1688,11 +1705,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'buckets',
-              'get-iam-policy', 'gs://b1/', '--format=json'
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'buckets', 'get-iam-policy', 'gs://b1/', '--format=json'
           ]),
           self._get_run_call([
-              'fake_dir/bin/gcloud',
+              os.path.join('fake_dir', 'bin', 'gcloud'),
               'alpha',
               'storage',
               'buckets',
@@ -1702,11 +1719,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ],
                              stdin=json.dumps(new_policy1, sort_keys=True)),
           self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'buckets',
-              'get-iam-policy', 'gs://b2/', '--format=json'
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'buckets', 'get-iam-policy', 'gs://b2/', '--format=json'
           ]),
           self._get_run_call([
-              'fake_dir/bin/gcloud',
+              os.path.join('fake_dir', 'bin', 'gcloud'),
               'alpha',
               'storage',
               'buckets',
@@ -1735,7 +1752,10 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
       ls_process = subprocess.CompletedProcess(args=[],
                                                returncode=0,
-                                               stdout='gs://b/o')
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o',
+                                                   'type': 'cloud_object'
+                                               }]))
       get_process = subprocess.CompletedProcess(
           args=[], returncode=0, stdout=json.dumps(original_policy))
       set_process = subprocess.CompletedProcess(args=[], returncode=0)
@@ -1748,14 +1768,16 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
 
       self.assertEqual(mock_run.call_args_list, [
-          self._get_run_call(
-              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o']),
           self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
-              'get-iam-policy', 'gs://b/o', '--format=json'
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o'
           ]),
           self._get_run_call([
-              'fake_dir/bin/gcloud',
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/o', '--format=json'
+          ]),
+          self._get_run_call([
+              os.path.join('fake_dir', 'bin', 'gcloud'),
               'alpha',
               'storage',
               'objects',
@@ -1776,16 +1798,22 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             'members': ['allUsers'],
         }]
     }
-    ls_output = ('gs://b/dir/:\n'
-                 'gs://b/dir/:\n'
-                 'gs://b/dir/o\n'
-                 '\n'
-                 'gs://b/dir2/:\n'
-                 'gs://b/dir2/o\n')
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
       ls_process = subprocess.CompletedProcess(args=[],
                                                returncode=0,
-                                               stdout=ls_output)
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/dir/',
+                                                   'type': 'prefix'
+                                               }, {
+                                                   'url': 'gs://b/dir/:',
+                                                   'type': 'cloud_object'
+                                               }, {
+                                                   'url': 'gs://b/dir2/',
+                                                   'type': 'prefix'
+                                               }, {
+                                                   'url': 'gs://b/dir2/o',
+                                                   'type': 'cloud_object'
+                                               }]))
       get_process = subprocess.CompletedProcess(
           args=[], returncode=0, stdout=json.dumps(original_policy))
       set_process = subprocess.CompletedProcess(args=[], returncode=0)
@@ -1800,14 +1828,15 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', '-r', 'gs://b/'
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'ls', '--json', '-r', 'gs://b/'
           ]),
           self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
-              'get-iam-policy', 'gs://b/dir/:', '--format=json'
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/dir/:', '--format=json'
           ]),
           self._get_run_call([
-              'fake_dir/bin/gcloud',
+              os.path.join('fake_dir', 'bin', 'gcloud'),
               'alpha',
               'storage',
               'objects',
@@ -1817,25 +1846,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ],
                              stdin=mock.ANY),
           self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
-              'get-iam-policy', 'gs://b/dir/o', '--format=json'
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/dir2/o', '--format=json'
           ]),
           self._get_run_call([
-              'fake_dir/bin/gcloud',
-              'alpha',
-              'storage',
-              'objects',
-              'set-iam-policy',
-              'gs://b/dir/o',
-              '-',
-          ],
-                             stdin=mock.ANY),
-          self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
-              'get-iam-policy', 'gs://b/dir2/o', '--format=json'
-          ]),
-          self._get_run_call([
-              'fake_dir/bin/gcloud',
+              os.path.join('fake_dir', 'bin', 'gcloud'),
               'alpha',
               'storage',
               'objects',
@@ -1870,7 +1885,10 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
       ls_process = subprocess.CompletedProcess(args=[],
                                                returncode=0,
-                                               stdout='gs://b/o')
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o',
+                                                   'type': 'cloud_object'
+                                               }]))
       get_process = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
                                                 stderr='An error.')
@@ -1891,7 +1909,10 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
       ls_process = subprocess.CompletedProcess(args=[],
                                                returncode=0,
-                                               stdout='gs://b/o')
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o',
+                                                   'type': 'cloud_object'
+                                               }]))
       get_process = subprocess.CompletedProcess(args=[],
                                                 returncode=0,
                                                 stdout='{"bindings": []}')
@@ -1943,10 +1964,14 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         ])
 
       self.assertEqual(mock_run.call_args_list, [
-          self._get_run_call(
-              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o1']),
-          self._get_run_call(
-              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o2']),
+          self._get_run_call([
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o1'
+          ]),
+          self._get_run_call([
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o2'
+          ]),
       ])
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
@@ -1967,7 +1992,10 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
       ls_process = subprocess.CompletedProcess(args=[],
                                                returncode=0,
-                                               stdout='gs://b/o1')
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o1',
+                                                   'type': 'cloud_object'
+                                               }]))
       get_process = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
                                                 stderr='An error.')
@@ -1985,14 +2013,18 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         ])
 
       self.assertEqual(mock_run.call_args_list, [
-          self._get_run_call(
-              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o1']),
           self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
-              'get-iam-policy', 'gs://b/o1', '--format=json'
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o1'
           ]),
-          self._get_run_call(
-              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o2']),
+          self._get_run_call([
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/o1', '--format=json'
+          ]),
+          self._get_run_call([
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o2'
+          ]),
       ])
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
@@ -2013,7 +2045,10 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
       ls_process = subprocess.CompletedProcess(args=[],
                                                returncode=0,
-                                               stdout='gs://b/o1')
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o1',
+                                                   'type': 'cloud_object'
+                                               }]))
       get_process = subprocess.CompletedProcess(
           args=[], returncode=0, stdout=json.dumps(original_policy))
       set_process = subprocess.CompletedProcess(args=[],
@@ -2034,14 +2069,16 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         ])
 
       self.assertEqual(mock_run.call_args_list, [
-          self._get_run_call(
-              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o1']),
           self._get_run_call([
-              'fake_dir/bin/gcloud', 'alpha', 'storage', 'objects',
-              'get-iam-policy', 'gs://b/o1', '--format=json'
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o1'
           ]),
           self._get_run_call([
-              'fake_dir/bin/gcloud',
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/o1', '--format=json'
+          ]),
+          self._get_run_call([
+              os.path.join('fake_dir', 'bin', 'gcloud'),
               'alpha',
               'storage',
               'objects',
@@ -2050,6 +2087,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
               '-',
           ],
                              stdin=json.dumps(new_policy, sort_keys=True)),
-          self._get_run_call(
-              ['fake_dir/bin/gcloud', 'alpha', 'storage', 'ls', 'gs://b/o2']),
+          self._get_run_call([
+              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o2'
+          ]),
       ])

@@ -30,6 +30,7 @@ import six
 from six.moves import zip
 from apitools.base.protorpclite import protojson
 from apitools.base.protorpclite.messages import DecodeError
+from boto import config
 from gslib.cloud_api import ArgumentException
 from gslib.cloud_api import PreconditionException
 from gslib.cloud_api import ServiceException
@@ -374,6 +375,12 @@ class IamCommand(Command):
       self.args = url_strings + self.args[:1]
 
     elif self.sub_command == 'ch':
+      if shim_util.HIDDEN_SHIM_MODE(
+          config.get('GSUtil', 'hidden_shim_mode',
+                     'none')) is shim_util.HIDDEN_SHIM_MODE.DRY_RUN:
+        self.logger.warning(
+            'The shim maps iam ch commands to several gcloud storage commands,'
+            ' which cannot be determined without running gcloud storage.')
       return []  # Translation occurs in self.run_gcloud_storage.
 
     return super().get_gcloud_storage_args(gcloud_storage_map)
@@ -387,7 +394,52 @@ class IamCommand(Command):
             ' before all bindings. See "gsutil help iam ch" for more details.')
       raise CommandException(error_msg)
 
-  def _run_gcloud_subprocess(self, args, stdin=None):
+  def _GetSettingsAndDiffs(self):
+    self.continue_on_error = False
+    self.recursion_requested = False
+
+    patch_bindings_tuples = []
+
+    if self.sub_opts:
+      for o, a in self.sub_opts:
+        if o in ['-r', '-R']:
+          self.recursion_requested = True
+        elif o == '-f':
+          self.continue_on_error = True
+        elif o == '-d':
+          patch_bindings_tuples.append(BindingStringToTuple(False, a))
+
+    url_pattern_strings = []
+
+    # N.B.: self.sub_opts stops taking in options at the first non-flagged
+    # token. The rest of the tokens are sent to self.args. Thus, in order to
+    # handle input of the form "-d <binding> <binding> <url>", we will have to
+    # parse self.args for a mix of both bindings and CloudUrls. We are not
+    # expecting to come across the -r, -f flags here.
+    it = iter(self.args)
+    for token in it:
+      if (STORAGE_URI_REGEX.match(token) and
+          IsKnownUrlScheme(GetSchemeFromUrlString(token))):
+        url_pattern_strings.append(token)
+        break
+      if token == '-d':
+        patch_bindings_tuples.append(BindingStringToTuple(False, next(it)))
+      else:
+        patch_bindings_tuples.append(BindingStringToTuple(True, token))
+    if not patch_bindings_tuples:
+      raise CommandException('Must specify at least one binding.')
+
+    # All following arguments are urls.
+    for token in it:
+      url_pattern_strings.append(token)
+
+    url_objects = list(map(StorageUrlFromString, url_pattern_strings))
+    _RaiseErrorIfUrlsAreMixOfBucketsAndObjects(url_objects,
+                                               self.recursion_requested)
+
+    return patch_bindings_tuples, url_objects
+
+  def _run_ch_subprocess(self, args, stdin=None):
     subprocess_envs = os.environ.copy()
     subprocess_envs.update(self._translated_env_variables)
 
@@ -421,14 +473,19 @@ class IamCommand(Command):
       self._RaiseIfInvalidUrl(url_pattern)
 
       if resource_type == 'objects':
-        ls_process = self._run_gcloud_subprocess(['alpha', 'storage', 'ls'] +
-                                                 list_settings +
-                                                 [str(url_pattern)])
+        ls_process = self._run_ch_subprocess(
+            ['alpha', 'storage', 'ls', '--json'] + list_settings +
+            [str(url_pattern)])
         if ls_process.returncode:
           return_code = 1
           continue
 
-        urls = ls_process.stdout.strip('\n').split('\n')
+        ls_output = json.loads(ls_process.stdout)
+        urls = [
+            resource['url']
+            for resource in ls_output
+            if resource['type'] == 'cloud_object'
+        ]
       else:
         urls = [str(url_pattern)]
 
@@ -436,17 +493,8 @@ class IamCommand(Command):
       # All headings other than the first are preceded by a new line.
       # These need to be skipped, without skipping objects that end in
       # '/:'.
-      next_url_could_be_container_line = True
       for url in urls:
-        if not url:
-          next_url_could_be_container_line = True
-          continue
-        if next_url_could_be_container_line:
-          next_url_could_be_container_line = False
-          if url.endswith('/:'):
-            continue
-
-        get_process = self._run_gcloud_subprocess([
+        get_process = self._run_ch_subprocess([
             'alpha', 'storage', resource_type, 'get-iam-policy', url,
             '--format=json'
         ])
@@ -465,7 +513,7 @@ class IamCommand(Command):
             'members': sorted(list(m))
         } for r, m in six.iteritems(bindings)]
 
-        set_process = self._run_gcloud_subprocess(
+        set_process = self._run_ch_subprocess(
             ['alpha', 'storage', resource_type, 'set-iam-policy', url, '-'],
             stdin=json.dumps(policy, sort_keys=True))
         if set_process.returncode:
@@ -655,51 +703,6 @@ class IamCommand(Command):
     # function to error out, so we are bypassing the exception handling offered
     # by IamCommand.SetIamHelper in lieu of our own handling (@Retry).
     self._SetIamHelperInternal(storage_url, policy, thread_state=thread_state)
-
-  def _GetSettingsAndDiffs(self):
-    self.continue_on_error = False
-    self.recursion_requested = False
-
-    patch_bindings_tuples = []
-
-    if self.sub_opts:
-      for o, a in self.sub_opts:
-        if o in ['-r', '-R']:
-          self.recursion_requested = True
-        elif o == '-f':
-          self.continue_on_error = True
-        elif o == '-d':
-          patch_bindings_tuples.append(BindingStringToTuple(False, a))
-
-    url_pattern_strings = []
-
-    # N.B.: self.sub_opts stops taking in options at the first non-flagged
-    # token. The rest of the tokens are sent to self.args. Thus, in order to
-    # handle input of the form "-d <binding> <binding> <url>", we will have to
-    # parse self.args for a mix of both bindings and CloudUrls. We are not
-    # expecting to come across the -r, -f flags here.
-    it = iter(self.args)
-    for token in it:
-      if (STORAGE_URI_REGEX.match(token) and
-          IsKnownUrlScheme(GetSchemeFromUrlString(token))):
-        url_pattern_strings.append(token)
-        break
-      if token == '-d':
-        patch_bindings_tuples.append(BindingStringToTuple(False, next(it)))
-      else:
-        patch_bindings_tuples.append(BindingStringToTuple(True, token))
-    if not patch_bindings_tuples:
-      raise CommandException('Must specify at least one binding.')
-
-    # All following arguments are urls.
-    for token in it:
-      url_pattern_strings.append(token)
-
-    url_objects = list(map(StorageUrlFromString, url_pattern_strings))
-    _RaiseErrorIfUrlsAreMixOfBucketsAndObjects(url_objects,
-                                               self.recursion_requested)
-
-    return patch_bindings_tuples, url_objects
 
   def _PatchIam(self):
     patch_bindings_tuples, url_patterns = self._GetSettingsAndDiffs()
