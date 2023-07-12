@@ -488,6 +488,17 @@ class TestIamCh(TestIamIntegration):
                             expected_status=1)
     self.assertIn('CommandException', stderr)
 
+  def test_raises_error_message_for_d_flag_missing_argument(self):
+    """Tests expected failure if no bindings are listed."""
+    stderr = self.RunGsUtil(
+        ['iam', 'ch',
+         '%s:%s' % (self.user, IAM_BUCKET_READ_ROLE_ABBREV), '-d'],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'A -d flag is missing an argument specifying bindings to remove.',
+        stderr)
+
   def test_path_mix_of_buckets_and_objects(self):
     """Tests expected failure if both buckets and objects are provided."""
     stderr = self.RunGsUtil([

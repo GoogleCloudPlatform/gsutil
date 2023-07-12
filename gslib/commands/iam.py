@@ -423,7 +423,11 @@ class IamCommand(Command):
         url_pattern_strings.append(token)
         break
       if token == '-d':
-        patch_bindings_tuples.append(BindingStringToTuple(False, next(it)))
+        try:
+          patch_bindings_tuples.append(BindingStringToTuple(False, next(it)))
+        except StopIteration:
+          raise CommandException(
+              'A -d flag is missing an argument specifying bindings to remove.')
       else:
         patch_bindings_tuples.append(BindingStringToTuple(True, token))
     if not patch_bindings_tuples:
