@@ -47,7 +47,7 @@ from gslib.utils.shim_util import GcloudStorageFlag
 from gslib.utils.shim_util import GcloudStorageMap
 
 _SET_SYNOPSIS = """
-  gsutil acl set [-f] [-r] [-a] <file-or-canned_acl_name> url...
+  gsutil acl set [-f] [-r] [-a] (<file-path>|<predefined-acl>) url...
 """
 
 _GET_SYNOPSIS = """
@@ -67,30 +67,31 @@ _CH_SYNOPSIS = """
 
 _GET_DESCRIPTION = """
 <B>GET</B>
-  The "acl get" command gets the ACL text for a bucket or object, which you can
-  save and edit for the acl set command.
+  The ``acl get`` command gets the ACL text for a bucket or object, which you
+  can save and edit for the acl set command.
 """
 
 _SET_DESCRIPTION = """
 <B>SET</B>
-  The "acl set" command allows you to set an Access Control List on one or
-  more buckets and objects. The file-or-canned_acl_name parameter names either
-  a canned ACL or the path to a file that contains ACL text. The simplest way
-  to use the "acl set" command is to specify one of the canned ACLs, e.g.,:
+  The ``acl set`` command allows you to set an Access Control List on one or
+  more buckets and objects. As part of the command, you must specify either a
+  predefined ACL or the path to a file that contains ACL text. The simplest way
+  to use the ``acl set`` command is to specify one of the predefined ACLs,
+  e.g.,:
 
-    gsutil acl set private gs://bucket
+    gsutil acl set private gs://example-bucket/example-object
 
   If you want to make an object or bucket publicly readable or writable, it is
-  recommended to use "acl ch", to avoid accidentally removing OWNER permissions.
-  See the "acl ch" section for details.
+  recommended to use ``acl ch``, to avoid accidentally removing OWNER
+  permissions. See the ``acl ch`` section for details.
 
   See `Predefined ACLs
   <https://cloud.google.com/storage/docs/access-control/lists#predefined-acl>`_
-  for a list of canned ACLs.
+  for a list of predefined ACLs.
 
   If you want to define more fine-grained control over your data, you can
-  retrieve an ACL using the "acl get" command, save the output to a file, edit
-  the file, and then use the "acl set" command to set that ACL on the buckets
+  retrieve an ACL using the ``acl get`` command, save the output to a file, edit
+  the file, and then use the ``acl set`` command to set that ACL on the buckets
   and/or objects. For example:
 
     gsutil acl get gs://bucket/file.txt > acl.txt

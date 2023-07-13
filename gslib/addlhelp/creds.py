@@ -91,9 +91,9 @@ _DETAILED_HELP_TEXT = ("""
     It is important to note that a service account is considered an Editor by
     default for the purposes of API access, rather than an Owner. In particular,
     the fact that Editors have OWNER access in the default object and
-    bucket ACLs, but the canned ACL options remove OWNER access from
+    bucket ACLs, but the predefined ACL options remove OWNER access from
     Editors, can lead to unexpected results. The solution to this problem is to
-    use "gsutil acl ch" instead of "gsutil acl set <canned-ACL>" to change
+    use "gsutil acl ch" instead of "gsutil acl set <predefined-ACL>" to change
     permissions on a bucket.
 
     To set up a service account for use with
