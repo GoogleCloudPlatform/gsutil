@@ -35,6 +35,7 @@ from gslib.utils.retention_util import SECONDS_IN_YEAR
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.utils.retry_util import Retry
+from gslib.utils import shim_util
 
 BUCKET_LOCK_SKIP_MSG = ('gsutil does not support bucket lock operations for '
                         'S3 buckets.')
@@ -421,7 +422,7 @@ class TestMbUnitTests(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} alpha storage buckets create'
                        ' --retention-period 31557600s gs://fake-bucket').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud')),
+                           shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
 
   @SkipForXML('The --rpo flag only works for GCS JSON API.')
@@ -442,4 +443,4 @@ class TestMbUnitTests(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage'
              ' buckets create --recovery-point-objective DEFAULT').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)

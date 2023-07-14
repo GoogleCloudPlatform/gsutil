@@ -42,6 +42,7 @@ from gslib.utils.iam_helper import DiffBindings
 from gslib.utils.iam_helper import IsEqualBindings
 from gslib.utils.iam_helper import PatchBindings
 from gslib.utils.retry_util import Retry
+from gslib.utils import shim_util
 
 from six import add_move, MovedModule
 
@@ -1440,7 +1441,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage objects get-iam-policy'
              ' --format=json gs://bucket/object').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_iam_get_bucket(self):
@@ -1456,7 +1457,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets get-iam-policy'
              ' --format=json gs://bucket').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_iam_set_object(self):
@@ -1473,7 +1474,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage objects set-iam-policy'
              ' --format=json gs://b/o1 gs://b/o2 policy-file').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_iam_set_bucket(self):
@@ -1490,7 +1491,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
              ' --format=json gs://b1 gs://b2 policy-file').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_iam_set_mix_of_bucket_and_objects_if_recursive(self):
@@ -1507,7 +1508,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage objects set-iam-policy'
              ' --format=json --recursive gs://b1 gs://b2/o policy-file').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   def test_shim_raises_for_iam_set_mix_of_bucket_and_objects(self):
@@ -1537,7 +1538,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
              ' --format=json --etag abc= gs://b policy-file').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_iam_set_handles_empty_etag(self):
@@ -1554,4 +1555,4 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
              ' --format=json --etag= gs://b policy-file').format(
-                 os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)

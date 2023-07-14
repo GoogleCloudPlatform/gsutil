@@ -59,6 +59,8 @@ from gslib.utils.posix_util import UID_ATTR
 from gslib.utils.retry_util import Retry
 from gslib.utils.system_util import IS_OSX
 from gslib.utils.system_util import IS_WINDOWS
+from gslib.utils import shim_util
+
 
 # These POSIX-specific variables aren't defined for Windows.
 # pylint: disable=g-import-not-at-top
@@ -153,7 +155,7 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
             'Gcloud Storage Command: {} alpha storage rsync'
             ' --no-ignore-symlinks --predefined-acl publicRead'
             ' --preserve-posix {} {}'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud'), suri(bucket_uri),
+                shim_util._get_gcloud_binary_path('fake_dir'), suri(bucket_uri),
                 fpath), info_lines)
         warn_lines = '\n'.join(mock_log_handler.messages['warning'])
         self.assertIn('By default, gsutil copies file symlinks', warn_lines)

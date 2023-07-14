@@ -34,6 +34,7 @@ from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import TEST_ENCRYPTION_KEY1
 from gslib.tests.util import unittest
 from gslib.utils import cat_helper
+from gslib.utils import shim_util
 
 from unittest import mock
 
@@ -225,8 +226,9 @@ class TestShimCatFlags(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             'Gcloud Storage Command: {} alpha storage cat'
-            ' -d -r 2-4 {}'.format(os.path.join('fake_dir', 'bin', 'gcloud'),
-                                   suri(object_uri)), info_lines)
+            ' -d -r 2-4 {}'.format(
+                shim_util._get_gcloud_binary_path('fake_dir'),
+                suri(object_uri)), info_lines)
 
 
 class TestCatHelper(testcase.GsUtilUnitTestCase):

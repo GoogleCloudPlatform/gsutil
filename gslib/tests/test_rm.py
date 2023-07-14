@@ -34,6 +34,7 @@ from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 from gslib.utils.retry_util import Retry
 
 MACOS_WARNING = (
@@ -765,8 +766,8 @@ class TestRmUnitTests(testcase.GsUtilUnitTestCase):
         self.assertIn(
             'Gcloud Storage Command: {} alpha storage rm'
             ' -r -r -a --continue-on-error {}'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud'), suri(bucket_uri)),
-            info_lines)
+                shim_util._get_gcloud_binary_path('fake_dir'),
+                suri(bucket_uri)), info_lines)
 
   @mock.patch.object(sys, 'stdin')
   def test_shim_translates_stdin_flag(self, mock_stdin):
@@ -785,4 +786,5 @@ class TestRmUnitTests(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             'Gcloud Storage Command: {} alpha storage rm'
-            ' -I'.format(os.path.join('fake_dir', 'bin', 'gcloud')), info_lines)
+            ' -I'.format(shim_util._get_gcloud_binary_path('fake_dir')),
+            info_lines)

@@ -29,6 +29,7 @@ from gslib.help_provider import CreateHelpText
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 from gslib.utils.constants import NO_MAX
 from gslib.utils.shim_util import GcloudStorageMap
+from gslib.utils import shim_util
 
 _SET_SYNOPSIS = """
   gsutil pap set (enforced|inherited) gs://<bucket_name>...
@@ -82,9 +83,9 @@ _get_help_text = CreateHelpText(_GET_SYNOPSIS, _GET_DESCRIPTION)
 # Aliases to make these more likely to fit enforced one line.
 IamConfigurationValue = apitools_messages.Bucket.IamConfigurationValue
 
-_GCLOUD_LIST_FORMAT = ('--format=value[separator=": "]'
-                       '(name.sub("^","gs://"),'
-                       'iamConfiguration.publicAccessPrevention.yesno('
+_GCLOUD_LIST_FORMAT = ('--format=value[separator=": "]' + '(name.sub("' +
+                       shim_util.get_format_flag_caret() + '","gs://"),' +
+                       'iamConfiguration.publicAccessPrevention.yesno(' +
                        'no="inherited"))')
 
 

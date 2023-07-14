@@ -28,6 +28,7 @@ from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 
 from six import add_move, MovedModule
 
@@ -161,7 +162,7 @@ class TestHashShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} alpha storage hash {}'
                        ' gs://b/o1 gs://b/o2').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'),
+                           shim_util._get_gcloud_binary_path('fake_dir'),
                            hash._GCLOUD_FORMAT_STRING), info_lines)
 
   @mock.patch.object(hash.HashCommand, 'RunCommand', new=mock.Mock())
@@ -177,7 +178,7 @@ class TestHashShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} alpha storage hash {}'
-             ' gs://b/o').format(os.path.join('fake_dir', 'bin', 'gcloud'),
+             ' gs://b/o').format(shim_util._get_gcloud_binary_path('fake_dir'),
                                  hash._GCLOUD_FORMAT_STRING), info_lines)
 
   @mock.patch.object(hash.HashCommand, 'RunCommand', new=mock.Mock())
@@ -193,7 +194,7 @@ class TestHashShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} alpha storage hash {}'
                        ' --skip-crc32c gs://b/o').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'),
+                           shim_util._get_gcloud_binary_path('fake_dir'),
                            hash._GCLOUD_FORMAT_STRING), info_lines)
 
   @mock.patch.object(hash.HashCommand, 'RunCommand', new=mock.Mock())
@@ -209,5 +210,5 @@ class TestHashShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} alpha storage hash {}'
                        ' --skip-md5 gs://b/o').format(
-                           os.path.join('fake_dir', 'bin', 'gcloud'),
+                           shim_util._get_gcloud_binary_path('fake_dir'),
                            hash._GCLOUD_FORMAT_STRING), info_lines)

@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 import collections
 from contextlib import contextmanager
 import os
+import re
 import subprocess
 from unittest import mock
 
@@ -38,6 +39,7 @@ from gslib.tests import testcase
 from gslib.utils import boto_util
 from gslib.utils import constants
 from gslib.utils import shim_util
+from gslib.utils import system_util
 from gslib.tests import util
 
 
@@ -405,6 +407,16 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         bucket_storage_uri_class=mock.ANY,
         gsutil_api_class_map_factory=mock.MagicMock())
 
+  def test_gets_gcloud_binary_path_on_non_windows(self):
+    with mock.patch.object(system_util, 'IS_WINDOWS', new=False):
+      self.assertEqual(shim_util._get_gcloud_binary_path('fake_root'),
+                       os.path.join('fake_root', 'bin', 'gcloud'))
+
+  def test_gets_gcloud_binary_path_on_windows(self):
+    with mock.patch.object(system_util, 'IS_WINDOWS', new=True):
+      self.assertEqual(shim_util._get_gcloud_binary_path('fake_root'),
+                       os.path.join('fake_root', 'bin', 'gcloud.cmd'))
+
   def test_returns_false_with_use_gcloud_storage_never(self):
     """Should not attempt translation."""
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'False')]):
@@ -430,7 +442,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         self.assertTrue(
             self._fake_command.translate_to_gcloud_storage_if_requested())
         # Verify translation.
-        expected_gcloud_path = os.path.join('fake_dir', 'bin', 'gcloud')
+        expected_gcloud_path = shim_util._get_gcloud_binary_path('fake_dir')
         self.assertEqual(self._fake_command._translated_gcloud_storage_command,
                          [
                              expected_gcloud_path, 'objects', 'fake', '--zip',
@@ -439,7 +451,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
 
   def test_with_cloudsdk_root_dir_unset_and_gcloud_binary_path_set(self):
     """Should return True and perform the translation."""
-    gcloud_path = os.path.join('fake_dir', 'bin', 'gcloud')
+    gcloud_path = shim_util._get_gcloud_binary_path('fake_dir')
     with _mock_boto_config({
         'GSUtil': {
             'use_gcloud_storage': 'always',
@@ -495,6 +507,13 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
   def test_raises_error_if_pass_credentials_to_gsutil_is_missing(self):
+    error_regex= (
+      r'CommandException: Requested to use "gcloud storage" but gsutil'
+      r' is not using the same credentials as'
+      r' gcloud. You can make gsutil use the same credentials'
+      r' by running:\n'
+      r'{} config set pass_credentials_to_gsutil True'
+    ).format(re.escape(shim_util._get_gcloud_binary_path('fake_dir')))
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                     ('GSUtil', 'hidden_shim_mode',
                                      'no_fallback')]):
@@ -504,11 +523,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
       }):
         with self.assertRaisesRegex(
             exception.CommandException,
-            'CommandException: Requested to use "gcloud storage" but gsutil'
-            ' is not using the same credentials as'
-            ' gcloud. You can make gsutil use the same credentials'
-            ' by running:\n'
-            'fake_dir.bin.gcloud config set pass_credentials_to_gsutil True'):
+            error_regex):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
   @mock.patch.object(boto_util, 'UsingGsHmac', return_value=True)
@@ -580,11 +595,11 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                                                    return_log_handler=True)
         self.assertIn(
             'Gcloud Storage Command: {} objects fake arg1'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud')),
+                shim_util._get_gcloud_binary_path('fake_dir')),
             mock_log_handler.messages['info'])
         self.assertIn(
             'FakeCommandWithGcloudStorageMap called'.format(
-                os.path.join('fake_dir', 'bin', 'gcloud')), stdout)
+                shim_util._get_gcloud_binary_path('fake_dir')), stdout)
 
   def test_non_dry_mode_logs_translated_command_to_debug_logs(self):
     with _mock_boto_config({
@@ -604,7 +619,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
           mock_logger.debug.assert_has_calls([
               mock.call('Gcloud Storage Command: {} objects'
                         ' fake --zip opt1 -x arg1 arg2'.format(
-                            os.path.join('fake_dir', 'bin', 'gcloud'))),
+                            shim_util._get_gcloud_binary_path('fake_dir'))),
               mock.call('Environment variables for Gcloud Storage:'),
               mock.call('%s=%s', 'CLOUDSDK_METRICS_ENVIRONMENT', 'gsutil_shim'),
               mock.call('%s=%s', 'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM', 'True')
@@ -650,7 +665,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
 
         self.assertTrue(fake_command.translate_to_gcloud_storage_if_requested())
         # Verify translation.
-        expected_gcloud_path = os.path.join('fake_dir', 'bin', 'gcloud')
+        expected_gcloud_path = shim_util._get_gcloud_binary_path('fake_dir')
         self.assertEqual(fake_command._translated_gcloud_storage_command, [
             expected_gcloud_path, 'objects', 'fake', 'arg1', 'arg2',
             '--verbosity', 'debug', '--billing-project=fake_user_project',
@@ -744,7 +759,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         self._fake_command.translate_to_gcloud_storage_if_requested()
         self.assertEqual(self._fake_command._translated_gcloud_storage_command,
                          [
-                             os.path.join('fake_dir', 'bin', 'gcloud'),
+                             shim_util._get_gcloud_binary_path('fake_dir'),
                              'objects', 'fake', '--zip', 'opt1', '-x', 'arg1',
                              'arg2', '--verbosity', 'debug', '--log-http'
                          ])
@@ -767,8 +782,8 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         self._fake_command.translate_to_gcloud_storage_if_requested()
         self.assertEqual(
             self._fake_command._translated_gcloud_storage_command, [
-                os.path.join('fake_dir', 'bin', 'gcloud'), 'objects', 'fake',
-                '--zip', 'opt1', '-x', 'arg1', 'arg2',
+                shim_util._get_gcloud_binary_path('fake_dir'), 'objects',
+                'fake', '--zip', 'opt1', '-x', 'arg1', 'arg2',
                 '--impersonate-service-account=fake_service_account'
             ])
 
@@ -787,7 +802,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         self._fake_command.translate_to_gcloud_storage_if_requested()
         self.assertEqual(self._fake_command._translated_gcloud_storage_command,
                          [
-                             os.path.join('fake_dir', 'bin', 'gcloud'),
+                             shim_util._get_gcloud_binary_path('fake_dir'),
                              'objects', 'fake', '--zip', 'opt1', '-x', 'arg1',
                              'arg2', '--no-user-output-enabled'
                          ])
@@ -869,7 +884,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
 
         self.assertTrue(fake_command.translate_to_gcloud_storage_if_requested())
         self.assertEqual(fake_command._translated_gcloud_storage_command, [
-            os.path.join('fake_dir', 'bin', 'gcloud'), 'objects', 'fake',
+            shim_util._get_gcloud_binary_path('fake_dir'), 'objects', 'fake',
             'arg1', 'arg2', '--content-type=fake_val'
         ])
 
@@ -1091,6 +1106,26 @@ class TestGetFlagFromHeader(testcase.GsUtilUnitTestCase):
       self.assertEqual(result, expected_flag)
 
 
+class TestFormatFlagUtils(testcase.GsUtilUnitTestCase):
+  """Test utils used for generating gcloud --format flags."""
+
+  def test_gets_format_flag_caret_on_non_windows(self):
+    with mock.patch.object(system_util, 'IS_WINDOWS', new=False):
+      self.assertEqual(shim_util.get_format_flag_caret(), '^')
+
+  def test_gets_format_flag_escaped_caret_on_windows(self):
+    with mock.patch.object(system_util, 'IS_WINDOWS', new=True):
+      self.assertEqual(shim_util.get_format_flag_caret(), '^^^^')
+
+  def test_gets_format_flag_newline_on_non_windows(self):
+    with mock.patch.object(system_util, 'IS_WINDOWS', new=False):
+      self.assertEqual(shim_util.get_format_flag_newline(), '\n')
+
+  def test_gets_format_flag_escaped_newline_on_windows(self):
+    with mock.patch.object(system_util, 'IS_WINDOWS', new=True):
+      self.assertEqual(shim_util.get_format_flag_newline(), '^\^n')
+
+
 class TestBotoTranslation(testcase.GsUtilUnitTestCase):
   """Test gsutil header  translation."""
 
@@ -1126,7 +1161,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
         self.assertTrue(
             self._fake_command.translate_to_gcloud_storage_if_requested())
         # Verify translation.
-        expected_gcloud_path = os.path.join('fake_dir', 'bin', 'gcloud')
+        expected_gcloud_path = shim_util._get_gcloud_binary_path('fake_dir')
         self.assertEqual(
             self._fake_command._translated_gcloud_storage_command, [
                 expected_gcloud_path, 'objects', 'fake', '--zip', 'opt1', '-x',

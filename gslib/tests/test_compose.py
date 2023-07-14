@@ -292,8 +292,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
                               expected_status=1,
                               return_stderr=True)
 
-      self.assertIn('The provided encryption key is incorrect',
-                    stderr)
+      self.assertIn('The provided encryption key is incorrect', stderr)
 
     # Should also fail if we don't have the second key.
     with SetBotoConfigForTest([('GSUtil', 'encryption_key',
@@ -309,8 +308,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
       if self._use_gcloud_storage:
         self.assertIn('Missing decryption key', stderr)
       else:
-        self.assertIn('The provided encryption key is incorrect',
-                      stderr)
+        self.assertIn('The provided encryption key is incorrect', stderr)
 
   def test_compose_missing_second_source_object(self):
     bucket_uri = self.CreateBucket()
