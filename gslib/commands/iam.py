@@ -444,20 +444,21 @@ class IamCommand(Command):
     return patch_bindings_tuples, url_objects
 
   def _run_ch_subprocess(self, args, stdin=None):
-    subprocess_envs = os.environ.copy()
-    subprocess_envs.update(self._translated_env_variables)
-
     _, command = self._get_full_gcloud_storage_execution_information(args)
     process = subprocess.run(
         command,
-        env=subprocess_envs,
+        env=self._get_shim_command_environment_variables(),
         input=stdin,
         stderr=subprocess.PIPE,
         stdout=subprocess.PIPE,
         text=True,
     )
-    if process.returncode != 0 and not self.continue_on_error:
-      raise CommandException(process.stderr)
+
+    if process.returncode != 0:
+      if self.continue_on_error:
+        self.logger.debug(process.stderr)
+      else:
+        raise CommandException(process.stderr)
     return process
 
   def run_gcloud_storage(self):
@@ -493,10 +494,6 @@ class IamCommand(Command):
       else:
         urls = [str(url_pattern)]
 
-      # With the -r flag, container headings are printed ending in '/:'.
-      # All headings other than the first are preceded by a new line.
-      # These need to be skipped, without skipping objects that end in
-      # '/:'.
       for url in urls:
         get_process = self._run_ch_subprocess([
             'alpha', 'storage', resource_type, 'get-iam-policy', url,
@@ -507,9 +504,9 @@ class IamCommand(Command):
           continue
 
         policy = json.loads(get_process.stdout)
-        bindings = iam_helper.BindingsToDict(policy['bindings'])
+        bindings = iam_helper.BindingsDictToUpdateDict(policy['bindings'])
         for (is_grant, diff) in bindings_tuples:
-          diff_dict = iam_helper.BindingsToDict(diff)
+          diff_dict = iam_helper.BindingsDictToUpdateDict(diff)
           bindings = PatchBindings(bindings, diff_dict, is_grant)
 
         policy['bindings'] = [{
@@ -688,8 +685,8 @@ class IamCommand(Command):
     orig_bindings = list(bindings)
 
     for (is_grant, diff) in bindings_tuples:
-      bindings_dict = iam_helper.BindingsToDict(bindings)
-      diff_dict = iam_helper.BindingsToDict(diff)
+      bindings_dict = iam_helper.BindingsMessageToUpdateDict(bindings)
+      diff_dict = iam_helper.BindingsMessageToUpdateDict(diff)
       new_bindings_dict = PatchBindings(bindings_dict, diff_dict, is_grant)
       bindings = [
           apitools_messages.Policy.BindingsValueListEntry(role=r,
@@ -709,7 +706,16 @@ class IamCommand(Command):
     self._SetIamHelperInternal(storage_url, policy, thread_state=thread_state)
 
   def _PatchIam(self):
-    patch_bindings_tuples, url_patterns = self._GetSettingsAndDiffs()
+    raw_bindings_tuples, url_patterns = self._GetSettingsAndDiffs()
+    patch_bindings_tuples = []
+    for is_grant, bindings in raw_bindings_tuples:
+      bindings_messages = []
+      for binding in bindings:
+        bindings_message = apitools_messages.Policy.BindingsValueListEntry(
+            members=binding['members'], role=binding['role'])
+        bindings_messages.append(bindings_message)
+      patch_bindings_tuples.append(
+          BindingsTuple(is_grant=is_grant, bindings=bindings_messages))
 
     self.everything_set_okay = True
     self.tried_ch_on_resource_with_conditions = False

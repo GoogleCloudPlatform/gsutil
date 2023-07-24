@@ -35,16 +35,15 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils import shim_util
 from gslib.utils.constants import UTF8
-from gslib.utils.iam_helper import BindingsToDict
+from gslib.utils.iam_helper import BindingsMessageToUpdateDict
+from gslib.utils.iam_helper import BindingsDictToUpdateDict
 from gslib.utils.iam_helper import BindingStringToTuple as bstt
-from gslib.utils.iam_helper import BindingsTuple
 from gslib.utils.iam_helper import DiffBindings
 from gslib.utils.iam_helper import IsEqualBindings
 from gslib.utils.iam_helper import PatchBindings
 from gslib.utils.retry_util import Retry
-from gslib.utils import shim_util
-
 from six import add_move, MovedModule
 
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
@@ -143,9 +142,10 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
 
   def test_convert_bindings_simple(self):
     """Tests that Policy.bindings lists are converted to dicts properly."""
-    self.assertEquals(BindingsToDict([]), defaultdict(set))
+    self.assertEquals(BindingsMessageToUpdateDict([]), defaultdict(set))
     expected = defaultdict(set, {'x': set(['y'])})
-    self.assertEquals(BindingsToDict([bvle(role='x', members=['y'])]), expected)
+    self.assertEquals(
+        BindingsMessageToUpdateDict([bvle(role='x', members=['y'])]), expected)
 
   def test_convert_bindings_duplicates(self):
     """Test that role and member duplication are converted correctly."""
@@ -158,8 +158,38 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
         bvle(role='x', members=['z', 'y']),
         bvle(role='x', members=['z'])
     ]
-    self.assertEquals(BindingsToDict(duplicate_roles), expected)
-    self.assertEquals(BindingsToDict(duplicate_members), expected)
+    self.assertEquals(BindingsMessageToUpdateDict(duplicate_roles), expected)
+    self.assertEquals(BindingsMessageToUpdateDict(duplicate_members), expected)
+
+  def test_convert_bindings_dict_simple(self):
+    """Tests that Policy.bindings lists are converted to dicts properly."""
+    self.assertEquals(BindingsDictToUpdateDict([]), defaultdict(set))
+    expected = defaultdict(set, {'x': set(['y'])})
+    self.assertEquals(
+        BindingsDictToUpdateDict([{
+            'role': 'x',
+            'members': ['y']
+        }]), expected)
+
+  def test_convert_bindings_dict_duplicates(self):
+    """Test that role and member duplication are converted correctly."""
+    expected = defaultdict(set, {'x': set(['y', 'z'])})
+    duplicate_roles = [{
+        'role': 'x',
+        'members': ['y']
+    }, {
+        'role': 'x',
+        'members': ['z']
+    }]
+    duplicate_members = [{
+        'role': 'x',
+        'members': ['z', 'y']
+    }, {
+        'role': 'x',
+        'members': ['z']
+    }]
+    self.assertEquals(BindingsDictToUpdateDict(duplicate_roles), expected)
+    self.assertEquals(BindingsDictToUpdateDict(duplicate_members), expected)
 
   def test_equality_bindings_literal(self):
     """Tests an easy case of identical bindings."""
@@ -233,26 +263,26 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
         bvle(role='b', members=['user:foo@bar.com']),
         bvle(role='c', members=['user:foo@bar.com']),
     ]
-    base = BindingsToDict(base_list)
+    base = BindingsMessageToUpdateDict(base_list)
     diff_list = [
         bvle(role='d', members=['user:foo@bar.com']),
     ]
-    diff = BindingsToDict(diff_list)
-    expected = BindingsToDict(base_list + diff_list)
+    diff = BindingsMessageToUpdateDict(diff_list)
+    expected = BindingsMessageToUpdateDict(base_list + diff_list)
     res = PatchBindings(base, diff, True)
     self.assertEqual(res, expected)
 
   def test_patch_bindings_remove(self):
     """Tests patching a remove binding."""
-    base = BindingsToDict([
+    base = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
     ])
-    diff = BindingsToDict([
+    diff = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
     ])
-    expected = BindingsToDict([
+    expected = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
     ])
@@ -262,18 +292,18 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
 
   def test_patch_bindings_remove_all(self):
     """Tests removing all roles from a member."""
-    base = BindingsToDict([
+    base = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
     ])
-    diff = BindingsToDict([
+    diff = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role=''),
     ])
     res = PatchBindings(base, diff, False)
     self.assertEqual(res, {})
 
-    diff = BindingsToDict([
+    diff = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
@@ -284,15 +314,15 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
 
   def test_patch_bindings_multiple_users(self):
     """Tests expected behavior when multiple users exist."""
-    expected = BindingsToDict([
+    expected = BindingsMessageToUpdateDict([
         bvle(members=['user:fii@bar.com'], role='b'),
     ])
-    base = BindingsToDict([
+    base = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com', 'user:fii@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
     ])
-    diff = BindingsToDict([
+    diff = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
@@ -302,15 +332,15 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
 
   def test_patch_bindings_grant_all_users(self):
     """Tests a public member grant."""
-    base = BindingsToDict([
+    base = BindingsMessageToUpdateDict([
         bvle(role='a', members=['user:foo@bar.com']),
         bvle(role='b', members=['user:foo@bar.com']),
         bvle(role='c', members=['user:foo@bar.com']),
     ])
-    diff = BindingsToDict([
+    diff = BindingsMessageToUpdateDict([
         bvle(role='a', members=['allUsers']),
     ])
-    expected = BindingsToDict([
+    expected = BindingsMessageToUpdateDict([
         bvle(role='a', members=['allUsers', 'user:foo@bar.com']),
         bvle(role='b', members=['user:foo@bar.com']),
         bvle(role='c', members=['user:foo@bar.com']),
@@ -324,21 +354,23 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     base_list = [
         bvle(role='a', members=['allUsers']),
     ]
-    base = BindingsToDict(base_list)
+    base = BindingsMessageToUpdateDict(base_list)
     diff_list = [
         bvle(role='a', members=['allAuthenticatedUsers']),
     ]
-    diff = BindingsToDict(diff_list)
+    diff = BindingsMessageToUpdateDict(diff_list)
 
     res = PatchBindings(base, diff, True)
-    self.assertEqual(res, BindingsToDict(base_list + diff_list))
+    self.assertEqual(res, BindingsMessageToUpdateDict(base_list + diff_list))
 
   def test_valid_public_member_single_role(self):
     """Tests parsing single role (case insensitive)."""
     (_, bindings) = bstt(True, 'allusers:admin')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.admin'),
-                  bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.admin'
+    }, bindings)
 
   def test_grant_no_role_error(self):
     """Tests that an error is raised when no role is specified for a grant."""
@@ -356,7 +388,7 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     # Input specifies remove all roles from allUsers.
     (is_grant, bindings) = bstt(False, 'allUsers')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['allUsers'], role=''), bindings)
+    self.assertIn({'members': ['allUsers'], 'role': ''}, bindings)
     self.assertEquals((is_grant, bindings), bstt(False, 'allUsers:'))
 
     # Input specifies remove all roles from a user.
@@ -367,67 +399,95 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     """Tests parsing of multiple roles bound to one user."""
     (_, bindings) = bstt(True, 'allUsers:a,b,c,roles/custom')
     self.assertEquals(len(bindings), 4)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.a'), bindings)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.b'), bindings)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.c'), bindings)
-    self.assertIn(bvle(members=['allUsers'], role='roles/custom'), bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.a'
+    }, bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.b'
+    }, bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.c'
+    }, bindings)
+    self.assertIn({'members': ['allUsers'], 'role': 'roles/custom'}, bindings)
 
   def test_valid_custom_roles(self):
     """Tests parsing of custom roles bound to one user."""
     (_, bindings) = bstt(True, 'user:foo@bar.com:roles/custom1,roles/custom2')
     self.assertEquals(len(bindings), 2)
-    self.assertIn(bvle(members=['user:foo@bar.com'], role='roles/custom1'),
-                  bindings)
-    self.assertIn(bvle(members=['user:foo@bar.com'], role='roles/custom2'),
-                  bindings)
+    self.assertIn({
+        'members': ['user:foo@bar.com'],
+        'role': 'roles/custom1'
+    }, bindings)
+    self.assertIn({
+        'members': ['user:foo@bar.com'],
+        'role': 'roles/custom2'
+    }, bindings)
 
   def test_valid_member(self):
     """Tests member parsing (case insensitive)."""
     (_, bindings) = bstt(True, 'User:foo@bar.com:admin')
     self.assertEquals(len(bindings), 1)
     self.assertIn(
-        bvle(members=['user:foo@bar.com'], role='roles/storage.admin'),
-        bindings)
+        {
+            'members': ['user:foo@bar.com'],
+            'role': 'roles/storage.admin'
+        }, bindings)
 
   def test_valid_deleted_member(self):
     """Tests deleted member parsing (case insensitive)."""
     (_, bindings) = bstt(False, 'Deleted:User:foo@bar.com?uid=123')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['deleted:user:foo@bar.com?uid=123'], role=''),
-                  bindings)
+    self.assertIn({
+        'members': ['deleted:user:foo@bar.com?uid=123'],
+        'role': ''
+    }, bindings)
     (_, bindings) = bstt(True, 'deleted:User:foo@bar.com?uid=123:admin')
     self.assertEquals(len(bindings), 1)
     self.assertIn(
-        bvle(members=['deleted:user:foo@bar.com?uid=123'],
-             role='roles/storage.admin'), bindings)
+        {
+            'members': ['deleted:user:foo@bar.com?uid=123'],
+            'role': 'roles/storage.admin'
+        }, bindings)
     # These emails can actually have multiple query params
     (_, bindings) = bstt(
         True,
         'deleted:user:foo@bar.com?query=param,uid=123?uid=456:admin,admin2')
     self.assertEquals(len(bindings), 2)
     self.assertIn(
-        bvle(members=['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
-             role='roles/storage.admin'), bindings)
+        {
+            'members': ['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
+            'role': 'roles/storage.admin'
+        }, bindings)
     self.assertIn(
-        bvle(members=['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
-             role='roles/storage.admin2'), bindings)
+        {
+            'members': ['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
+            'role': 'roles/storage.admin2'
+        }, bindings)
 
   def test_duplicate_roles(self):
     """Tests that duplicate roles are ignored."""
     (_, bindings) = bstt(True, 'allUsers:a,a')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.a'), bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.a'
+    }, bindings)
 
   def test_removing_project_convenience_groups(self):
     """Tests that project convenience roles can be removed."""
     (_, bindings) = bstt(False, 'projectViewer:123424:admin')
     self.assertEquals(len(bindings), 1)
     self.assertIn(
-        bvle(members=['projectViewer:123424'], role='roles/storage.admin'),
-        bindings)
+        {
+            'members': ['projectViewer:123424'],
+            'role': 'roles/storage.admin'
+        }, bindings)
     (_, bindings) = bstt(False, 'projectViewer:123424')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['projectViewer:123424'], role=''), bindings)
+    self.assertIn({'members': ['projectViewer:123424'], 'role': ''}, bindings)
 
   def test_adding_project_convenience_groups(self):
     """Tests that project convenience roles cannot be added."""
@@ -1613,7 +1673,6 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                      stdout=stdout,
                      text=text)
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_adds_updates_and_deletes_bucket_policies(self, mock_run):
     original_policy = {
@@ -1654,11 +1713,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'buckets', 'get-iam-policy', 'gs://b/', '--format=json'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'),
+              shim_util._get_gcloud_binary_path('fake_dir'),
               'alpha',
               'storage',
               'buckets',
@@ -1669,7 +1728,6 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                              stdin=json.dumps(new_policy, sort_keys=True))
       ])
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_updates_bucket_policies_for_multiple_urls(self, mock_run):
     original_policy1 = {
@@ -1716,11 +1774,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'buckets', 'get-iam-policy', 'gs://b1/', '--format=json'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'),
+              shim_util._get_gcloud_binary_path('fake_dir'),
               'alpha',
               'storage',
               'buckets',
@@ -1730,11 +1788,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ],
                              stdin=json.dumps(new_policy1, sort_keys=True)),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'buckets', 'get-iam-policy', 'gs://b2/', '--format=json'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'),
+              shim_util._get_gcloud_binary_path('fake_dir'),
               'alpha',
               'storage',
               'buckets',
@@ -1745,7 +1803,6 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                              stdin=json.dumps(new_policy2, sort_keys=True))
       ])
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_updates_object_policies(self, mock_run):
     original_policy = {
@@ -1780,15 +1837,15 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'ls', '--json', 'gs://b/o'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'objects', 'get-iam-policy', 'gs://b/o', '--format=json'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'),
+              shim_util._get_gcloud_binary_path('fake_dir'),
               'alpha',
               'storage',
               'objects',
@@ -1799,7 +1856,6 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                              stdin=json.dumps(new_policy, sort_keys=True))
       ])
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_expands_urls_with_recursion_and_ignores_container_headers(
       self, mock_run):
@@ -1839,15 +1895,15 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'ls', '--json', '-r', 'gs://b/'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'objects', 'get-iam-policy', 'gs://b/dir/:', '--format=json'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'),
+              shim_util._get_gcloud_binary_path('fake_dir'),
               'alpha',
               'storage',
               'objects',
@@ -1857,11 +1913,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ],
                              stdin=mock.ANY),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'objects', 'get-iam-policy', 'gs://b/dir2/o', '--format=json'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'),
+              shim_util._get_gcloud_binary_path('fake_dir'),
               'alpha',
               'storage',
               'objects',
@@ -1872,7 +1928,6 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                              stdin=mock.ANY)
       ])
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_raises_ls_error(self, mock_run):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
@@ -1890,7 +1945,6 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
               'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
         self.assertEqual(mock_run.call_count, 1)
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_raises_get_error(self, mock_run):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
@@ -1914,7 +1968,6 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
               'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
         self.assertEqual(mock_run.call_count, 2)
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_raises_set_error(self, mock_run):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
@@ -1941,7 +1994,6 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
               'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
         self.assertEqual(mock_run.call_count, 3)
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_continues_on_ls_error(self, mock_run):
     original_policy = {
@@ -1962,30 +2014,38 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                                                stderr='An error.')
       ls_process2 = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
-                                                stdout='Another error.')
+                                                stderr='Another error.')
       mock_run.side_effect = [ls_process, ls_process2]
 
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
-        self.RunCommand('iam', [
-            'ch', '-f', 'allAuthenticatedUsers:modified-role', 'gs://b/o1',
-            'gs://b/o2'
-        ])
+        mock_log_handler = self.RunCommand('iam', [
+            'ch',
+            '-f',
+            'allAuthenticatedUsers:modified-role',
+            'gs://b/o1',
+            'gs://b/o2',
+        ],
+                                           debug=1,
+                                           return_log_handler=True)
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'ls', '--json', 'gs://b/o1'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'ls', '--json', 'gs://b/o2'
           ]),
       ])
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+      debug_lines = '\n'.join(mock_log_handler.messages['debug'])
+      self.assertIn('An error.', debug_lines)
+      self.assertIn('Another error.', debug_lines)
+
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_continues_on_get_error(self, mock_run):
     original_policy = {
@@ -2012,33 +2072,41 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                                                 stderr='An error.')
       ls_process2 = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
-                                                stdout='Another error.')
+                                                stderr='Another error.')
       mock_run.side_effect = [ls_process, get_process, ls_process2]
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
-        self.RunCommand('iam', [
-            'ch', '-f', 'allAuthenticatedUsers:modified-role', 'gs://b/o1',
-            'gs://b/o2'
-        ])
+        mock_log_handler = self.RunCommand('iam', [
+            'ch',
+            '-f',
+            'allAuthenticatedUsers:modified-role',
+            'gs://b/o1',
+            'gs://b/o2',
+        ],
+                                           debug=1,
+                                           return_log_handler=True)
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'ls', '--json', 'gs://b/o1'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'objects', 'get-iam-policy', 'gs://b/o1', '--format=json'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'ls', '--json', 'gs://b/o2'
           ]),
       ])
 
-  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+      debug_lines = '\n'.join(mock_log_handler.messages['debug'])
+      self.assertIn('An error.', debug_lines)
+      self.assertIn('Another error.', debug_lines)
+
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_continues_on_set_error(self, mock_run):
     original_policy = {
@@ -2067,29 +2135,31 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                                                 stderr='An error.')
       ls_process2 = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
-                                                stdout='Another error.')
+                                                stderr='Another error.')
       mock_run.side_effect = [ls_process, get_process, set_process, ls_process2]
 
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
-        self.RunCommand('iam', [
+        mock_log_handler = self.RunCommand('iam', [
             'ch', '-f', 'allAuthenticatedUsers:modified-role', 'gs://b/o1',
             'gs://b/o2'
-        ])
+        ],
+                                           debug=1,
+                                           return_log_handler=True)
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'ls', '--json', 'gs://b/o1'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'objects', 'get-iam-policy', 'gs://b/o1', '--format=json'
           ]),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'),
+              shim_util._get_gcloud_binary_path('fake_dir'),
               'alpha',
               'storage',
               'objects',
@@ -2099,7 +2169,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ],
                              stdin=json.dumps(new_policy, sort_keys=True)),
           self._get_run_call([
-              os.path.join('fake_dir', 'bin', 'gcloud'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
               'ls', '--json', 'gs://b/o2'
           ]),
       ])
+
+      debug_lines = '\n'.join(mock_log_handler.messages['debug'])
+      self.assertIn('An error.', debug_lines)
+      self.assertIn('Another error.', debug_lines)

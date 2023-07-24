@@ -617,7 +617,7 @@ class GcloudStorageCommandMixin(object):
               ' same credentials as gcloud.'
               ' You can make gsutil use the same credentials by running:\n'
               '{} config set pass_credentials_to_gsutil True'.format(
-                  _get_gcloud_binary_path()))
+                  _get_validated_gcloud_binary_path()))
         elif (boto_util.UsingGsHmac() and
               ApiSelector.XML not in self.command_spec.gs_api_support):
           raise CommandException(
@@ -641,9 +641,12 @@ class GcloudStorageCommandMixin(object):
             ' Going to run gsutil command. Error: %s', e)
     return False
 
-  def run_gcloud_storage(self):
+  def _get_shim_command_environment_variables(self):
     subprocess_envs = os.environ.copy()
     subprocess_envs.update(self._translated_env_variables)
+    return subprocess_envs
+
+  def run_gcloud_storage(self):
     process = subprocess.run(self._translated_gcloud_storage_command,
-                             env=subprocess_envs)
+                             env=self._get_shim_command_environment_variables())
     return process.returncode
