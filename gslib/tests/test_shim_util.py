@@ -507,13 +507,13 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
   def test_raises_error_if_pass_credentials_to_gsutil_is_missing(self):
-    error_regex= (
-      r'CommandException: Requested to use "gcloud storage" but gsutil'
-      r' is not using the same credentials as'
-      r' gcloud. You can make gsutil use the same credentials'
-      r' by running:\n'
-      r'{} config set pass_credentials_to_gsutil True'
-    ).format(re.escape(shim_util._get_gcloud_binary_path('fake_dir')))
+    error_regex = (
+        r'CommandException: Requested to use "gcloud storage" but gsutil'
+        r' is not using the same credentials as'
+        r' gcloud. You can make gsutil use the same credentials'
+        r' by running:\n'
+        r'{} config set pass_credentials_to_gsutil True').format(
+            re.escape(shim_util._get_gcloud_binary_path('fake_dir')))
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                     ('GSUtil', 'hidden_shim_mode',
                                      'no_fallback')]):
@@ -521,9 +521,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': None
       }):
-        with self.assertRaisesRegex(
-            exception.CommandException,
-            error_regex):
+        with self.assertRaisesRegex(exception.CommandException, error_regex):
           self._fake_command.translate_to_gcloud_storage_if_requested()
 
   @mock.patch.object(boto_util, 'UsingGsHmac', return_value=True)

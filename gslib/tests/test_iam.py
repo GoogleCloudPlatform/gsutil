@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 from collections import defaultdict
 import json
 import os
+import subprocess
 
 from gslib.commands import iam
 from gslib.exception import CommandException
@@ -34,16 +35,15 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.tests.util import unittest
 from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+from gslib.utils import shim_util
 from gslib.utils.constants import UTF8
-from gslib.utils.iam_helper import BindingsToDict
+from gslib.utils.iam_helper import BindingsMessageToUpdateDict
+from gslib.utils.iam_helper import BindingsDictToUpdateDict
 from gslib.utils.iam_helper import BindingStringToTuple as bstt
-from gslib.utils.iam_helper import BindingsTuple
 from gslib.utils.iam_helper import DiffBindings
 from gslib.utils.iam_helper import IsEqualBindings
 from gslib.utils.iam_helper import PatchBindings
 from gslib.utils.retry_util import Retry
-from gslib.utils import shim_util
-
 from six import add_move, MovedModule
 
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
@@ -142,9 +142,10 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
 
   def test_convert_bindings_simple(self):
     """Tests that Policy.bindings lists are converted to dicts properly."""
-    self.assertEquals(BindingsToDict([]), defaultdict(set))
+    self.assertEquals(BindingsMessageToUpdateDict([]), defaultdict(set))
     expected = defaultdict(set, {'x': set(['y'])})
-    self.assertEquals(BindingsToDict([bvle(role='x', members=['y'])]), expected)
+    self.assertEquals(
+        BindingsMessageToUpdateDict([bvle(role='x', members=['y'])]), expected)
 
   def test_convert_bindings_duplicates(self):
     """Test that role and member duplication are converted correctly."""
@@ -157,8 +158,38 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
         bvle(role='x', members=['z', 'y']),
         bvle(role='x', members=['z'])
     ]
-    self.assertEquals(BindingsToDict(duplicate_roles), expected)
-    self.assertEquals(BindingsToDict(duplicate_members), expected)
+    self.assertEquals(BindingsMessageToUpdateDict(duplicate_roles), expected)
+    self.assertEquals(BindingsMessageToUpdateDict(duplicate_members), expected)
+
+  def test_convert_bindings_dict_simple(self):
+    """Tests that Policy.bindings lists are converted to dicts properly."""
+    self.assertEquals(BindingsDictToUpdateDict([]), defaultdict(set))
+    expected = defaultdict(set, {'x': set(['y'])})
+    self.assertEquals(
+        BindingsDictToUpdateDict([{
+            'role': 'x',
+            'members': ['y']
+        }]), expected)
+
+  def test_convert_bindings_dict_duplicates(self):
+    """Test that role and member duplication are converted correctly."""
+    expected = defaultdict(set, {'x': set(['y', 'z'])})
+    duplicate_roles = [{
+        'role': 'x',
+        'members': ['y']
+    }, {
+        'role': 'x',
+        'members': ['z']
+    }]
+    duplicate_members = [{
+        'role': 'x',
+        'members': ['z', 'y']
+    }, {
+        'role': 'x',
+        'members': ['z']
+    }]
+    self.assertEquals(BindingsDictToUpdateDict(duplicate_roles), expected)
+    self.assertEquals(BindingsDictToUpdateDict(duplicate_members), expected)
 
   def test_equality_bindings_literal(self):
     """Tests an easy case of identical bindings."""
@@ -227,113 +258,119 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
 
   def test_patch_bindings_grant(self):
     """Tests patching a grant binding."""
-    base = [
+    base_list = [
         bvle(role='a', members=['user:foo@bar.com']),
         bvle(role='b', members=['user:foo@bar.com']),
         bvle(role='c', members=['user:foo@bar.com']),
     ]
-    diff = [
+    base = BindingsMessageToUpdateDict(base_list)
+    diff_list = [
         bvle(role='d', members=['user:foo@bar.com']),
     ]
-    expected = base + diff
-    res = PatchBindings(base, BindingsTuple(True, diff))
-    self.assertTrue(IsEqualBindings(res, expected))
+    diff = BindingsMessageToUpdateDict(diff_list)
+    expected = BindingsMessageToUpdateDict(base_list + diff_list)
+    res = PatchBindings(base, diff, True)
+    self.assertEqual(res, expected)
 
   def test_patch_bindings_remove(self):
     """Tests patching a remove binding."""
-    base = [
+    base = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
-    diff = [
+    ])
+    diff = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
-    ]
-    expected = [
+    ])
+    expected = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
+    ])
 
-    res = PatchBindings(base, BindingsTuple(False, diff))
-    self.assertTrue(IsEqualBindings(res, expected))
+    res = PatchBindings(base, diff, False)
+    self.assertEqual(res, expected)
 
   def test_patch_bindings_remove_all(self):
     """Tests removing all roles from a member."""
-    base = [
+    base = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
-    diff = [
+    ])
+    diff = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role=''),
-    ]
-    res = PatchBindings(base, BindingsTuple(False, diff))
-    self.assertEquals(res, [])
+    ])
+    res = PatchBindings(base, diff, False)
+    self.assertEqual(res, {})
 
-    diff = [
+    diff = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
+    ])
 
-    res = PatchBindings(base, BindingsTuple(False, diff))
-    self.assertEquals(res, [])
+    res = PatchBindings(base, diff, False)
+    self.assertEqual(res, {})
 
   def test_patch_bindings_multiple_users(self):
     """Tests expected behavior when multiple users exist."""
-    expected = [
+    expected = BindingsMessageToUpdateDict([
         bvle(members=['user:fii@bar.com'], role='b'),
-    ]
-    base = [
+    ])
+    base = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com', 'user:fii@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
-    diff = [
+    ])
+    diff = BindingsMessageToUpdateDict([
         bvle(members=['user:foo@bar.com'], role='a'),
         bvle(members=['user:foo@bar.com'], role='b'),
         bvle(members=['user:foo@bar.com'], role='c'),
-    ]
-    res = PatchBindings(base, BindingsTuple(False, diff))
-    self.assertTrue(IsEqualBindings(res, expected))
+    ])
+    res = PatchBindings(base, diff, False)
+    self.assertEqual(res, expected)
 
   def test_patch_bindings_grant_all_users(self):
     """Tests a public member grant."""
-    base = [
+    base = BindingsMessageToUpdateDict([
         bvle(role='a', members=['user:foo@bar.com']),
         bvle(role='b', members=['user:foo@bar.com']),
         bvle(role='c', members=['user:foo@bar.com']),
-    ]
-    diff = [
+    ])
+    diff = BindingsMessageToUpdateDict([
         bvle(role='a', members=['allUsers']),
-    ]
-    expected = [
+    ])
+    expected = BindingsMessageToUpdateDict([
         bvle(role='a', members=['allUsers', 'user:foo@bar.com']),
         bvle(role='b', members=['user:foo@bar.com']),
         bvle(role='c', members=['user:foo@bar.com']),
-    ]
+    ])
 
-    res = PatchBindings(base, BindingsTuple(True, diff))
-    self.assertTrue(IsEqualBindings(res, expected))
+    res = PatchBindings(base, diff, True)
+    self.assertEqual(res, expected)
 
   def test_patch_bindings_public_member_overwrite(self):
     """Tests public member vs. public member interaction."""
-    base = [
+    base_list = [
         bvle(role='a', members=['allUsers']),
     ]
-    diff = [
+    base = BindingsMessageToUpdateDict(base_list)
+    diff_list = [
         bvle(role='a', members=['allAuthenticatedUsers']),
     ]
+    diff = BindingsMessageToUpdateDict(diff_list)
 
-    res = PatchBindings(base, BindingsTuple(True, diff))
-    self.assertTrue(IsEqualBindings(res, base + diff))
+    res = PatchBindings(base, diff, True)
+    self.assertEqual(res, BindingsMessageToUpdateDict(base_list + diff_list))
 
   def test_valid_public_member_single_role(self):
     """Tests parsing single role (case insensitive)."""
     (_, bindings) = bstt(True, 'allusers:admin')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.admin'),
-                  bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.admin'
+    }, bindings)
 
   def test_grant_no_role_error(self):
     """Tests that an error is raised when no role is specified for a grant."""
@@ -351,7 +388,7 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     # Input specifies remove all roles from allUsers.
     (is_grant, bindings) = bstt(False, 'allUsers')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['allUsers'], role=''), bindings)
+    self.assertIn({'members': ['allUsers'], 'role': ''}, bindings)
     self.assertEquals((is_grant, bindings), bstt(False, 'allUsers:'))
 
     # Input specifies remove all roles from a user.
@@ -362,67 +399,95 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     """Tests parsing of multiple roles bound to one user."""
     (_, bindings) = bstt(True, 'allUsers:a,b,c,roles/custom')
     self.assertEquals(len(bindings), 4)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.a'), bindings)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.b'), bindings)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.c'), bindings)
-    self.assertIn(bvle(members=['allUsers'], role='roles/custom'), bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.a'
+    }, bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.b'
+    }, bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.c'
+    }, bindings)
+    self.assertIn({'members': ['allUsers'], 'role': 'roles/custom'}, bindings)
 
   def test_valid_custom_roles(self):
     """Tests parsing of custom roles bound to one user."""
     (_, bindings) = bstt(True, 'user:foo@bar.com:roles/custom1,roles/custom2')
     self.assertEquals(len(bindings), 2)
-    self.assertIn(bvle(members=['user:foo@bar.com'], role='roles/custom1'),
-                  bindings)
-    self.assertIn(bvle(members=['user:foo@bar.com'], role='roles/custom2'),
-                  bindings)
+    self.assertIn({
+        'members': ['user:foo@bar.com'],
+        'role': 'roles/custom1'
+    }, bindings)
+    self.assertIn({
+        'members': ['user:foo@bar.com'],
+        'role': 'roles/custom2'
+    }, bindings)
 
   def test_valid_member(self):
     """Tests member parsing (case insensitive)."""
     (_, bindings) = bstt(True, 'User:foo@bar.com:admin')
     self.assertEquals(len(bindings), 1)
     self.assertIn(
-        bvle(members=['user:foo@bar.com'], role='roles/storage.admin'),
-        bindings)
+        {
+            'members': ['user:foo@bar.com'],
+            'role': 'roles/storage.admin'
+        }, bindings)
 
   def test_valid_deleted_member(self):
     """Tests deleted member parsing (case insensitive)."""
     (_, bindings) = bstt(False, 'Deleted:User:foo@bar.com?uid=123')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['deleted:user:foo@bar.com?uid=123'], role=''),
-                  bindings)
+    self.assertIn({
+        'members': ['deleted:user:foo@bar.com?uid=123'],
+        'role': ''
+    }, bindings)
     (_, bindings) = bstt(True, 'deleted:User:foo@bar.com?uid=123:admin')
     self.assertEquals(len(bindings), 1)
     self.assertIn(
-        bvle(members=['deleted:user:foo@bar.com?uid=123'],
-             role='roles/storage.admin'), bindings)
+        {
+            'members': ['deleted:user:foo@bar.com?uid=123'],
+            'role': 'roles/storage.admin'
+        }, bindings)
     # These emails can actually have multiple query params
     (_, bindings) = bstt(
         True,
         'deleted:user:foo@bar.com?query=param,uid=123?uid=456:admin,admin2')
     self.assertEquals(len(bindings), 2)
     self.assertIn(
-        bvle(members=['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
-             role='roles/storage.admin'), bindings)
+        {
+            'members': ['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
+            'role': 'roles/storage.admin'
+        }, bindings)
     self.assertIn(
-        bvle(members=['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
-             role='roles/storage.admin2'), bindings)
+        {
+            'members': ['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
+            'role': 'roles/storage.admin2'
+        }, bindings)
 
   def test_duplicate_roles(self):
     """Tests that duplicate roles are ignored."""
     (_, bindings) = bstt(True, 'allUsers:a,a')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['allUsers'], role='roles/storage.a'), bindings)
+    self.assertIn({
+        'members': ['allUsers'],
+        'role': 'roles/storage.a'
+    }, bindings)
 
   def test_removing_project_convenience_groups(self):
     """Tests that project convenience roles can be removed."""
     (_, bindings) = bstt(False, 'projectViewer:123424:admin')
     self.assertEquals(len(bindings), 1)
     self.assertIn(
-        bvle(members=['projectViewer:123424'], role='roles/storage.admin'),
-        bindings)
+        {
+            'members': ['projectViewer:123424'],
+            'role': 'roles/storage.admin'
+        }, bindings)
     (_, bindings) = bstt(False, 'projectViewer:123424')
     self.assertEquals(len(bindings), 1)
-    self.assertIn(bvle(members=['projectViewer:123424'], role=''), bindings)
+    self.assertIn({'members': ['projectViewer:123424'], 'role': ''}, bindings)
 
   def test_adding_project_convenience_groups(self):
     """Tests that project convenience roles cannot be added."""
@@ -482,6 +547,17 @@ class TestIamCh(TestIamIntegration):
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('CommandException', stderr)
+
+  def test_raises_error_message_for_d_flag_missing_argument(self):
+    """Tests expected failure if no bindings are listed."""
+    stderr = self.RunGsUtil(
+        ['iam', 'ch',
+         '%s:%s' % (self.user, IAM_BUCKET_READ_ROLE_ABBREV), '-d'],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn(
+        'A -d flag is missing an argument specifying bindings to remove.',
+        stderr)
 
   def test_path_mix_of_buckets_and_objects(self):
     """Tests expected failure if both buckets and objects are provided."""
@@ -708,7 +784,10 @@ class TestIamCh(TestIamIntegration):
     ],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('BucketNotFoundException', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('not found: 404.', stderr)
+    else:
+      self.assertIn('BucketNotFoundException', stderr)
 
     bucket_iam_string = self.RunGsUtil(['iam', 'get', self.bucket.uri],
                                        return_stdout=True)
@@ -727,7 +806,10 @@ class TestIamCh(TestIamIntegration):
     ],
                             return_stderr=True,
                             expected_status=1)
-    self.assertIn('CommandException', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('not found: 404.', stderr)
+    else:
+      self.assertIn('CommandException', stderr)
 
     bucket_iam_string = self.RunGsUtil(['iam', 'get', self.bucket.uri],
                                        return_stdout=True)
@@ -749,7 +831,10 @@ class TestIamCh(TestIamIntegration):
       ],
                               return_stderr=True,
                               expected_status=1)
-      self.assertIn('BucketNotFoundException', stderr)
+      if self._use_gcloud_storage:
+        self.assertIn('not found: 404.', stderr)
+      else:
+        self.assertIn('BucketNotFoundException', stderr)
 
     # TODO(b/135780661): Remove retry after bug resolved
     @Retry(AssertionError, tries=3, timeout_secs=1)
@@ -934,7 +1019,7 @@ class TestIamSet(TestIamIntegration):
       stderr = self.RunGsUtil(['iam', 'set', inpath, self.bucket.uri],
                               return_stderr=True,
                               expected_status=1)
-      error_message = ('Found invalid JSON/YAML file'
+      error_message = ('Found invalid JSON/YAML'
                        if self._use_gcloud_storage else 'ArgumentException')
       self.assertIn(error_message, stderr)
 
@@ -1556,3 +1641,539 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
              ' --format=json --etag= gs://b policy-file').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_warns_with_dry_run_mode_for_iam_ch(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('iam',
+                                           ['ch', '-d', 'allUsers', 'gs://b'],
+                                           return_log_handler=True)
+        warning_lines = '\n'.join(mock_log_handler.messages['warning'])
+        self.assertIn(
+            'The shim maps iam ch commands to several gcloud storage commands,'
+            ' which cannot be determined without running gcloud storage.',
+            warning_lines)
+
+  def _get_run_call(self,
+                    command,
+                    env=mock.ANY,
+                    stdin=None,
+                    stderr=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    text=True):
+    return mock.call(command,
+                     env=env,
+                     input=stdin,
+                     stderr=stderr,
+                     stdout=stdout,
+                     text=text)
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_adds_updates_and_deletes_bucket_policies(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'preserved-role',
+            'members': ['allUsers'],
+        }, {
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers', 'user:deleted-user@example.com'],
+        }, {
+            'role': 'roles/storage.deleted-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'preserved-role',
+            'members': ['allUsers'],
+        }, {
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      get_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy))
+      set_process = subprocess.CompletedProcess(args=[], returncode=0)
+      mock_run.side_effect = [get_process, set_process]
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand('iam', [
+            'ch', 'allAuthenticatedUsers:modified-role', '-d',
+            'user:deleted-user@example.com', '-d', 'allUsers:deleted-role',
+            'gs://b'
+        ])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'buckets', 'get-iam-policy', 'gs://b/', '--format=json'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'),
+              'alpha',
+              'storage',
+              'buckets',
+              'set-iam-policy',
+              'gs://b/',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy, sort_keys=True))
+      ])
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_updates_bucket_policies_for_multiple_urls(self, mock_run):
+    original_policy1 = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['user:test-user1@example.com'],
+        }]
+    }
+    original_policy2 = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['user:test-user2@example.com'],
+        }]
+    }
+    new_policy1 = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'user:test-user1@example.com'],
+        }]
+    }
+    new_policy2 = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'user:test-user2@example.com'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      get_process1 = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy1))
+      get_process2 = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy2))
+      set_process = subprocess.CompletedProcess(args=[], returncode=0)
+      mock_run.side_effect = [
+          get_process1, set_process, get_process2, set_process
+      ]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand(
+            'iam',
+            ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b1', 'gs://b2'])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'buckets', 'get-iam-policy', 'gs://b1/', '--format=json'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'),
+              'alpha',
+              'storage',
+              'buckets',
+              'set-iam-policy',
+              'gs://b1/',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy1, sort_keys=True)),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'buckets', 'get-iam-policy', 'gs://b2/', '--format=json'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'),
+              'alpha',
+              'storage',
+              'buckets',
+              'set-iam-policy',
+              'gs://b2/',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy2, sort_keys=True))
+      ])
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_updates_object_policies(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o',
+                                                   'type': 'cloud_object'
+                                               }]))
+      get_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy))
+      set_process = subprocess.CompletedProcess(args=[], returncode=0)
+      mock_run.side_effect = [ls_process, get_process, set_process]
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand(
+            'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/o', '--format=json'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'),
+              'alpha',
+              'storage',
+              'objects',
+              'set-iam-policy',
+              'gs://b/o',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy, sort_keys=True))
+      ])
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_expands_urls_with_recursion_and_ignores_container_headers(
+      self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/dir/',
+                                                   'type': 'prefix'
+                                               }, {
+                                                   'url': 'gs://b/dir/:',
+                                                   'type': 'cloud_object'
+                                               }, {
+                                                   'url': 'gs://b/dir2/',
+                                                   'type': 'prefix'
+                                               }, {
+                                                   'url': 'gs://b/dir2/o',
+                                                   'type': 'cloud_object'
+                                               }]))
+      get_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy))
+      set_process = subprocess.CompletedProcess(args=[], returncode=0)
+      mock_run.side_effect = [ls_process] + [get_process, set_process] * 3
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.RunCommand(
+            'iam',
+            ['ch', '-r', 'allAuthenticatedUsers:modified-role', 'gs://b'])
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'ls', '--json', '-r', 'gs://b/'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/dir/:', '--format=json'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'),
+              'alpha',
+              'storage',
+              'objects',
+              'set-iam-policy',
+              'gs://b/dir/:',
+              '-',
+          ],
+                             stdin=mock.ANY),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/dir2/o', '--format=json'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'),
+              'alpha',
+              'storage',
+              'objects',
+              'set-iam-policy',
+              'gs://b/dir2/o',
+              '-',
+          ],
+                             stdin=mock.ANY)
+      ])
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_raises_ls_error(self, mock_run):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=1,
+                                               stderr='An error.')
+      mock_run.side_effect = [ls_process]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with self.assertRaisesRegex(CommandException, 'An error.'):
+          self.RunCommand(
+              'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
+        self.assertEqual(mock_run.call_count, 1)
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_raises_get_error(self, mock_run):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o',
+                                                   'type': 'cloud_object'
+                                               }]))
+      get_process = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='An error.')
+      mock_run.side_effect = [ls_process, get_process]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with self.assertRaisesRegex(CommandException, 'An error.'):
+          self.RunCommand(
+              'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
+        self.assertEqual(mock_run.call_count, 2)
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_raises_set_error(self, mock_run):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o',
+                                                   'type': 'cloud_object'
+                                               }]))
+      get_process = subprocess.CompletedProcess(args=[],
+                                                returncode=0,
+                                                stdout='{"bindings": []}')
+      set_process = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='An error.')
+      mock_run.side_effect = [ls_process, get_process, set_process]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with self.assertRaisesRegex(CommandException, 'An error.'):
+          self.RunCommand(
+              'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
+        self.assertEqual(mock_run.call_count, 3)
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_continues_on_ls_error(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=1,
+                                               stderr='An error.')
+      ls_process2 = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='Another error.')
+      mock_run.side_effect = [ls_process, ls_process2]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('iam', [
+            'ch',
+            '-f',
+            'allAuthenticatedUsers:modified-role',
+            'gs://b/o1',
+            'gs://b/o2',
+        ],
+                                           debug=1,
+                                           return_log_handler=True)
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o1'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o2'
+          ]),
+      ])
+
+      debug_lines = '\n'.join(mock_log_handler.messages['debug'])
+      self.assertIn('An error.', debug_lines)
+      self.assertIn('Another error.', debug_lines)
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_continues_on_get_error(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o1',
+                                                   'type': 'cloud_object'
+                                               }]))
+      get_process = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='An error.')
+      ls_process2 = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='Another error.')
+      mock_run.side_effect = [ls_process, get_process, ls_process2]
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('iam', [
+            'ch',
+            '-f',
+            'allAuthenticatedUsers:modified-role',
+            'gs://b/o1',
+            'gs://b/o2',
+        ],
+                                           debug=1,
+                                           return_log_handler=True)
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o1'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/o1', '--format=json'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o2'
+          ]),
+      ])
+
+      debug_lines = '\n'.join(mock_log_handler.messages['debug'])
+      self.assertIn('An error.', debug_lines)
+      self.assertIn('Another error.', debug_lines)
+
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_iam_ch_continues_on_set_error(self, mock_run):
+    original_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allUsers'],
+        }]
+    }
+    new_policy = {
+        'bindings': [{
+            'role': 'roles/storage.modified-role',
+            'members': ['allAuthenticatedUsers', 'allUsers'],
+        }]
+    }
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      ls_process = subprocess.CompletedProcess(args=[],
+                                               returncode=0,
+                                               stdout=json.dumps([{
+                                                   'url': 'gs://b/o1',
+                                                   'type': 'cloud_object'
+                                               }]))
+      get_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout=json.dumps(original_policy))
+      set_process = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='An error.')
+      ls_process2 = subprocess.CompletedProcess(args=[],
+                                                returncode=1,
+                                                stderr='Another error.')
+      mock_run.side_effect = [ls_process, get_process, set_process, ls_process2]
+
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('iam', [
+            'ch', '-f', 'allAuthenticatedUsers:modified-role', 'gs://b/o1',
+            'gs://b/o2'
+        ],
+                                           debug=1,
+                                           return_log_handler=True)
+
+      self.assertEqual(mock_run.call_args_list, [
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o1'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'objects', 'get-iam-policy', 'gs://b/o1', '--format=json'
+          ]),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'),
+              'alpha',
+              'storage',
+              'objects',
+              'set-iam-policy',
+              'gs://b/o1',
+              '-',
+          ],
+                             stdin=json.dumps(new_policy, sort_keys=True)),
+          self._get_run_call([
+              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              'ls', '--json', 'gs://b/o2'
+          ]),
+      ])
+
+      debug_lines = '\n'.join(mock_log_handler.messages['debug'])
+      self.assertIn('An error.', debug_lines)
+      self.assertIn('Another error.', debug_lines)
