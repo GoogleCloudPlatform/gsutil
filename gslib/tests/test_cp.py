@@ -3805,22 +3805,22 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(file_name='looks-zipped.gz', contents=b'foo')
     stderr = self.RunGsUtil([
-        '-DD', '-d', '-h', 'content-type:application/gzip', 'cp', '-J',
+        '-DD', '-h', 'content-type:application/gzip', 'cp', '-J',
         suri(fpath),
         suri(bucket_uri, 'foo')
     ],
                             return_stderr=True)
-    # Ensure the progress logger sees a gzip encoding.
     if self._use_gcloud_storage:
       self.assertIn("b\'Content-Encoding\': b\'gzip\'", stderr)
       self.assertIn('"contentType": "application/gzip"', stderr)
     else:
-      self.assertIn('send: Using gzip transport encoding for the request.',
-                    stderr)
+      self.assertIn("\'Content-Encoding\': \'gzip\'", stderr)
+      self.assertIn('contentType: \'application/gzip\'', stderr)
     self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath])
 
+  @unittest.skipIf(IS_WINDOWS, 'TODO(b/293885158) Timeout on Windows.')
   @SequentialAndParallelTransfer
-  def tet_cp_resumable_download_gzip(self):
+  def test_cp_resumable_download_gzip(self):
     """Tests that download can be resumed successfully with a gzipped file."""
     # Generate some reasonably incompressible data.  This compresses to a bit
     # around 128K in practice, but we assert specifically below that it is

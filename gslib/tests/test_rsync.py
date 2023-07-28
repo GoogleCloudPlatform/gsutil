@@ -61,7 +61,6 @@ from gslib.utils.system_util import IS_OSX
 from gslib.utils.system_util import IS_WINDOWS
 from gslib.utils import shim_util
 
-
 # These POSIX-specific variables aren't defined for Windows.
 # pylint: disable=g-import-not-at-top
 if not IS_WINDOWS:

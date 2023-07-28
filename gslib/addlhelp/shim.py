@@ -275,6 +275,9 @@ _DETAILED_HELP_TEXT = ("""
     same URL.
   - This will be updated as new commands are supported by both gcloud storage
     and the shim.
+  - If Unicode is having issues, try setting the environment variable
+    ``PYTHONUTF8`` to ``1``. Specifically, this may help on the Windows
+    command-line (CMD).
 
 """)
 
