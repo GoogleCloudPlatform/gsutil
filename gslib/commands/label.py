@@ -183,21 +183,19 @@ class LabelCommand(Command):
       'get':
           GcloudStorageMap(
               gcloud_command=[
-                  'alpha', 'storage', 'buckets', 'describe',
+                  'storage', 'buckets', 'describe',
                   '--format=multi(labels:format=json)', '--raw'
               ],
               flag_map={},
           ),
       'set':
           GcloudStorageMap(
-              gcloud_command=[
-                  'alpha', 'storage', 'buckets', 'update', '--labels-file'
-              ],
+              gcloud_command=['storage', 'buckets', 'update', '--labels-file'],
               flag_map={},
           ),
       'ch':
           GcloudStorageMap(
-              gcloud_command=['alpha', 'storage', 'buckets', 'update'],
+              gcloud_command=['storage', 'buckets', 'update'],
               flag_map={
                   '-d':
                       GcloudStorageFlag(

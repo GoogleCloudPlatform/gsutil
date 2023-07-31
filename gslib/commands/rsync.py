@@ -1609,7 +1609,7 @@ class RsyncCommand(Command):
   def get_gcloud_storage_args(self):
     ShimTranslatePredefinedAclSubOptForCopy(self.sub_opts)
 
-    gcloud_command = ['alpha', 'storage', 'rsync']
+    gcloud_command = ['storage', 'rsync']
     flag_keys = [flag for flag, _ in self.sub_opts]
     if '-e' not in flag_keys:
       gcloud_command += ['--no-ignore-symlinks']

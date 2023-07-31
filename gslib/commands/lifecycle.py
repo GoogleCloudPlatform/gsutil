@@ -145,7 +145,6 @@ class LifecycleCommand(Command):
               'set':
                   GcloudStorageMap(
                       gcloud_command=[
-                          'alpha',
                           'storage',
                           'buckets',
                           'update',
@@ -164,7 +163,7 @@ class LifecycleCommand(Command):
               'get':
                   GcloudStorageMap(
                       gcloud_command=[
-                          'alpha', 'storage', 'buckets', 'describe',
+                          'storage', 'buckets', 'describe',
                           '--format=multi(lifecycle:format=json)', '--raw'
                       ],
                       flag_map={},

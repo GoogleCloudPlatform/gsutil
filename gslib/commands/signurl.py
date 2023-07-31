@@ -411,7 +411,7 @@ class UrlSignCommand(Command):
     original_args = copy.deepcopy(self.args)
     original_sub_opts = copy.deepcopy(self.sub_opts)
     gcloud_command = [
-        'alpha', 'storage', 'sign-url',
+        'storage', 'sign-url',
         '--format=csv[separator="\\t"](resource:label="URL",'
         ' http_verb:label="HTTP Method",'
         ' expiration:label="Expiration",'

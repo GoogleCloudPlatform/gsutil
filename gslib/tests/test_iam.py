@@ -1713,12 +1713,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'buckets', 'get-iam-policy', 'gs://b/', '--format=json'
           ]),
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'),
-              'alpha',
               'storage',
               'buckets',
               'set-iam-policy',
@@ -1774,12 +1773,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'buckets', 'get-iam-policy', 'gs://b1/', '--format=json'
           ]),
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'),
-              'alpha',
               'storage',
               'buckets',
               'set-iam-policy',
@@ -1788,12 +1786,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ],
                              stdin=json.dumps(new_policy1, sort_keys=True)),
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'buckets', 'get-iam-policy', 'gs://b2/', '--format=json'
           ]),
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'),
-              'alpha',
               'storage',
               'buckets',
               'set-iam-policy',
@@ -1837,16 +1834,15 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
-              'ls', '--json', 'gs://b/o'
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
+              '--json', 'gs://b/o'
           ]),
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'objects', 'get-iam-policy', 'gs://b/o', '--format=json'
           ]),
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'),
-              'alpha',
               'storage',
               'objects',
               'set-iam-policy',
@@ -1895,16 +1891,15 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
-              'ls', '--json', '-r', 'gs://b/'
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
+              '--json', '-r', 'gs://b/'
           ]),
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'objects', 'get-iam-policy', 'gs://b/dir/:', '--format=json'
           ]),
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'),
-              'alpha',
               'storage',
               'objects',
               'set-iam-policy',
@@ -1913,12 +1908,11 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ],
                              stdin=mock.ANY),
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'objects', 'get-iam-policy', 'gs://b/dir2/o', '--format=json'
           ]),
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'),
-              'alpha',
               'storage',
               'objects',
               'set-iam-policy',
@@ -2033,12 +2027,12 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
-              'ls', '--json', 'gs://b/o1'
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
+              '--json', 'gs://b/o1'
           ]),
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
-              'ls', '--json', 'gs://b/o2'
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
+              '--json', 'gs://b/o2'
           ]),
       ])
 
@@ -2090,16 +2084,16 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
-              'ls', '--json', 'gs://b/o1'
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
+              '--json', 'gs://b/o1'
           ]),
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'objects', 'get-iam-policy', 'gs://b/o1', '--format=json'
           ]),
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
-              'ls', '--json', 'gs://b/o2'
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
+              '--json', 'gs://b/o2'
           ]),
       ])
 
@@ -2151,16 +2145,15 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
 
       self.assertEqual(mock_run.call_args_list, [
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
-              'ls', '--json', 'gs://b/o1'
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
+              '--json', 'gs://b/o1'
           ]),
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'objects', 'get-iam-policy', 'gs://b/o1', '--format=json'
           ]),
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'),
-              'alpha',
               'storage',
               'objects',
               'set-iam-policy',
@@ -2169,8 +2162,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ],
                              stdin=json.dumps(new_policy, sort_keys=True)),
           self._get_run_call([
-              shim_util._get_gcloud_binary_path('fake_dir'), 'alpha', 'storage',
-              'ls', '--json', 'gs://b/o2'
+              shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
+              '--json', 'gs://b/o2'
           ]),
       ])
 

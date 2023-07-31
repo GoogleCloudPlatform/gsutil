@@ -452,7 +452,7 @@ class NotificationCommand(Command):
           'create':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'notifications', 'create'
+                      'storage', 'buckets', 'notifications', 'create'
                   ],
                   flag_map={
                       '-m':
@@ -476,14 +476,13 @@ class NotificationCommand(Command):
           'delete':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'notifications', 'delete'
+                      'storage', 'buckets', 'notifications', 'delete'
                   ],
                   flag_map={},
               ),
           'list':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha',
                       'storage',
                       'buckets',
                       'notifications',

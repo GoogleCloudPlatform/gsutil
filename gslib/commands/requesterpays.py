@@ -119,8 +119,7 @@ class RequesterPaysCommand(Command):
           'get':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'list',
-                      _GCLOUD_FORMAT_STRING
+                      'storage', 'buckets', 'list', _GCLOUD_FORMAT_STRING
                   ],
                   flag_map={},
                   supports_output_translation=True,
@@ -131,7 +130,7 @@ class RequesterPaysCommand(Command):
                       'on':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha', 'storage', 'buckets', 'update',
+                                  'storage', 'buckets', 'update',
                                   '--requester-pays'
                               ],
                               flag_map={},
@@ -139,7 +138,6 @@ class RequesterPaysCommand(Command):
                       'off':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha',
                                   'storage',
                                   'buckets',
                                   'update',

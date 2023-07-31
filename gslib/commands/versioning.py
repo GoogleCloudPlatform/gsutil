@@ -121,7 +121,7 @@ class VersioningCommand(Command):
           'get':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'list', '--raw',
+                      'storage', 'buckets', 'list', '--raw',
                       _GCLOUD_FORMAT_STRING
                   ],
                   flag_map={},
@@ -133,7 +133,6 @@ class VersioningCommand(Command):
                       'on':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha',
                                   'storage',
                                   'buckets',
                                   'update',
@@ -144,7 +143,6 @@ class VersioningCommand(Command):
                       'off':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha',
                                   'storage',
                                   'buckets',
                                   'update',

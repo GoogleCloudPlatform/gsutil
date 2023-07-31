@@ -789,8 +789,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
     _Check5()
 
-  @unittest.skipIf(IS_WINDOWS,
-                   'Unicode handling on Windows requires mods to site-packages')
+  @unittest.skipIf(
+      IS_WINDOWS, 'Unicode handling on Windows requires mods to site-packages')
   def test_list_unicode_filename(self):
     """Tests listing an object with a unicode filename."""
     # Note: This test fails on Windows (command.exe). I was able to get ls to

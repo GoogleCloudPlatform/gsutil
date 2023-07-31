@@ -2034,8 +2034,8 @@ def _ApplyZippedUploadCompression(src_url, src_obj_filestream, src_obj_size,
           'gzip compression is not currently supported on streaming uploads. '
           'Remove the compression flag or save the streamed output '
           'temporarily to a file before uploading.')
-    if src_obj_size is not None and (CheckFreeSpace(gzip_path) <
-                                     2 * int(src_obj_size)):
+    if src_obj_size is not None and (CheckFreeSpace(gzip_path)
+                                     < 2 * int(src_obj_size)):
       raise CommandException('Inadequate temp space available to compress '
                              '%s. See the CHANGING TEMP DIRECTORIES section '
                              'of "gsutil help cp" for more info.' % src_url)
@@ -2211,9 +2211,9 @@ def _UploadFileToObject(src_url,
       src_obj_size,
       gsutil_api,
       canned_acl=global_copy_helper_opts.canned_acl)
-  non_resumable_upload = (
-      (0 if upload_size is None else upload_size) < ResumableThreshold() or
-      src_url.IsStream() or src_url.IsFifo())
+  non_resumable_upload = ((0 if upload_size is None else upload_size)
+                          < ResumableThreshold() or src_url.IsStream() or
+                          src_url.IsFifo())
 
   if ((src_url.IsStream() or src_url.IsFifo()) and
       gsutil_api.GetApiSelector(provider=dst_url.scheme) == ApiSelector.JSON):

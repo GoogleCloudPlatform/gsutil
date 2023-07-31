@@ -116,7 +116,6 @@ class HashCommand(Command):
   def get_gcloud_storage_args(self):
     gcloud_storage_map = GcloudStorageMap(
         gcloud_command=[
-            'alpha',
             'storage',
             'hash',
             _GCLOUD_FORMAT_STRING,
