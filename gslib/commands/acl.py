@@ -356,7 +356,7 @@ class AclCommand(Command):
       else:
         command_group = 'buckets'
       gcloud_storage_map = GcloudStorageMap(gcloud_command=[
-          'alpha', 'storage', command_group, 'describe',
+          'storage', command_group, 'describe',
           '--format=multi(acl:format=json)', '--raw'
       ],
                                             flag_map={})
@@ -380,7 +380,7 @@ class AclCommand(Command):
       command_group = self._get_shim_command_group()
 
       gcloud_storage_map = GcloudStorageMap(
-          gcloud_command=['alpha', 'storage', command_group, 'update'] +
+          gcloud_command=['storage', command_group, 'update'] +
           [acl_flag],
           flag_map={
               '-a': GcloudStorageFlag('--all-versions'),
@@ -395,7 +395,7 @@ class AclCommand(Command):
       command_group = self._get_shim_command_group()
 
       gcloud_storage_map = GcloudStorageMap(
-          gcloud_command=['alpha', 'storage', command_group, 'update'],
+          gcloud_command=['storage', command_group, 'update'],
           flag_map={
               '-g': GcloudStorageFlag('--add-acl-grant'),
               '-p': GcloudStorageFlag('--add-acl-grant'),

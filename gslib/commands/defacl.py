@@ -238,7 +238,7 @@ class DefAclCommand(Command):
       self.sub_opts = acl_helper.translate_sub_opts_for_shim(self.sub_opts)
 
       gcloud_storage_map = GcloudStorageMap(
-          gcloud_command=['alpha', 'storage', 'buckets', 'update'],
+          gcloud_command=['storage', 'buckets', 'update'],
           flag_map={
               '-g': GcloudStorageFlag('--add-default-object-acl-grant'),
               '-p': GcloudStorageFlag('--add-default-object-acl-grant'),
