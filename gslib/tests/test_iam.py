@@ -1524,7 +1524,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage objects get-iam-policy'
+            ('Gcloud Storage Command: {} storage objects get-iam-policy'
              ' --format=json gs://bucket/object').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
@@ -1540,7 +1540,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage buckets get-iam-policy'
+            ('Gcloud Storage Command: {} storage buckets get-iam-policy'
              ' --format=json gs://bucket').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
@@ -1557,7 +1557,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage objects set-iam-policy'
+            ('Gcloud Storage Command: {} storage objects set-iam-policy'
              ' --format=json gs://b/o1 gs://b/o2 policy-file').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
@@ -1574,7 +1574,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
+            ('Gcloud Storage Command: {} storage buckets set-iam-policy'
              ' --format=json gs://b1 gs://b2 policy-file').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
@@ -1591,7 +1591,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage objects set-iam-policy'
+            ('Gcloud Storage Command: {} storage objects set-iam-policy'
              ' --format=json --recursive gs://b1 gs://b2/o policy-file').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
@@ -1621,7 +1621,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
+            ('Gcloud Storage Command: {} storage buckets set-iam-policy'
              ' --format=json --etag abc= gs://b policy-file').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
@@ -1638,7 +1638,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage buckets set-iam-policy'
+            ('Gcloud Storage Command: {} storage buckets set-iam-policy'
              ' --format=json --etag= gs://b policy-file').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 

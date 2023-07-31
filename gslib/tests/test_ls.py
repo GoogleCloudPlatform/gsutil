@@ -202,7 +202,7 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
         mock_log_handler = self.RunCommand('ls', ['-rRlLbeah', '-p foo'],
                                            return_log_handler=True)
         self.assertIn(
-            'Gcloud Storage Command: {} alpha storage ls'
+            'Gcloud Storage Command: {} storage ls'
             ' --fetch-encrypted-object-hashes'
             ' -r -r -l -L -b -e -a --readable-sizes --project  foo'.format(
                 shim_util._get_gcloud_binary_path('fake_dir')),

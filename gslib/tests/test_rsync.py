@@ -151,7 +151,7 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            'Gcloud Storage Command: {} alpha storage rsync'
+            'Gcloud Storage Command: {} storage rsync'
             ' --no-ignore-symlinks --predefined-acl publicRead'
             ' --preserve-posix {} {}'.format(
                 shim_util._get_gcloud_binary_path('fake_dir'), suri(bucket_uri),

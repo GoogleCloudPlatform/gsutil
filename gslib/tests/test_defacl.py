@@ -322,7 +322,7 @@ class TestDefaclShim(case.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn((
-            'Gcloud Storage Command: {} alpha storage buckets update'
+            'Gcloud Storage Command: {} storage buckets update'
             ' --continue-on-error'
             ' --add-default-object-acl-grant entity=user-user@example.com,role=READER'
             ' gs://bucket1').format(

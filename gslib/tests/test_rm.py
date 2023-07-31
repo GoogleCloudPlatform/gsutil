@@ -764,7 +764,7 @@ class TestRmUnitTests(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            'Gcloud Storage Command: {} alpha storage rm'
+            'Gcloud Storage Command: {} storage rm'
             ' -r -r -a --continue-on-error {}'.format(
                 shim_util._get_gcloud_binary_path('fake_dir'),
                 suri(bucket_uri)), info_lines)
@@ -785,6 +785,6 @@ class TestRmUnitTests(testcase.GsUtilUnitTestCase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            'Gcloud Storage Command: {} alpha storage rm'
+            'Gcloud Storage Command: {} storage rm'
             ' -I'.format(shim_util._get_gcloud_binary_path('fake_dir')),
             info_lines)

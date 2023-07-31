@@ -578,7 +578,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            'alpha storage sign-url'
+            'storage sign-url'
             ' --format=csv[separator="\\t"](resource:label="URL", http_verb:label="HTTP Method", expiration:label="Expiration", signed_url:label="Signed URL")'
             ' --private-key-file={}'
             ' --headers=x-goog-resumable=start'

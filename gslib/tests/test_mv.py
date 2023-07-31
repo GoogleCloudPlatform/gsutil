@@ -122,7 +122,7 @@ class TestMvUnitTests(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            'Gcloud Storage Command: {} alpha storage mv'
+            'Gcloud Storage Command: {} storage mv'
             ' --predefined-acl publicRead {} {}'.format(
                 shim_util._get_gcloud_binary_path('fake_dir'), fpath,
                 suri(bucket_uri)), info_lines)
