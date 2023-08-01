@@ -366,9 +366,9 @@ class IamCommand(Command):
       _RaiseErrorIfUrlsAreMixOfBucketsAndObjects(url_objects, recurse)
 
       if recurse or url_objects[0].IsObject():
-        gcloud_storage_map.gcloud_command[2] = 'objects'
+        gcloud_storage_map.gcloud_command[1] = 'objects'
       else:
-        gcloud_storage_map.gcloud_command[2] = 'buckets'
+        gcloud_storage_map.gcloud_command[1] = 'buckets'
       # Gsutil takes policy file then URLs, and gcloud storage does the reverse.
       self.args = url_strings + self.args[:1]
 
