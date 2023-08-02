@@ -147,8 +147,8 @@ class CorsCommand(Command):
               GcloudStorageMap(
                   gcloud_command=[
                       'storage', 'buckets', 'describe',
-                      '--format="gsutiljson[key=cors,empty=\' has no CORS '
-                      'configuration.\',empty_prefix_key=storage_url]"',
+                      '--format="gsutiljson[key=cors_config,empty=\' has no '
+                      'CORS configuration.\',empty_prefix_key=storage_url]"',
                       '--raw'
                   ],
                   flag_map={},
