@@ -328,7 +328,7 @@ class TestSetMetaShim(testcase.GsUtilUnitTestCase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage objects update'
+            ('Gcloud Storage Command: {} storage objects update'
              ' --recursive --clear-cache-control'
              ' --content-type=fake-content-type gs://bucket/object').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)

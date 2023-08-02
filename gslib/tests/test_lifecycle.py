@@ -289,7 +289,7 @@ class TestLifecycleUnitTests(testcase.GsUtilUnitTestCase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage buckets'
+            ('Gcloud Storage Command: {} storage buckets'
              ' describe --format=multi(lifecycle:format=json)'
              ' --raw {}').format(shim_util._get_gcloud_binary_path('fake_dir'),
                                  suri(bucket_uri)), info_lines)
@@ -312,7 +312,7 @@ class TestLifecycleUnitTests(testcase.GsUtilUnitTestCase):
                                            ],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} alpha storage buckets'
+        self.assertIn(('Gcloud Storage Command: {} storage buckets'
                        ' update --lifecycle-file=fake-lifecycle-config.json'
                        ' gs://fake-bucket1 gs://fake-bucket2').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),

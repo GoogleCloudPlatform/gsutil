@@ -136,8 +136,8 @@ class UblaCommand(Command):
           'get':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'list',
-                      _GCLOUD_FORMAT_STRING, '--raw'
+                      'storage', 'buckets', 'list', _GCLOUD_FORMAT_STRING,
+                      '--raw'
                   ],
                   flag_map={},
               ),
@@ -147,7 +147,6 @@ class UblaCommand(Command):
                       'on':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha',
                                   'storage',
                                   'buckets',
                                   'update',
@@ -158,7 +157,6 @@ class UblaCommand(Command):
                       'off':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha',
                                   'storage',
                                   'buckets',
                                   'update',

@@ -129,7 +129,7 @@ SETTABLE_FIELDS = [
     'content-language', 'content-type', 'custom-time'
 ]
 
-_GCLOUD_OBJECTS_UPDATE_COMMAND = ['alpha', 'storage', 'objects', 'update']
+_GCLOUD_OBJECTS_UPDATE_COMMAND = ['storage', 'objects', 'update']
 
 
 def _SetMetadataExceptionHandler(cls, e):

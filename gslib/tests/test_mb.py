@@ -420,7 +420,7 @@ class TestMbUnitTests(testcase.GsUtilUnitTestCase):
                                            ],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} alpha storage buckets create'
+        self.assertIn(('Gcloud Storage Command: {} storage buckets create'
                        ' --retention-period 31557600s gs://fake-bucket').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
@@ -441,6 +441,6 @@ class TestMbUnitTests(testcase.GsUtilUnitTestCase):
 
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage'
+            ('Gcloud Storage Command: {} storage'
              ' buckets create --recovery-point-objective DEFAULT').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)

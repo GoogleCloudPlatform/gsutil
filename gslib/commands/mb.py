@@ -235,7 +235,7 @@ class MbCommand(Command):
   )
 
   gcloud_storage_map = GcloudStorageMap(
-      gcloud_command=['alpha', 'storage', 'buckets', 'create'],
+      gcloud_command=['storage', 'buckets', 'create'],
       flag_map={
           '-b':
               GcloudStorageFlag({

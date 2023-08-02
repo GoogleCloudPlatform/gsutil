@@ -161,7 +161,7 @@ class WebCommand(Command):
           'get':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'describe',
+                      'storage', 'buckets', 'describe',
                       '--format=multi(website:format=json)', '--raw'
                   ],
                   flag_map={},
@@ -179,7 +179,6 @@ class WebCommand(Command):
               'set':
                   GcloudStorageMap(
                       gcloud_command=[
-                          'alpha',
                           'storage',
                           'buckets',
                           'update',

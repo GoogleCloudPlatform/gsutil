@@ -131,7 +131,7 @@ class MvCommand(Command):
   def get_gcloud_storage_args(self):
     ShimTranslatePredefinedAclSubOptForCopy(self.sub_opts)
     gcloud_storage_map = GcloudStorageMap(
-        gcloud_command=['alpha', 'storage', 'mv'],
+        gcloud_command=['storage', 'mv'],
         flag_map=CP_AND_MV_SHIM_FLAG_MAP,
     )
     return super().get_gcloud_storage_args(gcloud_storage_map)

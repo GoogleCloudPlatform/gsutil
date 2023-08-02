@@ -335,14 +335,12 @@ class IamCommand(Command):
       else:
         command_group = 'buckets'
       gcloud_storage_map = GcloudStorageMap(gcloud_command=[
-          'alpha', 'storage', command_group, 'get-iam-policy', '--format=json'
+          'storage', command_group, 'get-iam-policy', '--format=json'
       ],
                                             flag_map={})
     elif self.sub_command == 'set':
       gcloud_storage_map = GcloudStorageMap(
-          gcloud_command=[
-              'alpha', 'storage', None, 'set-iam-policy', '--format=json'
-          ],
+          gcloud_command=['storage', None, 'set-iam-policy', '--format=json'],
           flag_map={
               '-a': GcloudStorageFlag('--all-versions'),
               '-e': GcloudStorageFlag('--etag'),
@@ -368,9 +366,9 @@ class IamCommand(Command):
       _RaiseErrorIfUrlsAreMixOfBucketsAndObjects(url_objects, recurse)
 
       if recurse or url_objects[0].IsObject():
-        gcloud_storage_map.gcloud_command[2] = 'objects'
+        gcloud_storage_map.gcloud_command[1] = 'objects'
       else:
-        gcloud_storage_map.gcloud_command[2] = 'buckets'
+        gcloud_storage_map.gcloud_command[1] = 'buckets'
       # Gsutil takes policy file then URLs, and gcloud storage does the reverse.
       self.args = url_strings + self.args[:1]
 
@@ -478,9 +476,8 @@ class IamCommand(Command):
       self._RaiseIfInvalidUrl(url_pattern)
 
       if resource_type == 'objects':
-        ls_process = self._run_ch_subprocess(
-            ['alpha', 'storage', 'ls', '--json'] + list_settings +
-            [str(url_pattern)])
+        ls_process = self._run_ch_subprocess(['storage', 'ls', '--json'] +
+                                             list_settings + [str(url_pattern)])
         if ls_process.returncode:
           return_code = 1
           continue
@@ -495,10 +492,8 @@ class IamCommand(Command):
         urls = [str(url_pattern)]
 
       for url in urls:
-        get_process = self._run_ch_subprocess([
-            'alpha', 'storage', resource_type, 'get-iam-policy', url,
-            '--format=json'
-        ])
+        get_process = self._run_ch_subprocess(
+            ['storage', resource_type, 'get-iam-policy', url, '--format=json'])
         if get_process.returncode:
           return_code = 1
           continue
@@ -515,7 +510,7 @@ class IamCommand(Command):
         } for r, m in sorted(six.iteritems(bindings))]
 
         set_process = self._run_ch_subprocess(
-            ['alpha', 'storage', resource_type, 'set-iam-policy', url, '-'],
+            ['storage', resource_type, 'set-iam-policy', url, '-'],
             stdin=json.dumps(policy, sort_keys=True))
         if set_process.returncode:
           return_code = 1

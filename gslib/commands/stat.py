@@ -126,7 +126,6 @@ class StatCommand(Command):
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command=[
           # Formatting done in gcloud.
-          'alpha',
           'storage',
           'objects',
           'list',

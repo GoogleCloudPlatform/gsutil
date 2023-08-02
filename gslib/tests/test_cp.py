@@ -2137,8 +2137,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     _Check1()
 
-  @unittest.skipIf(IS_WINDOWS,
-                   'Unicode handling on Windows requires mods to site-packages')
+  @unittest.skipIf(
+      IS_WINDOWS, 'Unicode handling on Windows requires mods to site-packages')
   @SequentialAndParallelTransfer
   def test_cp_manifest_upload_unicode(self):
     return self._ManifestUpload('foo-unicöde'.encode(UTF8),
@@ -5026,7 +5026,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            'Gcloud Storage Command: {} alpha storage cp'
+            'Gcloud Storage Command: {} storage cp'
             ' --ignore-symlinks --no-clobber -r -r --storage-class some-class'
             ' --print-created-message --predefined-acl publicRead {} {}'.format(
                 shim_util._get_gcloud_binary_path('fake_dir'), fpath,

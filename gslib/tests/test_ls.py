@@ -202,7 +202,7 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
         mock_log_handler = self.RunCommand('ls', ['-rRlLbeah', '-p foo'],
                                            return_log_handler=True)
         self.assertIn(
-            'Gcloud Storage Command: {} alpha storage ls'
+            'Gcloud Storage Command: {} storage ls'
             ' --fetch-encrypted-object-hashes'
             ' -r -r -l -L -b -e -a --readable-sizes --project  foo'.format(
                 shim_util._get_gcloud_binary_path('fake_dir')),
@@ -789,8 +789,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
     _Check5()
 
-  @unittest.skipIf(IS_WINDOWS,
-                   'Unicode handling on Windows requires mods to site-packages')
+  @unittest.skipIf(
+      IS_WINDOWS, 'Unicode handling on Windows requires mods to site-packages')
   def test_list_unicode_filename(self):
     """Tests listing an object with a unicode filename."""
     # Note: This test fails on Windows (command.exe). I was able to get ls to

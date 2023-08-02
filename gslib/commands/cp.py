@@ -746,7 +746,7 @@ class CpCommand(Command):
         ' parallelism (i.e. "gsutil -m cp ...").')
     ShimTranslatePredefinedAclSubOptForCopy(self.sub_opts)
     gcloud_storage_map = GcloudStorageMap(
-        gcloud_command=['alpha', 'storage', 'cp'],
+        gcloud_command=['storage', 'cp'],
         flag_map=CP_SHIM_FLAG_MAP,
     )
     return super().get_gcloud_storage_args(gcloud_storage_map)

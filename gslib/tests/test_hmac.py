@@ -431,7 +431,7 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
             args=['create', '-p', project, service_account],
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} alpha storage'
+        self.assertIn(('Gcloud Storage Command: {} storage'
                        ' hmac create {} --project {} {}').format(
                            shim_util._get_gcloud_binary_path('fake_dir'),
                            hmac._CREATE_COMMAND_FORMAT, project,
@@ -453,7 +453,7 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
             args=['delete', '-p', project, access_id],
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} alpha storage'
+        self.assertIn(('Gcloud Storage Command: {} storage'
                        ' hmac delete --project {} {}').format(
                            shim_util._get_gcloud_binary_path('fake_dir'),
                            project, access_id), info_lines)
@@ -475,7 +475,7 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
 
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} alpha storage'
+        self.assertIn(('Gcloud Storage Command: {} storage'
                        ' hmac describe {} --project {} {}').format(
                            shim_util._get_gcloud_binary_path('fake_dir'),
                            hmac._DESCRIBE_COMMAND_FORMAT, project, access_id),
@@ -499,7 +499,7 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage'
+            ('Gcloud Storage Command: {} storage'
              ' hmac list {} --all --service-account {} --project {}').format(
                  shim_util._get_gcloud_binary_path('fake_dir'),
                  hmac._LIST_COMMAND_SHORT_FORMAT, service_account, project),
@@ -523,7 +523,7 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage'
+            ('Gcloud Storage Command: {} storage'
              ' hmac list {} --all --service-account {} --long --project {}'
             ).format(shim_util._get_gcloud_binary_path('fake_dir'),
                      hmac._DESCRIBE_COMMAND_FORMAT, service_account, project),
@@ -551,7 +551,7 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
                                            ],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} alpha storage'
+        self.assertIn(('Gcloud Storage Command: {} storage'
                        ' hmac update {} --etag {} --project {} --{} {}').format(
                            shim_util._get_gcloud_binary_path('fake_dir'),
                            hmac._DESCRIBE_COMMAND_FORMAT, etag, project,
@@ -579,7 +579,7 @@ class TestHmacUnit(testcase.GsUtilUnitTestCase):
                                            ],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} alpha storage'
+        self.assertIn(('Gcloud Storage Command: {} storage'
                        ' hmac update {} --etag {} --project {} --{} {}').format(
                            shim_util._get_gcloud_binary_path('fake_dir'),
                            hmac._DESCRIBE_COMMAND_FORMAT, etag, project,

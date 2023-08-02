@@ -185,7 +185,7 @@ class LoggingCommand(Command):
           'get':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'list',
+                      'storage', 'buckets', 'list',
                       '--format=multi(logging:format=json)', '--raw'
                   ],
                   flag_map={},
@@ -196,7 +196,6 @@ class LoggingCommand(Command):
                       'on':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha',
                                   'storage',
                                   'buckets',
                                   'update',
@@ -211,7 +210,6 @@ class LoggingCommand(Command):
                       'off':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha',
                                   'storage',
                                   'buckets',
                                   'update',

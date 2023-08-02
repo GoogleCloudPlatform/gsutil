@@ -123,7 +123,7 @@ class TestWebShim(testcase.GsUtilUnitTestCase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage buckets describe'
+            ('Gcloud Storage Command: {} storage buckets describe'
              ' --format=multi(website:format=json)'
              ' --raw gs://bucket').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
@@ -147,7 +147,7 @@ class TestWebShim(testcase.GsUtilUnitTestCase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
-            ('Gcloud Storage Command: {} alpha storage buckets update'
+            ('Gcloud Storage Command: {} storage buckets update'
              ' --web-error-page 404 --web-main-page-suffix main gs://bucket'
             ).format(shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
@@ -162,7 +162,7 @@ class TestWebShim(testcase.GsUtilUnitTestCase):
         mock_log_handler = self.RunCommand('web', ['set', 'gs://bucket'],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} alpha storage buckets update'
+        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
                        ' --clear-web-error-page --clear-web-main-page-suffix'
                        ' gs://bucket').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
