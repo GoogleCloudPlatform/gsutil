@@ -162,7 +162,9 @@ class WebCommand(Command):
               GcloudStorageMap(
                   gcloud_command=[
                       'storage', 'buckets', 'describe',
-                      '--format=multi(website:format=json)', '--raw'
+                      '--format="gsutiljson[key=website,empty=\' has no '
+                      'website configuration.\',empty_prefix_key='
+                      'storage_url]"', '--raw'
                   ],
                   flag_map={},
                   supports_output_translation=True,

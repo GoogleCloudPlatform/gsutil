@@ -79,13 +79,13 @@ SHIM_GET_COMMAND_MAP = GcloudStorageMap(
     # Using a list because a string gets splitted up on space and the
     # format string below has a space.
     gcloud_command=[
-        'alpha', 'storage', 'buckets', 'list', _GCLOUD_FORMAT_STRING, '--raw'
+        'storage', 'buckets', 'list', _GCLOUD_FORMAT_STRING, '--raw'
     ],
     flag_map={},
 )
 SHIM_SET_COMMAND_MAP = GcloudStorageMap(
     gcloud_command=[
-        'alpha', 'storage', 'buckets', 'update', '--default-storage-class'
+        'storage', 'buckets', 'update', '--default-storage-class'
     ],
     flag_map={},
 )

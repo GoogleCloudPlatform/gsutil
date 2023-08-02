@@ -119,7 +119,7 @@ class AutoclassCommand(Command):
           'get':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'list',
+                      'storage', 'buckets', 'list',
                       _GCLOUD_FORMAT_STRING, '--raw'
                   ],
                   flag_map={},
@@ -131,7 +131,6 @@ class AutoclassCommand(Command):
                       'on':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha',
                                   'storage',
                                   'buckets',
                                   'update',
@@ -142,7 +141,6 @@ class AutoclassCommand(Command):
                       'off':
                           GcloudStorageMap(
                               gcloud_command=[
-                                  'alpha',
                                   'storage',
                                   'buckets',
                                   'update',

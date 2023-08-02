@@ -164,7 +164,9 @@ class LifecycleCommand(Command):
                   GcloudStorageMap(
                       gcloud_command=[
                           'storage', 'buckets', 'describe',
-                          '--format=multi(lifecycle:format=json)', '--raw'
+                          '--format="gsutiljson[key=lifecycle_config,empty=\' '
+                          'has no lifecycle configuration.\',empty_prefix_key='
+                          'storage_url]"', '--raw'
                       ],
                       flag_map={},
                   ),
