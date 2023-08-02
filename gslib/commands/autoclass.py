@@ -119,8 +119,8 @@ class AutoclassCommand(Command):
           'get':
               GcloudStorageMap(
                   gcloud_command=[
-                      'storage', 'buckets', 'list',
-                      _GCLOUD_FORMAT_STRING, '--raw'
+                      'storage', 'buckets', 'list', _GCLOUD_FORMAT_STRING,
+                      '--raw'
                   ],
                   flag_map={},
                   supports_output_translation=True,

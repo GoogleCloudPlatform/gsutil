@@ -380,8 +380,7 @@ class AclCommand(Command):
       command_group = self._get_shim_command_group()
 
       gcloud_storage_map = GcloudStorageMap(
-          gcloud_command=['storage', command_group, 'update'] +
-          [acl_flag],
+          gcloud_command=['storage', command_group, 'update'] + [acl_flag],
           flag_map={
               '-a': GcloudStorageFlag('--all-versions'),
               '-f': GcloudStorageFlag('--continue-on-error'),
