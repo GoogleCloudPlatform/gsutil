@@ -124,7 +124,8 @@ class TestWebShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} storage buckets describe'
-             ' --format=multi(website:format=json)'
+             ' --format="gsutiljson[key=website_config,empty=\' has no website'
+             ' configuration.\',empty_prefix_key=storage_url]"'
              ' --raw gs://bucket').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 

@@ -836,11 +836,11 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         mock_log_handler = self.RunCommand('acl', ['get', 'gs://bucket/object'],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(
-            ('Gcloud Storage Command: {} storage objects describe'
-             ' --format=multi(acl:format=json)'
-             ' --raw gs://bucket/object').format(
-                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
+        self.assertIn(('Gcloud Storage Command: {} storage objects describe'
+                       ' --format=multi(acl:format=json)'
+                       ' --raw gs://bucket/object').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_get_bucket(self):
@@ -853,11 +853,11 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         mock_log_handler = self.RunCommand('acl', ['get', 'gs://bucket'],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(
-            ('Gcloud Storage Command: {} storage buckets describe'
-             ' --format=multi(acl:format=json)'
-             ' --raw gs://bucket').format(
-                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
+        self.assertIn(('Gcloud Storage Command: {} storage buckets describe'
+                       ' --format=multi(acl:format=json)'
+                       ' --raw gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_set_object(self):
@@ -1152,12 +1152,11 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
               'acl', ['ch', '-g', identifier + ':O', 'gs://bucket1/o'],
               return_log_handler=True)
           info_lines = '\n'.join(mock_log_handler.messages['info'])
-          self.assertIn(
-              ('Gcloud Storage Command: {} storage objects update'
-               ' --add-acl-grant entity=allUsers,role=OWNER'
-               ' gs://bucket1/o').format(
-                   shim_util._get_gcloud_binary_path('fake_dir'),
-                   inpath), info_lines)
+          self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                         ' --add-acl-grant entity=allUsers,role=OWNER'
+                         ' gs://bucket1/o').format(
+                             shim_util._get_gcloud_binary_path('fake_dir'),
+                             inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_changes_acls_for_all_authenticated_users(self):
@@ -1221,12 +1220,11 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
               'acl', ['ch', '-d', identifier, 'gs://bucket1/o'],
               return_log_handler=True)
           info_lines = '\n'.join(mock_log_handler.messages['info'])
-          self.assertIn(
-              ('Gcloud Storage Command: {} storage objects update'
-               ' --remove-acl-grant AllUsers'
-               ' gs://bucket1/o').format(
-                   shim_util._get_gcloud_binary_path('fake_dir'),
-                   inpath), info_lines)
+          self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                         ' --remove-acl-grant AllUsers'
+                         ' gs://bucket1/o').format(
+                             shim_util._get_gcloud_binary_path('fake_dir'),
+                             inpath), info_lines)
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_removes_acls_for_all_authenticated_users(self):
@@ -1245,9 +1243,8 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
               'acl', ['ch', '-d', identifier, 'gs://bucket1/o'],
               return_log_handler=True)
           info_lines = '\n'.join(mock_log_handler.messages['info'])
-          self.assertIn(
-              ('Gcloud Storage Command: {} storage objects update'
-               ' --remove-acl-grant AllAuthenticatedUsers'
-               ' gs://bucket1/o').format(
-                   shim_util._get_gcloud_binary_path('fake_dir'),
-                   inpath), info_lines)
+          self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                         ' --remove-acl-grant AllAuthenticatedUsers'
+                         ' gs://bucket1/o').format(
+                             shim_util._get_gcloud_binary_path('fake_dir'),
+                             inpath), info_lines)

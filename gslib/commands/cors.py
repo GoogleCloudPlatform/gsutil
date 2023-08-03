@@ -146,15 +146,17 @@ class CorsCommand(Command):
           'get':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'describe',
-                      '--format=multi(cors:format=json)', '--raw'
+                      'storage', 'buckets', 'describe',
+                      '--format="gsutiljson[key=cors_config,empty=\' has no '
+                      'CORS configuration.\',empty_prefix_key=storage_url]"',
+                      '--raw'
                   ],
                   flag_map={},
               ),
           'set':
               GcloudStorageMap(
                   gcloud_command=[
-                      'alpha', 'storage', 'buckets', 'update', '--cors-file'
+                      'storage', 'buckets', 'update', '--cors-file'
                   ],
                   flag_map={},
               ),
