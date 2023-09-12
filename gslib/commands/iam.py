@@ -454,7 +454,7 @@ class IamCommand(Command):
 
     if process.returncode != 0:
       if self.continue_on_error:
-        self.logger.debug(process.stderr)
+        self.logger.error(process.stderr)
       else:
         raise CommandException(process.stderr)
     return process

@@ -2036,9 +2036,9 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ]),
       ])
 
-      debug_lines = '\n'.join(mock_log_handler.messages['debug'])
-      self.assertIn('An error.', debug_lines)
-      self.assertIn('Another error.', debug_lines)
+      error_lines = '\n'.join(mock_log_handler.messages['error'])
+      self.assertIn('An error.', error_lines)
+      self.assertIn('Another error.', error_lines)
 
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_continues_on_get_error(self, mock_run):
@@ -2097,9 +2097,9 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ]),
       ])
 
-      debug_lines = '\n'.join(mock_log_handler.messages['debug'])
-      self.assertIn('An error.', debug_lines)
-      self.assertIn('Another error.', debug_lines)
+      error_lines = '\n'.join(mock_log_handler.messages['error'])
+      self.assertIn('An error.', error_lines)
+      self.assertIn('Another error.', error_lines)
 
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_continues_on_set_error(self, mock_run):
@@ -2167,6 +2167,6 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
           ]),
       ])
 
-      debug_lines = '\n'.join(mock_log_handler.messages['debug'])
-      self.assertIn('An error.', debug_lines)
-      self.assertIn('Another error.', debug_lines)
+      error_lines = '\n'.join(mock_log_handler.messages['error'])
+      self.assertIn('An error.', error_lines)
+      self.assertIn('Another error.', error_lines)
