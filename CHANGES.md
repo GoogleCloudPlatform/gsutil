@@ -1,3 +1,22 @@
+Release 5.26 (release date: 2023-09-21)
+======================================
+New Features
+------------------
+- iam ch shim (#1727)
+- Adding support for HMAC auth to the shim (#1708)
+Add shim support for signurl (#1714)
+- Removing alpha from all shim command mappings (#1731)
+
+Bug Fixes
+------------------
+- Fix typos.
+- Formatting fixes.
+- Windows parity test fixes (encoding-focused) (#1730)
+
+Other Changes
+------------------
+- Remove untrusted cert provider (#1741, #1742)
+
 Release 5.25 (release date: 2023-06-21)
 ======================================
 New Features
