@@ -110,7 +110,10 @@ _DETAILED_HELP_TEXT = ("""
   <https://cloud.google.com/storage/docs/gsutil/addlhelp/CredentialTypesSupportingVariousUseCases#supported-credential-types_1>`_
   for authentication, you can replace the  <private-key-file> argument with
   the -u or --use-service-account option to use the system-managed private key
-  directly. This avoids the need to download the private key file.
+  directly. This avoids the need to store a private key file locally, but
+  prior to using this flag you must `configure
+  <https://cloud.google.com/sdk/gcloud/reference/auth/activate-service-account>`_
+  ``gcloud`` to use your service account credentials.
 
 <B>OPTIONS</B>
   -b <project>  Allows you to specify a user project that will be billed for
@@ -176,15 +179,6 @@ _DETAILED_HELP_TEXT = ("""
   Create a signed URL for downloading an object valid for 10 minutes:
 
     gsutil signurl -d 10m <private-key-file> gs://<bucket>/<object>
-
-  Create a signed URL without a private key, using a service account's
-  credentials:
-
-    gsutil signurl -d 10m -u gs://<bucket>/<object>
-
-  Create a signed URL by impersonating a service account:
-
-    gsutil -i <service account email> signurl -d 10m -u gs://<bucket>/<object>
 
   Create a signed URL, valid for one hour, for uploading a plain text
   file via HTTP PUT:
