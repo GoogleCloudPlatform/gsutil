@@ -303,9 +303,9 @@ def TestCpMvPOSIXBucketToLocalErrors(cls, bucket_uri, obj, tmpdir, is_cp=True):
     listing1 = TailSet(suri(bucket_uri), cls.FlatListBucket(bucket_uri))
     listing2 = TailSet(tmpdir, cls.FlatListDir(tmpdir))
     # Bucket should have un-altered content.
-    cls.assertEquals(listing1, set(['/%s' % obj.object_name]))
+    cls.assertEqual(listing1, set(['/%s' % obj.object_name]))
     # Dir should have un-altered content.
-    cls.assertEquals(listing2, set(['']))
+    cls.assertEqual(listing2, set(['']))
 
 
 def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
@@ -376,7 +376,7 @@ def TestCpMvPOSIXBucketToLocalNoErrors(cls, bucket_uri, tmpdir, is_cp=True):
         ['cp' if is_cp else 'mv', '-P',
          suri(bucket_uri, obj_name), tmpdir])
   listing = TailSet(tmpdir, cls.FlatListDir(tmpdir))
-  cls.assertEquals(
+  cls.assertEqual(
       listing,
       set([
           '/obj1', '/obj2', '/obj3', '/obj4', '/obj5', '/obj6', '/obj7',
@@ -1356,24 +1356,24 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       listing2 = self.RunGsUtil(['ls', '-la', suri(bucket2_uri)],
                                 return_stdout=True).split('\n')
       # 2 lines of listing output, 1 summary line, 1 empty line from \n split.
-      self.assertEquals(len(listing1), 4)
-      self.assertEquals(len(listing2), 4)
+      self.assertEqual(len(listing1), 4)
+      self.assertEqual(len(listing2), 4)
 
       # First object in each bucket should match in size and version-less name.
       size1, _, uri_str1, _ = listing1[0].split()
-      self.assertEquals(size1, str(len('data0')))
-      self.assertEquals(storage_uri(uri_str1).object_name, 'k')
+      self.assertEqual(size1, str(len('data0')))
+      self.assertEqual(storage_uri(uri_str1).object_name, 'k')
       size2, _, uri_str2, _ = listing2[0].split()
-      self.assertEquals(size2, str(len('data0')))
-      self.assertEquals(storage_uri(uri_str2).object_name, 'k')
+      self.assertEqual(size2, str(len('data0')))
+      self.assertEqual(storage_uri(uri_str2).object_name, 'k')
 
       # Similarly for second object in each bucket.
       size1, _, uri_str1, _ = listing1[1].split()
-      self.assertEquals(size1, str(len('longer_data1')))
-      self.assertEquals(storage_uri(uri_str1).object_name, 'k')
+      self.assertEqual(size1, str(len('longer_data1')))
+      self.assertEqual(storage_uri(uri_str1).object_name, 'k')
       size2, _, uri_str2, _ = listing2[1].split()
-      self.assertEquals(size2, str(len('longer_data1')))
-      self.assertEquals(storage_uri(uri_str2).object_name, 'k')
+      self.assertEqual(size2, str(len('longer_data1')))
+      self.assertEqual(storage_uri(uri_str2).object_name, 'k')
 
     _Check2()
 
@@ -1390,14 +1390,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       listing2 = self.RunGsUtil(['ls', '-la', suri(bucket3_uri)],
                                 return_stdout=True).split('\n')
       # 2 lines of listing output, 1 summary line, 1 empty line from \n split.
-      self.assertEquals(len(listing1), 4)
+      self.assertEqual(len(listing1), 4)
       # 1 lines of listing output, 1 summary line, 1 empty line from \n split.
-      self.assertEquals(len(listing2), 3)
+      self.assertEqual(len(listing2), 3)
 
       # Live (second) object in bucket 1 should match the single live object.
       size1, _, uri_str1, _ = listing2[0].split()
-      self.assertEquals(size1, str(len('longer_data1')))
-      self.assertEquals(storage_uri(uri_str1).object_name, 'k')
+      self.assertEqual(size1, str(len('longer_data1')))
+      self.assertEqual(storage_uri(uri_str1).object_name, 'k')
 
     _Check3()
 
@@ -2264,14 +2264,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
       stdout = self.RunGsUtil(['cat', suri(key_uri)],
                               return_stdout=True,
                               force_gsutil=True)
-      self.assertEquals(stdout.encode('ascii'), file_contents)
+      self.assertEqual(stdout.encode('ascii'), file_contents)
     with SetBotoConfigForTest([('GSUtil', 'resumable_threshold',
                                 str(START_CALLBACK_PER_BYTES * 3))]):
       self.RunGsUtil(['cp', fpath, suri(key_uri)], return_stderr=True)
       stdout = self.RunGsUtil(['cat', suri(key_uri)],
                               return_stdout=True,
                               force_gsutil=True)
-      self.assertEquals(stdout.encode('ascii'), file_contents)
+      self.assertEqual(stdout.encode('ascii'), file_contents)
 
   # Note: We originally one time implemented a test
   # (test_copy_invalid_unicode_filename) that invalid unicode filenames were
@@ -2654,7 +2654,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # Check that files in the subdir got copied even though subdir object
     # download was skipped.
     with open(os.path.join(tmpdir, bucket_uri.bucket_name, 'abc', 'def')) as f:
-      self.assertEquals('def', '\n'.join(f.readlines()))
+      self.assertEqual('def', '\n'.join(f.readlines()))
 
   def test_cp_without_read_access(self):
     """Tests that cp fails without read access to the object."""
@@ -3083,15 +3083,15 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               return_stderr=True)
-      self.assertEquals(1, stderr.count(final_progress_callback))
+      self.assertEqual(1, stderr.count(final_progress_callback))
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(2 * ONE_MIB))
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               return_stderr=True)
-      self.assertEquals(1, stderr.count(final_progress_callback))
+      self.assertEqual(1, stderr.count(final_progress_callback))
     stderr = self.RunGsUtil(['cp', suri(bucket_uri, 'foo'), fpath],
                             return_stderr=True)
-    self.assertEquals(1, stderr.count(final_progress_callback))
+    self.assertEqual(1, stderr.count(final_progress_callback))
 
   @SkipForS3('No resumable upload support for S3.')
   def test_cp_resumable_upload(self):
@@ -4913,7 +4913,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     log_handler = self.RunCommand('cp', [suri(object_uri), dst_dir],
                                   return_log_handler=True)
     warning_messages = log_handler.messages['warning']
-    self.assertEquals(2, len(warning_messages))
+    self.assertEqual(2, len(warning_messages))
     self.assertRegex(
         warning_messages[0], r'Non-MD5 etag \(12345\) present for key .*, '
         r'data integrity checks are not possible')
@@ -4952,7 +4952,7 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
       log_handler = self.RunCommand('cp', [fpath, suri(bucket_uri)],
                                     return_log_handler=True)
     warning_messages = log_handler.messages['warning']
-    self.assertEquals(1, len(warning_messages))
+    self.assertEqual(1, len(warning_messages))
     self.assertIn('Found no hashes to validate object upload',
                   warning_messages[0])
 

@@ -138,7 +138,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
       self.assertTrue(gcs_json_credentials._HasGceCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials, GceAssertionCredentials)
-      self.assertEquals(client.credentials.refresh_token, "rEfrEshtOkEn")
+      self.assertEqual(client.credentials.refresh_token, "rEfrEshtOkEn")
       self.assertIs(client.credentials.client_id, None)
 
   @mock.patch.object(GceAssertionCredentials,

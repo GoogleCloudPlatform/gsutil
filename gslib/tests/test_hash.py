@@ -77,7 +77,7 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
                              return_stdout=True)
     # One summary line and two hash lines per file.
     num_expected_lines = num_test_files * (1 + 2)
-    self.assertEquals(len(stdout.splitlines()), num_expected_lines)
+    self.assertEqual(len(stdout.splitlines()), num_expected_lines)
 
   def testHashSelectAlg(self):
     tmp_file = self.CreateTempFile(contents=_TEST_FILE_CONTENTS)

@@ -84,13 +84,13 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
                                state='ACTIVE',
                                service_account='.*',
                                project='.*'):
-    self.assertRegexpMatches(output_string, r'Access ID %s:' % access_id)
-    self.assertRegexpMatches(output_string, r'\sState:\s+%s' % state)
-    self.assertRegexpMatches(output_string,
+    self.assertRegex(output_string, r'Access ID %s:' % access_id)
+    self.assertRegex(output_string, r'\sState:\s+%s' % state)
+    self.assertRegex(output_string,
                              r'\s+Service Account:\s+%s\n' % service_account)
-    self.assertRegexpMatches(output_string, r'\s+Project:\s+%s' % project)
-    self.assertRegexpMatches(output_string, r'\s+Time Created:\s+.*')
-    self.assertRegexpMatches(output_string, r'\s+Time Last Updated:\s+.*')
+    self.assertRegex(output_string, r'\s+Project:\s+%s' % project)
+    self.assertRegex(output_string, r'\s+Time Created:\s+.*')
+    self.assertRegex(output_string, r'\s+Time Last Updated:\s+.*')
 
   def CleanupHelper(self, access_id):
     # Set the key to inactive if it isn't already.
@@ -175,8 +175,8 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['hmac', 'create', SERVICE_ACCOUNT],
                             return_stdout=True)
     try:
-      self.assertRegexpMatches(stdout, r'Access ID:\s+\S+')
-      self.assertRegexpMatches(stdout, r'Secret:\s+\S+')
+      self.assertRegex(stdout, r'Access ID:\s+\S+')
+      self.assertRegex(stdout, r'Secret:\s+\S+')
     finally:
       access_id = self.ExtractAccessId(stdout)
       self.CleanupHelper(access_id)

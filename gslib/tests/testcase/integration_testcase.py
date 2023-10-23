@@ -379,7 +379,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       b_uri = [suri(bucket_uri) + '/**'] if num_objects else [suri(bucket_uri)]
       listing = self.RunGsUtil(command + b_uri, return_stdout=True).split('\n')
       # num_objects + one trailing newline.
-      self.assertEquals(len(listing), num_objects + 1)
+      self.assertEqual(len(listing), num_objects + 1)
       return listing
 
     if self.multiregional_buckets:
@@ -427,7 +427,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       stdout = self.RunGsUtil(['stat', object_uri_str],
                               return_stdout=True,
                               force_gsutil=True)
-    self.assertRegexpMatches(stdout, r'KMS key:\s+%s' % encryption_key)
+    self.assertRegex(stdout, r'KMS key:\s+%s' % encryption_key)
 
   def AssertObjectUnencrypted(self, object_uri_str):
     """Checks that no CSEK or CMEK attributes appear in `stat` output.
