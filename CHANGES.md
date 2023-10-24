@@ -1,3 +1,13 @@
+Release 5.27 (release date: 2023-10-24)
+======================================
+New Features
+------------------
+- Added support for Python 3.12 (#1751)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications. 
+
 Release 5.26 (release date: 2023-09-21)
 ======================================
 New Features
@@ -39,7 +49,7 @@ Other Changes
 - Update acl.py to use snake case "allUsers" and "allAuthenticatedUsers" (#1720)
 
 
-- Release 5.24 (release date: 2023-05-17)
+Release 5.24 (release date: 2023-05-17)
 ======================================
 New Features
 ------------------
