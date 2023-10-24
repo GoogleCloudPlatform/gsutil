@@ -77,7 +77,7 @@ _DETAILED_HELP_TEXT = ("""
 _GCLOUD_FORMAT_STRING = (
     '--format=' + 'value[separator="",terminator=""](' + 'digest_format.sub("' +
     shim_util.get_format_flag_caret() + '", "Hashes ["),' + 'url.sub("' +
-    shim_util.get_format_flag_caret() + '", "] for ").sub("$", ":^\^n"),' +
+    shim_util.get_format_flag_caret() + '", "] for ").sub("$", ":^\\^n"),' +
     'md5_hash.yesno(yes="\tHash (md5):\t\t", no=""),' +
     'md5_hash.yesno(no=""),' + 'md5_hash.yesno(yes="NEWLINE", no="")' +
     '.sub("NEWLINE", "' + shim_util.get_format_flag_newline() + '"),' +

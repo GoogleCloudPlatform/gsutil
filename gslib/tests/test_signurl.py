@@ -157,7 +157,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
          '0%BE%D0%B0%D1%80i%20%D1%85%D0%B8%D0%B2?x-goog-signature=')
     ]
 
-    self.assertEquals(len(objs), len(expected_partial_urls))
+    self.assertEqual(len(objs), len(expected_partial_urls))
 
     cmd_args = [
         'signurl', '-m', 'PUT', '-p', 'notasecret', '-r', 'us',
@@ -169,7 +169,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
 
     lines = stdout.split('\n')
     # Header, signed urls, trailing newline.
-    self.assertEquals(len(lines), len(objs) + 2)
+    self.assertEqual(len(lines), len(objs) + 2)
 
     # Strip the header line to make the indices line up.
     lines = lines[1:]
@@ -198,7 +198,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
         return_stdout=True)
 
     # Header, 3 signed urls, trailing newline
-    self.assertEquals(len(stdout.split('\n')), 5)
+    self.assertEqual(len(stdout.split('\n')), 5)
 
     for obj_url in obj_urls:
       self.assertIn(suri(obj_url), stdout)
@@ -275,7 +275,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     for inp, expected in tests:
       try:
         td = gslib.commands.signurl._DurationToTimeDelta(inp)
-        self.assertEquals(td, expected)
+        self.assertEqual(td, expected)
       except CommandException:
         if expected is not None:
           self.fail('{0} failed to parse')
@@ -299,7 +299,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           logger=self.logger,
           region='us-east',
           content_type='')
-    self.assertEquals(expected, signed_url)
+    self.assertEqual(expected, signed_url)
 
   @SkipForS3('Tests only uses gs credentials.')
   @SkipForXML('Tests only run on JSON API.')
@@ -450,7 +450,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           logger=mock_logger,
           region='us-east',
           content_type='')
-    self.assertEquals(expected, signed_url)
+    self.assertEqual(expected, signed_url)
     # Resumable uploads with no content-type should issue a warning.
     self.assertTrue(mock_logger.warning_issued)
 
@@ -491,7 +491,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           logger=self.logger,
           region='eu',
           content_type='text/plain')
-    self.assertEquals(expected, signed_url)
+    self.assertEqual(expected, signed_url)
 
   def testSignurlGetUsingKeyFile(self):
     """Tests the _GenSignedUrl function using key file with a GET method."""
@@ -512,7 +512,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           logger=self.logger,
           region='asia',
           content_type='')
-    self.assertEquals(expected, signed_url)
+    self.assertEqual(expected, signed_url)
 
   def testSignurlGetWithJSONKeyUsingKeyFile(self):
     """Tests _GenSignedUrl with a GET method and the test JSON private key."""
@@ -537,7 +537,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           logger=self.logger,
           region='asia',
           content_type='')
-    self.assertEquals(expected, signed_url)
+    self.assertEqual(expected, signed_url)
 
   def testSignurlGetWithUserProject(self):
     """Tests the _GenSignedUrl function with a userproject."""
@@ -559,7 +559,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           region='asia',
           content_type='',
           billing_project='myproject')
-    self.assertEquals(expected, signed_url)
+    self.assertEqual(expected, signed_url)
 
   def testShimTranslatesFlags(self):
     key_contents = pkgutil.get_data('gslib', 'tests/test_data/test.json')

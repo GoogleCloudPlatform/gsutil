@@ -194,7 +194,7 @@ def get_format_flag_caret():
 
 def get_format_flag_newline():
   if system_util.IS_WINDOWS:
-    return '^\^n'
+    return '^\\^n'
   return '\n'
 
 

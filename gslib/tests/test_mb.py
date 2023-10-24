@@ -135,7 +135,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                              suri(bucket_uri)],
                             expected_status=1,
                             return_stderr=True)
-    self.assertRegexpMatches(stderr, r'Incorrect retention period specified')
+    self.assertRegex(stderr, r'Incorrect retention period specified')
 
   def test_create_with_retention_on_s3_urls_fails(self):
     bucket_name = self.MakeTempName('bucket')
@@ -149,7 +149,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Features disallowed for S3: Setting Retention Period',
                     stderr)
     else:
-      self.assertRegexpMatches(
+      self.assertRegex(
           stderr, r'Retention policy can only be specified for GCS buckets.')
 
   @SkipForXML('Public access prevention only runs on GCS JSON API.')
@@ -184,7 +184,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
       self.assertIn(
           'Flag value not in translation map for "--pap": invalid_arg', stderr)
     else:
-      self.assertRegexpMatches(stderr, r'invalid_arg is not a valid value')
+      self.assertRegex(stderr, r'invalid_arg is not a valid value')
 
   @SkipForXML('RPO flag only works for GCS JSON API.')
   def test_create_with_rpo_async_turbo(self):

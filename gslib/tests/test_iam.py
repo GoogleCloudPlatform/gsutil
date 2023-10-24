@@ -142,9 +142,9 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
 
   def test_convert_bindings_simple(self):
     """Tests that Policy.bindings lists are converted to dicts properly."""
-    self.assertEquals(BindingsMessageToUpdateDict([]), defaultdict(set))
+    self.assertEqual(BindingsMessageToUpdateDict([]), defaultdict(set))
     expected = defaultdict(set, {'x': set(['y'])})
-    self.assertEquals(
+    self.assertEqual(
         BindingsMessageToUpdateDict([bvle(role='x', members=['y'])]), expected)
 
   def test_convert_bindings_duplicates(self):
@@ -158,14 +158,14 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
         bvle(role='x', members=['z', 'y']),
         bvle(role='x', members=['z'])
     ]
-    self.assertEquals(BindingsMessageToUpdateDict(duplicate_roles), expected)
-    self.assertEquals(BindingsMessageToUpdateDict(duplicate_members), expected)
+    self.assertEqual(BindingsMessageToUpdateDict(duplicate_roles), expected)
+    self.assertEqual(BindingsMessageToUpdateDict(duplicate_members), expected)
 
   def test_convert_bindings_dict_simple(self):
     """Tests that Policy.bindings lists are converted to dicts properly."""
-    self.assertEquals(BindingsDictToUpdateDict([]), defaultdict(set))
+    self.assertEqual(BindingsDictToUpdateDict([]), defaultdict(set))
     expected = defaultdict(set, {'x': set(['y'])})
-    self.assertEquals(
+    self.assertEqual(
         BindingsDictToUpdateDict([{
             'role': 'x',
             'members': ['y']
@@ -188,8 +188,8 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
         'role': 'x',
         'members': ['z']
     }]
-    self.assertEquals(BindingsDictToUpdateDict(duplicate_roles), expected)
-    self.assertEquals(BindingsDictToUpdateDict(duplicate_members), expected)
+    self.assertEqual(BindingsDictToUpdateDict(duplicate_roles), expected)
+    self.assertEqual(BindingsDictToUpdateDict(duplicate_members), expected)
 
   def test_equality_bindings_literal(self):
     """Tests an easy case of identical bindings."""
@@ -212,23 +212,23 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     """Tests simple grant behavior of Policy.bindings diff."""
     expected = [bvle(role='x', members=['y'])]
     (granted, removed) = DiffBindings([], expected)
-    self.assertEquals(granted.bindings, expected)
-    self.assertEquals(removed.bindings, [])
+    self.assertEqual(granted.bindings, expected)
+    self.assertEqual(removed.bindings, [])
 
   def test_diff_bindings_drop_role(self):
     """Tests simple remove behavior of Policy.bindings diff."""
     expected = [bvle(role='x', members=['y'])]
     (granted, removed) = DiffBindings(expected, [])
-    self.assertEquals(granted.bindings, [])
-    self.assertEquals(removed.bindings, expected)
+    self.assertEqual(granted.bindings, [])
+    self.assertEqual(removed.bindings, expected)
 
   def test_diff_bindings_swap_role(self):
     """Tests expected behavior of switching a role."""
     old = [bvle(role='x', members=['y'])]
     new = [bvle(role='a', members=['b'])]
     (granted, removed) = DiffBindings(old, new)
-    self.assertEquals(granted.bindings, new)
-    self.assertEquals(removed.bindings, old)
+    self.assertEqual(granted.bindings, new)
+    self.assertEqual(removed.bindings, old)
 
   def test_diff_bindings_add_member(self):
     """Tests expected behavior of adding a member to a role."""
@@ -236,8 +236,8 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     new = [bvle(role='x', members=['z', 'y'])]
     expected = [bvle(role='x', members=['z'])]
     (granted, removed) = DiffBindings(old, new)
-    self.assertEquals(granted.bindings, expected)
-    self.assertEquals(removed.bindings, [])
+    self.assertEqual(granted.bindings, expected)
+    self.assertEqual(removed.bindings, [])
 
   def test_diff_bindings_drop_member(self):
     """Tests expected behavior of dropping a member from a role."""
@@ -245,16 +245,16 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     new = [bvle(role='x', members=['y'])]
     expected = [bvle(role='x', members=['z'])]
     (granted, removed) = DiffBindings(old, new)
-    self.assertEquals(granted.bindings, [])
-    self.assertEquals(removed.bindings, expected)
+    self.assertEqual(granted.bindings, [])
+    self.assertEqual(removed.bindings, expected)
 
   def test_diff_bindings_swap_member(self):
     """Tests expected behavior of switching a member in a role."""
     old = [bvle(role='x', members=['z'])]
     new = [bvle(role='x', members=['y'])]
     (granted, removed) = DiffBindings(old, new)
-    self.assertEquals(granted.bindings, new)
-    self.assertEquals(removed.bindings, old)
+    self.assertEqual(granted.bindings, new)
+    self.assertEqual(removed.bindings, old)
 
   def test_patch_bindings_grant(self):
     """Tests patching a grant binding."""
@@ -366,7 +366,7 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
   def test_valid_public_member_single_role(self):
     """Tests parsing single role (case insensitive)."""
     (_, bindings) = bstt(True, 'allusers:admin')
-    self.assertEquals(len(bindings), 1)
+    self.assertEqual(len(bindings), 1)
     self.assertIn({
         'members': ['allUsers'],
         'role': 'roles/storage.admin'
@@ -387,18 +387,18 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     """Tests parsing a -d allUsers or -d user:foo@bar.com request."""
     # Input specifies remove all roles from allUsers.
     (is_grant, bindings) = bstt(False, 'allUsers')
-    self.assertEquals(len(bindings), 1)
+    self.assertEqual(len(bindings), 1)
     self.assertIn({'members': ['allUsers'], 'role': ''}, bindings)
-    self.assertEquals((is_grant, bindings), bstt(False, 'allUsers:'))
+    self.assertEqual((is_grant, bindings), bstt(False, 'allUsers:'))
 
     # Input specifies remove all roles from a user.
     (_, bindings) = bstt(False, 'user:foo@bar.com')
-    self.assertEquals(len(bindings), 1)
+    self.assertEqual(len(bindings), 1)
 
   def test_valid_multiple_roles(self):
     """Tests parsing of multiple roles bound to one user."""
     (_, bindings) = bstt(True, 'allUsers:a,b,c,roles/custom')
-    self.assertEquals(len(bindings), 4)
+    self.assertEqual(len(bindings), 4)
     self.assertIn({
         'members': ['allUsers'],
         'role': 'roles/storage.a'
@@ -416,7 +416,7 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
   def test_valid_custom_roles(self):
     """Tests parsing of custom roles bound to one user."""
     (_, bindings) = bstt(True, 'user:foo@bar.com:roles/custom1,roles/custom2')
-    self.assertEquals(len(bindings), 2)
+    self.assertEqual(len(bindings), 2)
     self.assertIn({
         'members': ['user:foo@bar.com'],
         'role': 'roles/custom1'
@@ -429,7 +429,7 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
   def test_valid_member(self):
     """Tests member parsing (case insensitive)."""
     (_, bindings) = bstt(True, 'User:foo@bar.com:admin')
-    self.assertEquals(len(bindings), 1)
+    self.assertEqual(len(bindings), 1)
     self.assertIn(
         {
             'members': ['user:foo@bar.com'],
@@ -439,13 +439,13 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
   def test_valid_deleted_member(self):
     """Tests deleted member parsing (case insensitive)."""
     (_, bindings) = bstt(False, 'Deleted:User:foo@bar.com?uid=123')
-    self.assertEquals(len(bindings), 1)
+    self.assertEqual(len(bindings), 1)
     self.assertIn({
         'members': ['deleted:user:foo@bar.com?uid=123'],
         'role': ''
     }, bindings)
     (_, bindings) = bstt(True, 'deleted:User:foo@bar.com?uid=123:admin')
-    self.assertEquals(len(bindings), 1)
+    self.assertEqual(len(bindings), 1)
     self.assertIn(
         {
             'members': ['deleted:user:foo@bar.com?uid=123'],
@@ -455,7 +455,7 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
     (_, bindings) = bstt(
         True,
         'deleted:user:foo@bar.com?query=param,uid=123?uid=456:admin,admin2')
-    self.assertEquals(len(bindings), 2)
+    self.assertEqual(len(bindings), 2)
     self.assertIn(
         {
             'members': ['deleted:user:foo@bar.com?query=param,uid=123?uid=456'],
@@ -470,7 +470,7 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
   def test_duplicate_roles(self):
     """Tests that duplicate roles are ignored."""
     (_, bindings) = bstt(True, 'allUsers:a,a')
-    self.assertEquals(len(bindings), 1)
+    self.assertEqual(len(bindings), 1)
     self.assertIn({
         'members': ['allUsers'],
         'role': 'roles/storage.a'
@@ -479,14 +479,14 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
   def test_removing_project_convenience_groups(self):
     """Tests that project convenience roles can be removed."""
     (_, bindings) = bstt(False, 'projectViewer:123424:admin')
-    self.assertEquals(len(bindings), 1)
+    self.assertEqual(len(bindings), 1)
     self.assertIn(
         {
             'members': ['projectViewer:123424'],
             'role': 'roles/storage.admin'
         }, bindings)
     (_, bindings) = bstt(False, 'projectViewer:123424')
-    self.assertEquals(len(bindings), 1)
+    self.assertEqual(len(bindings), 1)
     self.assertIn({'members': ['projectViewer:123424'], 'role': ''}, bindings)
 
   def test_adding_project_convenience_groups(self):

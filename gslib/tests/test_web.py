@@ -55,7 +55,7 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
       self.assertIn('"mainPageSuffix": "main"', stdout)
       self.assertIn('"notFoundPage": "404"', stdout)
     else:
-      self.assertEquals(json.loads(stdout), WEBCFG_FULL)
+      self.assertEqual(json.loads(stdout), WEBCFG_FULL)
 
   def test_main(self):
     bucket_uri = self.CreateBucket()
@@ -63,9 +63,9 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
                             return_stdout=True)
     if self._use_gcloud_storage:
-      self.assertEquals('{\n  "mainPageSuffix": "main"\n}\n', stdout)
+      self.assertEqual('{\n  "mainPageSuffix": "main"\n}\n', stdout)
     else:
-      self.assertEquals(json.loads(stdout), WEBCFG_MAIN)
+      self.assertEqual(json.loads(stdout), WEBCFG_MAIN)
 
   def test_error(self):
     bucket_uri = self.CreateBucket()
@@ -73,9 +73,9 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
                             return_stdout=True)
     if self._use_gcloud_storage:
-      self.assertEquals('{\n  "notFoundPage": "404"\n}\n', stdout)
+      self.assertEqual('{\n  "notFoundPage": "404"\n}\n', stdout)
     else:
-      self.assertEquals(json.loads(stdout), WEBCFG_ERROR)
+      self.assertEqual(json.loads(stdout), WEBCFG_ERROR)
 
   def test_empty(self):
     bucket_uri = self.CreateBucket()
@@ -83,7 +83,7 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
                             return_stdout=True)
     if self._use_gcloud_storage:
-      self.assertEquals('[]\n', stdout)
+      self.assertEqual('[]\n', stdout)
     else:
       self.assertIn(WEBCFG_EMPTY, stdout)
 
