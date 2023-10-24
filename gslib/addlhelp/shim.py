@@ -52,7 +52,7 @@ _DETAILED_HELP_TEXT = ("""
   acl
   ------------------------
 
-  - The ``ch`` subcommand is not supported.
+  - Works as expected.
 
   autoclass
   ------------------------
@@ -77,22 +77,24 @@ _DETAILED_HELP_TEXT = ("""
   cors
   ------------------------
 
-  - ``get`` subcommand prints "[]" instead of "gs://[bucket name] has no CORS
-    configuration".
+  - Works as expected.
 
   cp
   ------------------------
 
-  - Copies a second object even if the first object is invalid.
   - Does not support file to file copies.
+  - Copies a second object even if the first object is invalid.
   - Supports copying objects cloud-to-cloud with trailing slashes in the name.
-  - The all-version flag (``-A``) silently enables sequential execution rather
-    than raising an error.
+  - The `-a` all-version flag silently enables sequential execution rather than raising an error.
+  - No spaces tolerated in CSV input of extensions to gzip.
+  - Warns if parallelism is used with STDIN source and switches to sequential rather than raising an error.
+  - The `no-clobber` message returns informational messages in a different format.
+  - Different capitalization in `X-Goog-Request-Reason` header.
 
   defacl
   ------------------------
 
-  - The ``ch`` subcommand is not supported.
+  - Works as expected.
 
   defstorageclass
   ------------------------
@@ -102,29 +104,25 @@ _DETAILED_HELP_TEXT = ("""
   hash
   ------------------------
 
-  - In gsutil, the ``-m`` and ``-c`` flags that affect which hashes are displayed
-    are ignored for cloud objects. This behavior is fixed for the shim and gcloud
-    storage.
+  - Fixes a bug where `-m` and `-c` flags are ignored for cloud objects.
 
   iam
   ------------------------
 
-  - The ``ch`` subcommand is not supported.
-  - The ``-f`` flag will continue on any error, not just API errors.
+  - The `-f` flag will continue when encountering any error, not just API errors.
 
 
   kms
   ------------------------
 
-  - The authorize subcommand returns informational messages in a different
+  - The `authorize` subcommand returns informational messages in a different
     format.
-  - The encryption subcommand returns informational messages in a different
+  - The `encryption` subcommand returns informational messages in a different
     format.
 
   labels
   ------------------------
-  - ``get`` subcommand prints "[]" instead of "gs://[bucket name] has no labels
-    configuration."
+  - Works as expected.
 
   lifecycle
   ------------------------
@@ -134,8 +132,7 @@ _DETAILED_HELP_TEXT = ("""
   logging
   ------------------------
 
-  - The get subcommand has different JSON spacing and doesn't print an
-    informational message if no configuration is found.
+  - Works as expected.
 
   ls
   ------------------------
@@ -154,8 +151,8 @@ _DETAILED_HELP_TEXT = ("""
   notification
   ------------------------
 
-  - The list subcommand prints configuration information as YAML.
-  - The delete subcommand offers progress tracking and parallelization.
+  - The `watchbucket` and `stopchannel` subcommands are no longer supported (due to disuse).
+  - The `delete` subcommand offers progress tracking and parallelization.
 
   pap
   ------------------------
@@ -175,7 +172,7 @@ _DETAILED_HELP_TEXT = ("""
   rewrite
   ------------------------
 
-  - The -k flag does not throw an error if called without a new key. In both the
+  - The `-k` flag does not throw an error if called without a new key. In both the
     shim and unshimmed cases, the old key is maintained.
 
   rm
@@ -188,10 +185,30 @@ _DETAILED_HELP_TEXT = ("""
 
   - Works as expected.
 
+  rsync
+  ------------------------
+
+  - Does not support file to file copies.
+  - Creates download destination directories if they do not exist.
+  - Aborts when encountering permission issues when attempting a patch rather than falling back to a copy operation.
+  - Leaves files zipped on download rather than decompressing them. 
+  - Raises an error on named pipes rather than ignoring them.
+  - Does not support the recently introduced `-y` flag (which can be substituted by the `-x` flag).
+  - Performs downloads when encountering an error preserving POSIX.
+  - Falls back on creation time if modification time is not available for all copy types for downloads and uploads, rather than just for uploads.
+  - Treats objects with the suffix `_$folder$` as objects rather than prefixes.
+  - Skips all operations on affected files when using an ignore or exclude flag rather than still performing patch operations on POSIX.
+  - Confirms the source and destination exist, sending an API call to confirm, rather than assuming they exist.
+                
+                       
   setmeta
   ------------------------
 
   - Does not throw an error if no headers are changed.
+
+  signurl
+  ------------------------
+  - Does not support the `-u` flag (due to disuse).
 
   stat
   ------------------------
@@ -211,8 +228,7 @@ _DETAILED_HELP_TEXT = ("""
   web
   ------------------------
 
-  - The get subcommand has different JSON spacing and doesn't print an
-    informational message if no configuration is found.
+  - Works as expected.
 
 
 
