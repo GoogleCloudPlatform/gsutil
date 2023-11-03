@@ -242,7 +242,6 @@ class GcloudStorageMap(object):
     self.flag_map = flag_map
     self.supports_output_translation = supports_output_translation
 
-
 def _get_gcloud_binary_path(cloudsdk_root):
   return os.path.join(cloudsdk_root, 'bin',
                       'gcloud.cmd' if system_util.IS_WINDOWS else 'gcloud')
@@ -354,6 +353,22 @@ class GcloudStorageCommandMixin(object):
   def __init__(self):
     self._translated_gcloud_storage_command = None
     self._translated_env_variables = None
+    self._gcloud_has_active_account = None
+
+  def gcloud_has_active_account(self, gcloud_path):
+    """Returns True if gcloud has an active account configured."""
+    if self._gcloud_has_active_account is None:
+      process = subprocess.run(
+        [gcloud_path, 'config', 'get', 'account'],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+      )
+      # stdout will have the name of the account if active account is available.
+      # Empty string indicates no active account available.
+      self._gcloud_has_active_account = process.stdout.strip() !=  b''
+      self.logger.debug(
+        'Result for "gcloud config get account" command:\n'
+        ' STDOUT: {}.\n STDERR: {}'.format(process.stdout, process.stderr))
+    return self._gcloud_has_active_account
 
   def _get_gcloud_storage_args(self, sub_opts, gsutil_args, gcloud_storage_map):
     if gcloud_storage_map is None:
@@ -572,6 +587,11 @@ class GcloudStorageCommandMixin(object):
     env_variables.update(env_vars_from_boto)
 
     gcloud_binary_path = _get_validated_gcloud_binary_path()
+
+    if not self.gcloud_has_active_account(gcloud_binary_path):
+      # Allow running gcloud with anonymous credentials.
+      env_variables['CLOUDSDK_AUTH_DISABLE_CREDENTIALS'] = True
+
     gcloud_storage_command = ([gcloud_binary_path] + args + top_level_flags +
                               header_flags + flags_from_boto)
     return env_variables, gcloud_storage_command
