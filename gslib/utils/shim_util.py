@@ -590,7 +590,7 @@ class GcloudStorageCommandMixin(object):
 
     if not self.gcloud_has_active_account(gcloud_binary_path):
       # Allow running gcloud with anonymous credentials.
-      env_variables['CLOUDSDK_AUTH_DISABLE_CREDENTIALS'] = True
+      env_variables['CLOUDSDK_AUTH_DISABLE_CREDENTIALS'] = 'True'
 
     gcloud_storage_command = ([gcloud_binary_path] + args + top_level_flags +
                               header_flags + flags_from_boto)
