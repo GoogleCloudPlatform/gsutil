@@ -562,7 +562,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     self.assertEqual(expected, signed_url)
 
 
-# @unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
+@unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
 class UnitTestSignUrlWithShim(testcase.ShimUnitTestBase):
 
   def testShimTranslatesFlags(self):
