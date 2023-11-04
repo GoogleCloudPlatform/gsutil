@@ -1510,7 +1510,7 @@ class TestIamSet(TestIamIntegration):
                   json.loads(set_iam_string)['bindings'])
 
 
-class TestIamShim(testcase.GsUtilUnitTestCase):
+class TestIamShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_iam_get_object(self):

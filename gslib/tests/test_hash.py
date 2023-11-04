@@ -147,7 +147,7 @@ class TestHash(testcase.GsUtilIntegrationTestCase):
     self.assertIn(('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_B64_CRC), stdout)
 
 
-class TestHashShim(testcase.GsUtilUnitTestCase):
+class TestHashShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(hash.HashCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_basic_hash_command(self):

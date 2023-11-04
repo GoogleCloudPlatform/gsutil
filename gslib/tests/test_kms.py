@@ -36,6 +36,11 @@ from gslib.utils.retry_util import Retry
 from gslib.utils import shim_util
 
 
+
+_DUMMY_KEYNAME = ('projects/my-project/locations/us-central1/'
+                 'keyRings/my-keyring/cryptoKeys/my-key')
+
+
 @SkipForS3('gsutil does not support KMS operations for S3 buckets.')
 @SkipForXML('gsutil does not support KMS operations for S3 buckets.')
 class TestKmsSuccessCases(testcase.GsUtilIntegrationTestCase):
@@ -159,7 +164,7 @@ class TestKmsSubcommandsFailWhenXmlForced(testcase.GsUtilIntegrationTestCase):
       ('Credentials', 'gs_access_key_id', 'dummykey'),
       ('Credentials', 'gs_secret_access_key', 'dummysecret'),
   ]
-  dummy_keyname = ('projects/my-project/locations/us-central1/'
+  _DUMMY_KEYNAME = ('projects/my-project/locations/us-central1/'
                    'keyRings/my-keyring/cryptoKeys/my-key')
 
   def DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(self, subcommand):
@@ -173,7 +178,7 @@ class TestKmsSubcommandsFailWhenXmlForced(testcase.GsUtilIntegrationTestCase):
 
   def testEncryptionDashKFailsWhenXmlForcedFromHmacInBotoConfig(self):
     self.DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(
-        ['kms', 'encryption', '-k', self.dummy_keyname, 'gs://dummybucket'])
+        ['kms', 'encryption', '-k', _DUMMY_KEYNAME, 'gs://dummybucket'])
 
   def testEncryptionDashDFailsWhenXmlForcedFromHmacInBotoConfig(self):
     self.DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(
@@ -185,14 +190,11 @@ class TestKmsSubcommandsFailWhenXmlForced(testcase.GsUtilIntegrationTestCase):
 
   def testAuthorizeFailsWhenXmlForcedFromHmacInBotoConfig(self):
     self.DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(
-        ['kms', 'authorize', '-k', self.dummy_keyname, 'gs://dummybucket'])
+        ['kms', 'authorize', '-k', _DUMMY_KEYNAME, 'gs://dummybucket'])
 
 
 class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil kms."""
-
-  dummy_keyname = ('projects/my-project/locations/us-central1/'
-                   'keyRings/my-keyring/cryptoKeys/my-key')
 
   @mock.patch(
       'gslib.cloud_api_delegator.CloudApiDelegator.GetProjectServiceAccount')
@@ -207,7 +209,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
     mock_get_project_service_account.return_value.email_address = 'dummy@google.com'
 
     stdout = self.RunCommand(
-        'kms', ['encryption', '-k', self.dummy_keyname,
+        'kms', ['encryption', '-k', _DUMMY_KEYNAME,
                 suri(bucket_uri)],
         return_stdout=True)
     self.assertIn('Setting default KMS key for bucket', stdout)
@@ -227,7 +229,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
     mock_get_project_service_account.return_value.email_address = 'dummy@google.com'
 
     stdout = self.RunCommand(
-        'kms', ['encryption', '-k', self.dummy_keyname, '-w',
+        'kms', ['encryption', '-k', _DUMMY_KEYNAME, '-w',
                 suri(bucket_uri)],
         return_stdout=True)
     self.assertIn('Setting default KMS key for bucket', stdout)
@@ -248,12 +250,15 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
 
     try:
       stdout = self.RunCommand(
-          'kms', ['encryption', '-k', self.dummy_keyname,
+          'kms', ['encryption', '-k', _DUMMY_KEYNAME,
                   suri(bucket_uri)],
           return_stdout=True)
       self.fail('Did not get expected AccessDeniedException')
     except AccessDeniedException as e:
       self.assertIn('Permission denied', e.reason)
+
+class TestKmsUnitTestsWithShim(testcase.ShimUnitTestBase):
+  """Unit tests for gsutil kms using shim."""
 
   @mock.patch(
       'gslib.cloud_api_delegator.CloudApiDelegator.GetProjectServiceAccount')
@@ -277,7 +282,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
             '-p',
             'foo',
             '-k',
-            self.dummy_keyname,
+            _DUMMY_KEYNAME,
         ],
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
@@ -285,7 +290,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
             'Gcloud Storage Command: {} storage service-agent'
             ' --project foo --authorize-cmek {}'.format(
                 shim_util._get_gcloud_binary_path('fake_dir'),
-                self.dummy_keyname), info_lines)
+                _DUMMY_KEYNAME), info_lines)
 
   def test_shim_translates_clear_encryption_key(self):
     bucket_uri = self.CreateBucket()
@@ -326,7 +331,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
       }):
         mock_log_handler = self.RunCommand(
             'kms',
-            ['encryption', '-w', '-k', self.dummy_keyname,
+            ['encryption', '-w', '-k', _DUMMY_KEYNAME,
              suri(bucket_uri)],
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
@@ -334,7 +339,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
             'Gcloud Storage Command: {} storage buckets update'
             '  --default-encryption-key {} {}'.format(
                 shim_util._get_gcloud_binary_path('fake_dir'),
-                self.dummy_keyname, suri(bucket_uri)), info_lines)
+                _DUMMY_KEYNAME, suri(bucket_uri)), info_lines)
 
   def test_shim_translates_displays_encryption_key(self):
     bucket_uri = self.CreateBucket()

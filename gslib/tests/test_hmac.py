@@ -412,7 +412,7 @@ class TestHmacXmlIntegration(testcase.GsUtilIntegrationTestCase):
             'The "hmac" command can only be used with the GCS JSON API', stderr)
 
 
-class TestHmacUnit(testcase.GsUtilUnitTestCase):
+class TestHmacUnitShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(hmac.HmacCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_hmac_create_command(self):

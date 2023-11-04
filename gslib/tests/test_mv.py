@@ -106,6 +106,10 @@ class TestMvUnitTests(testcase.GsUtilUnitTestCase):
         suri(bucket_uri, 'dir2', 'file.txt'),
     ])
     self.assertEqual(actual, expected)
+        
+
+class TestMvUnitTestsWithShim(testcase.ShimUnitTestBase):
+  """Unit tests for mv command with shim."""
 
   def test_shim_translates_flags(self):
     bucket_uri = self.CreateBucket()

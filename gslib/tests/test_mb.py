@@ -402,8 +402,8 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         stderr)
 
 
-class TestMbUnitTests(testcase.GsUtilUnitTestCase):
-  """Unit tests for gsutil mb."""
+class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
+  """Unit tests for gsutil mb with shim."""
 
   def test_shim_translates_retention_seconds_flags(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),

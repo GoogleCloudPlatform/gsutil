@@ -209,7 +209,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(stdout, '123')
 
 
-class TestShimCatFlags(testcase.GsUtilUnitTestCase):
+class TestShimCatFlags(testcase.ShimUnitTestBase):
   """Unit tests for shimming cat flags"""
 
   def test_shim_translates_flags(self):

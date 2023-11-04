@@ -823,7 +823,7 @@ class TestAclOldAlias(TestAcl):
   _ch_acl_prefix = ['chacl']
 
 
-class TestAclShim(testcase.GsUtilUnitTestCase):
+class TestAclShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_get_object(self):

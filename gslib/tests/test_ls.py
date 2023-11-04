@@ -192,6 +192,10 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
                                return_stdout=True)
     self.assertNotRegex(stdout, 'Placement locations:')
 
+
+class TestLsUnitWithShim(testcase.ShimUnitTestBase):
+  """Unit tests for ls command with shim."""
+
   def test_shim_translates_flags(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):

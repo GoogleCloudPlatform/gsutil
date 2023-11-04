@@ -307,7 +307,7 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
         ' -h flag. See "gsutil help setmeta" for more information.', stderr)
 
 
-class TestSetMetaShim(testcase.GsUtilUnitTestCase):
+class TestSetMetaShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(setmeta.SetMetaCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_setmeta_set_and_clear_flags(self):

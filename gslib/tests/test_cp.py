@@ -5009,6 +5009,10 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(sub_opts, [('--flag-key', 'flag-value'),
                                 ('-a', 'publicRead'), ('-a', 'does-not-exist')])
 
+
+class TestCpShimUnitTests(testcase.ShimUnitTestBase):
+  """Unit tests for shimming cp flags"""
+
   def test_shim_translates_flags(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempFile(contents=b'abcd')

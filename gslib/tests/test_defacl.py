@@ -232,7 +232,7 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     self.assertIn('command requires at least', stderr)
 
 
-class TestDefaclShim(case.GsUtilUnitTestCase):
+class TestDefaclShim(case.ShimUnitTestBase):
 
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_defacl_get(self):

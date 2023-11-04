@@ -392,7 +392,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
       fake_with_subcommand.get_gcloud_storage_args()
 
 
-class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
+class TestTranslateToGcloudStorageIfRequested(testcase.ShimUnitTestBase):
   """Test Command.translate_to_gcloud_storage_if_requested method."""
 
   def setUp(self):
@@ -406,20 +406,6 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
         parallel_operations=True,
         bucket_storage_uri_class=mock.ANY,
         gsutil_api_class_map_factory=mock.MagicMock())
-    
-    # Translator calls `gcloud config get account` to check active account
-    # using subprocess.run().
-    # We don't care about this call for most of the tests below, so we are
-    # simply patching this here.
-    # There are separate tests to check this call is being made.
-    self._subprocess_run_patcher = mock.patch.object(
-      subprocess, 'run', autospec=True)
-    self._mock_subprocess_run = self._subprocess_run_patcher.start()
-    self._mock_subprocess_run.return_value.returncode = 0
-
-  def tearDown(self):
-    if self._subprocess_run_patcher is not None:
-      self._subprocess_run_patcher.stop()
 
   def test_gets_gcloud_binary_path_on_non_windows(self):
     with mock.patch.object(system_util, 'IS_WINDOWS', new=False):
