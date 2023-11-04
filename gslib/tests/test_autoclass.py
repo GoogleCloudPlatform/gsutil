@@ -31,22 +31,22 @@ class TestAutoclassUnit(testcase.GsUtilUnitTestCase):
 
   def test_set_too_few_arguments_fails(self):
     with self.assertRaisesRegex(exception.CommandException,
-                                 'command requires at least'):
+                                'command requires at least'):
       self.RunCommand('autoclass', ['set'])
 
   def test_get_too_few_arguments_fails(self):
     with self.assertRaisesRegex(exception.CommandException,
-                                 'command requires at least'):
+                                'command requires at least'):
       self.RunCommand('autoclass', ['get'])
 
   def test_no_subcommand_fails(self):
     with self.assertRaisesRegex(exception.CommandException,
-                                 'command requires at least'):
+                                'command requires at least'):
       self.RunCommand('autoclass', [])
 
   def test_invalid_subcommand_fails(self):
     with self.assertRaisesRegex(exception.CommandException,
-                                 'Invalid subcommand'):
+                                'Invalid subcommand'):
       self.RunCommand('autoclass', ['fakecommand', 'test'])
 
   def test_gets_multiple_buckets_with_wildcard(self):

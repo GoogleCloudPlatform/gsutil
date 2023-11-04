@@ -2137,8 +2137,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     _Check1()
 
-  @unittest.skipIf(
-      IS_WINDOWS, 'Unicode handling on Windows requires mods to site-packages')
+  @unittest.skipIf(IS_WINDOWS,
+                   'Unicode handling on Windows requires mods to site-packages')
   @SequentialAndParallelTransfer
   def test_cp_manifest_upload_unicode(self):
     return self._ManifestUpload('foo-unicöde'.encode(UTF8),

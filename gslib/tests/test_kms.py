@@ -35,10 +35,8 @@ from gslib.tests.util import SetEnvironmentForTest
 from gslib.utils.retry_util import Retry
 from gslib.utils import shim_util
 
-
-
 _DUMMY_KEYNAME = ('projects/my-project/locations/us-central1/'
-                 'keyRings/my-keyring/cryptoKeys/my-key')
+                  'keyRings/my-keyring/cryptoKeys/my-key')
 
 
 @SkipForS3('gsutil does not support KMS operations for S3 buckets.')
@@ -165,7 +163,7 @@ class TestKmsSubcommandsFailWhenXmlForced(testcase.GsUtilIntegrationTestCase):
       ('Credentials', 'gs_secret_access_key', 'dummysecret'),
   ]
   _DUMMY_KEYNAME = ('projects/my-project/locations/us-central1/'
-                   'keyRings/my-keyring/cryptoKeys/my-key')
+                    'keyRings/my-keyring/cryptoKeys/my-key')
 
   def DoTestSubcommandFailsWhenXmlForcedFromHmacInBotoConfig(self, subcommand):
     with SetBotoConfigForTest(self.boto_config_hmac_auth_only):
@@ -257,6 +255,7 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
     except AccessDeniedException as e:
       self.assertIn('Permission denied', e.reason)
 
+
 class TestKmsUnitTestsWithShim(testcase.ShimUnitTestBase):
   """Unit tests for gsutil kms using shim."""
 
@@ -289,8 +288,8 @@ class TestKmsUnitTestsWithShim(testcase.ShimUnitTestBase):
         self.assertIn(
             'Gcloud Storage Command: {} storage service-agent'
             ' --project foo --authorize-cmek {}'.format(
-                shim_util._get_gcloud_binary_path('fake_dir'),
-                _DUMMY_KEYNAME), info_lines)
+                shim_util._get_gcloud_binary_path('fake_dir'), _DUMMY_KEYNAME),
+            info_lines)
 
   def test_shim_translates_clear_encryption_key(self):
     bucket_uri = self.CreateBucket()
@@ -330,16 +329,15 @@ class TestKmsUnitTestsWithShim(testcase.ShimUnitTestBase):
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
         mock_log_handler = self.RunCommand(
-            'kms',
-            ['encryption', '-w', '-k', _DUMMY_KEYNAME,
-             suri(bucket_uri)],
+            'kms', ['encryption', '-w', '-k', _DUMMY_KEYNAME,
+                    suri(bucket_uri)],
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             'Gcloud Storage Command: {} storage buckets update'
             '  --default-encryption-key {} {}'.format(
-                shim_util._get_gcloud_binary_path('fake_dir'),
-                _DUMMY_KEYNAME, suri(bucket_uri)), info_lines)
+                shim_util._get_gcloud_binary_path('fake_dir'), _DUMMY_KEYNAME,
+                suri(bucket_uri)), info_lines)
 
   def test_shim_translates_displays_encryption_key(self):
     bucket_uri = self.CreateBucket()

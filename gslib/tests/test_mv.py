@@ -106,7 +106,7 @@ class TestMvUnitTests(testcase.GsUtilUnitTestCase):
         suri(bucket_uri, 'dir2', 'file.txt'),
     ])
     self.assertEqual(actual, expected)
-        
+
 
 class TestMvUnitTestsWithShim(testcase.ShimUnitTestBase):
   """Unit tests for mv command with shim."""

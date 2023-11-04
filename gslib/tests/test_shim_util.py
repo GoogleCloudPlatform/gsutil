@@ -678,7 +678,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.ShimUnitTestBase):
             })
 
   def test_anonymous_credentials_sets_disable_credentials_env_variable(self):
-    self._mock_subprocess_run.return_value.stdout = b''
+    self._mock_subprocess_run.return_value.stdout = ''
 
     boto_config = {
         'GSUtil': {
@@ -692,7 +692,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.ShimUnitTestBase):
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
         self.assertTrue(
-          self._fake_command.translate_to_gcloud_storage_if_requested())
+            self._fake_command.translate_to_gcloud_storage_if_requested())
         # Verify translation.
         expected_gcloud_path = shim_util._get_gcloud_binary_path('fake_dir')
         self.assertCountEqual(
@@ -702,8 +702,10 @@ class TestTranslateToGcloudStorageIfRequested(testcase.ShimUnitTestBase):
                 'CLOUDSDK_AUTH_DISABLE_CREDENTIALS': 'True',
             })
     self._mock_subprocess_run.assert_called_once_with(
-      ['fake_dir/bin/gcloud', 'config', 'get', 'account'], stdout=-1, stderr=-1
-    )
+        ['fake_dir/bin/gcloud', 'config', 'get', 'account'],
+        stdout=-1,
+        stderr=-1,
+        encoding='utf-8')
 
   def test_gcloud_config_get_account_nonzero_returncode_raises_error(self):
     self._mock_subprocess_run.return_value.stdout = b''
@@ -727,7 +729,10 @@ class TestTranslateToGcloudStorageIfRequested(testcase.ShimUnitTestBase):
             " Error: b'fake error message"):
           self._fake_command.translate_to_gcloud_storage_if_requested()
     self._mock_subprocess_run.assert_called_once_with(
-      ['fake_dir/bin/gcloud', 'config', 'get', 'account'], stdout=-1, stderr=-1
+        ['fake_dir/bin/gcloud', 'config', 'get', 'account'],
+        stdout=-1,
+        stderr=-1,
+        encoding='utf-8',
     )
 
   def test_parallel_operations_true_does_not_add_process_count_env_vars(self):
@@ -914,7 +919,7 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
                      new={'fake_shim'})
   @mock.patch.object(subprocess, 'run', autospec=True)
   def test_translated_headers_get_added_to_final_command(
-    self, mock_subprocess_run):
+      self, mock_subprocess_run):
     mock_subprocess_run.return_value.returncode = 0
 
     with _mock_boto_config({

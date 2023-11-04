@@ -115,9 +115,9 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
     self.assertEqual(json_values["_base"]["audience"], "foo")
     self.assertEqual(json_values["_base"]["subject_token_type"], "bar")
     self.assertEqual(json_values["_base"]["token_url"],
-                      "https://sts.googleapis.com")
+                     "https://sts.googleapis.com")
     self.assertEqual(json_values["_base"]["credential_source"]["url"],
-                      "google.com")
+                     "google.com")
 
     creds2 = WrappedCredentials.from_json(creds_json)
     self.assertIsInstance(creds2, WrappedCredentials)

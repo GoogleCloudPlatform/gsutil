@@ -136,6 +136,9 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
         print_macos_warning=False,
     )
 
+
+class TestRsyncUnitWithShim(testcase.ShimUnitTestBase):
+
   def testShimTranslatesFlags(self):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempDir()
@@ -375,10 +378,10 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = TailSet(suri(dst_bucket), self.FlatListBucket(dst_bucket))
       # First bucket should have un-altered content.
       self.assertEqual(listing1,
-                        set(['/obj1', '/obj2', '/obj3', '/obj4', '/obj5']))
+                       set(['/obj1', '/obj2', '/obj3', '/obj4', '/obj5']))
       # dst_bucket should have new content from src_bucket.
       self.assertEqual(listing2,
-                        set(['/obj1', '/obj2', '/obj3', '/obj4', '/obj5']))
+                       set(['/obj1', '/obj2', '/obj3', '/obj4', '/obj5']))
       if self._use_gcloud_storage:
         self.assertIn('Patching', stderr)
       else:
@@ -728,7 +731,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
       self.assertEqual(listing1,
-                        set(['/obj1', '/.obj2', '/subdir/obj3', '/obj6']))
+                       set(['/obj1', '/.obj2', '/subdir/obj3', '/obj6']))
       # Second bucket should have new objects added from source bucket (without
       # removing extraneeous object found in dest bucket), and without the
       # subdir objects synchronized.
@@ -1753,14 +1756,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
     def _Check2():
       """Verify mtime was set for objects at destination."""
       self.assertEqual(long(os.path.getmtime(os.path.join(tmpdir, 'obj1'))), 5)
-      self.assertEqual(long(os.path.getmtime(os.path.join(tmpdir, '.obj2'))),
-                        5)
-      self.assertEqual(long(os.path.getmtime(os.path.join(tmpdir, 'obj6'))),
-                        50)
+      self.assertEqual(long(os.path.getmtime(os.path.join(tmpdir, '.obj2'))), 5)
+      self.assertEqual(long(os.path.getmtime(os.path.join(tmpdir, 'obj6'))), 50)
       self.assertEqual(long(os.path.getmtime(os.path.join(tmpdir, 'obj8'))),
-                        100)
-      self.assertEqual(long(os.path.getmtime(os.path.join(tmpdir, 'obj9'))),
-                        25)
+                       100)
+      self.assertEqual(long(os.path.getmtime(os.path.join(tmpdir, 'obj9'))), 25)
 
     _Check2()
 
@@ -2450,11 +2450,11 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
       listing2 = TailSet(suri(bucket_uri), self.FlatListBucket(bucket_uri))
       # Dir should have un-altered content.
       self.assertEqual(listing1,
-                        set(['/obj1', '/.obj2', '/subdir/obj3', '/symlink1']))
+                       set(['/obj1', '/.obj2', '/subdir/obj3', '/symlink1']))
       # Bucket should have content like dir but without the symlink, and
       # without subdir objects synchronized.
       self.assertEqual(listing2,
-                        set(['/obj1', '/.obj2', '/subdir/obj5', '/symlink1']))
+                       set(['/obj1', '/.obj2', '/subdir/obj5', '/symlink1']))
       self.assertEqual(
           'obj1',
           self.RunGsUtil(['cat', suri(bucket_uri, 'symlink1')],

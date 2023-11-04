@@ -87,7 +87,7 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     self.assertRegex(output_string, r'Access ID %s:' % access_id)
     self.assertRegex(output_string, r'\sState:\s+%s' % state)
     self.assertRegex(output_string,
-                             r'\s+Service Account:\s+%s\n' % service_account)
+                     r'\s+Service Account:\s+%s\n' % service_account)
     self.assertRegex(output_string, r'\s+Project:\s+%s' % project)
     self.assertRegex(output_string, r'\s+Time Created:\s+.*')
     self.assertRegex(output_string, r'\s+Time Last Updated:\s+.*')
