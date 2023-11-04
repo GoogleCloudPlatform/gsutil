@@ -362,6 +362,11 @@ class GcloudStorageCommandMixin(object):
         [gcloud_path, 'config', 'get', 'account'],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE
       )
+      if process.returncode:
+        raise exception.GcloudStorageTranslationError(
+          "Error occurred while trying to retrieve gcloud's active account."
+          " Error: {}".format(process.stderr)
+        )
       # stdout will have the name of the account if active account is available.
       # Empty string indicates no active account available.
       self._gcloud_has_active_account = process.stdout.strip() !=  b''
