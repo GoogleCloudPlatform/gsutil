@@ -228,8 +228,9 @@ If you do not have ``gcloud`` installed, follow the
 <B>BOTO CONFIGURATION</B>
   Configuration found in the boto file is mapped 1:1 to gcloud environment
   variables where appropriate.
-The ``gs_oauth2_refresh_token`` and ``gs_service_key_file`` fields are ignored
-by the shim and authentication is taken care by ``gcloud``.
+
+  Important: The ``gs_oauth2_refresh_token`` and ``gs_service_key_file`` fields
+  are ignored by the shim and authentication is taken care by ``gcloud``.
 
   [Credentials]
   ------------------------
