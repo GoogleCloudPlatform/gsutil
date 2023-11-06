@@ -702,7 +702,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.ShimUnitTestBase):
                 'CLOUDSDK_AUTH_DISABLE_CREDENTIALS': 'True',
             })
     self._mock_subprocess_run.assert_called_once_with(
-        [os.path.join('fake_dir','bin', 'gcloud'), 'config', 'get', 'account'],
+        [expected_gcloud_path, 'config', 'get', 'account'],
         stdout=-1,
         stderr=-1,
         encoding='utf-8')
@@ -711,6 +711,8 @@ class TestTranslateToGcloudStorageIfRequested(testcase.ShimUnitTestBase):
     self._mock_subprocess_run.return_value.stdout = b''
     self._mock_subprocess_run.return_value.stderr = b'fake error message'
     self._mock_subprocess_run.return_value.returncode = 1
+
+    expected_gcloud_path = shim_util._get_gcloud_binary_path('fake_dir')
 
     boto_config = {
         'GSUtil': {
@@ -729,7 +731,7 @@ class TestTranslateToGcloudStorageIfRequested(testcase.ShimUnitTestBase):
             " Error: b'fake error message"):
           self._fake_command.translate_to_gcloud_storage_if_requested()
     self._mock_subprocess_run.assert_called_once_with(
-        [os.path.join('fake_dir','bin', 'gcloud'), 'config', 'get', 'account'],
+        [expected_gcloud_path, 'config', 'get', 'account'],
         stdout=-1,
         stderr=-1,
         encoding='utf-8',
