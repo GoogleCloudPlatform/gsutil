@@ -1451,7 +1451,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       self.assertEqual(env_vars, {})
 
   def test_truthy_https_validate_certificates(self):
-    """Should not set CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION"""
+    """Should not set CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION."""
     with _mock_boto_config({'GSUtil': {'https_validate_certificates': True}}):
       flags, env_vars = self._fake_command._translate_boto_config()
       self.assertEqual(flags, [])
