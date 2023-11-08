@@ -44,3 +44,4 @@ class ShimUnitTestBase(GsUtilUnitTestCase):
   def tearDown(self):
     if self._subprocess_run_patcher is not None:
       self._subprocess_run_patcher.stop()
+    super().tearDown()
