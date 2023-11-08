@@ -747,8 +747,8 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
       self.assertIn('2 files/objects could not be removed.', stderr)
 
 
-class TestRmUnitTests(testcase.GsUtilUnitTestCase):
-  """Unit tests for gsutil rm."""
+class TestRmUnitTestsWithShim(testcase.ShimUnitTestBase):
+  """Unit tests for gsutil rm with shim."""
 
   def test_shim_translates_flags(self):
     bucket_uri = self.CreateBucket()

@@ -132,27 +132,26 @@ class TestRetentionUtil(testcase.GsUtilUnitTestCase):
     self.assertRegex(retention_str, r'Duration: 86399 Second\(s\)')
 
     retention_str = _RetentionPeriodToString(SECONDS_IN_DAY + 1)
-    self.assertRegex(retention_str,
-                             r'Duration: 86401 Seconds \(~1 Day\(s\)\)')
+    self.assertRegex(retention_str, r'Duration: 86401 Seconds \(~1 Day\(s\)\)')
 
     retention_str = _RetentionPeriodToString(SECONDS_IN_MONTH)
     self.assertRegex(retention_str, r'Duration: 1 Month\(s\)')
 
     retention_str = _RetentionPeriodToString(SECONDS_IN_MONTH - 1)
     self.assertRegex(retention_str,
-                             r'Duration: 2678399 Seconds \(~30 Day\(s\)\)')
+                     r'Duration: 2678399 Seconds \(~30 Day\(s\)\)')
 
     retention_str = _RetentionPeriodToString(SECONDS_IN_MONTH + 1)
     self.assertRegex(retention_str,
-                             r'Duration: 2678401 Seconds \(~31 Day\(s\)\)')
+                     r'Duration: 2678401 Seconds \(~31 Day\(s\)\)')
 
     retention_str = _RetentionPeriodToString(SECONDS_IN_YEAR)
     self.assertRegex(retention_str, r'Duration: 1 Year\(s\)')
 
     retention_str = _RetentionPeriodToString(SECONDS_IN_YEAR - 1)
     self.assertRegex(retention_str,
-                             r'Duration: 31557599 Seconds \(~365 Day\(s\)\)')
+                     r'Duration: 31557599 Seconds \(~365 Day\(s\)\)')
 
     retention_str = _RetentionPeriodToString(SECONDS_IN_YEAR + 1)
     self.assertRegex(retention_str,
-                             r'Duration: 31557601 Seconds \(~365 Day\(s\)\)')
+                     r'Duration: 31557601 Seconds \(~365 Day\(s\)\)')

@@ -2137,8 +2137,8 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
 
     _Check1()
 
-  @unittest.skipIf(
-      IS_WINDOWS, 'Unicode handling on Windows requires mods to site-packages')
+  @unittest.skipIf(IS_WINDOWS,
+                   'Unicode handling on Windows requires mods to site-packages')
   @SequentialAndParallelTransfer
   def test_cp_manifest_upload_unicode(self):
     return self._ManifestUpload('foo-unicöde'.encode(UTF8),
@@ -5008,6 +5008,10 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     ShimTranslatePredefinedAclSubOptForCopy(sub_opts)
     self.assertEqual(sub_opts, [('--flag-key', 'flag-value'),
                                 ('-a', 'publicRead'), ('-a', 'does-not-exist')])
+
+
+class TestCpShimUnitTests(testcase.ShimUnitTestBase):
+  """Unit tests for shimming cp flags"""
 
   def test_shim_translates_flags(self):
     bucket_uri = self.CreateBucket()

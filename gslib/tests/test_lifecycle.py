@@ -270,8 +270,8 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
 
-class TestLifecycleUnitTests(testcase.GsUtilUnitTestCase):
-  """Unit tests for gsutil lifecycle."""
+class TestLifecycleUnitTestsWithShim(testcase.ShimUnitTestBase):
+  """Unit tests for gsutil lifecycle with shim."""
 
   def test_shim_translates_lifecycle_get_correctly(self):
     bucket_uri = self.CreateBucket()

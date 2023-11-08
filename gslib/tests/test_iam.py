@@ -1510,7 +1510,18 @@ class TestIamSet(TestIamIntegration):
                   json.loads(set_iam_string)['bindings'])
 
 
-class TestIamShim(testcase.GsUtilUnitTestCase):
+class TestIamShim(testcase.ShimUnitTestBase):
+  _FAKE_CONFIG_GET_ACCOUNT_PROCESS = subprocess.CompletedProcess(
+      args=[], returncode=0, stdout='fake_account@gmail.com')
+  _MOCK_CONFIG_GET_ACCOUNT_CALL = mock.call(
+      [
+          shim_util._get_gcloud_binary_path('fake_dir'), 'config', 'get',
+          'account'
+      ],
+      stderr=-1,
+      stdout=-1,
+      encoding='utf-8',
+  )
 
   @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_iam_get_object(self):
@@ -1673,8 +1684,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                      stdout=stdout,
                      text=text)
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
-  def test_iam_ch_adds_updates_and_deletes_bucket_policies(self, mock_run):
+  def test_iam_ch_adds_updates_and_deletes_bucket_policies(self):
     original_policy = {
         'bindings': [{
             'role': 'preserved-role',
@@ -1700,7 +1710,9 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       get_process = subprocess.CompletedProcess(
           args=[], returncode=0, stdout=json.dumps(original_policy))
       set_process = subprocess.CompletedProcess(args=[], returncode=0)
-      mock_run.side_effect = [get_process, set_process]
+      self._mock_subprocess_run.side_effect = [
+          self._FAKE_CONFIG_GET_ACCOUNT_PROCESS, get_process, set_process
+      ]
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -1711,7 +1723,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             'gs://b'
         ])
 
-      self.assertEqual(mock_run.call_args_list, [
+      self.assertEqual(self._mock_subprocess_run.call_args_list, [
+          self._MOCK_CONFIG_GET_ACCOUNT_CALL,
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'buckets', 'get-iam-policy', 'gs://b/', '--format=json'
@@ -1727,8 +1740,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                              stdin=json.dumps(new_policy, sort_keys=True))
       ])
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
-  def test_iam_ch_updates_bucket_policies_for_multiple_urls(self, mock_run):
+  def test_iam_ch_updates_bucket_policies_for_multiple_urls(self):
     original_policy1 = {
         'bindings': [{
             'role': 'roles/storage.modified-role',
@@ -1759,8 +1771,9 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       get_process2 = subprocess.CompletedProcess(
           args=[], returncode=0, stdout=json.dumps(original_policy2))
       set_process = subprocess.CompletedProcess(args=[], returncode=0)
-      mock_run.side_effect = [
-          get_process1, set_process, get_process2, set_process
+      self._mock_subprocess_run.side_effect = [
+          self._FAKE_CONFIG_GET_ACCOUNT_PROCESS, get_process1, set_process,
+          get_process2, set_process
       ]
 
       with SetEnvironmentForTest({
@@ -1771,7 +1784,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             'iam',
             ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b1', 'gs://b2'])
 
-      self.assertEqual(mock_run.call_args_list, [
+      self.assertEqual(self._mock_subprocess_run.call_args_list, [
+          self._MOCK_CONFIG_GET_ACCOUNT_CALL,
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'), 'storage',
               'buckets', 'get-iam-policy', 'gs://b1/', '--format=json'
@@ -1800,8 +1814,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                              stdin=json.dumps(new_policy2, sort_keys=True))
       ])
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
-  def test_iam_ch_updates_object_policies(self, mock_run):
+  def test_iam_ch_updates_object_policies(self):
     original_policy = {
         'bindings': [{
             'role': 'roles/storage.modified-role',
@@ -1824,7 +1837,10 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       get_process = subprocess.CompletedProcess(
           args=[], returncode=0, stdout=json.dumps(original_policy))
       set_process = subprocess.CompletedProcess(args=[], returncode=0)
-      mock_run.side_effect = [ls_process, get_process, set_process]
+      self._mock_subprocess_run.side_effect = [
+          self._FAKE_CONFIG_GET_ACCOUNT_PROCESS, ls_process, get_process,
+          set_process
+      ]
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -1832,7 +1848,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         self.RunCommand(
             'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
 
-      self.assertEqual(mock_run.call_args_list, [
+      self.assertEqual(self._mock_subprocess_run.call_args_list, [
+          self._MOCK_CONFIG_GET_ACCOUNT_CALL,
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
               '--json', 'gs://b/o'
@@ -1852,9 +1869,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                              stdin=json.dumps(new_policy, sort_keys=True))
       ])
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
   def test_iam_ch_expands_urls_with_recursion_and_ignores_container_headers(
-      self, mock_run):
+      self):
     original_policy = {
         'bindings': [{
             'role': 'modified-role',
@@ -1880,7 +1896,9 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       get_process = subprocess.CompletedProcess(
           args=[], returncode=0, stdout=json.dumps(original_policy))
       set_process = subprocess.CompletedProcess(args=[], returncode=0)
-      mock_run.side_effect = [ls_process] + [get_process, set_process] * 3
+      self._mock_subprocess_run.side_effect = (
+          [self._FAKE_CONFIG_GET_ACCOUNT_PROCESS, ls_process] +
+          [get_process, set_process] * 3)
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -1889,7 +1907,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
             'iam',
             ['ch', '-r', 'allAuthenticatedUsers:modified-role', 'gs://b'])
 
-      self.assertEqual(mock_run.call_args_list, [
+      self.assertEqual(self._mock_subprocess_run.call_args_list, [
+          self._MOCK_CONFIG_GET_ACCOUNT_CALL,
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
               '--json', '-r', 'gs://b/'
@@ -1922,13 +1941,14 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                              stdin=mock.ANY)
       ])
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
-  def test_iam_ch_raises_ls_error(self, mock_run):
+  def test_iam_ch_raises_ls_error(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      get_account_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout='fake_account@gmail.com')
       ls_process = subprocess.CompletedProcess(args=[],
                                                returncode=1,
                                                stderr='An error.')
-      mock_run.side_effect = [ls_process]
+      self._mock_subprocess_run.side_effect = [get_account_process, ls_process]
 
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
@@ -1937,11 +1957,12 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         with self.assertRaisesRegex(CommandException, 'An error.'):
           self.RunCommand(
               'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
-        self.assertEqual(mock_run.call_count, 1)
+        self.assertEqual(self._mock_subprocess_run.call_count, 2)
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
-  def test_iam_ch_raises_get_error(self, mock_run):
+  def test_iam_ch_raises_get_error(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      get_account_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout='fake_account@gmail.com')
       ls_process = subprocess.CompletedProcess(args=[],
                                                returncode=0,
                                                stdout=json.dumps([{
@@ -1951,7 +1972,9 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       get_process = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
                                                 stderr='An error.')
-      mock_run.side_effect = [ls_process, get_process]
+      self._mock_subprocess_run.side_effect = [
+          get_account_process, ls_process, get_process
+      ]
 
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
@@ -1960,11 +1983,12 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         with self.assertRaisesRegex(CommandException, 'An error.'):
           self.RunCommand(
               'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
-        self.assertEqual(mock_run.call_count, 2)
+        self.assertEqual(self._mock_subprocess_run.call_count, 3)
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
-  def test_iam_ch_raises_set_error(self, mock_run):
+  def test_iam_ch_raises_set_error(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True')]):
+      get_account_process = subprocess.CompletedProcess(
+          args=[], returncode=0, stdout='fake_account@gmail.com')
       ls_process = subprocess.CompletedProcess(args=[],
                                                returncode=0,
                                                stdout=json.dumps([{
@@ -1977,7 +2001,9 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       set_process = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
                                                 stderr='An error.')
-      mock_run.side_effect = [ls_process, get_process, set_process]
+      self._mock_subprocess_run.side_effect = [
+          get_account_process, ls_process, get_process, set_process
+      ]
 
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
@@ -1986,10 +2012,9 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
         with self.assertRaisesRegex(CommandException, 'An error.'):
           self.RunCommand(
               'iam', ['ch', 'allAuthenticatedUsers:modified-role', 'gs://b/o'])
-        self.assertEqual(mock_run.call_count, 3)
+        self.assertEqual(self._mock_subprocess_run.call_count, 4)
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
-  def test_iam_ch_continues_on_ls_error(self, mock_run):
+  def test_iam_ch_continues_on_ls_error(self):
     original_policy = {
         'bindings': [{
             'role': 'roles/storage.modified-role',
@@ -2009,7 +2034,9 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       ls_process2 = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
                                                 stderr='Another error.')
-      mock_run.side_effect = [ls_process, ls_process2]
+      self._mock_subprocess_run.side_effect = [
+          self._FAKE_CONFIG_GET_ACCOUNT_PROCESS, ls_process, ls_process2
+      ]
 
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
@@ -2025,7 +2052,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                                            debug=1,
                                            return_log_handler=True)
 
-      self.assertEqual(mock_run.call_args_list, [
+      self.assertEqual(self._mock_subprocess_run.call_args_list, [
+          self._MOCK_CONFIG_GET_ACCOUNT_CALL,
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
               '--json', 'gs://b/o1'
@@ -2040,8 +2068,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       self.assertIn('An error.', error_lines)
       self.assertIn('Another error.', error_lines)
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
-  def test_iam_ch_continues_on_get_error(self, mock_run):
+  def test_iam_ch_continues_on_get_error(self):
     original_policy = {
         'bindings': [{
             'role': 'roles/storage.modified-role',
@@ -2067,7 +2094,10 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       ls_process2 = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
                                                 stderr='Another error.')
-      mock_run.side_effect = [ls_process, get_process, ls_process2]
+      self._mock_subprocess_run.side_effect = [
+          self._FAKE_CONFIG_GET_ACCOUNT_PROCESS, ls_process, get_process,
+          ls_process2
+      ]
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
@@ -2082,7 +2112,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                                            debug=1,
                                            return_log_handler=True)
 
-      self.assertEqual(mock_run.call_args_list, [
+      self.assertEqual(self._mock_subprocess_run.call_args_list, [
+          self._MOCK_CONFIG_GET_ACCOUNT_CALL,
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
               '--json', 'gs://b/o1'
@@ -2101,8 +2132,7 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       self.assertIn('An error.', error_lines)
       self.assertIn('Another error.', error_lines)
 
-  @mock.patch.object(subprocess, 'run', autospec=True)
-  def test_iam_ch_continues_on_set_error(self, mock_run):
+  def test_iam_ch_continues_on_set_error(self):
     original_policy = {
         'bindings': [{
             'role': 'roles/storage.modified-role',
@@ -2130,7 +2160,10 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
       ls_process2 = subprocess.CompletedProcess(args=[],
                                                 returncode=1,
                                                 stderr='Another error.')
-      mock_run.side_effect = [ls_process, get_process, set_process, ls_process2]
+      self._mock_subprocess_run.side_effect = [
+          self._FAKE_CONFIG_GET_ACCOUNT_PROCESS, ls_process, get_process,
+          set_process, ls_process2
+      ]
 
       with SetEnvironmentForTest({
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
@@ -2143,7 +2176,8 @@ class TestIamShim(testcase.GsUtilUnitTestCase):
                                            debug=1,
                                            return_log_handler=True)
 
-      self.assertEqual(mock_run.call_args_list, [
+      self.assertEqual(self._mock_subprocess_run.call_args_list, [
+          self._MOCK_CONFIG_GET_ACCOUNT_CALL,
           self._get_run_call([
               shim_util._get_gcloud_binary_path('fake_dir'), 'storage', 'ls',
               '--json', 'gs://b/o1'

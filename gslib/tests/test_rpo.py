@@ -86,6 +86,9 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
         CommandException, 'Invalid subcommand "blah", use get|set instead'):
       self.RunCommand('rpo', ['blah', 'DEFAULT', 'gs://boo*'])
 
+
+class TestRpoUnitWithShim(testcase.ShimUnitTestBase):
+
   def test_shim_translates_recovery_point_objective_get_command(self):
     fake_cloudsdk_dir = 'fake_dir'
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),

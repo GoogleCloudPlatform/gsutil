@@ -106,7 +106,7 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
     self.assertIn('command requires at least', stderr)
 
 
-class TestWebShim(testcase.GsUtilUnitTestCase):
+class TestWebShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(web.WebCommand, '_GetWeb', new=mock.Mock())
   def test_shim_translates_get_command(self):

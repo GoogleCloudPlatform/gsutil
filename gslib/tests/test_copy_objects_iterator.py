@@ -73,7 +73,7 @@ class TestCopyObjectsIterator(testcase.GsUtilUnitTestCase):
     for (src_string, dst_string) in src_dst_strings:
       copy_object_info = next(copy_objects_iterator)
       self.assertEqual(src_string,
-                        copy_object_info.source_storage_url.object_name)
+                       copy_object_info.source_storage_url.object_name)
       self.assertEqual(dst_string, copy_object_info.exp_dst_url.object_name)
 
     iterator_ended = False

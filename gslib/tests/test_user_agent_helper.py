@@ -49,8 +49,8 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCp(self, mock_invoked):
     mock_invoked.return_value = False
-    self.assertRegex(
-        GetUserAgent(['cp', '-r', '-Z', '1.txt', 'gs://dst']), r"command/cp$")
+    self.assertRegex(GetUserAgent(['cp', '-r', '-Z', '1.txt', 'gs://dst']),
+                     r"command/cp$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpNotEnoughArgs(self, mock_invoked):
@@ -68,62 +68,57 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
   def testRsync(self, mock_invoked):
     mock_invoked.return_value = False
     self.assertRegex(GetUserAgent(['rsync', '1.txt', 'gs://dst']),
-                             r"command/rsync$")
+                     r"command/rsync$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testMv(self, mock_invoked):
     mock_invoked.return_value = False
-    self.assertRegex(
-        GetUserAgent(['mv', 'gs://src/1.txt', 'gs://dst/1.txt']),
-        r"command/mv$")
+    self.assertRegex(GetUserAgent(['mv', 'gs://src/1.txt', 'gs://dst/1.txt']),
+                     r"command/mv$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpCloudToCloud(self, mock_invoked):
     mock_invoked.return_value = False
     self.assertRegex(GetUserAgent(['cp', '-r', 'gs://src', 'gs://dst']),
-                             r"command/cp$")
+                     r"command/cp$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpForcedDaisyChain(self, mock_invoked):
     mock_invoked.return_value = False
     self.assertRegex(GetUserAgent(['cp', '-D', 'gs://src', 'gs://dst']),
-                             r"command/cp$")
+                     r"command/cp$")
 
   def testCpDaisyChain(self):
-    self.assertRegex(
-        GetUserAgent(['cp', '-r', '-Z', 'gs://src', 's3://dst']),
-        r"command/cp-DaisyChain")
-    self.assertRegex(
-        GetUserAgent(['mv', 'gs://src/1.txt', 's3://dst/1.txt']),
-        r"command/mv-DaisyChain")
-    self.assertRegex(
-        GetUserAgent(['rsync', '-r', 'gs://src', 's3://dst']),
-        r"command/rsync-DaisyChain")
+    self.assertRegex(GetUserAgent(['cp', '-r', '-Z', 'gs://src', 's3://dst']),
+                     r"command/cp-DaisyChain")
+    self.assertRegex(GetUserAgent(['mv', 'gs://src/1.txt', 's3://dst/1.txt']),
+                     r"command/mv-DaisyChain")
+    self.assertRegex(GetUserAgent(['rsync', '-r', 'gs://src', 's3://dst']),
+                     r"command/rsync-DaisyChain")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testPassOnInvalidUrlError(self, mock_invoked):
     mock_invoked.return_value = False
-    self.assertRegex(
-        GetUserAgent(['cp', '-r', '-Z', 'bad://src', 's3://dst']),
-        r"command/cp$")
+    self.assertRegex(GetUserAgent(['cp', '-r', '-Z', 'bad://src', 's3://dst']),
+                     r"command/cp$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testRewriteEncryptionKey(self, mock_invoked):
     mock_invoked.return_value = False
     self.assertRegex(GetUserAgent(['rewrite', '-k', 'gs://dst']),
-                             r"command/rewrite-k$")
+                     r"command/rewrite-k$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testRewriteStorageClass(self, mock_invoked):
     mock_invoked.return_value = False
     self.assertRegex(GetUserAgent(['rewrite', '-s', 'gs://dst']),
-                             r"command/rewrite-s$")
+                     r"command/rewrite-s$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testRewriteEncryptionKeyAndStorageClass(self, mock_invoked):
     mock_invoked.return_value = False
     self.assertRegex(GetUserAgent(['rewrite', '-k', '-s', 'gs://dst']),
-                             r"command/rewrite-k-s$")
+                     r"command/rewrite-k-s$")
 
   @mock.patch.object(system_util, 'CloudSdkVersion')
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')

@@ -930,7 +930,7 @@ class TestUi(testcase.GsUtilIntegrationTestCase):
       listing2 = TailSet(suri(bucket2_uri), self.FlatListBucket(bucket2_uri))
       # First bucket should have un-altered content.
       self.assertEqual(listing1,
-                        set(['/obj1', '/.obj2', '/subdir/obj3', '/obj6']))
+                       set(['/obj1', '/.obj2', '/subdir/obj3', '/obj6']))
       # Second bucket should have new objects added from source bucket (without
       # removing extraneeous object found in dest bucket), and without the
       # subdir objects synchronized.
@@ -1285,7 +1285,7 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       average_progress = BytesToFixedWidthString(
           (file1_progress + file2_progress) / 2)
       self.assertEqual(content.count(average_progress + '/s'),
-                        2 * progress_calls_number - 1)
+                       2 * progress_calls_number - 1)
 
   def test_ui_throughput_calculation_with_no_components(self):
     """Tests throughput calculation in the UI.
@@ -1397,7 +1397,7 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
       average_progress = BytesToFixedWidthString(
           (file1_progress + file2_progress) / 2)
       self.assertEqual(content.count(average_progress + '/s'),
-                        2 * progress_calls_number - 1)
+                       2 * progress_calls_number - 1)
 
   def test_ui_metadata_message_passing(self):
     """Tests that MetadataMessages are being correctly received and processed.
@@ -1507,13 +1507,13 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     self.assertEqual('    0.0 B', BytesToFixedWidthString(0, decimal_places=1))
     self.assertEqual('   0.00 B', BytesToFixedWidthString(0, decimal_places=2))
     self.assertEqual('  2.3 KiB',
-                      BytesToFixedWidthString(2.27 * 1024, decimal_places=1))
+                     BytesToFixedWidthString(2.27 * 1024, decimal_places=1))
     self.assertEqual(' 1023 KiB',
-                      BytesToFixedWidthString(1023.2 * 1024, decimal_places=1))
+                     BytesToFixedWidthString(1023.2 * 1024, decimal_places=1))
     self.assertEqual('  1.0 MiB',
-                      BytesToFixedWidthString(1024**2, decimal_places=1))
-    self.assertEqual(
-        '999.1 MiB', BytesToFixedWidthString(999.1 * 1024**2, decimal_places=1))
+                     BytesToFixedWidthString(1024**2, decimal_places=1))
+    self.assertEqual('999.1 MiB',
+                     BytesToFixedWidthString(999.1 * 1024**2, decimal_places=1))
 
   def test_ui_spinner(self):
     stream = six.StringIO()

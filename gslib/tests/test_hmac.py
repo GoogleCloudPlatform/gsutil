@@ -87,7 +87,7 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     self.assertRegex(output_string, r'Access ID %s:' % access_id)
     self.assertRegex(output_string, r'\sState:\s+%s' % state)
     self.assertRegex(output_string,
-                             r'\s+Service Account:\s+%s\n' % service_account)
+                     r'\s+Service Account:\s+%s\n' % service_account)
     self.assertRegex(output_string, r'\s+Project:\s+%s' % project)
     self.assertRegex(output_string, r'\s+Time Created:\s+.*')
     self.assertRegex(output_string, r'\s+Time Last Updated:\s+.*')
@@ -412,7 +412,7 @@ class TestHmacXmlIntegration(testcase.GsUtilIntegrationTestCase):
             'The "hmac" command can only be used with the GCS JSON API', stderr)
 
 
-class TestHmacUnit(testcase.GsUtilUnitTestCase):
+class TestHmacUnitShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(hmac.HmacCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_hmac_create_command(self):

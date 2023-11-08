@@ -561,6 +561,10 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
           billing_project='myproject')
     self.assertEqual(expected, signed_url)
 
+
+@unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
+class UnitTestSignUrlWithShim(testcase.ShimUnitTestBase):
+
   def testShimTranslatesFlags(self):
     key_contents = pkgutil.get_data('gslib', 'tests/test_data/test.json')
     key_path = self.CreateTempFile(contents=key_contents)
