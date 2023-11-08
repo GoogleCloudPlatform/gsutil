@@ -30,6 +30,15 @@ _DETAILED_HELP_TEXT = ("""
   transition to this new CLI, gsutil provides a shim that translates your gsutil
   commands to gcloud storage commands if an equivalent exists, and falls back to
   gsutil's usual behavior if an equivalent does not exist.
+                       
+<B> PREREQUISITES </B>
+                       
+You should be running gsutil binary installed via Cloud SDK tool.
+To verify this, run ``gsutil ver -l`` and you should be able to see
+``pass cloud sdk credentials to gsutil: True``. If it is ``False``,
+try running ``gcloud config set pass_credentials_to_gsutil True``.
+If you do not have ``gcloud`` installed, follow the
+`Cloud SDK installation instructions. <https://cloud.google.com/sdk/docs/install>`_.
 
 
 <B>TO ENABLE</B>
@@ -219,6 +228,9 @@ _DETAILED_HELP_TEXT = ("""
 <B>BOTO CONFIGURATION</B>
   Configuration found in the boto file is mapped 1:1 to gcloud environment
   variables where appropriate.
+
+  Important: The ``gs_oauth2_refresh_token`` and ``gs_service_key_file`` fields
+  are ignored by the shim and authentication is taken care by ``gcloud``.
 
   [Credentials]
   ------------------------
