@@ -74,6 +74,7 @@ def getBotoCredentialsConfig(
 class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
   """Test logic for interacting with GCS JSON Credentials."""
 
+  @unittest.skipUnless(HAS_OPENSSL, 'signurl requires pyopenssl.')
   def testOauth2ServiceAccountCredential(self):
     contents = pkgutil.get_data("gslib", "tests/test_data/test.p12")
     tmpfile = self.CreateTempFile(contents=contents)
@@ -84,9 +85,10 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
         })):
       self.assertTrue(gcs_json_credentials._HasOauth2ServiceAccountCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
-      self.assertIsInstance(client.credentials, gcs_json_credentials.P12Credentials)
+      self.assertIsInstance(client.credentials, ServiceAccountCredentials)
 
-  @mock.patch.object(gcs_json_credentials.P12Credentials,
+  @unittest.skipUnless(HAS_OPENSSL, 'signurl requires pyopenssl.')
+  @mock.patch.object(ServiceAccountCredentials,
                      "__init__",
                      side_effect=ValueError(ERROR_MESSAGE))
   def testOauth2ServiceAccountFailure(self, _):

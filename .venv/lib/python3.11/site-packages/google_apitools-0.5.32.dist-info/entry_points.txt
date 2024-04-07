@@ -1,3 +1,0 @@
-[console_scripts]
-gen_client = apitools.gen.gen_client:main
-
