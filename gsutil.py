@@ -92,6 +92,7 @@ THIRD_PARTY_LIBS = [
     ('mock', ''),
     ('funcsigs', ''),  # mock dependency
     ('google-reauth-python', ''),  # Package name: google_reauth
+    ('google-auth-library-python-httplib2', ''), #Package name: google-auth-httplib2
     ('pyu2f', ''),  # google_reauth dependency
     ('pyasn1', ''),  # oauth2client dependency
     ('pyasn1-modules', ''),  # oauth2client dependency
