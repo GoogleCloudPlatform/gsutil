@@ -106,7 +106,7 @@ class PKCS12Signer(crypt_base.Signer, crypt_base.FromServiceAccountMixin):
     return cls(key)
 
 
-class Credentials(service_account.Credentials):
+class P12Credentials(service_account.Credentials):
   """google-auth service account credentials  for p12 keys.
   p12 keys are not supported by the google-auth service account credentials.
   gcloud uses oauth2client to support p12 key users. Since oauth2client was
@@ -140,7 +140,7 @@ class Credentials(service_account.Credentials):
 def CreateP12ServiceAccount(key_string, password=None, **kwargs):
   """Creates a service account from a p12 key and handles import errors."""
   try:
-    return Credentials.from_service_account_pkcs12_keystring(
+    return P12Credentials.from_service_account_pkcs12_keystring(
         key_string, password, **kwargs)
   except ImportError:
       raise MissingDependencyError(
@@ -218,8 +218,8 @@ def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
         'WARNING: This command is using service account impersonation. All '
         'API calls will be executed as [%s].', _GetImpersonateServiceAccount())
 
-  # Do not store service account credentials.
-  if not isinstance(api.credentials, service_account.Credentials):
+  # Do not store p12 credentials (Supported by google-auth), as google-auth does not support storing service account credentials.
+  if not isinstance(api.credentials, P12Credentials):
     # Set credential cache so that we don't have to get a new access token for
     # every call we make. All GCS APIs use the same credentials as the JSON API,
     # so we use its version in the key for caching access tokens.
