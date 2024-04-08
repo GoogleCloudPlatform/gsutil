@@ -44,6 +44,12 @@ try:
 except ImportError:
   HAS_OPENSSL = False
 
+try:
+  import cryptography
+  HAS_CRYPTO = True
+except ImportError:
+  HAS_CRYPTO = False
+
 ERROR_MESSAGE = "This is the error message"
 
 
@@ -74,6 +80,7 @@ def getBotoCredentialsConfig(
 class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
   """Test logic for interacting with GCS JSON Credentials."""
 
+  @unittest.skipUnless(HAS_CRYPTO, 'p12credentials requires cryptography.')
   def testOauth2ServiceAccountCredential(self):
     contents = pkgutil.get_data("gslib", "tests/test_data/test.p12")
     tmpfile = self.CreateTempFile(contents=contents)
@@ -86,6 +93,7 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertIsInstance(client.credentials, gcs_json_credentials.P12Credentials)
 
+  @unittest.skipUnless(HAS_CRYPTO, 'p12credentials requires cryptography.')
   @mock.patch.object(gcs_json_credentials.P12Credentials,
                      "__init__",
                      side_effect=ValueError(ERROR_MESSAGE))
