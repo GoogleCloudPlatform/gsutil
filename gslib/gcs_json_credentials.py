@@ -102,8 +102,11 @@ class PKCS12Signer(crypt_base.Signer, crypt_base.FromServiceAccountMixin):
     del key_id
     key_string, password = (_helpers.to_bytes(k) for k in key_strings)
     from cryptography.hazmat.primitives.serialization import pkcs12  # pylint: disable=g-import-not-at-top
-    key, _, _ = pkcs12.load_key_and_certificates(key_string, password)
-    return cls(key)
+    try:
+      key, _, _ = pkcs12.load_key_and_certificates(key_string, password)
+      return cls(key)
+    except:
+      raise Exception('Unable to load the keyfile, Invalid password or PKCS12 data.')
 
 
 class P12Credentials(service_account.Credentials):

@@ -783,6 +783,8 @@ def _RunNamedCommandAndHandleExceptions(command_runner,
           'gs_service_key_file field in your config file(s),\n%s, is correct.' %
           config_paths,
           exception=e)
+    elif 'Invalid password or PKCS12' in str(e):
+      _OutputAndExit('Unable to load the keyfile, Invalid password or PKCS12 data.', exception=e)
     _HandleUnknownFailure(e)
 
 
