@@ -80,8 +80,10 @@ def getBotoCredentialsConfig(
 class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
   """Test logic for interacting with GCS JSON Credentials."""
 
-  @unittest.skipUnless(HAS_CRYPTO, 'p12credentials requires cryptography.')
-  def testOauth2ServiceAccountCredential(self):
+  @mock.patch.object(gcs_json_credentials.P12Credentials,
+                     "from_service_account_pkcs12_keystring",
+                     return_value=gcs_json_credentials.P12Credentials(mock.Mock(), token_uri='123', service_account_email='123', scopes=['a', 'b']))
+  def testOauth2ServiceAccountCredential(self, _):
     contents = pkgutil.get_data("gslib", "tests/test_data/test.p12")
     tmpfile = self.CreateTempFile(contents=contents)
     with SetBotoConfigForTest(
@@ -91,7 +93,14 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
         })):
       self.assertTrue(gcs_json_credentials._HasOauth2ServiceAccountCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
+      self.assertEqual(client.credentials.service_account_email, '123')
       self.assertIsInstance(client.credentials, gcs_json_credentials.P12Credentials)
+
+  def testP12CredentialsthrowsErrorIfProvidedWithMissingFields(self):
+    contents = pkgutil.get_data("gslib", "tests/test_data/test.p12")
+    tmpfile = self.CreateTempFile(contents=contents)
+    with self.assertRaises(Exception) as exc:
+      gcs_json_credentials.CreateP12ServiceAccount(tmpfile)
 
   @unittest.skipUnless(HAS_CRYPTO, 'p12credentials requires cryptography.')
   @mock.patch.object(gcs_json_credentials.P12Credentials,

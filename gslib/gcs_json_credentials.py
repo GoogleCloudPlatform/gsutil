@@ -99,22 +99,23 @@ class PKCS12Signer(crypt_base.Signer, crypt_base.FromServiceAccountMixin):
 
   @classmethod
   def from_string(cls, key_strings, key_id=None):
-    del key_id
+    del key_id #Unused
     key_string, password = (_helpers.to_bytes(k) for k in key_strings)
+    # Cryptography package is not bundled with gsutil, Keeping it at top would throw error.
     from cryptography.hazmat.primitives.serialization import pkcs12  # pylint: disable=g-import-not-at-top
     try:
       key, _, _ = pkcs12.load_key_and_certificates(key_string, password)
       return cls(key)
     except:
-      raise Exception('Unable to load the keyfile, Invalid password or PKCS12 data.')
+      raise CommandException('Unable to load the keyfile, Invalid password or PKCS12 data.')
 
 
 class P12Credentials(service_account.Credentials):
   """google-auth service account credentials  for p12 keys.
   p12 keys are not supported by the google-auth service account credentials.
-  gcloud uses oauth2client to support p12 key users. Since oauth2client was
+  gsutil uses oauth2client to support p12 key users. Since oauth2client was
   deprecated and bundling it is security concern, we decided to support p12
-  in gcloud codebase. We prefer not adding it to the google-auth library
+  in gsutil codebase. We prefer not adding it to the google-auth library
   because p12 is not supported from the beginning by google-auth. GCP strongly
   suggests users to use the JSON format. gsutil has to support it to not
   break users.
@@ -135,7 +136,7 @@ class P12Credentials(service_account.Credentials):
 
     missing_fields = [f for f in cls._REQUIRED_FIELDS if f not in kwargs]
     if missing_fields:
-      raise MissingRequiredFieldsError('Missing fields: {}.'.format(
+      raise CommandException('Missing fields: {}.'.format(
           ', '.join(missing_fields)))
     creds = cls(signer, **kwargs)
     return creds
@@ -146,7 +147,7 @@ def CreateP12ServiceAccount(key_string, password=None, **kwargs):
     return P12Credentials.from_service_account_pkcs12_keystring(
         key_string, password, **kwargs)
   except ImportError:
-      raise MissingDependencyError(
+      raise CommandException(
           ('pyca/cryptography is not available. Either install it, or please consider using the .json keyfile'))
 
 def GetCredentialStoreKey(credentials, api_version):
