@@ -244,6 +244,8 @@ class GcsJsonApi(CloudApi):
     # sequentially, but we can share TCP warmed-up connections across calls.
     self.download_http = self._GetNewDownloadHttp()
     self.upload_http = self._GetNewUploadHttp()
+    WrapDownloadHttpRequest(self.download_http)
+    WrapUploadHttpRequest(self.upload_http)
     if self.credentials:
       self.authorized_download_http = self.credentials.authorize(
           self.download_http)
@@ -251,8 +253,6 @@ class GcsJsonApi(CloudApi):
     else:
       self.authorized_download_http = self.download_http
       self.authorized_upload_http = self.upload_http
-    WrapDownloadHttpRequest(self.authorized_download_http)
-    WrapUploadHttpRequest(self.authorized_upload_http)
 
     self.http_base = 'https://'
     gs_json_host = config.get('Credentials', 'gs_json_host', None)
