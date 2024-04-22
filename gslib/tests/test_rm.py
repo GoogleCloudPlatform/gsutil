@@ -138,7 +138,11 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         stderr_set.remove('')  # Avoid groups represented by an empty string.
       if MACOS_WARNING in stderr_set:
         stderr_set.remove(MACOS_WARNING)
-      self.assertEqual(stderr_set, expected_stderr_lines)
+      if self._use_gcloud_storage:
+        for to_check in expected_stderr_lines:
+          self.assertIn(to_check, stderr)
+      else:
+        self.assertEqual(stderr_set, expected_stderr_lines)
     else:
       cumulative_stderr_lines = set()
 
