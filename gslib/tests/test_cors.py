@@ -87,8 +87,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
 
   def setUp(self):
     super(TestCors, self).setUp()
-    self.no_cors = ('[]' if self._use_gcloud_storage else
-                    'has no CORS configuration')
+    self.no_cors = 'has no CORS configuration'
 
   def test_cors_translation(self):
     """Tests cors translation for various formats."""
@@ -148,7 +147,7 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
 
     if self._use_gcloud_storage:
-      self.assertIn('Found invalid JSON/YAML file', stderr)
+      self.assertIn('Found invalid JSON/YAML', stderr)
     else:
       self.assertNotIn('XML CORS data provided', stderr)
 

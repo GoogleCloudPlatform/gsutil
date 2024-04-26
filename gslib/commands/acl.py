@@ -357,7 +357,7 @@ class AclCommand(Command):
         command_group = 'buckets'
       gcloud_storage_map = GcloudStorageMap(gcloud_command=[
           'storage', command_group, 'describe',
-          '--format=multi(acl:format=json)', '--raw'
+          '--format=multi(acl:format=json)'
       ],
                                             flag_map={})
 

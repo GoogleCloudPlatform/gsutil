@@ -51,41 +51,29 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
         ['-m', 'main', '-e', '404', suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
                             return_stdout=True)
-    if self._use_gcloud_storage:
-      self.assertIn('"mainPageSuffix": "main"', stdout)
-      self.assertIn('"notFoundPage": "404"', stdout)
-    else:
-      self.assertEqual(json.loads(stdout), WEBCFG_FULL)
+    self.assertEqual(json.loads(stdout), WEBCFG_FULL)
 
   def test_main(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(self._set_web_cmd + ['-m', 'main', suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
                             return_stdout=True)
-    if self._use_gcloud_storage:
-      self.assertEqual('{\n  "mainPageSuffix": "main"\n}\n', stdout)
-    else:
-      self.assertEqual(json.loads(stdout), WEBCFG_MAIN)
+
+    self.assertEqual(json.loads(stdout), WEBCFG_MAIN)
 
   def test_error(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(self._set_web_cmd + ['-e', '404', suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
                             return_stdout=True)
-    if self._use_gcloud_storage:
-      self.assertEqual('{\n  "notFoundPage": "404"\n}\n', stdout)
-    else:
-      self.assertEqual(json.loads(stdout), WEBCFG_ERROR)
+    self.assertEqual(json.loads(stdout), WEBCFG_ERROR)
 
   def test_empty(self):
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(self._set_web_cmd + [suri(bucket_uri)])
     stdout = self.RunGsUtil(self._get_web_cmd + [suri(bucket_uri)],
                             return_stdout=True)
-    if self._use_gcloud_storage:
-      self.assertEqual('[]\n', stdout)
-    else:
-      self.assertIn(WEBCFG_EMPTY, stdout)
+    self.assertIn(WEBCFG_EMPTY, stdout)
 
   def testTooFewArgumentsFails(self):
     """Ensures web commands fail with too few arguments."""
@@ -124,9 +112,9 @@ class TestWebShim(testcase.ShimUnitTestBase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} storage buckets describe'
-             ' --format="gsutiljson[key=website_config,empty=\' has no website'
-             ' configuration.\',empty_prefix_key=storage_url]"'
-             ' --raw gs://bucket').format(
+             ' --format=gsutiljson[key=website_config,empty=\' has no website'
+             ' configuration.\',empty_prefix_key=storage_url]'
+             ' gs://bucket').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
   @mock.patch.object(web.WebCommand, '_SetWeb', new=mock.Mock())

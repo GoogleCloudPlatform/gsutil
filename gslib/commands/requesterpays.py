@@ -71,7 +71,7 @@ _set_help_text = CreateHelpText(_SET_SYNOPSIS, _SET_DESCRIPTION)
 
 _GCLOUD_FORMAT_STRING = ('--format=value[separator=": "](' + 'name.sub("' +
                          shim_util.get_format_flag_caret() + '", "gs://"),' +
-                         'billing.requesterPays.yesno("Enabled", "Disabled"))')
+                         'requester_pays.yesno("Enabled", "Disabled"))')
 
 
 class RequesterPaysCommand(Command):
