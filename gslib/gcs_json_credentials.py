@@ -76,6 +76,8 @@ DEFAULT_SCOPES = [
 
 GOOGLE_OAUTH2_DEFAULT_FILE_PASSWORD = 'notasecret'
 
+def isP12Credentials(credentials):
+  return isinstance(credentials, P12Credentials)
 
 class PKCS12Signer(crypt_base.Signer, crypt_base.FromServiceAccountMixin):
   """Signer for a p12 service account key."""
@@ -223,7 +225,7 @@ def SetUpJsonCredentialsAndCache(api, logger, credentials=None):
         'API calls will be executed as [%s].', _GetImpersonateServiceAccount())
 
   # Do not store p12 credentials (Supported by google-auth), as google-auth does not support storing service account credentials.
-  if not isinstance(api.credentials, P12Credentials):
+  if not isP12Credentials(api.credentials):
     # Set credential cache so that we don't have to get a new access token for
     # every call we make. All GCS APIs use the same credentials as the JSON API,
     # so we use its version in the key for caching access tokens.
