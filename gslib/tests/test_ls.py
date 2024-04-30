@@ -42,6 +42,7 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
+from gslib.tests.util import SkipForP12Creds
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1_CRC32C
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1_MD5
@@ -426,6 +427,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                   stderr)
 
   @SkipForXML('Credstore file gets created only for json API')
+  @SkipForP12Creds('P12 credentials are not cached, as they are supported via google-auth')
   def test_credfile_lock_permissions(self):
     tmpdir = self.CreateTempDir()
     filepath = os.path.join(tmpdir, 'credstore2')
