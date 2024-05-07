@@ -1,3 +1,12 @@
+Release 5.29 (release date: 2024-05-07)
+======================================
+New Features
+------------------
+
+Other Changes
+------------------
+- Upgraded gcs-oauth2-boto-plugin for users with versions greater than 5.29 to authenticate via google-auth for .p12 keys.
+
 Release 5.28 (release date: 2024-04-30)
 ======================================
 New Features
