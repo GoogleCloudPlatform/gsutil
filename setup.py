@@ -15,6 +15,7 @@
 # limitations under the License.
 """Setup installation module for gsutil."""
 
+# TEMPO
 import os
 
 from setuptools import find_packages
