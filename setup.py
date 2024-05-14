@@ -39,7 +39,7 @@ requires = [
     'argcomplete>=1.9.4',
     'crcmod>=1.7',
     'fasteners>=0.14.1',
-    'gcs-oauth2-boto-plugin>=3.0',
+    'gcs-oauth2-boto-plugin>=3.2',
     'google-apitools>=0.5.32',
     'httplib2==0.20.4',
     'google-reauth>=0.1.0',
@@ -51,7 +51,7 @@ requires = [
     'retry_decorator>=1.0.0',
     'six>=1.16.0',
     # aiohttp is the extra dependency that contains requests lib.
-    'google-auth[aiohttp]>=2.5.0',
+    'google-auth[aiohttp]==2.17.0',
     'google-auth-httplib2>=0.2.0',
 ]
 
