@@ -184,8 +184,8 @@ class LabelCommand(Command):
           GcloudStorageMap(
               gcloud_command=[
                   'storage', 'buckets', 'describe',
-                  '--format="gsutiljson[key=labels,empty=\' has no label '
-                  'configuration.\',empty_prefix_key=storage_url]"', '--raw'
+                  '--format=gsutiljson[key=labels,empty=\' has no label '
+                  'configuration.\',empty_prefix_key=storage_url,indent=2]'
               ],
               flag_map={},
           ),
