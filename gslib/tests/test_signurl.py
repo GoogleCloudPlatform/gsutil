@@ -28,6 +28,7 @@ import boto
 
 import gslib.commands.signurl
 from gslib.commands.signurl import HAVE_OPENSSL
+from gslib.commands.signurl import HAVE_CRYPTO
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.iamcredentials_api import IamcredentailsApi
@@ -109,6 +110,19 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.assertIn('CommandException: Max valid duration allowed is 12:00:00',
                   stderr)
 
+  @unittest.skipUnless(not HAVE_CRYPTO, 'signurl requires crypto to decode .p12 keys')
+  def testSignUrlRaiseErrorForP12KeysWithoutCrypto(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'z')
+    cmd = [
+        'signurl', '-p', 'notasecret', '-m', 'PUT',
+        self._GetKsFile(),
+        suri(object_uri)
+    ]
+    stderr = self.RunGsUtil(cmd, return_stderr=1, expected_status=1)
+    self.assertIn('CommandException: pyca/cryptography is not available. Either install it, or please consider using the .json keyfile', stderr)
+
+  @unittest.skipUnless(HAVE_CRYPTO, 'signurl requires crypto to decode .p12 keys.')
   def testSignUrlOutputP12(self):
     """Tests signurl output of a sample object with pkcs12 keystore."""
     bucket_uri = self.CreateBucket()
@@ -160,8 +174,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(len(objs), len(expected_partial_urls))
 
     cmd_args = [
-        'signurl', '-m', 'PUT', '-p', 'notasecret', '-r', 'us',
-        self._GetKsFile()
+        'signurl', '-m', 'PUT', '-r', 'us',
+        self._GetJSONKsFile()
     ]
     cmd_args.extend(objs)
 
@@ -177,7 +191,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     for obj, line, partial_url in zip(objs, lines, expected_partial_urls):
       self.assertIn(obj, line)
       self.assertIn(partial_url, line)
-      self.assertIn('x-goog-credential=test.apps.googleusercontent.com', line)
+      self.assertIn('x-goog-credential='+TEST_EMAIL, line)
     self.assertIn('%2Fus%2F', stdout)
 
   def testSignUrlWithWildcard(self):
@@ -192,8 +206,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
                             contents=b''))
 
     stdout = self.RunGsUtil(
-        ['signurl', '-p', 'notasecret',
-         self._GetKsFile(),
+        ['signurl',
+         self._GetJSONKsFile(),
          suri(bucket) + '/*'],
         return_stdout=True)
 
@@ -223,9 +237,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
 
   def testSignUrlOfNonObjectUrl(self):
     """Tests the signurl output of a non-existent file."""
-    self.RunGsUtil(['signurl', self._GetKsFile(), 'gs://'],
-                   expected_status=1,
-                   stdin='notasecret')
+    self.RunGsUtil(['signurl', self._GetJSONKsFile(), 'gs://'],
+                   expected_status=1)
     self.RunGsUtil(['signurl', 'file://tmp/abc', 'gs://bucket'],
                    expected_status=1)
 
@@ -592,3 +605,33 @@ class UnitTestSignUrlWithShim(testcase.ShimUnitTestBase):
             ' --query-params userProject=project'
             ' --headers content-type=application/octet-stream'
             ' gs://bucket/object'.format(key_path), info_lines)
+
+  def testShimTranslatesFlagsWithP12Key(self):
+    key_contents = pkgutil.get_data('gslib', 'tests/test_data/test.p12')
+    key_path = self.CreateTempFile(contents=key_contents)
+    key_password = 'notasecret'
+
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('signurl', [
+            '-d', '2m', '-m', 'RESUMABLE', '-p', key_password, '-r', 'US', '-b', 'project', '-c',
+            'application/octet-stream', key_path, 'gs://bucket/object'
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            'storage sign-url'
+            ' --format=csv[separator="\\t"](resource:label="URL", http_verb:label="HTTP Method", expiration:label="Expiration", signed_url:label="Signed URL")'
+            ' --private-key-file={}'
+            ' --headers=x-goog-resumable=start'
+            ' --duration 120s'
+            ' --http-verb POST'
+            ' --private-key-password {}'
+            ' --region US'
+            ' --query-params userProject=project'
+            ' --headers content-type=application/octet-stream'
+            ' gs://bucket/object'.format(key_path, key_password), info_lines)
