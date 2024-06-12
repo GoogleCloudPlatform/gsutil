@@ -1,3 +1,12 @@
+Release 5.30 (release date: 2024-06-12)
+======================================
+New Features
+------------------
+
+Other Changes
+------------------
+- Fixed the bug in `gsutil signurl` command.
+
 Release 5.29 (release date: 2024-05-07)
 ======================================
 New Features
