@@ -745,7 +745,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         expected_status=1)
     if self._use_gcloud_storage:
       self.assertIn(
-          'The following URLs matched no objects or files:\n{}\n-{}'.format(
+          'The following URLs matched no objects or files:\n{}\n{}'.format(
               nonexistent_object1, nonexistent_object2), stderr)
     else:
       self.assertIn('2 files/objects could not be removed.', stderr)
