@@ -250,7 +250,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         expected_status=1)
     if self._use_gcloud_storage:
       no_url_matched_target = no_url_matched_target = (
-          'The following URLs matched no objects or files:\n-%s')
+          'The following URLs matched no objects or files:\n%s')
     else:
       no_url_matched_target = NO_URLS_MATCHED_TARGET
     self.assertIn(no_url_matched_target % suri(bucket_uri, 'foo'), stderr)
@@ -393,7 +393,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(stderr.count('Removing %s://' % self.default_provider), 1)
     if self._use_gcloud_storage:
       self.assertIn(
-          'The following URLs matched no objects or files:\n-%s' %
+          'The following URLs matched no objects or files:\n%s' %
           suri(bucket_uri, 'missing'), stderr)
     else:
       self.assertIn(NO_URLS_MATCHED_TARGET % suri(bucket_uri, 'missing'),
@@ -745,7 +745,7 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
         expected_status=1)
     if self._use_gcloud_storage:
       self.assertIn(
-          'The following URLs matched no objects or files:\n-{}\n-{}'.format(
+          'The following URLs matched no objects or files:\n{}\n{}'.format(
               nonexistent_object1, nonexistent_object2), stderr)
     else:
       self.assertIn('2 files/objects could not be removed.', stderr)

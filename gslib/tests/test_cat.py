@@ -136,7 +136,7 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
                               expected_status=1)
       if self._use_gcloud_storage:
         self.assertIn(
-            'The following URLs matched no objects or files:\n-{}23\n'.format(
+            'The following URLs matched no objects or files:\n{}23\n'.format(
                 uri2.version_specific_uri), stderr)
       else:
         self.assertIn(NO_URLS_MATCHED_TARGET % uri2.version_specific_uri + '23',
