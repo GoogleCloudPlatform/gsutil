@@ -722,6 +722,7 @@ class TestMetricsIntegrationTests(testcase.GsUtilIntegrationTestCase):
       reported_metrics = pickle.load(metrics_file)
     self.assertEqual(COMMAND_AND_ERROR_TEST_METRICS, set(reported_metrics))
 
+  @unittest.skip("example.com is currently not accepting post requests, tracking issue: https://github.com/GoogleCloudPlatform/gsutil/issues/1800")
   @mock.patch('time.time', new=mock.MagicMock(return_value=0))
   def testMetricsPosting(self):
     """Tests the metrics posting process as performed in metrics_reporter.py."""
