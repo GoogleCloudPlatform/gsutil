@@ -1,4 +1,4 @@
-# gsutil
+# gsutil ==
 
 gsutil is a Python application that lets you access Google Cloud Storage from
 the command line. You can use gsutil to do a wide range of bucket and object
@@ -9,6 +9,7 @@ management tasks, including:
 * Listing buckets and objects.
 * Moving, copying, and renaming objects.
 * Editing object and bucket ACLs.
+* Test.
 
 ## Installation
 
