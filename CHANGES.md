@@ -2,7 +2,7 @@ Release 5.31 (release date: 2024-10-10)
 ======================================
 Bug Fixes
 ------------------
-- Fixed some vulnerabilities in dependencies
+- Fixed some vulnerabilities in dependencies by addressing CVE-2023-38325.
 
 Other Changes
 ------------------
