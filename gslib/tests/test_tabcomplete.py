@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import os
 import time
+import sys
 
 from gslib.command import CreateOrGetGsutilLogger
 from gslib.tab_complete import CloudObjectCompleter
@@ -36,6 +37,8 @@ from gslib.utils.boto_util import GetTabCompletionCacheFilename
 
 @unittest.skipUnless(ARGCOMPLETE_AVAILABLE,
                      'Tab completion requires argcomplete')
+@unittest.skipUnless(sys.version_info < (3, 11, 9),
+                     'Tab completion is only supported on Python < 3.11.9')
 class TestTabComplete(testcase.GsUtilIntegrationTestCase):
   """Integration tests for tab completion."""
 
