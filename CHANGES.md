@@ -1,3 +1,13 @@
+Release 5.31 (release date: 2024-10-10)
+======================================
+Bug Fixes
+------------------
+- Fixed vulnerabilities in dependencies
+
+Other Changes
+------------------
+- Skipped incompatible tests for python 3.11.9 and above
+
 Release 5.30 (release date: 2024-06-12)
 ======================================
 New Features
