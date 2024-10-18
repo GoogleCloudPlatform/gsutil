@@ -27,7 +27,7 @@ import warnings
 # TODO: gsutil-beta: Distribute a pylint rc file.
 
 ver = sys.version_info
-if (vermajor == 3 and verminor < 5) or (vermajor == 4):
+if (ver.major == 3 and ver.minor < 5) or (ver.major == 4):
   sys.exit(
     "Error: gsutil requires Python version 3.5+ and <4, but a different version is installed.\n"
     "You are currently running Python {}.{}\n"
