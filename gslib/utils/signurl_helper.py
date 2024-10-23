@@ -16,7 +16,7 @@
 
 import base64
 from datetime import datetime
-from datetime import UTC
+from datetime import timezone
 import hashlib
 
 from gslib.utils.constants import UTF8
@@ -34,7 +34,7 @@ _UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
 
 
 def _NowUTC():
-  return datetime.now(tz=UTC)
+  return datetime.now(tz=timezone.utc)
 
 
 def CreatePayload(client_id,
