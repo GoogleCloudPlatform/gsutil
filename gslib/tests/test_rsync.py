@@ -2929,7 +2929,7 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
                                            'b.txt'), ('data3', 'data4', 'c.txt')
     ])
     self.RunGsUtil(
-        ['rsync', '-r', flag, '^(?!.*\.txt$).*', tmpdir,
+        ['rsync', '-r', flag, r'^(?!.*\.txt$).*', tmpdir,
          suri(bucket_uri)],
         return_stderr=True)
     listing = TailSet(tmpdir, self.FlatListDir(tmpdir))
