@@ -273,7 +273,7 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
         ['retention', 'get', suri(bucket_uri)], return_stdout=True)
     if self._use_gcloud_storage:
       # Sometimes the field is absent if isLocked is false.
-      self.assertNotRegexpMatches(stdout, r'isLocked \: true')
+      self.assertNotRegex(stdout, r'isLocked \: true')
       self.assertRegex(stdout, r'retentionPeriod\: \'86400\'')
       self.assertRegex(stdout, r'effectiveTime\: \'.*\'')
     else:
