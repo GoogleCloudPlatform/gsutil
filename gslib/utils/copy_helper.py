@@ -4138,13 +4138,13 @@ class Manifest(object):
     # Always use the source_url as the key for the item. This is unique.
     self.Set(source_url, 'source_uri', source_url)
     self.Set(source_url, 'destination_uri', destination_url)
-    self.Set(source_url, 'start_time', datetime.datetime.now(tz=datetime.timezone.utc))
+    self.Set(source_url, 'start_time', datetime.datetime.now(tz=datetime.timezone.utc).replace(tzinfo=None))
 
   def SetResult(self, source_url, bytes_transferred, result, description=''):
     self.Set(source_url, 'bytes', bytes_transferred)
     self.Set(source_url, 'result', result)
     self.Set(source_url, 'description', description)
-    self.Set(source_url, 'end_time', datetime.datetime.now(tz=datetime.timezone.utc))
+    self.Set(source_url, 'end_time', datetime.datetime.now(tz=datetime.timezone.utc).replace(tzinfo=None))
     self._WriteRowToManifestFile(source_url)
     self._RemoveItemFromManifest(source_url)
 

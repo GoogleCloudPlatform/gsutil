@@ -34,7 +34,7 @@ _UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
 
 
 def _NowUTC():
-  return datetime.now(tz=timezone.utc)
+  return datetime.now(tz=timezone.utc).replace(tzinfo=None)
 
 
 def CreatePayload(client_id,

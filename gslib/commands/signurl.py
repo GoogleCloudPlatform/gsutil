@@ -215,7 +215,7 @@ _DETAILED_HELP_TEXT = ("""
 
 def _NowUTC():
   """Returns the current utc time as a datetime object."""
-  return datetime.now(tz=timezone.utc)
+  return datetime.now(tz=timezone.utc).replace(tzinfo=None)
 
 
 def _DurationToTimeDelta(duration):
@@ -698,7 +698,7 @@ class UrlSignCommand(Command):
                                 billing_project=billing_project,
                                 string_to_sign_debug=True)
 
-      expiration = calendar.timegm((datetime.now(tz=timezone.utc) + delta).utctimetuple())
+      expiration = calendar.timegm((datetime.now(tz=timezone.utc).replace(tzinfo=None) + delta).utctimetuple())
       expiration_dt = datetime.fromtimestamp(expiration)
 
       time_str = expiration_dt.strftime('%Y-%m-%d %H:%M:%S')
