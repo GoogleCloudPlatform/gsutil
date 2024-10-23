@@ -1185,7 +1185,7 @@ class TestFormatFlagUtils(testcase.GsUtilUnitTestCase):
 
   def test_gets_format_flag_escaped_newline_on_windows(self):
     with mock.patch.object(system_util, 'IS_WINDOWS', new=True):
-      self.assertEqual(shim_util.get_format_flag_newline(), '^\^n')
+      self.assertEqual(shim_util.get_format_flag_newline(), r'^\^n')
 
 
 class TestBotoTranslation(testcase.GsUtilUnitTestCase):
