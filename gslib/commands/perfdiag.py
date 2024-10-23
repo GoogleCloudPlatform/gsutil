@@ -42,7 +42,7 @@ import boto.gs.connection
 import six
 from six.moves import cStringIO
 from six.moves import http_client
-from six.moves import xrange
+from six.moves import range
 from six.moves import range
 
 import gslib
@@ -1222,7 +1222,7 @@ class PerfDiagCommand(Command):
         [random.choice(string.ascii_lowercase) for _ in range(10)])
     list_prefix = 'gsutil-perfdiag-list-' + random_id + '-'
 
-    for _ in xrange(self.num_objects):
+    for _ in range(self.num_objects):
       fpath = self._MakeTempFile(0,
                                  mem_data=True,
                                  mem_metadata=True,

@@ -128,7 +128,7 @@ from gslib.utils import shim_util
 import six
 from six.moves import http_client
 from six.moves import range
-from six.moves import xrange
+from six.moves import range
 
 if six.PY3:
   long = int  # pylint: disable=redefined-builtin,invalid-name
@@ -3829,7 +3829,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     object_uri = self.CreateObject()
     random.seed(0)
     contents = str([
-        random.choice(string.ascii_letters) for _ in xrange(self.halt_size)
+        random.choice(string.ascii_letters) for _ in range(self.halt_size)
     ]).encode('ascii')
     random.seed()  # Reset the seed for any other tests.
     fpath1 = self.CreateTempFile(file_name='unzipped.txt', contents=contents)

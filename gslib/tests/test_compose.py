@@ -19,7 +19,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-from six.moves import xrange
+from six.moves import range
 from six.moves import range
 
 from gslib.commands.compose import MAX_COMPOSE_ARITY
@@ -45,7 +45,7 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
 
     data_list = [
-        ('data-%d,' % i).encode('ascii') for i in xrange(num_components)
+        ('data-%d,' % i).encode('ascii') for i in range(num_components)
     ]
     components = [
         self.CreateObject(bucket_uri=bucket_uri, contents=data).uri
