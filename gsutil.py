@@ -139,7 +139,7 @@ for libdir, subdir in THIRD_PARTY_LIBS:
 
 CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', submodule_pyvers)
 # CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
-CRCMOD_PLUS_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_plus')
+CRCMOD_PLUS_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_plus', 'src')
 try:
   # pylint: disable=g-import-not-at-top
   import crcmod

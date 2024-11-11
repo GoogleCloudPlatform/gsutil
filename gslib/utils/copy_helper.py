@@ -53,6 +53,7 @@ from apitools.base.protorpclite import protojson
 from boto import config
 
 import crcmod
+import crcmod.predefined
 
 import gslib
 from gslib.cloud_api import AccessDeniedException
