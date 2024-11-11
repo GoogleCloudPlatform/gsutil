@@ -24,6 +24,7 @@ import os
 import time
 
 import crcmod
+import crcmod.predefined
 import six
 
 from gslib.command import Command

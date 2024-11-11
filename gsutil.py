@@ -138,7 +138,8 @@ for libdir, subdir in THIRD_PARTY_LIBS:
   sys.path.insert(0, os.path.join(THIRD_PARTY_DIR, libdir, subdir))
 
 CRCMOD_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod', submodule_pyvers)
-CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
+# CRCMOD_OSX_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_osx')
+CRCMOD_PLUS_PATH = os.path.join(THIRD_PARTY_DIR, 'crcmod_plus', 'src')
 try:
   # pylint: disable=g-import-not-at-top
   import crcmod
@@ -146,7 +147,7 @@ except ImportError:
   # Note: the bundled crcmod module under THIRD_PARTY_DIR does not include its
   # compiled C extension, but we still add it to sys.path because other parts of
   # gsutil assume that at least the core crcmod module will be available.
-  local_crcmod_path = (CRCMOD_OSX_PATH if 'darwin' in str(sys.platform).lower()
+  local_crcmod_path = (CRCMOD_PLUS_PATH if 'darwin' in str(sys.platform).lower()
                        else CRCMOD_PATH)
   sys.path.insert(0, local_crcmod_path)
 

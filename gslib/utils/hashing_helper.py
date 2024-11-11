@@ -28,6 +28,7 @@ import six
 
 from boto import config
 import crcmod
+import crcmod.predefined
 
 from gslib.exception import CommandException
 from gslib.utils.boto_util import UsingCrcmodExtension

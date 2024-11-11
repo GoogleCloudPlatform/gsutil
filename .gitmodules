@@ -85,3 +85,6 @@
 [submodule "third_party/google-auth-library-python-httplib2"]
 	path = third_party/google-auth-library-python-httplib2
 	url = https://github.com/googleapis/google-auth-library-python-httplib2.git
+[submodule "third_party/crcmod_plus"]
+	path = third_party/crcmod_plus
+	url = https://github.com/ntamas/crcmod-plus.git
