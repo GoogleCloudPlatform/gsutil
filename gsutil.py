@@ -116,7 +116,7 @@ THIRD_PARTY_LIBS = [
     ('chardet', ''),  # requests dependency
     ('certifi', ''),  # requests dependency
     ('idna', ''),  # requests dependency
-    ('requests', ''),  # google auth dependency
+    ('requests', 'src'),  # google auth dependency
     ('google-auth-library-python', ''),
     ('google-auth-library-python-httplib2', ''), #Package name: google-auth-httplib2
 ]
