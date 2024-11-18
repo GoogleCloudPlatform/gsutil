@@ -126,16 +126,16 @@ setup(
         'Natural Language :: English',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Topic :: System :: Filesystems',
         'Topic :: Utilities',
     ],
-    # Gsutil supports Python 3.5+
-    python_requires='!=2.*, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4',
+    # Gsutil supports Python 3.8 to 3.12
+    python_requires='>=3.8, <=3.12',
     platforms='any',
     packages=find_packages(
         exclude=[
