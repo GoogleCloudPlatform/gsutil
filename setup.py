@@ -47,7 +47,7 @@ requires = [
     # 3.0.5 is the last version that supports Python 3.3 or lower.
     'mock>=2.0.0, <=3.0.5; python_version < "3.3"',
     'monotonic>=1.4',
-    'pyOpenSSL>=0.13, <24.3.0',
+    'pyOpenSSL==24.2.1',
     'retry_decorator>=1.0.0',
     'six>=1.16.0',
     # aiohttp is the extra dependency that contains requests lib.
