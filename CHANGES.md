@@ -1,3 +1,14 @@
+Release 5.32 (release date: 2024-12-04)
+======================================
+New Features
+------------------
+- Added explicit support for Python 3.12
+
+Other Changes
+------------------
+- Dropped Support for Python 3.5, 3.6 and 3.7.
+- Pinned pyOpenSSL to a maximum version of 24.2.1 (#1822).
+
 Release 5.31 (release date: 2024-10-10)
 ======================================
 Bug Fixes
