@@ -1,3 +1,12 @@
+Release 5.33 (release date: 2024-12-10)
+======================================
+Bug Fixes
+------------------
+- Corrected python-requires as <3.13 (#1827)
+
+Other Changes
+------------------
+
 Release 5.32 (release date: 2024-12-04)
 ======================================
 New Features
