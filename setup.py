@@ -135,7 +135,7 @@ setup(
         'Topic :: Utilities',
     ],
     # Gsutil supports Python 3.8 to 3.12
-    python_requires='>=3.8, <=3.12',
+    python_requires='>=3.8, <3.13',
     platforms='any',
     packages=find_packages(
         exclude=[
