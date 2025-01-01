@@ -36,7 +36,7 @@ management tasks, including:
 """
 
 requires = [
-    'argcomplete>=1.9.4',
+    'argcomplete>=3.5.1',
     'crcmod>=1.7',
     'fasteners>=0.14.1',
     'gcs-oauth2-boto-plugin>=3.2',
@@ -47,7 +47,7 @@ requires = [
     # 3.0.5 is the last version that supports Python 3.3 or lower.
     'mock>=2.0.0, <=3.0.5; python_version < "3.3"',
     'monotonic>=1.4',
-    'pyOpenSSL>=0.13',
+    'pyOpenSSL>=0.13, <=24.2.1',
     'retry_decorator>=1.0.0',
     'six>=1.16.0',
     # aiohttp is the extra dependency that contains requests lib.
@@ -126,16 +126,16 @@ setup(
         'Natural Language :: English',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Topic :: System :: Filesystems',
         'Topic :: Utilities',
     ],
-    # Gsutil supports Python 3.5+
-    python_requires='!=2.*, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4',
+    # Gsutil supports Python 3.8 to 3.12
+    python_requires='>=3.8, <3.13',
     platforms='any',
     packages=find_packages(
         exclude=[
