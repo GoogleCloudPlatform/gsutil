@@ -64,27 +64,30 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
     self.assertEqual(actual, expected_string)
 
   def test_get_with_wrong_url_raises_error(self):
-    with self.assertRaisesRegexp(CommandException, 'No URLs matched'):
+    with self.assertRaisesRegex(CommandException, 'No URLs matched'):
       self.RunCommand('rpo', ['get', 'gs://invalid*'])
 
   def test_set_called_with_incorrect_value_raises_error(self):
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         CommandException,
         r'Invalid value for rpo set. Should be one of \(ASYNC_TURBO\|DEFAULT\)'
     ):
       self.RunCommand('rpo', ['set', 'random', 'gs://boo*'])
 
   def test_set_called_with_lower_case_value_raises_error(self):
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         CommandException,
         r'Invalid value for rpo set. Should be one of \(ASYNC_TURBO\|DEFAULT\)'
     ):
       self.RunCommand('rpo', ['set', 'async_turbo', 'gs://boo*'])
 
   def test_invalid_subcommand_raises_error(self):
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         CommandException, 'Invalid subcommand "blah", use get|set instead'):
       self.RunCommand('rpo', ['blah', 'DEFAULT', 'gs://boo*'])
+
+
+class TestRpoUnitWithShim(testcase.ShimUnitTestBase):
 
   def test_shim_translates_recovery_point_objective_get_command(self):
     fake_cloudsdk_dir = 'fake_dir'

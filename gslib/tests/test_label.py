@@ -284,10 +284,7 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['label', 'ch', '-d', 'dummy-key', suri(bucket_uri)])
     stdout = self.RunGsUtil(['label', 'get', suri(bucket_uri)],
                             return_stdout=True)
-    if self._use_gcloud_storage:
-      self.assertIn('[]', stdout)
-    else:
-      self.assertIn('%s/ has no label configuration.' % suri(bucket_uri),
+    self.assertIn('%s/ has no label configuration.' % suri(bucket_uri),
                     stdout)
 
   def testTooFewArgumentsFails(self):

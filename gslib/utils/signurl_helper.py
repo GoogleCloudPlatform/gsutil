@@ -16,6 +16,7 @@
 
 import base64
 from datetime import datetime
+from datetime import timezone
 import hashlib
 
 from gslib.utils.constants import UTF8
@@ -33,7 +34,7 @@ _UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
 
 
 def _NowUTC():
-  return datetime.utcnow()
+  return datetime.now(tz=timezone.utc).replace(tzinfo=None)
 
 
 def CreatePayload(client_id,
@@ -139,3 +140,8 @@ def GetFinalUrl(raw_signature, host, path, canonical_query_string):
                                    path=path,
                                    sig=signature,
                                    query_string=canonical_query_string)
+
+def to_bytes(value, encoding=UTF8):
+  if isinstance(value, bytes):
+    return value
+  return value.encode(encoding)

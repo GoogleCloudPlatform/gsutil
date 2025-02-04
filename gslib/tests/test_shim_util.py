@@ -392,7 +392,7 @@ class TestGetGCloudStorageArgs(testcase.GsUtilUnitTestCase):
       fake_with_subcommand.get_gcloud_storage_args()
 
 
-class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
+class TestTranslateToGcloudStorageIfRequested(testcase.ShimUnitTestBase):
   """Test Command.translate_to_gcloud_storage_if_requested method."""
 
   def setUp(self):
@@ -677,6 +677,66 @@ class TestTranslateToGcloudStorageIfRequested(testcase.GsUtilUnitTestCase):
                 'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM': 'True',
             })
 
+  def test_anonymous_credentials_sets_disable_credentials_env_variable(self):
+    self._mock_subprocess_run.return_value.stdout = ''
+
+    boto_config = {
+        'GSUtil': {
+            'use_gcloud_storage': 'always',
+            'hidden_shim_mode': 'no_fallback'
+        }
+    }
+    with _mock_boto_config(boto_config):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        self.assertTrue(
+            self._fake_command.translate_to_gcloud_storage_if_requested())
+        # Verify translation.
+        expected_gcloud_path = shim_util._get_gcloud_binary_path('fake_dir')
+        self.assertCountEqual(
+            self._fake_command._translated_env_variables, {
+                'CLOUDSDK_METRICS_ENVIRONMENT': 'gsutil_shim',
+                'CLOUDSDK_STORAGE_RUN_BY_GSUTIL_SHIM': 'True',
+                'CLOUDSDK_AUTH_DISABLE_CREDENTIALS': 'True',
+            })
+    self._mock_subprocess_run.assert_called_once_with(
+        [expected_gcloud_path, 'config', 'get', 'account'],
+        stdout=-1,
+        stderr=-1,
+        encoding='utf-8')
+
+  def test_gcloud_config_get_account_nonzero_returncode_raises_error(self):
+    self._mock_subprocess_run.return_value.stdout = b''
+    self._mock_subprocess_run.return_value.stderr = b'fake error message'
+    self._mock_subprocess_run.return_value.returncode = 1
+
+    expected_gcloud_path = shim_util._get_gcloud_binary_path('fake_dir')
+
+    boto_config = {
+        'GSUtil': {
+            'use_gcloud_storage': 'always',
+            'hidden_shim_mode': 'no_fallback'
+        }
+    }
+    with _mock_boto_config(boto_config):
+      with util.SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with self.assertRaisesRegex(
+            exception.CommandException,
+            "Error occurred while trying to retrieve gcloud's active account."
+            " Error: b'fake error message"):
+          self._fake_command.translate_to_gcloud_storage_if_requested()
+    self._mock_subprocess_run.assert_called_once_with(
+        [expected_gcloud_path, 'config', 'get', 'account'],
+        stdout=-1,
+        stderr=-1,
+        encoding='utf-8',
+    )
+
   def test_parallel_operations_true_does_not_add_process_count_env_vars(self):
     with util.SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                     ('GSUtil', 'hidden_shim_mode',
@@ -859,7 +919,11 @@ class TestHeaderTranslation(testcase.GsUtilUnitTestCase):
   @mock.patch.object(shim_util,
                      'COMMANDS_SUPPORTING_ALL_HEADERS',
                      new={'fake_shim'})
-  def test_translated_headers_get_added_to_final_command(self):
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_translated_headers_get_added_to_final_command(
+      self, mock_subprocess_run):
+    mock_subprocess_run.return_value.returncode = 0
+
     with _mock_boto_config({
         'GSUtil': {
             'use_gcloud_storage': 'always',
@@ -1121,7 +1185,7 @@ class TestFormatFlagUtils(testcase.GsUtilUnitTestCase):
 
   def test_gets_format_flag_escaped_newline_on_windows(self):
     with mock.patch.object(system_util, 'IS_WINDOWS', new=True):
-      self.assertEqual(shim_util.get_format_flag_newline(), '^\^n')
+      self.assertEqual(shim_util.get_format_flag_newline(), r'^\^n')
 
 
 class TestBotoTranslation(testcase.GsUtilUnitTestCase):
@@ -1142,8 +1206,10 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
   @mock.patch.object(shim_util,
                      'COMMANDS_SUPPORTING_ALL_HEADERS',
                      new={'fake_shim'})
-  def test_translated_boto_config_gets_added(self):
+  @mock.patch.object(subprocess, 'run', autospec=True)
+  def test_translated_boto_config_gets_added(self, mock_subprocess_run):
     """Should add translated env vars as well flags."""
+    mock_subprocess_run.return_value.returncode = 0
     with _mock_boto_config({
         'GSUtil': {
             'use_gcloud_storage': 'True',
@@ -1385,7 +1451,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       self.assertEqual(env_vars, {})
 
   def test_truthy_https_validate_certificates(self):
-    """Should not set CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION"""
+    """Should not set CLOUDSDK_AUTH_DISABLE_SSL_VALIDATION."""
     with _mock_boto_config({'GSUtil': {'https_validate_certificates': True}}):
       flags, env_vars = self._fake_command._translate_boto_config()
       self.assertEqual(flags, [])

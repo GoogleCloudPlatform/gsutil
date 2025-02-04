@@ -77,7 +77,7 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
                              return_stdout=True)
     # One summary line and two hash lines per file.
     num_expected_lines = num_test_files * (1 + 2)
-    self.assertEquals(len(stdout.splitlines()), num_expected_lines)
+    self.assertEqual(len(stdout.splitlines()), num_expected_lines)
 
   def testHashSelectAlg(self):
     tmp_file = self.CreateTempFile(contents=_TEST_FILE_CONTENTS)
@@ -147,7 +147,7 @@ class TestHash(testcase.GsUtilIntegrationTestCase):
     self.assertIn(('\tHash (crc32c):\t\t%s' % _TEST_COMPOSITE_B64_CRC), stdout)
 
 
-class TestHashShim(testcase.GsUtilUnitTestCase):
+class TestHashShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(hash.HashCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_basic_hash_command(self):

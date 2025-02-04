@@ -85,7 +85,7 @@ class TestAcl(TestAclBase):
                             return_stderr=True,
                             expected_status=1)
     if self._use_gcloud_storage:
-      error_text = 'Found invalid JSON/YAML file'
+      error_text = 'Found invalid JSON/YAML'
     else:
       error_text = 'ArgumentException'
     self.assertIn(error_text, stderr)
@@ -98,7 +98,7 @@ class TestAcl(TestAclBase):
                             return_stderr=True,
                             expected_status=1)
     if self._use_gcloud_storage:
-      error_text = 'Found invalid JSON/YAML file'
+      error_text = 'Found invalid JSON/YAML'
     else:
       error_text = 'ArgumentException'
     self.assertIn(error_text, stderr)
@@ -112,7 +112,7 @@ class TestAcl(TestAclBase):
                             expected_status=1)
 
     if self._use_gcloud_storage:
-      self.assertIn('Found invalid JSON/YAML file', stderr)
+      self.assertIn('Found invalid JSON/YAML', stderr)
       # XML not currently supported in gcloud storage.
     else:
       self.assertIn('ArgumentException', stderr)
@@ -126,7 +126,7 @@ class TestAcl(TestAclBase):
                             return_stderr=True,
                             expected_status=1)
     if self._use_gcloud_storage:
-      self.assertIn('Found invalid JSON/YAML file', stderr)
+      self.assertIn('Found invalid JSON/YAML', stderr)
       # XML not currently supported in gcloud storage.
     else:
       self.assertIn('ArgumentException', stderr)
@@ -823,7 +823,7 @@ class TestAclOldAlias(TestAcl):
   _ch_acl_prefix = ['chacl']
 
 
-class TestAclShim(testcase.GsUtilUnitTestCase):
+class TestAclShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_acl_get_object(self):
@@ -838,7 +838,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage objects describe'
                        ' --format=multi(acl:format=json)'
-                       ' --raw gs://bucket/object').format(
+                       ' gs://bucket/object').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
 
@@ -855,7 +855,7 @@ class TestAclShim(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage buckets describe'
                        ' --format=multi(acl:format=json)'
-                       ' --raw gs://bucket').format(
+                       ' gs://bucket').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
 

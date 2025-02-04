@@ -27,8 +27,14 @@ import warnings
 # TODO: gsutil-beta: Distribute a pylint rc file.
 
 ver = sys.version_info
-if (ver.major == 2 and ver.minor < 7) or (ver.major == 3 and ver.minor < 5):
-  sys.exit('gsutil requires python 2.7 or 3.5+.')
+if ver.major != 3 or ver.minor < 8 or ver.minor > 12:
+  sys.exit(
+    "Error: gsutil requires Python version 3.8-3.12, but a different version is installed.\n"
+    "You are currently running Python {}.{}\n"
+    "Follow the steps below to resolve this issue:\n"
+    "\t1. Switch to Python 3.8-3.12 using your Python version manager or install an appropriate version.\n"
+    "\t2. If you are unsure how to manage Python versions, visit [https://cloud.google.com/storage/docs/gsutil_install#specifications] for detailed instructions.".format(ver.major, ver.minor)
+  )
 
 # setup a string to load the correct httplib2
 if sys.version_info.major == 2:
@@ -110,8 +116,9 @@ THIRD_PARTY_LIBS = [
     ('chardet', ''),  # requests dependency
     ('certifi', ''),  # requests dependency
     ('idna', ''),  # requests dependency
-    ('requests', ''),  # google auth dependency
+    ('requests', 'src'),  # google auth dependency
     ('google-auth-library-python', ''),
+    ('google-auth-library-python-httplib2', ''), #Package name: google-auth-httplib2
 ]
 
 # The wrapper script adds all third_party libraries to the Python path, since

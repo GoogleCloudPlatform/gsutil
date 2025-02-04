@@ -42,6 +42,7 @@ from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import RUN_S3_TESTS
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
+from gslib.tests.util import SkipForP12Creds
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1_CRC32C
 from gslib.tests.util import TEST_ENCRYPTION_CONTENT1_MD5
@@ -191,6 +192,10 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
       stdout = self.RunCommand('ls', ['-Lb', suri(bucket_uri)],
                                return_stdout=True)
     self.assertNotRegex(stdout, 'Placement locations:')
+
+
+class TestLsUnitWithShim(testcase.ShimUnitTestBase):
+  """Unit tests for ls command with shim."""
 
   def test_shim_translates_flags(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
@@ -422,6 +427,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
                   stderr)
 
   @SkipForXML('Credstore file gets created only for json API')
+  @SkipForP12Creds('P12 credentials are not cached, as they are supported via google-auth')
   def test_credfile_lock_permissions(self):
     tmpdir = self.CreateTempDir()
     filepath = os.path.join(tmpdir, 'credstore2')
@@ -789,8 +795,8 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
 
     _Check5()
 
-  @unittest.skipIf(
-      IS_WINDOWS, 'Unicode handling on Windows requires mods to site-packages')
+  @unittest.skipIf(IS_WINDOWS,
+                   'Unicode handling on Windows requires mods to site-packages')
   def test_list_unicode_filename(self):
     """Tests listing an object with a unicode filename."""
     # Note: This test fails on Windows (command.exe). I was able to get ls to

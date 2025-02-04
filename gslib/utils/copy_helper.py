@@ -45,7 +45,7 @@ import time
 import traceback
 
 import six
-from six.moves import xrange
+from six.moves import range
 from six.moves import range
 
 from apitools.base.protorpclite import protojson
@@ -4138,13 +4138,13 @@ class Manifest(object):
     # Always use the source_url as the key for the item. This is unique.
     self.Set(source_url, 'source_uri', source_url)
     self.Set(source_url, 'destination_uri', destination_url)
-    self.Set(source_url, 'start_time', datetime.datetime.utcnow())
+    self.Set(source_url, 'start_time', datetime.datetime.now(tz=datetime.timezone.utc).replace(tzinfo=None))
 
   def SetResult(self, source_url, bytes_transferred, result, description=''):
     self.Set(source_url, 'bytes', bytes_transferred)
     self.Set(source_url, 'result', result)
     self.Set(source_url, 'description', description)
-    self.Set(source_url, 'end_time', datetime.datetime.utcnow())
+    self.Set(source_url, 'end_time', datetime.datetime.now(tz=datetime.timezone.utc).replace(tzinfo=None))
     self._WriteRowToManifestFile(source_url)
     self._RemoveItemFromManifest(source_url)
 
@@ -4270,7 +4270,7 @@ def ResolveWildcardsInPathBeforeFinalDir(src_url_path_sans_final_dir,
   wildcarded_src_obj_path = StorageUrlFromString(
       src_url_path_sans_final_dir).object_name.split('/')
   expanded_src_obj_path = exp_src_url.object_name.split('/')
-  for path_segment_index in xrange(len(wildcarded_src_obj_path)):
+  for path_segment_index in range(len(wildcarded_src_obj_path)):
     if ContainsWildcard(wildcarded_src_obj_path[path_segment_index]):
       # The expanded path is guaranteed to be have at least as many path
       # segments as the wildcarded path.

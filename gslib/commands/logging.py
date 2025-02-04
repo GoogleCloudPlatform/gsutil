@@ -186,10 +186,10 @@ class LoggingCommand(Command):
           'get':
               GcloudStorageMap(
                   gcloud_command=[
-                      'storage', 'buckets', 'list',
-                      '--format="gsutiljson[key=logging_config,empty=\' has '
+                      'storage', 'buckets', 'describe',
+                      '--format=gsutiljson[key=logging_config,empty=\' has '
                       'no logging configuration.\',empty_prefix_key='
-                      'storage_url]"', '--raw'
+                      'storage_url]'
                   ],
                   flag_map={},
               ),

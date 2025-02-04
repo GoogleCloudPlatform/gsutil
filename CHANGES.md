@@ -1,3 +1,71 @@
+Release 5.33 (release date: 2024-12-10)
+======================================
+Bug Fixes
+------------------
+- Corrected python-requires as <3.13 (#1827)
+
+Other Changes
+------------------
+
+Release 5.32 (release date: 2024-12-04)
+======================================
+New Features
+------------------
+- Added explicit support for Python 3.12
+
+Other Changes
+------------------
+- Dropped Support for Python 3.5, 3.6 and 3.7.
+- Pinned pyOpenSSL to a maximum version of 24.2.1 (#1822).
+
+Release 5.31 (release date: 2024-10-10)
+======================================
+Bug Fixes
+------------------
+- Fixed some vulnerabilities in dependencies by addressing CVE-2023-38325.
+
+Other Changes
+------------------
+- Skipped incompatible tests for python 3.11.9 and above
+
+Release 5.30 (release date: 2024-06-12)
+======================================
+New Features
+------------------
+
+Other Changes
+------------------
+- Fixed the bug in `gsutil signurl` command.
+
+Release 5.29 (release date: 2024-05-07)
+======================================
+New Features
+------------------
+
+Other Changes
+------------------
+- Upgraded gcs-oauth2-boto-plugin for users to authenticate via google-auth (instead of oauth2client) for .p12 keys.
+
+Release 5.28 (release date: 2024-04-30)
+======================================
+New Features
+------------------
+- Allow accessing public data with anonymous user when shim is turned ON
+
+Other Changes
+------------------
+- Migrated P12 Authentication from oauth2client to google-auth.
+
+Release 5.27 (release date: 2023-10-24)
+======================================
+New Features
+------------------
+- Added support for Python 3.12 (#1751)
+
+Other Changes
+------------------
+- Several documentation updates and clarifications. 
+
 Release 5.26 (release date: 2023-09-21)
 ======================================
 New Features
@@ -39,7 +107,7 @@ Other Changes
 - Update acl.py to use snake case "allUsers" and "allAuthenticatedUsers" (#1720)
 
 
-- Release 5.24 (release date: 2023-05-17)
+Release 5.24 (release date: 2023-05-17)
 ======================================
 New Features
 ------------------

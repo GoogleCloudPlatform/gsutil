@@ -76,7 +76,6 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
       '"age": 0, "isLive": false, "numNewerVersions": 0}}]}')
 
   no_lifecycle_config = 'has no lifecycle configuration.'
-  empty_lifecycle_config = '[]'
 
   def test_lifecycle_translation(self):
     """Tests lifecycle translation for various formats."""
@@ -96,10 +95,7 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     stdout = self.RunGsUtil(
         ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
-    if self._use_gcloud_storage:
-      self.assertIn(self.empty_lifecycle_config, stdout)
-    else:
-      self.assertIn(self.no_lifecycle_config, stdout)
+    self.assertIn(self.no_lifecycle_config, stdout)
 
   def test_set_empty_lifecycle1(self):
     bucket_uri = self.CreateBucket()
@@ -107,10 +103,7 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(
         ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
-    if self._use_gcloud_storage:
-      self.assertIn(self.empty_lifecycle_config, stdout)
-    else:
-      self.assertIn(self.no_lifecycle_config, stdout)
+    self.assertIn(self.no_lifecycle_config, stdout)
 
   def test_valid_lifecycle(self):
     bucket_uri = self.CreateBucket()
@@ -187,10 +180,7 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['lifecycle', 'set', fpath, suri(bucket_uri)])
     stdout = self.RunGsUtil(
         ['lifecycle', 'get', suri(bucket_uri)], return_stdout=True)
-    if self._use_gcloud_storage:
-      self.assertIn(self.empty_lifecycle_config, stdout)
-    else:
-      self.assertIn(self.no_lifecycle_config, stdout)
+    self.assertIn(self.no_lifecycle_config, stdout)
 
   def test_set_lifecycle_multi_buckets(self):
     """Tests setting lifecycle configuration on multiple buckets."""
@@ -270,8 +260,8 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
 
-class TestLifecycleUnitTests(testcase.GsUtilUnitTestCase):
-  """Unit tests for gsutil lifecycle."""
+class TestLifecycleUnitTestsWithShim(testcase.ShimUnitTestBase):
+  """Unit tests for gsutil lifecycle with shim."""
 
   def test_shim_translates_lifecycle_get_correctly(self):
     bucket_uri = self.CreateBucket()
@@ -290,9 +280,9 @@ class TestLifecycleUnitTests(testcase.GsUtilUnitTestCase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(
             ('Gcloud Storage Command: {} storage buckets'
-             ' describe --format="gsutiljson[key=lifecycle_config,empty=\' has'
-             ' no lifecycle configuration.\',empty_prefix_key=storage_url]"'
-             ' --raw {}').format(shim_util._get_gcloud_binary_path('fake_dir'),
+             ' describe --format=gsutiljson[key=lifecycle_config,empty=\' has'
+             ' no lifecycle configuration.\',empty_prefix_key=storage_url]'
+             ' {}').format(shim_util._get_gcloud_binary_path('fake_dir'),
                                  suri(bucket_uri)), info_lines)
 
   @mock.patch('gslib.commands.lifecycle.LifecycleCommand._SetLifecycleConfig',

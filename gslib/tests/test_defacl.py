@@ -179,7 +179,7 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._defacl_set_prefix + ['private', suri(bucket)])
     stdout = self.RunGsUtil(self._defacl_get_prefix + [suri(bucket)],
                             return_stdout=True)
-    self.assertEquals(stdout.rstrip(), '[]')
+    self.assertEqual(stdout.rstrip(), '[]')
     self.RunGsUtil(self._defacl_ch_prefix +
                    ['-u', self.USER_TEST_ADDRESS +
                     ':fc', suri(bucket)])
@@ -232,7 +232,7 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     self.assertIn('command requires at least', stderr)
 
 
-class TestDefaclShim(case.GsUtilUnitTestCase):
+class TestDefaclShim(case.ShimUnitTestBase):
 
   @mock.patch.object(defacl.DefAclCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_defacl_get(self):

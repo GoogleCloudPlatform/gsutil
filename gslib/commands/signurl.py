@@ -26,6 +26,7 @@ import calendar
 import copy
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 import getpass
 import json
 import re
@@ -48,22 +49,32 @@ from gslib.storage_url import StorageUrlFromString
 from gslib.utils import constants
 from gslib.utils.boto_util import GetNewHttp
 from gslib.utils.shim_util import GcloudStorageMap, GcloudStorageFlag
-from gslib.utils.signurl_helper import CreatePayload, GetFinalUrl
+from gslib.utils.signurl_helper import CreatePayload, GetFinalUrl, to_bytes
 
 try:
   # Check for openssl.
   # pylint: disable=C6204
   from OpenSSL.crypto import FILETYPE_PEM
-  from OpenSSL.crypto import load_pkcs12
   from OpenSSL.crypto import load_privatekey
   from OpenSSL.crypto import sign
+  from OpenSSL.crypto import PKey
   HAVE_OPENSSL = True
 except ImportError:
   load_privatekey = None
-  load_pkcs12 = None
   sign = None
   HAVE_OPENSSL = False
   FILETYPE_PEM = None
+
+try:
+  from cryptography.hazmat.primitives import hashes
+  from cryptography.hazmat.primitives.asymmetric import padding
+  from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+  from cryptography.hazmat.primitives.serialization import pkcs12
+  from cryptography.hazmat._oid import NameOID
+  HAVE_CRYPTO = True
+except ImportError:
+  HAVE_CRYPTO = False
+  _CRYPTO_IMPORT_ERROR = "pyca/cryptography is not available. Either install it, or please consider using the .json keyfile"
 
 _AUTO_DETECT_REGION = 'auto'
 _MAX_EXPIRATION_TIME = timedelta(days=7)
@@ -204,7 +215,7 @@ _DETAILED_HELP_TEXT = ("""
 
 def _NowUTC():
   """Returns the current utc time as a datetime object."""
-  return datetime.utcnow()
+  return datetime.now(tz=timezone.utc).replace(tzinfo=None)
 
 
 def _DurationToTimeDelta(duration):
@@ -313,18 +324,29 @@ def _GenSignedUrl(key,
         signed_headers=signed_headers,
         billing_project=billing_project,
         string_to_sign_debug=string_to_sign_debug)
-    raw_signature = sign(key, string_to_sign, digest)
+    if isinstance(key, PKey):
+      raw_signature = sign(key, string_to_sign, digest)
+    else: 
+      if not HAVE_CRYPTO:
+        raise CommandException(_CRYPTO_IMPORT_ERROR)
+      raw_signature = key.sign(to_bytes(string_to_sign), padding.PKCS1v15(), hashes.SHA256())
     final_url = GetFinalUrl(raw_signature, gs_host, gcs_path,
                             canonical_query_string)
   return final_url
 
 
-def _ReadKeystore(ks_contents, passwd):
-  ks = load_pkcs12(ks_contents, passwd)
-  client_email = ks.get_certificate().get_subject().CN
-
-  return ks.get_privatekey(), client_email
-
+def _ReadKeystore(key_string, passwd):
+  key_string = to_bytes(key_string)
+  passwd = to_bytes(passwd)
+  # Cryptography package is not bundled with gsutil, Keeping it at top would throw error.
+  if not HAVE_CRYPTO:
+      raise CommandException(_CRYPTO_IMPORT_ERROR)
+  try:
+    key, cert, add = pkcs12.load_key_and_certificates(key_string, passwd)
+    client_email = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    return key, client_email
+  except:
+    raise CommandException('Unable to load the keyfile, Invalid password or PKCS12 data.') 
 
 def _ReadJSONKeystore(ks_contents, passwd=None):
   """Read the client email and private key from a JSON keystore.
@@ -676,7 +698,7 @@ class UrlSignCommand(Command):
                                 billing_project=billing_project,
                                 string_to_sign_debug=True)
 
-      expiration = calendar.timegm((datetime.utcnow() + delta).utctimetuple())
+      expiration = calendar.timegm((datetime.now(tz=timezone.utc).replace(tzinfo=None) + delta).utctimetuple())
       expiration_dt = datetime.fromtimestamp(expiration)
 
       time_str = expiration_dt.strftime('%Y-%m-%d %H:%M:%S')
