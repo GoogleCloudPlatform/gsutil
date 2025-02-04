@@ -401,6 +401,26 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
         ' -b option(s) can only be used for GCS Buckets with the JSON API',
         stderr)
 
+  @SkipForXML('The --autoclass flag only works for GCS JSON API.')
+  def test_create_with_autoclass_flag(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(['mb', '--autoclass', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r"Autoclass:.*Enabled on *.")
+
+  @SkipForXML('The --autoclass flag only works for GCS JSON API.')
+  def test_create_with_invalid_storage_class_with_autoclass_flag(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    stderr = self.RunGsUtil(['mb', '--autoclass', '-c', 'archive', suri(bucket_uri)], return_stderr=True, expected_status=1)
+    if self._use_gcloud_storage:
+      self.assertIn('HTTPError 400: Cannot set default storage class', stderr)
+    else:
+      self.assertIn('BadRequestException: 400 Cannot set default storage class', stderr)
+
 
 class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
   """Unit tests for gsutil mb with shim."""
@@ -444,3 +464,23 @@ class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
             ('Gcloud Storage Command: {} storage'
              ' buckets create --recovery-point-objective DEFAULT').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
+
+  @SkipForXML('The --autoclass flag only works for GCS JSON API.')
+  def test_shim_translates_autoclass_flag(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('mb',
+                                           args=[
+                                               '--autoclass', 
+                                               'gs://fake-bucket-2',
+                                           ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets create'
+                       ' --enable-autoclass gs://fake-bucket-2').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)

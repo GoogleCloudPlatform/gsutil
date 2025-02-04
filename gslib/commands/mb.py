@@ -238,6 +238,8 @@ class MbCommand(Command):
   gcloud_storage_map = GcloudStorageMap(
       gcloud_command=['storage', 'buckets', 'create'],
       flag_map={
+          '--autoclass':
+              GcloudStorageFlag('--enable-autoclass'),
           '-b':
               GcloudStorageFlag({
                   'on': '--uniform-bucket-level-access',
