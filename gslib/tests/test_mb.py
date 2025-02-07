@@ -416,7 +416,10 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
     stderr = self.RunGsUtil(['mb', '--autoclass', '-c', 'archive', suri(bucket_uri)])
-    self.assertIn('HTTPError 400: Cannot set default storage class on bucket with Autoclass enabled to storage class other than STANDARD.', stderr)
+    if self._use_gcloud_storage:
+      self.assertIn('HTTPError 400: Cannot set default storage class on bucket with Autoclass enabled to storage class other than STANDARD.', stderr)
+    else:
+      self.assertIn('BadRequestException: 400 Cannot set default storage class on bucket with Autoclass enabled to storage class other than STANDARD.', stderr)
 
 
 class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
@@ -462,7 +465,7 @@ class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
              ' buckets create --recovery-point-objective DEFAULT').format(
                  shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
 
-  @SkipForXML('The --autoclass flag only works for GCS JSON API')
+  @SkipForXML('The --autoclass flag only works for GCS JSON API.')
   def test_shim_translates_autoclass_flag(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
