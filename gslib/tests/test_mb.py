@@ -408,14 +408,14 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                                   suppress_consec_slashes=False)
     self.RunGsUtil(['mb', '--autoclass', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
-    self.assertRegex(stdout, r"utoclass:\s*\[\s*.Enabled on *.")
+    self.assertRegex(stdout, r"*.utoclass:.*Enabled on *.")
 
   @SkipForXML('The --autoclass flag only works for GCS JSON API.')
   def test_create_with_invalid_storage_class_with_autoclass_flag(self):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
-    stderr = self.RunGsUtil(['mb', '--autoclass', '-c', 'archive', suri(bucket_uri)])
+    stderr = self.RunGsUtil(['mb', '--autoclass', '-c', 'archive', suri(bucket_uri)], return_stderr=True, expected_status=1)
     if self._use_gcloud_storage:
       self.assertIn('HTTPError 400: Cannot set default storage class on bucket with Autoclass enabled to storage class other than STANDARD.', stderr)
     else:
