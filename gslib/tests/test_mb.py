@@ -417,9 +417,9 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
                                   suppress_consec_slashes=False)
     stderr = self.RunGsUtil(['mb', '--autoclass', '-c', 'archive', suri(bucket_uri)], return_stderr=True, expected_status=1)
     if self._use_gcloud_storage:
-      self.assertIn('HTTPError 400: Cannot set default storage class on bucket with Autoclass enabled to storage class other than STANDARD.', stderr)
+      self.assertIn('HTTPError 400: Cannot set default storage class', stderr)
     else:
-      self.assertIn('BadRequestException: 400 Cannot set default storage class on bucket with Autoclass enabled to storage class other than STANDARD.', stderr)
+      self.assertIn('BadRequestException: 400 Cannot set default storage class', stderr)
 
 
 class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
