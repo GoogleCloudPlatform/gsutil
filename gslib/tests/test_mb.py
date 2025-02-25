@@ -484,3 +484,23 @@ class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
                        ' --enable-autoclass gs://fake-bucket-2').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
+
+  def test_shim_translates_for_class_flag(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('mb',
+                                           args=[
+                                               '-s', 
+                                               'nearline'
+                                               'gs://fake-bucket',
+                                           ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets create'
+                       ' --default-storage-class nearline gs://fake-bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
