@@ -421,6 +421,14 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     else:
       self.assertIn('BadRequestException: 400 Cannot set default storage class', stderr)
 
+  def test_create_with_storage_class(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(['mb', '-c', 'nearline', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r"Storage\sclass:\s*NEARLINE")
+
 
 class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
   """Unit tests for gsutil mb with shim."""
