@@ -425,7 +425,7 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     bucket_name = self.MakeTempName('bucket')
     bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
                                   suppress_consec_slashes=False)
-    self.RunGsUtil(['mb', '-c', 'nearline', suri(bucket_uri)])
+    self.RunGsUtil(['mb', '-s', 'nearline', suri(bucket_uri)])
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     self.assertRegex(stdout, r"Storage\sclass:\s*NEARLINE")
 
