@@ -247,6 +247,8 @@ class MbCommand(Command):
               }),
           '-c':
               GcloudStorageFlag('--default-storage-class'),
+          '-s':
+              GcloudStorageFlag('--default-storage-class'),
           '-k':
               GcloudStorageFlag('--default-encryption-key'),
           '-l':
