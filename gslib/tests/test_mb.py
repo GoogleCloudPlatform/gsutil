@@ -501,6 +501,6 @@ class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage buckets create'
-                       ' -s nearline gs://fake-bucket-3').format(
+                       ' --default-storage-class nearline gs://fake-bucket-3').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
