@@ -220,9 +220,9 @@ _DESCRIBE_COMMAND_FORMAT = (
     'format("\tService Account:       {}", serviceAccountEmail),' +
     'format("\tProject:               {}", projectId),' +
     'format("\tTime Created:          {}",' +
-    ' timeCreated.date(format="%a %d %b %Y %H:%M:%S GMT")),' +
+    ' timeCreated.date(format="%a\',\' %d %b %Y %H:%M:%S GMT")),' +
     'format("\tTime Last Updated:     {}",' +
-    ' updated.date(format="%a %d %b %Y %H:%M:%S GMT")),' +
+    ' updated.date(format="%a\',\' %d %b %Y %H:%M:%S GMT")),' +
     'format("\tEtag:                  {}", etag))')
 
 _LIST_COMMAND_SHORT_FORMAT = (
