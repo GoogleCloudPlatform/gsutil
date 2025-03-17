@@ -226,8 +226,8 @@ _DESCRIBE_COMMAND_FORMAT = (
     'format("\tEtag:                  {}", etag))')
 
 _LIST_COMMAND_SHORT_FORMAT = (
-    '--format=table[no-heading](format("{} ", accessId),'
-    'state:width=11, serviceAccountEmail)')
+    '--format=table[no-heading](format("{}\t{:<12} {}",'
+    'accessId, state, serviceAccountEmail))')
 
 _PROJECT_FLAG = GcloudStorageFlag('--project')
 
