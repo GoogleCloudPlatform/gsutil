@@ -421,6 +421,14 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     else:
       self.assertIn('BadRequestException: 400 Cannot set default storage class', stderr)
 
+  def test_create_with_storage_class(self):
+    bucket_name = self.MakeTempName('bucket')
+    bucket_uri = boto.storage_uri('gs://%s' % (bucket_name.lower()),
+                                  suppress_consec_slashes=False)
+    self.RunGsUtil(['mb', '-s', 'nearline', suri(bucket_uri)])
+    stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
+    self.assertRegex(stdout, r"Storage\sclass:\s*NEARLINE")
+
 
 class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
   """Unit tests for gsutil mb with shim."""
@@ -482,5 +490,25 @@ class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage buckets create'
                        ' --enable-autoclass gs://fake-bucket-2').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  def test_shim_translates_class_flag(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('mb',
+                                           args=[
+                                               '-s',
+                                               'nearline', 
+                                               'gs://fake-bucket-3',
+                                           ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets create'
+                       ' --default-storage-class nearline gs://fake-bucket-3').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
