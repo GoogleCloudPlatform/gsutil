@@ -637,6 +637,7 @@ CP_AND_MV_SHIM_FLAG_MAP = {
     '-v': GcloudStorageFlag('--print-created-message'),
     '-Z': GcloudStorageFlag('--gzip-local-all'),
     '-z': GcloudStorageFlag('--gzip-local'),
+    '-U': GcloudStorageFlag('--skip-unsupported'),
 }
 # Adds recursion flags.
 CP_SHIM_FLAG_MAP = {
