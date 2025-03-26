@@ -5023,7 +5023,7 @@ class TestCpShimUnitTests(testcase.ShimUnitTestBase):
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
         mock_log_handler = self.RunCommand('cp', [
-            '-e', '-n', '-r', '-R', '-s', 'some-class', '-v', '-a',
+            '-e', '-n', '-r', '-R', '-s', 'some-class', '-v', '-U', '-a',
             'public-read', fpath,
             suri(bucket_uri)
         ],
@@ -5032,7 +5032,7 @@ class TestCpShimUnitTests(testcase.ShimUnitTestBase):
         self.assertIn(
             'Gcloud Storage Command: {} storage cp'
             ' --ignore-symlinks --no-clobber -r -r --storage-class some-class'
-            ' --print-created-message --predefined-acl publicRead {} {}'.format(
+            ' --print-created-message --skip-unsupported --predefined-acl publicRead {} {}'.format(
                 shim_util._get_gcloud_binary_path('fake_dir'), fpath,
                 suri(bucket_uri)), info_lines)
         warn_lines = '\n'.join(mock_log_handler.messages['warning'])
