@@ -220,14 +220,14 @@ _DESCRIBE_COMMAND_FORMAT = (
     'format("\tService Account:       {}", serviceAccountEmail),' +
     'format("\tProject:               {}", projectId),' +
     'format("\tTime Created:          {}",' +
-    ' timeCreated.date(format="%a %d %b %Y %H:%M:%S GMT")),' +
+    ' timeCreated.date(format="%a\',\' %d %b %Y %H:%M:%S GMT")),' +
     'format("\tTime Last Updated:     {}",' +
-    ' updated.date(format="%a %d %b %Y %H:%M:%S GMT")),' +
+    ' updated.date(format="%a\',\' %d %b %Y %H:%M:%S GMT")),' +
     'format("\tEtag:                  {}", etag))')
 
 _LIST_COMMAND_SHORT_FORMAT = (
-    '--format=table[no-heading](format("{} ", accessId),'
-    'state:width=11, serviceAccountEmail)')
+    '--format=table[no-heading](format("{}\t{:<12} {}",'
+    'accessId, state, serviceAccountEmail))')
 
 _PROJECT_FLAG = GcloudStorageFlag('--project')
 

@@ -89,6 +89,10 @@ warnings.filterwarnings('ignore',
 warnings.filterwarnings('ignore',
                         category=UserWarning,
                         message=r'.* oauth2client was already imported from')
+warnings.filterwarnings("ignore",
+                        category=SyntaxWarning,
+                        message=r"invalid escape sequence",
+                        module=r".*third_party/pyparsing/")
 
 # List of third-party libraries. The first element of the tuple is the name of
 # the directory under third_party and the second element is the subdirectory
