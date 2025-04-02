@@ -16,6 +16,7 @@
 
 import six
 import sys
+import uuid
 import gslib
 from gslib.utils import system_util
 from gslib.storage_url import StorageUrlFromString
@@ -36,6 +37,7 @@ def GetUserAgent(args, metrics_off=True):
   user_agent += ' (%s)' % sys.platform
   user_agent += ' analytics/%s' % ('disabled' if metrics_off else 'enabled')
   user_agent += ' interactive/%s' % system_util.IsRunningInteractively()
+  user_agent += ' invocation-id/%s' % uuid.uuid4().hex
 
   if len(args) > 0:
     user_agent += ' command/%s' % args[0]
