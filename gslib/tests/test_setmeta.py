@@ -250,6 +250,22 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     _Check1()
     _Check2()
 
+  def test_remove_custom_time_header_throws_error(self):
+    """Tests removing a custom-time header throws error"""
+    objuri = self.CreateObject(contents=b'foo')
+
+    def _Check1():
+      self.RunGsUtil(['setmeta', '-h', 'custom-time:2024-12-31T23:59:59Z', suri(objuri)])
+      stdout = self.RunGsUtil(['stat', suri(objuri)], return_stdout=True)
+      self.assertRegex(stdout, r'Custom-Time')
+
+    def _Check2():
+      stderr = self.RunGsUtil(['setmeta', '-h', 'custom-time', suri(objuri)], return_stderr=True, expected_status=1)
+      self.assertIn('can not be removed once set', stderr)
+    
+    _Check1()
+    _Check2()
+
   def test_disallowed_header(self):
     stderr = self.RunGsUtil(
         ['setmeta', '-h', 'Content-Length:5', 'gs://foo/bar'],
