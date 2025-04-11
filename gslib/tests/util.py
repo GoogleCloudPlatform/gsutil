@@ -196,9 +196,9 @@ def CommunicateWithTimeout(process, stdin=None):
 
   if six.PY3:
     # TODO(b/135936279): Make this number configurable in .boto
-    comm_kwargs['timeout'] = 180
+    comm_kwargs['timeout'] = 360
   else:
-    timer = threading.Timer(180, Kill)
+    timer = threading.Timer(360, Kill)
     timer.start()
 
   c_out = process.communicate(**comm_kwargs)
