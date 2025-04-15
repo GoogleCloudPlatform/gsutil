@@ -93,6 +93,9 @@ _DETAILED_HELP_TEXT = ("""
 """)
 
 
+MV_SHIM_FLAG_MAP = {**CP_AND_MV_SHIM_FLAG_MAP, '-r': None, '-R': None}
+
+
 class MvCommand(Command):
   """Implementation of gsutil mv command.
 
@@ -132,7 +135,7 @@ class MvCommand(Command):
     ShimTranslatePredefinedAclSubOptForCopy(self.sub_opts)
     gcloud_storage_map = GcloudStorageMap(
         gcloud_command=['storage', 'mv'],
-        flag_map=CP_AND_MV_SHIM_FLAG_MAP,
+        flag_map=MV_SHIM_FLAG_MAP,
     )
     return super().get_gcloud_storage_args(gcloud_storage_map)
 

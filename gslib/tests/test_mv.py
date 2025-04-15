@@ -121,7 +121,7 @@ class TestMvUnitTestsWithShim(testcase.ShimUnitTestBase):
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
         mock_log_handler = self.RunCommand(
-            'mv', ['-a', 'public-read', '-U', fpath,
+            'mv', ['-a', 'public-read', '-U', '-r', '-R', fpath,
                    suri(bucket_uri)],
             return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
