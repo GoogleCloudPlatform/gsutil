@@ -665,7 +665,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                         contents='test {:d}'.format(i).encode('ascii'))
     return bucket_uri
 
-  def CreateVersionedBucket(self, bucket_name=None, test_objects=0):
+  def CreateVersionedBucket(self, bucket_name=None, test_objects=0, provider=None):
     """Creates a versioned test bucket.
 
     The bucket and all of its contents will be deleted after the test.
@@ -685,11 +685,13 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     bucket_uri = self.CreateBucket(bucket_name=bucket_name,
                                    test_objects=test_objects,
                                    prefer_json_api=True,
+                                   provider=provider,
                                    versioning_enabled=True)
     return bucket_uri
 
   def CreateObject(self,
                    bucket_uri=None,
+                   provider=None,
                    object_name=None,
                    contents=None,
                    prefer_json_api=False,
@@ -735,7 +737,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
     Returns:
       A StorageUri for the created object.
     """
-    bucket_uri = bucket_uri or self.CreateBucket()
+    bucket_uri = bucket_uri or self.CreateBucket(provider=provider)
     # checking for valid types - None or unicode/binary text
     if contents is not None:
       if not isinstance(contents, (six.binary_type, six.text_type)):
@@ -769,7 +771,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
       # pylint: enable=protected-access
       return object_uri
 
-    bucket_uri = bucket_uri or self.CreateBucket()
+    bucket_uri = bucket_uri or self.CreateBucket(provider=provider)
     object_name = object_name or self.MakeTempName('obj')
     key_uri = bucket_uri.clone_replace_name(object_name)
     if contents is not None:
