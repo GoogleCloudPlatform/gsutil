@@ -679,7 +679,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-lb', bucket_suri], return_stdout=True)
     self.assertNotIn('Logging configuration', stdout)
 
-    spacing = '       ' if self._use_gcloud_storage else '\t\t'
+    spacing = '\t\t'
     # Logging configuration is absent by default
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
     self.assertIn('Logging configuration:{}None'.format(spacing), stdout)
@@ -704,7 +704,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-lb', bucket_suri], return_stdout=True)
     self.assertNotIn('Website configuration', stdout)
 
-    spacing = '       ' if self._use_gcloud_storage else '\t\t'
+    spacing = '\t\t'
     # Website configuration is absent by default
     stdout = self.RunGsUtil(['ls', '-Lb', bucket_suri], return_stdout=True)
     self.assertIn('Website configuration:{}None'.format(spacing), stdout)
@@ -726,7 +726,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
     bucket_suri = suri(bucket_uri)
 
-    spacing = '      ' if self._use_gcloud_storage else '\t\t'
+    spacing = '\t\t'
     # No requester pays configuration
     stdout = self.RunGsUtil(['ls', '-lb', bucket_suri], return_stdout=True)
     self.assertNotIn('Requester Pays enabled', stdout)
