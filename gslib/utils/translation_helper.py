@@ -157,7 +157,10 @@ def ObjectMetadataFromHeaders(headers):
       else:
         obj_metadata.contentType = value.strip()
     elif CUSTOM_TIME_REGEX.match(header):
-      obj_metadata.customTime = decode_datetime(value.strip())
+      stripped_value = value.strip()
+      if not stripped_value:
+        raise CommandException('Custom-Time can not be removed once set on object, To know more about this, please refer https://cloud.google.com/storage/docs/metadata#custom-time')
+      obj_metadata.customTime = decode_datetime(stripped_value)
     elif GOOG_API_VERSION_REGEX.match(header):
       # API version is only relevant for XML, ignore and rely on the XML API
       # to add the appropriate version.
@@ -245,7 +248,7 @@ def HeadersFromObjectMetadata(dst_obj_metadata, provider):
     if not dst_obj_metadata.customTime:
       headers['custom-time'] = None
     else:
-      headers['custom-time'] = dst_obj_metadata.customTime.strip()
+      headers['custom-time'] = dst_obj_metadata.customTime
   if dst_obj_metadata.storageClass:
     header_name = 'storage-class'
     if provider == 'gs':
