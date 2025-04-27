@@ -363,6 +363,14 @@ USING_JSON_API = boto.config.get('GSUtil', 'prefer_api',
                                  'json').upper() != 'XML'
 
 
+def RunOnlyOnParityTesting(cls):
+    if 'PARITY_TESTING' not in os.environ:
+        for attr_name in dir(cls):
+            attr = getattr(cls, attr_name)
+            if callable(attr) and attr_name.startswith('test_'):
+                setattr(cls, attr_name, unittest.skip('Skipped due to environment variable')(attr))
+    return cls
+
 def SkipForP12Creds(reason):
   if HAS_P12_CREDS:
     return unittest.skip(reason)
