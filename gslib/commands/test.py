@@ -59,6 +59,8 @@ if six.PY3:
 _DEFAULT_TEST_PARALLEL_PROCESSES = 5
 _DEFAULT_S3_TEST_PARALLEL_PROCESSES = 50
 _SEQUENTIAL_ISOLATION_FLAG = 'sequential_only'
+_GSLIB_TEST_PREFIX = 'gslib.tests.test_'
+_STANDARD_TEST_PREFIX = 'test_'
 
 _SYNOPSIS = """
   gsutil test [-l] [-u] [-f] [command command...]
@@ -160,6 +162,9 @@ _DETAILED_HELP_TEXT = ("""
   -s          Run tests against S3 instead of GS.
 
   -u          Only run unit tests.
+
+  -d          To run tests in a specific directory, use gsutil to execute tests in parallel matching the pattern test_*.py.
+
 """ % _DEFAULT_TEST_PARALLEL_PROCESSES)
 
 TestProcessData = namedtuple('TestProcessData',
@@ -193,7 +198,7 @@ def MakeCustomTestResultClass(total_tests):
   return CustomTestResult
 
 
-def GetTestNamesFromSuites(test_suite):
+def GetTestNamesFromSuites(test_suite, test_prefix):
   """Takes a list of test suites and returns a list of contained test names."""
   suites = [test_suite]
   test_names = []
@@ -203,7 +208,7 @@ def GetTestNamesFromSuites(test_suite):
       if isinstance(test, unittest.TestSuite):
         suites.append(test)
       else:
-        test_names.append(test.id()[len('gslib.tests.test_'):])
+        test_names.append(test.id()[len(test_prefix):])
   return test_names
 
 
@@ -284,6 +289,7 @@ def CreateTestProcesses(parallel_tests,
                         process_list,
                         process_done,
                         max_parallel_tests,
+                        test_path,
                         root_coverage_file=None):
   """Creates test processes to run tests in parallel.
 
@@ -306,6 +312,8 @@ def CreateTestProcesses(parallel_tests,
   # is used for testing
   executable_prefix = [sys.executable] if not InvokedFromParFile() else []
   s3_argument = ['-s'] if tests.util.RUN_S3_TESTS else []
+  test_path_argument = ['-d', test_path] if test_path else []
+  test_prefix = _GSLIB_TEST_PREFIX if not test_path else _STANDARD_TEST_PREFIX
   multiregional_buckets = ['-b'] if tests.util.USE_MULTIREGIONAL_BUCKETS else []
   project_id_arg = []
   try:
@@ -332,9 +340,10 @@ def CreateTestProcesses(parallel_tests,
             project_id_arg +
             ['test'] +
             s3_argument +
+            test_path_argument +
             multiregional_buckets +
             ['--' + _SEQUENTIAL_ISOLATION_FLAG] +
-            [parallel_tests[test_index][len('gslib.tests.test_'):]]
+            [parallel_tests[test_index][len(test_prefix):]]
         )
     ]  # yapf: disable
     for k, v in six.iteritems(env):
@@ -367,7 +376,7 @@ class TestCommand(Command):
       usage_synopsis=_SYNOPSIS,
       min_args=0,
       max_args=NO_MAX,
-      supported_sub_args='buflp:sc',
+      supported_sub_args='buflp:scd:',
       file_url_ok=True,
       provider_url_ok=False,
       urls_start_arg=0,
@@ -385,7 +394,7 @@ class TestCommand(Command):
   )
 
   def RunParallelTests(self, parallel_integration_tests, max_parallel_tests,
-                       coverage_filename):
+                       coverage_filename, test_path):
     """Executes the parallel/isolated portion of the test suite.
 
     Args:
@@ -410,6 +419,7 @@ class TestCommand(Command):
                                      process_list,
                                      process_done,
                                      max_parallel_tests,
+                                     test_path,
                                      root_coverage_file=coverage_filename)
     while len(process_results) < num_parallel_tests:
       for proc_num in range(len(process_list)):
@@ -433,6 +443,7 @@ class TestCommand(Command):
                                          process_list,
                                          process_done,
                                          max_parallel_tests,
+                                         test_path,
                                          root_coverage_file=coverage_filename)
       if len(process_results) < num_parallel_tests:
         if time.time() - last_log_time > 5:
@@ -529,6 +540,9 @@ class TestCommand(Command):
     max_parallel_tests = _DEFAULT_TEST_PARALLEL_PROCESSES
     perform_coverage = False
     sequential_only = False
+    test_path = None
+    test_prefix = _GSLIB_TEST_PREFIX
+  
     if self.sub_opts:
       for o, a in self.sub_opts:
         if o == '-b':
@@ -553,6 +567,12 @@ class TestCommand(Command):
           tests.util.RUN_S3_TESTS = True
         elif o == '-u':
           tests.util.RUN_INTEGRATION_TESTS = False
+        elif o == '-d':
+          test_path = str(a)
+          test_prefix = _STANDARD_TEST_PREFIX
+
+    if test_path:
+      sys.path.insert(0, test_path)
 
     if perform_coverage and not coverage:
       raise CommandException(
@@ -566,7 +586,7 @@ class TestCommand(Command):
           'limitations.', _DEFAULT_S3_TEST_PARALLEL_PROCESSES)
       max_parallel_tests = _DEFAULT_S3_TEST_PARALLEL_PROCESSES
 
-    test_names = sorted(GetTestNames())
+    test_names = sorted(GetTestNames(test_path=test_path))
     if list_tests and not self.args:
       print('Found %d test names:' % len(test_names))
       print(' ', '\n  '.join(sorted(test_names)))
@@ -577,11 +597,14 @@ class TestCommand(Command):
       commands_to_test = []
       for name in self.args:
         if name in test_names or name.split('.')[0] in test_names:
-          commands_to_test.append('gslib.tests.test_%s' % name)
-        else:
+          commands_to_test.append('%s%s' % (test_prefix, name))
+        elif not test_path:
           commands_to_test.append(name)
     else:
-      commands_to_test = ['gslib.tests.test_%s' % name for name in test_names]
+      commands_to_test = ['%s%s' % (test_prefix, name) for name in test_names]
+
+    if not commands_to_test:
+      raise CommandException('No tests found at the given directory!')
 
     # Installs a ctrl-c handler that tries to cleanly tear down tests.
     unittest.installHandler()
@@ -611,7 +634,7 @@ class TestCommand(Command):
           raise CommandException(msg)
 
     if list_tests:
-      test_names = GetTestNamesFromSuites(suite)
+      test_names = GetTestNamesFromSuites(suite, test_prefix)
       print('Found %d test names:' % len(test_names))
       print(' ', '\n  '.join(sorted(test_names)))
       return 0
@@ -730,7 +753,7 @@ class TestCommand(Command):
         (num_parallel_failures, parallel_time_elapsed) = self.RunParallelTests(
             parallel_integration_tests, max_parallel_tests,
             coverage_controller.data_files.filename
-            if perform_coverage else None)
+            if perform_coverage else None, test_path)
         self.PrintTestResults(num_sequential_tests, sequential_success,
                               sequential_skipped, sequential_time_elapsed,
                               num_parallel_tests, num_parallel_failures,

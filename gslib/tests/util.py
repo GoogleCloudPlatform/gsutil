@@ -721,11 +721,12 @@ def _SetBotoConfigFileForTest(boto_config_path):
       os.environ.pop('BOTO_CONFIG', None)
 
 
-def GetTestNames():
+def GetTestNames(test_path=None):
   """Returns a list of the names of the test modules in gslib.tests."""
   matcher = re.compile(r'^test_(?P<name>.*)$')
   names = []
-  for _, modname, _ in pkgutil.iter_modules(gslib_tests.__path__):
+  test_path = [test_path] if test_path else gslib_tests.__path__
+  for _, modname, _ in pkgutil.iter_modules(test_path):
     m = matcher.match(modname)
     if m:
       names.append(m.group('name'))
