@@ -446,6 +446,12 @@ class RewriteCommand(Command):
 
     should_encrypt_dest = self.boto_file_encryption_keywrapper is not None
 
+    # Remove version number from CMEK name if present for matching with dest key
+    if (src_encryption_kms_key is not None and
+        '/cryptoKeyVersions/' in src_encryption_kms_key):
+      versionIdx = src_encryption_kms_key.find('/cryptoKeyVersions/')
+      src_encryption_kms_key = src_encryption_kms_key[:versionIdx]
+
     encryption_unchanged = (src_encryption_sha256 == dest_encryption_sha256 and
                             src_encryption_kms_key == dest_encryption_kms_key)
 
