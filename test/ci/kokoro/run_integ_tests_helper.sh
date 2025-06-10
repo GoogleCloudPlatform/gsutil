@@ -56,14 +56,12 @@ function preferred_python_release {
 
 function install_pyenv {
   # Install the latest pyenv version to include latest python versions.
-  git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+  curl -fsSL https://pyenv.run | bash
   export PYENV_ROOT="$HOME/.pyenv"
   export PATH="$PYENV_ROOT/bin:$PATH"
   eval "$(pyenv init --path)"
-  export PYENV_VERSION="$(pyenv --version)"
-  echo "\nInstalled pyenv version\n"
-  echo $PYENV_VERSION
-  echo "\n\n"
+  echo "PYENV_VERSION = $(pyenv --version)"
+  echo $KOKORO_JOB_NAME
 }
 
 function install_python {
