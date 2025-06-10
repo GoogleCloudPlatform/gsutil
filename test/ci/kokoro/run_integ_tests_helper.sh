@@ -55,14 +55,11 @@ function preferred_python_release {
 }
 
 function install_pyenv {
-  # Install pyenv if missing.
-  if ! [ "$(pyenv --version)" ]; then
-    # MacOS VM does not have pyenv installed by default.
-    git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init --path)"
-  fi
+  # Install the latest pyenv version to include latest python versions.
+  git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+  export PYENV_ROOT="$HOME/.pyenv"
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$(pyenv init --path)"
 }
 
 function install_python {
