@@ -62,6 +62,10 @@ def GetUserAgent(args, metrics_off=True):
           # Rewrite storage class.
           user_agent += '-s'
 
+    if '-m' in args:
+      # Use of multi processing
+      user_agent += '-m'
+
   if system_util.InvokedViaCloudSdk():
     user_agent += ' google-cloud-sdk'
     if system_util.CloudSdkVersion():
