@@ -56,12 +56,16 @@ function preferred_python_release {
 
 function install_pyenv {
   # Install the latest pyenv version to include latest python versions.
-  curl -fsSL https://pyenv.run | bash
+  if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
+    brew update
+    brew install pyenv
+  else
+    git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+  fi
   export PYENV_ROOT="$HOME/.pyenv"
   export PATH="$PYENV_ROOT/bin:$PATH"
   eval "$(pyenv init --path)"
   echo "PYENV_VERSION = $(pyenv --version)"
-  echo $KOKORO_JOB_NAME
 }
 
 function install_python {
