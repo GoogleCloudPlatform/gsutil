@@ -48,21 +48,26 @@ function preferred_python_release {
   # Return string with latest Python version triplet for a given version tuple.
   # Example: PYVERSION="2.7"; latest_python_release -> "2.7.15"
   pyenv install --list \
-    | grep -vE "(^Available versions:|-src|dev|rc|alpha|beta|(a|b)[0-9]+)" \
+    | grep -vE "(^Available versions:|-src|dev|rc|alpha|beta|(a|b)[0-9]+|t$)" \
     | grep -E "^\s*$PYVERSION" \
     | sed -E 's/^[[:space:]]+//' \
     | tail -1
 }
 
 function install_pyenv {
-  # Install pyenv if missing.
-  if ! [ "$(pyenv --version)" ]; then
-    # MacOS VM does not have pyenv installed by default.
+  # Install the latest pyenv version to include the latest python versions.
+  # For installation instructions refer:
+  #   https://github.com/pyenv/pyenv?tab=readme-ov-file#installation
+  if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
+    brew update
+    brew install pyenv
+    export PYENV_ROOT="$(brew --prefix pyenv)"
+  else
     git clone https://github.com/pyenv/pyenv.git ~/.pyenv
     export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init --path)"
   fi
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$(pyenv init --path)"
 }
 
 function install_python {
