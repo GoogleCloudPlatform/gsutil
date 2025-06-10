@@ -48,7 +48,7 @@ function preferred_python_release {
   # Return string with latest Python version triplet for a given version tuple.
   # Example: PYVERSION="2.7"; latest_python_release -> "2.7.15"
   pyenv install --list \
-    | grep -vE "(^Available versions:|-src|dev|rc|alpha|beta|(a|b)[0-9]+)" \
+    | grep -vE "(^Available versions:|-src|dev|rc|alpha|beta|(a|b)[0-9]+|t$)" \
     | grep -E "^\s*$PYVERSION" \
     | sed -E 's/^[[:space:]]+//' \
     | tail -1
@@ -66,7 +66,6 @@ function install_pyenv {
   fi
   export PATH="$PYENV_ROOT/bin:$PATH"
   eval "$(pyenv init --path)"
-  echo "PYENV_VERSION = $(pyenv --version)"
 }
 
 function install_python {
