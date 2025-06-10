@@ -59,10 +59,11 @@ function install_pyenv {
   if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
     brew update
     brew install pyenv
+    export PYENV_ROOT="$(brew --prefix pyenv)"
   else
     git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+    export PYENV_ROOT="$HOME/.pyenv"
   fi
-  export PYENV_ROOT="$HOME/.pyenv"
   export PATH="$PYENV_ROOT/bin:$PATH"
   eval "$(pyenv init --path)"
   echo "PYENV_VERSION = $(pyenv --version)"
