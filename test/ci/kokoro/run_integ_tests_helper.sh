@@ -60,6 +60,10 @@ function install_pyenv {
   export PYENV_ROOT="$HOME/.pyenv"
   export PATH="$PYENV_ROOT/bin:$PATH"
   eval "$(pyenv init --path)"
+  export PYENV_VERSION="$(pyenv --version)"
+  echo "\nInstalled pyenv version\n"
+  echo $PYENV_VERSION
+  echo "\n\n"
 }
 
 function install_python {
