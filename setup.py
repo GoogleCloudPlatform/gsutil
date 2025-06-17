@@ -49,7 +49,7 @@ requires = [
     'monotonic>=1.4',
     'pyOpenSSL>=0.13, <=24.2.1',
     'retry_decorator>=1.0.0',
-    'six>=1.16.0',
+    'six>=1.17.0',
     # aiohttp is the extra dependency that contains requests lib.
     'google-auth[aiohttp]==2.17.0',
     'google-auth-httplib2>=0.2.0',
