@@ -36,7 +36,7 @@ management tasks, including:
 """
 
 requires = [
-    'argcomplete>=3.5.1',
+    'argcomplete>=3.6.2',
     'crcmod>=1.7',
     'fasteners>=0.14.1',
     'gcs-oauth2-boto-plugin>=3.2',
