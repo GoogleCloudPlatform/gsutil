@@ -234,6 +234,8 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
                 "clientId",
             "client_secret":
                 "clientSecret",
+            "universe_domain":
+                "googleapis.com",
         }
     }
     self.assertEqual(json_values, expected_json_values)
