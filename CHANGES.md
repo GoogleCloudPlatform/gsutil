@@ -1,3 +1,13 @@
+Release 5.35 (release date: 2025-06-25)
+======================================
+New Features
+------------------
+- Added explicit support for Python 3.13
+
+Other Changes
+------------------
+- Dropped Support for Python 3.8.
+
 Release 5.34 (release date: 2025-04-16)
 ======================================
 New Features
