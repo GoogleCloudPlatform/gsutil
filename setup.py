@@ -39,7 +39,7 @@ requires = [
     'argcomplete>=3.6.2',
     'crcmod>=1.7',
     'fasteners>=0.14.1',
-    'gcs-oauth2-boto-plugin>=3.2',
+    'gcs-oauth2-boto-plugin>=3.3',
     'google-apitools>=0.5.32',
     'httplib2==0.20.4',
     'google-reauth>=0.1.0',
