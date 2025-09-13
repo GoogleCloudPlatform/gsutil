@@ -189,8 +189,8 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
       self.assertIn('Content-Length: 0', request_fields_str)
       self.assertRegex(
           request_fields_str,
-          'User-Agent: .*gsutil/%s.*interactive/False command/cat' %
-          gslib.VERSION)
+          'User-Agent: .*gsutil/%s.*interactive/False invocation-id/[a-z0-9-].+ command/cat'
+          % gslib.VERSION)
     elif self.test_api == ApiSelector.JSON:
       if six.PY2:
         self.assertIn("md5Hash: u'eB5eJF1ptWaXm4bijSPyxw=='", stderr)
@@ -203,8 +203,9 @@ class TestDOption(testcase.GsUtilIntegrationTestCase):
           stderr,
           '.*GET.*b/%s/o/%s' % (key_uri.bucket_name, key_uri.object_name))
       self.assertRegex(
-          stderr, 'Python/%s.gsutil/%s.*interactive/False command/cat' %
-          (platform.python_version(), gslib.VERSION))
+          stderr,
+          'Python/%s.gsutil/%s.*interactive/False invocation-id/[a-z0-9-].+ command/cat'
+          % (platform.python_version(), gslib.VERSION))
 
     if gslib.IS_PACKAGE_INSTALL:
       self.assertIn('PACKAGED_GSUTIL_INSTALLS_DO_NOT_HAVE_CHECKSUMS', stdout)

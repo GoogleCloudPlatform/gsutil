@@ -1,3 +1,34 @@
+Release 5.35 (release date: 2025-06-25)
+======================================
+New Features
+------------------
+- Added explicit support for Python 3.13
+
+Other Changes
+------------------
+- Dropped Support for Python 3.8.
+
+Release 5.34 (release date: 2025-04-16)
+======================================
+New Features
+------------------
+
+Shim Changes
+------------------
+- Added shim translations for (--autoclass and -s) options in gsutil mb command (#1835 and #1845).
+- Added shim translations for (-U and -r/-R) options in gsutil mv command (#1852 and #1853).
+- Added shim translation for -U option in gsutil cp command (#1852).
+
+Other Changes
+------------------
+- Added invocation id to Gsutil user agent (#1856).
+- Ignored Syntax warnings in pyparsing module (#1841).
+- Increased timeout for gsutil tests from 180s to 360s (#1855).
+
+Bug Fixes
+------------------
+- Fixed parity issues and updated tests in gstil hmac and gsutil ls commands (#1847, #1848 and #1860).
+
 Release 5.33 (release date: 2024-12-10)
 ======================================
 Bug Fixes

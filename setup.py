@@ -36,10 +36,10 @@ management tasks, including:
 """
 
 requires = [
-    'argcomplete>=3.5.1',
+    'argcomplete>=3.6.2',
     'crcmod>=1.7',
     'fasteners>=0.14.1',
-    'gcs-oauth2-boto-plugin>=3.2',
+    'gcs-oauth2-boto-plugin>=3.3',
     'google-apitools>=0.5.32',
     'httplib2==0.20.4',
     'google-reauth>=0.1.0',
@@ -49,9 +49,9 @@ requires = [
     'monotonic>=1.4',
     'pyOpenSSL>=0.13, <=24.2.1',
     'retry_decorator>=1.0.0',
-    'six>=1.16.0',
+    'six>=1.17.0',
     # aiohttp is the extra dependency that contains requests lib.
-    'google-auth[aiohttp]==2.17.0',
+    'google-auth[aiohttp]==2.39.0',
     'google-auth-httplib2>=0.2.0',
 ]
 
@@ -126,16 +126,16 @@ setup(
         'Natural Language :: English',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'Topic :: System :: Filesystems',
         'Topic :: Utilities',
     ],
-    # Gsutil supports Python 3.8 to 3.12
-    python_requires='>=3.8, <3.13',
+    # Gsutil supports Python 3.9 to 3.13
+    python_requires='>=3.9, <3.14',
     platforms='any',
     packages=find_packages(
         exclude=[

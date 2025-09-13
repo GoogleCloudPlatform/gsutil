@@ -53,6 +53,12 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
                      r"command/cp$")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
+  def testCpWithMultiprocessing(self, mock_invoked):
+    mock_invoked.return_value = False
+    self.assertRegex(GetUserAgent(['cp', '-m', '1.txt', 'gs://dst']),
+                     r"command/cp-m$")
+
+  @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testCpNotEnoughArgs(self, mock_invoked):
     mock_invoked.return_value = False
     self.assertRegex(GetUserAgent(['cp']), r"command/cp$")
@@ -95,6 +101,11 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
                      r"command/mv-DaisyChain")
     self.assertRegex(GetUserAgent(['rsync', '-r', 'gs://src', 's3://dst']),
                      r"command/rsync-DaisyChain")
+
+  def testCpDaisyChainWithMultiprocessing(self):
+    self.assertRegex(
+        GetUserAgent(['cp', '-r', '-Z', '-m', 'gs://src', 's3://dst']),
+        r"command/cp-DaisyChain-m")
 
   @mock.patch.object(system_util, 'InvokedViaCloudSdk')
   def testPassOnInvalidUrlError(self, mock_invoked):

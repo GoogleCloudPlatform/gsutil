@@ -9,15 +9,15 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python-version: [3.8.x, 3.9.x, 3.10.x, 3.11.x, 3.12.x]
+        python-version: [3.9.x, 3.10.x, 3.11.x, 3.12.x, 3.13.x]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
       env:
@@ -26,14 +26,6 @@ jobs:
       run: |
         set -x
         git submodule update --init --recursive
-    - name: Lint
-      if: ${{ matrix.python-version  == 3.6 }}
-      run: |
-        set -x
-        pip install pylint
-        pip install yapf
-        test/run_pylint.sh
-        yapf -dr .
     - name: Test
       run: |
         set -x

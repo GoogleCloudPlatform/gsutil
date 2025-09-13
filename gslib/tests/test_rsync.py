@@ -2999,7 +2999,13 @@ class TestRsync(testcase.GsUtilIntegrationTestCase):
 
     def _Check2():
       """Tests that a regex with a pipe works as expected."""
-      _check_exclude_regex('^data|[bc]$', set(['/a']))
+      if self._use_gcloud_storage and IS_WINDOWS:
+        # Pipe character should be escaped for windows cmd.
+        # It appears that ^ is not escaping | as expected but ^^^ does So
+        # changing input for windows shim mode gsutil test.
+        _check_exclude_regex('^data^^^|[bc]$', set(['/a']))
+      else:
+        _check_exclude_regex('^data|[bc]$', set(['/a']))
 
     _Check2()
 
