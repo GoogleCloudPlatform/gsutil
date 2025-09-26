@@ -59,9 +59,17 @@ function install_pyenv {
   # For installation instructions refer:
   #   https://github.com/pyenv/pyenv?tab=readme-ov-file#installation
   if [[ $KOKORO_JOB_NAME =~ "macos" ]]; then
-    brew update
-    brew install pyenv
-    export PYENV_ROOT="$(brew --prefix pyenv)"
+    # MacOS Images seem to have an existing and outdated pyenv version which 
+    # does not install Python 3.13. Hence, we need to update it.
+    # Additionally, there are existing uncommited changes (Python build files)
+    # which need to be removed before pulling in the update as it would
+    # otherwise create conflicts.
+    cd ~/.pyenv
+    # Clean all uncommited changes
+    git reset --hard HEAD
+    # Pull latest pyenv commit
+    git pull
+    export PYENV_ROOT="$HOME/.pyenv"
   else
     git clone https://github.com/pyenv/pyenv.git ~/.pyenv
     export PYENV_ROOT="$HOME/.pyenv"
