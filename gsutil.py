@@ -29,7 +29,7 @@ import warnings
 ver = sys.version_info
 if ver.major != 3 or ver.minor < 9 or ver.minor > 14:
   sys.exit(
-    "Error: gsutil requires Python version 3.9-3.13, but a different version is installed.\n"
+    "Error: gsutil requires Python version 3.9-3.1, but a different version is installed.\n"
     "You are currently running Python {}.{}\n"
     "Follow the steps below to resolve this issue:\n"
     "\t1. Switch to Python 3.9-3.13 using your Python version manager or install an appropriate version.\n"
