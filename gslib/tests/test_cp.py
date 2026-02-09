@@ -1936,7 +1936,7 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     # instead of returning a response. This integration test ensures retries
     # from exceptions work correctly.
 
-    src_bucket_region = 'ap-east-1'
+    src_bucket_region = 'eu-north-1'
     dest_bucket_region = 'us-east-2'
     src_bucket_host = 's3.%s.amazonaws.com' % src_bucket_region
     dest_bucket_host = 's3.%s.amazonaws.com' % dest_bucket_region
@@ -3083,6 +3083,9 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               return_stderr=True)
+      print("DEBUG STDERR START >>>")
+      print(stderr)
+      print("DEBUG STDERR END <<<")
       self.assertEqual(1, stderr.count(final_progress_callback))
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(2 * ONE_MIB))
     with SetBotoConfigForTest([boto_config_for_test]):

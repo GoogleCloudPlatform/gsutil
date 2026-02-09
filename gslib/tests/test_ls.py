@@ -397,7 +397,7 @@ class TestLs(testcase.GsUtilIntegrationTestCase):
   def test_400_location_redirect(self):
     # ap-east-1 used here since regions launched before March 20, 2019 do
     # some temporary redirecting for new buckets which suppresses 400 errors.
-    self.location_redirect_test_helper('ap-east-1', 'us-east-2')
+    self.location_redirect_test_helper('eu-north-1', 'us-east-2')
 
   @SkipForGS('Only s3 V4 signatures error on location mismatches.')
   def test_301_location_redirect(self):
