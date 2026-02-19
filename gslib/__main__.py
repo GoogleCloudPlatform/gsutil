@@ -433,6 +433,29 @@ def main():
     if os.environ.get('_ARGCOMPLETE', '0') in ('1', '2'):
       return _PerformTabCompletion(command_runner)
 
+    # Check for suppression (interactive users can disable it)
+    no_banner = os.environ.get('GSUTIL_NO_BANNER',
+                               'false').lower() in ('true', '1')
+
+    # Check for forced display (only for testing/verification)
+    force_banner = os.environ.get('GSUTIL_TEST_FORCE_BANNER',
+                                  'false').lower() in ('true', '1')
+
+    # Standard check: Is this an interactive TTY?
+    is_tty = system_util.IsRunningInteractively()
+
+    # Show banner if:
+    # 1. Not quiet mode (-q)
+    # 2. Not explicitly suppressed (GSUTIL_NO_BANNER=true)
+    # 3. AND (It's an interactive TTY OR We are forcing it for tests)
+    if not quiet and not no_banner and (is_tty or force_banner):
+      sys.stderr.write(
+          'Google recommends using Gcloud storage CLI '
+          '(https://docs.cloud.google.com/storage/docs/discover-object-storage-gcloud) '
+          'instead of gsutil. Please refer to migration guide '
+          '(https://docs.cloud.google.com/storage/docs/gsutil-transition-to-gcloud) '
+          'for assistance.\n')
+
     return _RunNamedCommandAndHandleExceptions(
         command_runner,
         command_name,

@@ -20,6 +20,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import importlib
+import os
+import select
+import subprocess
+import sys
 import unittest
 from unittest import mock
 from google.auth import exceptions as google_auth_exceptions
@@ -54,6 +58,155 @@ class TestGsUtil(testcase.GsUtilIntegrationTestCase):
     self.assertIn('checksum', stdout)
     self.assertIn('config path', stdout)
     self.assertIn('gsutil path', stdout)
+
+
+class TestGsUtilBanner(testcase.GsUtilIntegrationTestCase):
+  """Integration tests for the deprecation banner."""
+
+  BANNER_TEXT = 'Google recommends using Gcloud storage CLI'
+
+  def test_banner_displayed_forced(self):
+    # Tests require forcing the banner because subprocess execution is non-interactive.
+    stderr = self.RunGsUtil(['version'],
+                            return_stderr=True,
+                            env_vars={'GSUTIL_TEST_FORCE_BANNER': 'true'})
+    self.assertIn(self.BANNER_TEXT, stderr)
+
+  def test_banner_hidden_non_interactive_default(self):
+    # Verify banner is HIDDEN by default in non-interactive (script) usage.
+    stderr = self.RunGsUtil(['version'], return_stderr=True)
+    self.assertNotIn(self.BANNER_TEXT, stderr)
+
+  def test_banner_suppressed_quiet(self):
+    # Even if forced, -q should suppress it.
+    stderr = self.RunGsUtil(['-q', 'version'],
+                            return_stderr=True,
+                            env_vars={'GSUTIL_TEST_FORCE_BANNER': 'true'})
+    self.assertNotIn(self.BANNER_TEXT, stderr)
+
+  def test_banner_suppressed_env_var_true(self):
+    # Even if forced for testing, GSUTIL_NO_BANNER=true takes precedence.
+    stderr = self.RunGsUtil(['version'],
+                            return_stderr=True,
+                            env_vars={
+                                'GSUTIL_TEST_FORCE_BANNER': 'true',
+                                'GSUTIL_NO_BANNER': 'true'
+                            })
+    self.assertNotIn(self.BANNER_TEXT, stderr)
+
+  def test_banner_suppressed_env_var_1(self):
+    stderr = self.RunGsUtil(['version'],
+                            return_stderr=True,
+                            env_vars={
+                                'GSUTIL_TEST_FORCE_BANNER': 'true',
+                                'GSUTIL_NO_BANNER': '1'
+                            })
+    self.assertNotIn(self.BANNER_TEXT, stderr)
+
+  def test_banner_displayed_env_var_false(self):
+    # GSUTIL_NO_BANNER=false should allow banner if interactive/forced.
+    stderr = self.RunGsUtil(['version'],
+                            return_stderr=True,
+                            env_vars={
+                                'GSUTIL_TEST_FORCE_BANNER': 'true',
+                                'GSUTIL_NO_BANNER': 'false'
+                            })
+    self.assertIn(self.BANNER_TEXT, stderr)
+
+  def test_banner_displayed_on_failure(self):
+    # Command failure (exit code 1) shouldn't prevent banner display
+    # if it's forced/interactive.
+    stderr = self.RunGsUtil(
+        ['ls', 'gs://non-existent-bucket-failure-test-12345'],
+        return_stderr=True,
+        expected_status=1,
+        env_vars={'GSUTIL_TEST_FORCE_BANNER': 'true'})
+    self.assertIn(self.BANNER_TEXT, stderr)
+
+  def get_terminal_output(self, master_fd, slave_fd, env, cmd):
+    proc = subprocess.Popen([sys.executable] + cmd,
+                              stdout=slave_fd,
+                              stderr=slave_fd,
+                              stdin=slave_fd,
+                              env=env,
+                              close_fds=True)
+
+    output = b""
+    while True:
+      r, _, _ = select.select([master_fd], [], [], 2.0)
+      if not r:
+        if proc.poll() is not None:
+          break
+        continue
+      try:
+        chunk = os.read(master_fd, 1024)
+        if not chunk:
+          break
+        output += chunk
+      except OSError:
+        break
+
+    proc.wait()
+    return output
+  
+  @unittest.skipIf(system_util.IS_WINDOWS, 'PTY not supported on Windows')
+  def test_banner_displayed_interactive_tty(self):
+    """Verifies banner is displayed when running in a real PTY."""
+    import pty
+    master_fd, slave_fd = pty.openpty()
+    try:
+      cmd = [gslib.GSUTIL_PATH, 'version']
+      env = os.environ.copy()
+      # Ensure BOTO_CONFIG is passed through
+      # Ensure no suppression env vars are set from the test runner environment
+      if 'GSUTIL_NO_BANNER' in env:
+        del env['GSUTIL_NO_BANNER']
+      if 'GSUTIL_TEST_FORCE_BANNER' in env:
+        del env['GSUTIL_TEST_FORCE_BANNER']
+
+      output = self.get_terminal_output(master_fd=master_fd, slave_fd=slave_fd, env=env, cmd=cmd)
+      output_str = output.decode('utf-8', 'ignore')
+      self.assertIn(self.BANNER_TEXT, output_str)
+    finally:
+      os.close(master_fd)
+      os.close(slave_fd)
+
+  @unittest.skipIf(system_util.IS_WINDOWS, 'PTY not supported on Windows')
+  def test_banner_suppressed_interactive_tty_quiet(self):
+    import pty
+    master_fd, slave_fd = pty.openpty()
+    try:
+      cmd = [gslib.GSUTIL_PATH, '-q', 'version']
+      env = os.environ.copy()
+      if 'GSUTIL_NO_BANNER' in env:
+        del env['GSUTIL_NO_BANNER']
+      if 'GSUTIL_TEST_FORCE_BANNER' in env:
+        del env['GSUTIL_TEST_FORCE_BANNER']
+
+      output = self.get_terminal_output(master_fd=master_fd, slave_fd=slave_fd, env=env, cmd=cmd)
+      output_str = output.decode('utf-8', 'ignore')
+      self.assertNotIn(self.BANNER_TEXT, output_str)
+    finally:
+      os.close(master_fd)
+      os.close(slave_fd)
+
+  @unittest.skipIf(system_util.IS_WINDOWS, 'PTY not supported on Windows')
+  def test_banner_suppressed_interactive_tty_env_var(self):
+    import pty
+    master_fd, slave_fd = pty.openpty()
+    try:
+      cmd = [gslib.GSUTIL_PATH, 'version']
+      env = os.environ.copy()
+      if 'GSUTIL_TEST_FORCE_BANNER' in env:
+        del env['GSUTIL_TEST_FORCE_BANNER']
+      env['GSUTIL_NO_BANNER'] = 'true'
+
+      output = self.get_terminal_output(master_fd=master_fd, slave_fd=slave_fd, env=env, cmd=cmd)
+      output_str = output.decode('utf-8', 'ignore')
+      self.assertNotIn(self.BANNER_TEXT, output_str)
+    finally:
+      os.close(master_fd)
+      os.close(slave_fd)
 
 
 class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
