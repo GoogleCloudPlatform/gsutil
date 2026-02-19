@@ -3083,9 +3083,6 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     with SetBotoConfigForTest([boto_config_for_test]):
       stderr = self.RunGsUtil(['cp', fpath, suri(bucket_uri)],
                               return_stderr=True)
-      print("DEBUG STDERR START >>>")
-      print(stderr)
-      print("DEBUG STDERR END <<<")
       self.assertEqual(1, stderr.count(final_progress_callback))
     boto_config_for_test = ('GSUtil', 'resumable_threshold', str(2 * ONE_MIB))
     with SetBotoConfigForTest([boto_config_for_test]):
