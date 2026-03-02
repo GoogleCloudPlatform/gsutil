@@ -1,3 +1,15 @@
+Release 5.36 (release date: 2026-03-03)
+======================================
+New Features
+------------------
+- Added explicit support for Python 3.14
+
+Other Changes
+------------------
+- Added migration guide for gsutil to gcloud storage (#1881)
+- Added banner suggesting migration to gcloud storage (#1899)
+- Updated README.md recommending gcloud storage CLI for GCS (#1903)
+
 Release 5.35 (release date: 2025-06-25)
 ======================================
 New Features
