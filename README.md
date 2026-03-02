@@ -1,3 +1,9 @@
+IMPORTANT: gsutil is not the recommended CLI for Cloud Storage. Use [gcloud storage commands](https://docs.cloud.google.com/storage/docs/discover-object-storage-gcloud) in the Google Cloud CLI instead.
+
+* The gsutil tool is a legacy Cloud Storage CLI and minimally maintained.
+* The gsutil tool does not support working with newer Cloud Storage features, such as [soft delete](https://docs.cloud.google.com/storage/docs/soft-delete) and [managed folders](https://docs.cloud.google.com/storage/docs/managed-folders).
+* gcloud storage commands require less manual optimization in order to achieve the fastest upload and download rates.
+
 # gsutil
 
 gsutil is a Python application that lets you access Google Cloud Storage from
