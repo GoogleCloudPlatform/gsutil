@@ -434,6 +434,7 @@ Equivalent to `gcloud storage cp`. Alias `copy` is not supported.
 *   **Empty Directories**: `gcloud storage cp` copies 0-byte placeholder objects created by Cloud Console, `gsutil cp` skips them.
 *   **Error Handling**: `gcloud storage cp` attempts to copy all valid sources even if some are invalid. `gsutil cp` may halt on the first invalid source.
 *   **Local Directory Creation**: `gcloud storage cp` creates missing local directories in the destination path during downloads. `gsutil cp` fails if the directory doesn't exist.
+*   **Support for Local Copy**: Gcloud Storage is meant as a tool to work with GCS (cloud). So it does not support local copying (where both source and destination are local files/folders). Trying to use the tool this way will cause an error.
 
 ---
 
