@@ -27,7 +27,7 @@ import pkgutil
 import boto
 
 import gslib.commands.signurl
-from gslib.commands.signurl import HAVE_OPENSSL
+from gslib.commands.signurl import HAVE_OPENSSL, HAVE_CRYPTO
 from gslib.commands.signurl import HAVE_CRYPTO
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
