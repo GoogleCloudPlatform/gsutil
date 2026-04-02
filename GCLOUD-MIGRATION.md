@@ -83,6 +83,11 @@ Replaced by `gcloud storage {buckets|objects} describe` and `gcloud storage {buc
 
 **`gsutil acl ch` -> `gcloud storage <RESOURCE> update`**
 
+Please note, for Gsutil, we followed a format of ENTITY:ROLE. For Gcloud, this format changes to a key-value pair, similar to `entity=user-tim@gmail.com,role=OWNER` for the `-u` flag as an example.  
+We need to append a prefix for emails/ids entities depending on the flag. For `-u` it is `user-`, for `-g`, it is `group-` and for `-p` it is `project-`.
+
+Also, in Gsutil, we used to utilise abbreviations for roles themselves, like R for READ, W for Write, etc. For Gcloud, we want to use the full terms similar to JSON for GCS as can be found in [documentation](https://docs.cloud.google.com/storage/docs/access-control/lists#permissions).
+
 | gsutil Flag | gcloud storage Flag | Applies To | Notes |
 | --- | --- | --- | --- |
 | -u | --add-acl-grant=GRANT | Buckets/Objects | Adds grant for a user. Format: ENTITY:ROLE |
@@ -114,6 +119,11 @@ Replaced by `gcloud storage buckets describe` and `gcloud storage buckets update
 | `<predefined-acl>` | --predefined-default-object-acl=<ACL> | Specifies a predefined default object ACL. |
 
 **`gsutil defacl ch` -> `gcloud storage buckets update`**
+
+Please note, for Gsutil, we followed a format of ENTITY:ROLE. For Gcloud, this format changes to a key-value pair, similar to `entity=user-tim@gmail.com,role=OWNER` for the `-u` flag as an example.  
+We need to append a prefix for emails/ids entities depending on the flag. For `-u` it is `user-`, for `-g`, it is `group-` and for `-p` it is `project-`.
+
+Also, in Gsutil, we used to utilise abbreviations for roles themselves, like R for READ, W for Write, etc. For Gcloud, we want to use the full terms similar to JSON for GCS as can be found in [documentation](https://docs.cloud.google.com/storage/docs/access-control/lists#permissions).
 
 | gsutil Flag | gcloud storage Flag | Notes |
 | --- | --- | --- |
