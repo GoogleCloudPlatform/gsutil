@@ -39,12 +39,6 @@ add_move(MovedModule("mock", "mock", "unittest.mock"))
 from six.moves import mock
 
 try:
-  from OpenSSL.crypto import load_pkcs12
-  HAS_OPENSSL = True
-except ImportError:
-  HAS_OPENSSL = False
-
-try:
   import cryptography
   HAS_CRYPTO = True
 except ImportError:

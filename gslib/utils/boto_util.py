@@ -114,7 +114,7 @@ def ConfigureNoOpAuthIfNeeded():
         raise CommandException('\n'.join(
             textwrap.wrap(
                 'Your gsutil is configured with an OAuth2 service account, but '
-                'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
+                'you do not have cryptography installed. '
                 'Service account authentication requires one of these libraries; '
                 'please reactivate your service account via the gcloud auth '
                 'command and ensure any gcloud packages necessary for '
@@ -123,7 +123,7 @@ def ConfigureNoOpAuthIfNeeded():
         raise CommandException('\n'.join(
             textwrap.wrap(
                 'Your gsutil is configured with an OAuth2 service account, but '
-                'you do not have PyOpenSSL or PyCrypto 2.6 or later installed. '
+                'you do not have cryptography installed. '
                 'Service account authentication requires one of these libraries; '
                 'please install either of them to proceed, or configure a '
                 'different type of credentials with "gsutil config".')))
