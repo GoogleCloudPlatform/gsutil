@@ -693,9 +693,19 @@ class UrlSignCommand(Command):
 
       # TODO(PY3-ONLY): Delete this if block.
       if six.PY2:
+        # Legacy Python 2 behavior: encode to bytes and print.
         url_info_str = url_info_str.encode(constants.UTF8)
-
-      print(url_info_str)
+        print(url_info_str)
+      else:
+        # Python 3 behavior: Bypassing the system's local code page (like cp1252)
+        # by writing UTF-8 bytes directly to the stdout buffer. 
+        # This prevents UnicodeEncodeError on Windows for non-ASCII characters.
+        try:
+          sys.stdout.buffer.write(url_info_str.encode(constants.UTF8) + b'\n')
+          sys.stdout.flush()
+        except (AttributeError, TypeError):
+          # Fallback for non-standard environments (e.g., custom unit test mocks)
+          print(url_info_str)
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,
