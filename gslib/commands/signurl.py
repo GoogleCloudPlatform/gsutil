@@ -695,7 +695,12 @@ class UrlSignCommand(Command):
       if six.PY2:
         url_info_str = url_info_str.encode(constants.UTF8)
 
-      print(url_info_str)
+
+      try:
+          print(url_info_str)
+      except UnicodeEncodeError:
+          # Fallback: Print the encoded version or replace unprintable chars
+          print(url_info_str.encode('utf-8', errors='replace').decode('utf-8'))
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,
