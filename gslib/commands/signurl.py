@@ -700,7 +700,8 @@ class UrlSignCommand(Command):
           print(url_info_str)
       except UnicodeEncodeError:
           # Fallback: Print the encoded version or replace unprintable chars
-          print(url_info_str.encode('utf-8', errors='replace').decode('utf-8'))
+         safe_str = url_info_str.encode('ascii', errors='backslashreplace').decode('ascii')
+         print(safe_str)
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,
