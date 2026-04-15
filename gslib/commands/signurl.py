@@ -314,6 +314,7 @@ def _GenSignedUrl(key,
         string_to_sign_debug=string_to_sign_debug)
     if not HAVE_CRYPTO:
       raise CommandException(_CRYPTO_IMPORT_ERROR)
+    string_to_sign = string_to_sign.replace('\r\n', '\n')
     raw_signature = key.sign(to_bytes(string_to_sign), padding.PKCS1v15(), hashes.SHA256())
     final_url = GetFinalUrl(raw_signature, gs_host, gcs_path,
                             canonical_query_string)
