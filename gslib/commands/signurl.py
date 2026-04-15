@@ -694,18 +694,8 @@ class UrlSignCommand(Command):
       # TODO(PY3-ONLY): Delete this if block.
       if six.PY2:
         url_info_str = url_info_str.encode(constants.UTF8)
-        print(url_info_str)
-      else:
-        # Realistic Fix: Use 'backslashreplace' instead of 'replace'.
-        # This prevents the crash but keeps the characters identifiable 
-        # as \uXXXX, which often allows tests to pass or fail with clarity.
-        terminal_encoding = sys.stdout.encoding or 'utf-8'
-        try:
-          print(url_info_str)
-        except UnicodeEncodeError:
-          # Convert to a byte string with backslash escapes, then back to a 
-          # string for printing.
-          print(url_info_str.encode(terminal_encoding, errors='backslashreplace').decode(terminal_encoding))
+
+      print(url_info_str)
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,
