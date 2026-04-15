@@ -246,7 +246,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['signurl', self._GetJSONKsFile(), 'gs://'],
                    expected_status=1)
     self.RunGsUtil(['signurl', 'file://tmp/abc', 'gs://bucket'],
-                   expected_status=1)
+                   expected_status=1,
+                   return_stderr=True)
 
 
 @unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
