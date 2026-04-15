@@ -295,12 +295,6 @@ def _GenSignedUrl(key,
                             signed_headers=signed_headers,
                             string_to_sign_debug=string_to_sign_debug)
   else:
-    if six.PY2:
-      digest = b'RSA-SHA256'
-    else:
-      # Your IDE may complain about this due to a bad docstring in pyOpenSsl:
-      # https://github.com/pyca/pyopenssl/issues/741
-      digest = 'RSA-SHA256'
     string_to_sign, canonical_query_string = CreatePayload(
         client_id=client_id,
         method=method,
