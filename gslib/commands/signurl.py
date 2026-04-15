@@ -696,18 +696,16 @@ class UrlSignCommand(Command):
         url_info_str = url_info_str.encode(constants.UTF8)
         print(url_info_str)
       else:
-        # Realistic fix: handle Windows console limitations for a global user base
-        # by replacing unencodable characters instead of crashing.
+        # Realistic Fix: Use 'backslashreplace' instead of 'replace'.
+        # This prevents the crash but keeps the characters identifiable 
+        # as \uXXXX, which often allows tests to pass or fail with clarity.
+        terminal_encoding = sys.stdout.encoding or 'utf-8'
         try:
           print(url_info_str)
         except UnicodeEncodeError:
-          # Encode to the current terminal's encoding (e.g., cp1252) and replace
-          # non-supported characters (like Cyrillic) with '?' to prevent FAIL.
-          terminal_encoding = sys.stdout.encoding or 'utf-8'
-          safe_str = url_info_str.encode(
-              terminal_encoding, errors='replace'
-          ).decode(terminal_encoding)
-          print(safe_str)
+          # Convert to a byte string with backslash escapes, then back to a 
+          # string for printing.
+          print(url_info_str.encode(terminal_encoding, errors='backslashreplace').decode(terminal_encoding))
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,
