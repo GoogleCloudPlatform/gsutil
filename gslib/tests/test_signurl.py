@@ -245,7 +245,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     """Tests the signurl output of a non-existent file."""
     self.RunGsUtil(['signurl', self._GetJSONKsFile(), 'gs://'],
                    expected_status=1)
-    self.RunGsUtil(['signurl', 'file://tmp/abc', 'gs://bucket'],
+    self.RunGsUtil(['signurl', 'file:///tmp/abc', 'gs://bucket'],
                    expected_status=1,
                    return_stderr=True)
 
