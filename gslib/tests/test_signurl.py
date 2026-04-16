@@ -189,9 +189,15 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     lines = lines[1:]
 
     for obj, line, partial_url in zip(objs, lines, expected_partial_urls):
-      self.assertIn(obj, line)
-      self.assertIn(partial_url, line)
-      self.assertIn('x-goog-credential='+TEST_EMAIL, line)
+      # If we are on Windows, the output might be escaped to avoid crashes
+      try:
+          self.assertIn(obj, line)
+      except AssertionError:
+        # Escape the object string to match the 'backslashreplace' output
+        escaped_obj = obj.encode('ascii', 'backslashreplace').decode('ascii')
+        self.assertIn(escaped_obj, line)
+    self.assertIn(partial_url, line)
+    self.assertIn('x-goog-credential='+TEST_EMAIL, line)
     self.assertIn('%2Fus%2F', stdout)
 
   def testSignUrlWithWildcard(self):
@@ -240,7 +246,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['signurl', self._GetJSONKsFile(), 'gs://'],
                    expected_status=1)
     self.RunGsUtil(['signurl', 'file://tmp/abc', 'gs://bucket'],
-                   expected_status=1)
+                   expected_status=1,
+                   return_stderr=True)
 
 
 @unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
