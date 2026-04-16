@@ -58,7 +58,6 @@
 [submodule "gslib/vendored/oauth2client"]
 	path = gslib/vendored/oauth2client
 	url = https://github.com/gurusai-voleti/oauth2client.git
-	branch = digestmod
 [submodule "third_party/google-auth-library-python"]
 	path = third_party/google-auth-library-python
 	url = https://github.com/googleapis/google-auth-library-python
