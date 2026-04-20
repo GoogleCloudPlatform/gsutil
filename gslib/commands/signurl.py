@@ -47,6 +47,7 @@ from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.utils import constants
+from gslib.utils import text_util
 from gslib.utils.boto_util import GetNewHttp
 from gslib.utils.shim_util import GcloudStorageMap, GcloudStorageFlag
 from gslib.utils.signurl_helper import CreatePayload, GetFinalUrl, to_bytes
@@ -540,7 +541,7 @@ class UrlSignCommand(Command):
 
     if use_service_account and billing_project:
       raise CommandException(
-          'Specifying both the -b and --use-service-account options together is'
+          'Specifying both the -b and --use-service-account options together is '
           'invalid.')
 
     return method, delta, content_type, passwd, region, use_service_account, billing_project
@@ -631,7 +632,7 @@ class UrlSignCommand(Command):
     else:
       client_email = self.gsutil_api.GetServiceAccountId(provider='gs')
 
-    print('URL\tHTTP Method\tExpiration\tSigned URL')
+    text_util.print_to_fd('URL\tHTTP Method\tExpiration\tSigned URL')
     for url in storage_urls:
       if url.scheme != 'gs':
         raise CommandException('Can only create signed urls from gs:// urls')
@@ -700,7 +701,7 @@ class UrlSignCommand(Command):
       if six.PY2:
         url_info_str = url_info_str.encode(constants.UTF8)
 
-      print(url_info_str)
+      text_util.print_to_fd(url_info_str)
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,
