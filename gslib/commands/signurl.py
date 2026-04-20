@@ -323,10 +323,14 @@ def _ReadKeystore(key_string, passwd):
       raise CommandException(_CRYPTO_IMPORT_ERROR)
   try:
     key, cert, add = pkcs12.load_key_and_certificates(key_string, passwd)
-    client_email = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    client_email = None
+    if cert:
+      attributes = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+      if attributes:
+        client_email = attributes[0].value
     return key, client_email
-  except:
-    raise CommandException('Unable to load the keyfile, Invalid password or PKCS12 data.') 
+  except Exception as e:
+    raise CommandException('Unable to load the keyfile, Invalid password or PKCS12 data. Error: %s' % str(e)) 
 
 def _ReadJSONKeystore(ks_contents, passwd=None):
   """Read the client email and private key from a JSON keystore.
@@ -612,18 +616,18 @@ class UrlSignCommand(Command):
     key = None
     if not use_service_account:
       try:
-        key, client_email = _ReadJSONKeystore(
-            open(self.args[0], 'rb').read(), passwd)
-      except ValueError:
-        # Ignore and try parsing as a pkcs12.
-        if not passwd:
-          passwd = getpass.getpass('Keystore password:')
+        with open(self.args[0], 'rb') as f:
+          ks_contents = f.read()
         try:
-          key, client_email = _ReadKeystore(
-              open(self.args[0], 'rb').read(), passwd)
-        except:
-          raise CommandException('Unable to parse private key from {0}'.format(
-              self.args[0]))
+          key, client_email = _ReadJSONKeystore(ks_contents, passwd)
+        except (ValueError, KeyError, json.JSONDecodeError):
+          # Ignore and try parsing as a pkcs12.
+          if not passwd:
+            passwd = getpass.getpass('Keystore password:')
+          key, client_email = _ReadKeystore(ks_contents, passwd)
+      except (OSError, IOError, CommandException) as e:
+        raise CommandException('Unable to parse private key from {0}: {1}'.format(
+            self.args[0], str(e)))
     else:
       client_email = self.gsutil_api.GetServiceAccountId(provider='gs')
 
