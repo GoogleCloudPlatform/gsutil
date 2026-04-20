@@ -142,6 +142,8 @@ def GetFinalUrl(raw_signature, host, path, canonical_query_string):
                                    query_string=canonical_query_string)
 
 def to_bytes(value, encoding=UTF8):
+  if value is None:
+    return None
   if isinstance(value, bytes):
     return value
   return value.encode(encoding)

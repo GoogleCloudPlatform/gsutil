@@ -248,6 +248,41 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['signurl', 'file://tmp/abc', 'gs://bucket'],
                    expected_status=1,
                    return_stderr=True)
+  
+  def testSignUrlMutuallyExclusiveFlags(self):
+    """Tests signurl with mutually exclusive -u and -b flags."""
+    stderr = self.RunGsUtil(
+        ['signurl', '-u', '-b', 'project', 'gs://bucket/obj'],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('Specifying both the -b and --use-service-account options '
+                  'together is invalid', stderr)
+
+  def testSignUrlBucketMissingRegion(self):
+    """Tests signurl for a bucket without specifying a region."""
+    stderr = self.RunGsUtil(
+        ['signurl', self._GetJSONKsFile(), 'gs://bucket'],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('Generating signed URLs for creating buckets requires a '
+                  'region be specified via the -r option', stderr)
+
+  def testSignUrlInvalidMethod(self):
+    """Tests signurl with an unsupported HTTP method."""
+    stderr = self.RunGsUtil(
+        ['signurl', '-m', 'PATCH', self._GetJSONKsFile(), 'gs://bucket/obj'],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('HTTP method must be one of', stderr)
+
+  def testSignUrlMissingUrlArgs(self):
+    """Tests signurl with a key file but no URL arguments."""
+    stderr = self.RunGsUtil(
+        ['signurl', self._GetJSONKsFile()],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('The command requires a key file argument and one or more '
+                  'URL arguments', stderr)
 
 
 @unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
@@ -642,3 +677,48 @@ class UnitTestSignUrlWithShim(testcase.ShimUnitTestBase):
             ' --query-params userProject=project'
             ' --headers content-type=application/octet-stream'
             ' gs://bucket/object'.format(key_path, key_password), info_lines)
+
+class TestSignUrlHelper(testcase.GsUtilUnitTestCase):
+  """Unit tests for signurl_helper functions."""
+
+  def testToBytes(self):
+    from gslib.utils.signurl_helper import to_bytes
+    self.assertEqual(to_bytes('test'), b'test')
+    self.assertEqual(to_bytes(b'test'), b'test')
+    self.assertIsNone(to_bytes(None))
+    self.assertEqual(to_bytes('Аудио'), 'Аудио'.encode('utf-8'))
+
+  def testGetFinalUrl(self):
+    from gslib.utils.signurl_helper import GetFinalUrl
+    raw_sig = b'\x01\x02\x03'
+    # b16 of \x01\x02\x03 is 010203
+    url = GetFinalUrl(raw_sig, 'host', 'bucket/obj', 'query=val')
+    self.assertEqual(
+        url,
+        'https://host/bucket/obj?x-goog-signature=010203&query=val')
+
+
+@unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
+class TestSignUrlKeyReaders(testcase.GsUtilUnitTestCase):
+  """Unit tests for keystore reader functions in signurl command."""
+
+  def testReadJSONKeystoreValid(self):
+    json_contents = pkgutil.get_data('gslib',
+                                     'tests/test_data/test.json').decode()
+    key, email = gslib.commands.signurl._ReadJSONKeystore(json_contents)
+    self.assertIsNotNone(key)
+    self.assertEqual(email, 'test@developer.gserviceaccount.com')
+
+  def testReadJSONKeystoreMissingFields(self):
+    invalid_json = '{"foo": "bar"}'
+    with self.assertRaisesRegex(ValueError, 'JSON keystore doesn\'t contain required fields'):
+      gslib.commands.signurl._ReadJSONKeystore(invalid_json)
+
+  def testReadKeystoreInvalidData(self):
+    with self.assertRaisesRegex(CommandException, 'Unable to load the keyfile'):
+      gslib.commands.signurl._ReadKeystore(b'not a p12', 'password')
+
+  def testReadKeystoreRobustness(self):
+    # Test with empty data
+    with self.assertRaises(CommandException):
+      gslib.commands.signurl._ReadKeystore(b'', 'password')
