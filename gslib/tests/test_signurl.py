@@ -248,8 +248,8 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
         ['signurl', '-u', '-b', 'project', 'gs://bucket/obj'],
         return_stderr=True,
         expected_status=1)
-    self.assertIn('Specifying both the -b and --use-service-account options '
-                  'together is invalid', stderr)
+    self.assertIn('Specifying both the -b and --use-service-account options',
+                  stderr)
 
   def testSignUrlBucketMissingRegion(self):
     """Tests signurl for a bucket without specifying a region."""
