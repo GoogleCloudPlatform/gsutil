@@ -772,7 +772,7 @@ class ConfigCommand(Command):
           if not HAS_CRYPTO:
             raise CommandException(
                 'Service account authentication via a .p12 file requires '
-                'either cryptography. Please install '
+                'either \ncryptography. Please install '
                 'either of these\nto proceed, use a JSON-format key file, or '
                 'configure a different type of credentials.')
 
