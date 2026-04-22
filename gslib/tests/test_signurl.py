@@ -189,9 +189,10 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     lines = lines[1:]
 
     for obj, line, partial_url in zip(objs, lines, expected_partial_urls):
+      self.assertIn(obj, line)
       self.assertIn(partial_url, line)
       self.assertIn('x-goog-credential='+TEST_EMAIL, line)
-      self.assertIn('%2Fus%2F', stdout)
+    self.assertIn('%2Fus%2F', stdout)
 
   def testSignUrlWithWildcard(self):
     objs = ['test1', 'test2', 'test3']
