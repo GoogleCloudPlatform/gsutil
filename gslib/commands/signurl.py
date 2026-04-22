@@ -64,7 +64,6 @@ except ImportError:
   HAVE_CRYPTO = False
   _CRYPTO_IMPORT_ERROR = "pyca/cryptography is not available. Either install it, or please consider using the .json keyfile"
 
-HAVE_OPENSSL = HAVE_CRYPTO
 _AUTO_DETECT_REGION = 'auto'
 _MAX_EXPIRATION_TIME = timedelta(days=7)
 _MAX_EXPIRATION_TIME_WITH_MINUS_U = timedelta(hours=12)
@@ -604,7 +603,7 @@ class UrlSignCommand(Command):
 
   def RunCommand(self):
     """Command entry point for signurl command."""
-    if not HAVE_OPENSSL:
+    if not HAVE_CRYPTO:
       raise CommandException(
           'The signurl command requires the cryptography library (try pip '
           'install cryptography)')

@@ -27,7 +27,6 @@ import pkgutil
 import boto
 
 import gslib.commands.signurl
-from gslib.commands.signurl import HAVE_OPENSSL
 from gslib.commands.signurl import HAVE_CRYPTO
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
@@ -54,7 +53,7 @@ TEST_EMAIL = 'test%40developer.gserviceaccount.com'
 
 
 # pylint: disable=protected-access
-@unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
+@unittest.skipUnless(HAVE_CRYPTO, 'signurl requires cryptography library.')
 @SkipForS3('Signed URLs are only supported for gs:// URLs.')
 class TestSignUrl(testcase.GsUtilIntegrationTestCase):
   """Integration tests for signurl command."""
@@ -279,7 +278,7 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
                   'URL arguments', stderr)
 
 
-@unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
+@unittest.skipUnless(HAVE_CRYPTO, 'signurl requires cryptography library.')
 class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
   """Unit tests for the signurl command."""
 
@@ -611,7 +610,7 @@ class UnitTestSignUrl(testcase.GsUtilUnitTestCase):
     self.assertEqual(expected, signed_url)
 
 
-@unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
+@unittest.skipUnless(HAVE_CRYPTO, 'signurl requires cryptography library.')
 class UnitTestSignUrlWithShim(testcase.ShimUnitTestBase):
 
   def testShimTranslatesFlags(self):
@@ -692,7 +691,7 @@ class TestSignUrlHelper(testcase.GsUtilUnitTestCase):
         'https://host/bucket/obj?x-goog-signature=010203&query=val')
 
 
-@unittest.skipUnless(HAVE_OPENSSL, 'signurl requires pyopenssl.')
+@unittest.skipUnless(HAVE_CRYPTO, 'signurl requires cryptography library.')
 class TestSignUrlKeyReaders(testcase.GsUtilUnitTestCase):
   """Unit tests for keystore reader functions in signurl command."""
 
