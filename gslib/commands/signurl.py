@@ -47,26 +47,14 @@ from gslib.exception import CommandException
 from gslib.storage_url import ContainsWildcard
 from gslib.storage_url import StorageUrlFromString
 from gslib.utils import constants
+from gslib.utils import text_util
 from gslib.utils.boto_util import GetNewHttp
 from gslib.utils.shim_util import GcloudStorageMap, GcloudStorageFlag
 from gslib.utils.signurl_helper import CreatePayload, GetFinalUrl, to_bytes
 
 try:
-  # Check for openssl.
-  # pylint: disable=C6204
-  from OpenSSL.crypto import FILETYPE_PEM
-  from OpenSSL.crypto import load_privatekey
-  from OpenSSL.crypto import sign
-  from OpenSSL.crypto import PKey
-  HAVE_OPENSSL = True
-except ImportError:
-  load_privatekey = None
-  sign = None
-  HAVE_OPENSSL = False
-  FILETYPE_PEM = None
-
-try:
   from cryptography.hazmat.primitives import hashes
+  from cryptography.hazmat.primitives import serialization
   from cryptography.hazmat.primitives.asymmetric import padding
   from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
   from cryptography.hazmat.primitives.serialization import pkcs12
@@ -307,12 +295,6 @@ def _GenSignedUrl(key,
                             signed_headers=signed_headers,
                             string_to_sign_debug=string_to_sign_debug)
   else:
-    if six.PY2:
-      digest = b'RSA-SHA256'
-    else:
-      # Your IDE may complain about this due to a bad docstring in pyOpenSsl:
-      # https://github.com/pyca/pyopenssl/issues/741
-      digest = 'RSA-SHA256'
     string_to_sign, canonical_query_string = CreatePayload(
         client_id=client_id,
         method=method,
@@ -324,12 +306,10 @@ def _GenSignedUrl(key,
         signed_headers=signed_headers,
         billing_project=billing_project,
         string_to_sign_debug=string_to_sign_debug)
-    if isinstance(key, PKey):
-      raw_signature = sign(key, string_to_sign, digest)
-    else: 
-      if not HAVE_CRYPTO:
-        raise CommandException(_CRYPTO_IMPORT_ERROR)
-      raw_signature = key.sign(to_bytes(string_to_sign), padding.PKCS1v15(), hashes.SHA256())
+    if not HAVE_CRYPTO:
+      raise CommandException(_CRYPTO_IMPORT_ERROR)
+    string_to_sign = string_to_sign.replace('\r\n', '\n')
+    raw_signature = key.sign(to_bytes(string_to_sign), padding.PKCS1v15(), hashes.SHA256())
     final_url = GetFinalUrl(raw_signature, gs_host, gcs_path,
                             canonical_query_string)
   return final_url
@@ -343,8 +323,14 @@ def _ReadKeystore(key_string, passwd):
       raise CommandException(_CRYPTO_IMPORT_ERROR)
   try:
     key, cert, add = pkcs12.load_key_and_certificates(key_string, passwd)
-    client_email = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    client_email = None
+    if cert:
+      attributes = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+      if attributes:
+        client_email = attributes[0].value
     return key, client_email
+  except Exception as e:
+    raise CommandException('Unable to load the keyfile, Invalid password or PKCS12 data. Error: %s' % str(e)) 
   except:
     raise CommandException('Unable to load the keyfile, Invalid password or PKCS12 data.') 
 
@@ -353,8 +339,7 @@ def _ReadJSONKeystore(ks_contents, passwd=None):
 
   Assumes this keystore was downloaded from the Cloud Platform Console.
   By default, JSON keystore private keys from the Cloud Platform Console
-  aren't encrypted so the passwd is optional as load_privatekey will
-  prompt for the PEM passphrase if the key is encrypted.
+  aren't encrypted so the passwd is optional.
 
   Arguments:
     ks_contents: JSON formatted string representing the keystore contents. Must
@@ -378,10 +363,13 @@ def _ReadJSONKeystore(ks_contents, passwd=None):
     raise ValueError('JSON keystore doesn\'t contain required fields')
 
   client_email = ks['client_email']
-  if passwd:
-    key = load_privatekey(FILETYPE_PEM, ks['private_key'], passwd)
-  else:
-    key = load_privatekey(FILETYPE_PEM, ks['private_key'])
+  if not HAVE_CRYPTO:
+    raise CommandException(_CRYPTO_IMPORT_ERROR)
+    
+  key = serialization.load_pem_private_key(
+      ks['private_key'].encode('utf-8'),
+      password=passwd.encode('utf-8') if passwd else None
+  )
 
   return key, client_email
 
@@ -615,10 +603,10 @@ class UrlSignCommand(Command):
 
   def RunCommand(self):
     """Command entry point for signurl command."""
-    if not HAVE_OPENSSL:
+    if not HAVE_CRYPTO:
       raise CommandException(
-          'The signurl command requires the pyopenssl library (try pip '
-          'install pyopenssl or easy_install pyopenssl)')
+          'The signurl command requires the cryptography library (try pip '
+          'install cryptography)')
 
     method, delta, content_type, passwd, region, use_service_account, billing_project = (
         self._ParseAndCheckSubOpts())
@@ -629,22 +617,22 @@ class UrlSignCommand(Command):
     key = None
     if not use_service_account:
       try:
-        key, client_email = _ReadJSONKeystore(
-            open(self.args[0], 'rb').read(), passwd)
-      except ValueError:
-        # Ignore and try parsing as a pkcs12.
-        if not passwd:
-          passwd = getpass.getpass('Keystore password:')
+        with open(self.args[0], 'rb') as f:
+          ks_contents = f.read()
         try:
-          key, client_email = _ReadKeystore(
-              open(self.args[0], 'rb').read(), passwd)
-        except ValueError:
-          raise CommandException('Unable to parse private key from {0}'.format(
-              self.args[0]))
+          key, client_email = _ReadJSONKeystore(ks_contents, passwd)
+        except (ValueError, KeyError, json.JSONDecodeError):
+          # Ignore and try parsing as a pkcs12.
+          if not passwd:
+            passwd = getpass.getpass('Keystore password:')
+          key, client_email = _ReadKeystore(ks_contents, passwd)
+      except (OSError, IOError, CommandException) as e:
+        raise CommandException('Unable to parse private key from {0}: {1}'.format(
+            self.args[0], str(e)))
     else:
       client_email = self.gsutil_api.GetServiceAccountId(provider='gs')
 
-    print('URL\tHTTP Method\tExpiration\tSigned URL')
+    text_util.print_to_fd('URL\tHTTP Method\tExpiration\tSigned URL')
     for url in storage_urls:
       if url.scheme != 'gs':
         raise CommandException('Can only create signed urls from gs:// urls')
@@ -713,7 +701,8 @@ class UrlSignCommand(Command):
       if six.PY2:
         url_info_str = url_info_str.encode(constants.UTF8)
 
-      print(url_info_str)
+
+      text_util.print_to_fd(url_info_str)
 
       response_code = self._ProbeObjectAccessWithClient(
           key, use_service_account, url.scheme, client_email, gcs_path,

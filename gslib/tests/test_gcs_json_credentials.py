@@ -39,12 +39,6 @@ add_move(MovedModule("mock", "mock", "unittest.mock"))
 from six.moves import mock
 
 try:
-  from OpenSSL.crypto import load_pkcs12
-  HAS_OPENSSL = True
-except ImportError:
-  HAS_OPENSSL = False
-
-try:
   import cryptography
   HAS_CRYPTO = True
 except ImportError:
@@ -152,7 +146,9 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
     with SetBotoConfigForTest(getBotoCredentialsConfig(gce_creds="?")):
       self.assertTrue(gcs_json_credentials._HasGceCreds())
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
-      self.assertIsInstance(client.credentials, GceAssertionCredentials)
+      # Since we've patched the class, the returned object is a mock, 
+      # but we can check if it was called.
+      self.assertEqual(client.credentials, mock_credentials.return_value)
       self.assertEqual(client.credentials.refresh_token, "rEfrEshtOkEn")
       self.assertIs(client.credentials.client_id, None)
 
@@ -160,12 +156,15 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
                      "__init__",
                      side_effect=ValueError(ERROR_MESSAGE))
   def testGCECredentialFailure(self, _):
-    with SetBotoConfigForTest(getBotoCredentialsConfig(gce_creds="?")):
-      with self.assertLogs() as logger:
-        with self.assertRaises(Exception) as exc:
-          gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
-        self.assertIn(ERROR_MESSAGE, str(exc.exception))
-        self.assertIn(CredTypes.GCE, logger.output[0])
+    # We need to bypass the DetectGce check that happens before __init__ 
+    # if it's called from apitools credentials_lib.
+    with mock.patch('apitools.base.py.util.DetectGce', return_value=True):
+      with SetBotoConfigForTest(getBotoCredentialsConfig(gce_creds="?")):
+        with self.assertLogs() as logger:
+          with self.assertRaises(Exception) as exc:
+            gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+          self.assertIn(ERROR_MESSAGE, str(exc.exception))
+          self.assertIn(CredTypes.GCE, logger.output[0])
 
   def testExternalAccountCredential(self):
     contents = pkgutil.get_data(
