@@ -71,8 +71,7 @@ class TestNotificationUnit(testcase.GsUtilUnitTestCase):
 class TestNotification(testcase.GsUtilIntegrationTestCase):
   """Integration tests for notification command."""
 
-  @unittest.skipUnless(NOTIFICATION_URL,
-                       'Test requires notification URL configuration.')
+  @unittest.skip('Object Change Notification (OCN) is deprecated; new channel creation is blocked.')
   def test_watch_bucket(self):
     """Tests creating a notification channel on a bucket."""
     bucket_uri = self.CreateBucket()
@@ -91,8 +90,7 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
     self.assertIn('token: %s' % token, stderr)
     self.assertIn('identifier: %s' % identifier, stderr)
 
-  @unittest.skipUnless(NOTIFICATION_URL,
-                       'Test requires notification URL configuration.')
+  @unittest.skip('Object Change Notification (OCN) is deprecated; new channel creation is blocked.')
   def test_stop_channel(self):
     """Tests stopping a notification channel on a bucket."""
     bucket_uri = self.CreateBucket()
@@ -111,8 +109,7 @@ class TestNotification(testcase.GsUtilIntegrationTestCase):
 
     self.RunGsUtil(['notification', 'stopchannel', channel_id, resource_id])
 
-  @unittest.skipUnless(NOTIFICATION_URL,
-                       'Test requires notification URL configuration.')
+  @unittest.skip('Object Change Notification (OCN) is deprecated; new channel creation is blocked.')
   def test_list_one_channel(self):
     """Tests listing notification channel on a bucket."""
     # TODO(b/132277269): Re-enable these once the service-side bug is fixed.
