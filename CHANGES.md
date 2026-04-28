@@ -1,3 +1,15 @@
+Release 5.37 (release date: 2026-04-28)
+======================================
+New Features
+------------------
+- Added support for pyOpenSSL 26.0.0
+
+Other Changes
+------------------
+- Removed pycrypto dependency from oauth2client
+- Skipped gsutil notification watchbucket and stopchannel tests in favour of Object Change Notification (OCN) deprecation.
+- Updates to the gsutil to gcloud storage migration guide.
+
 Release 5.36 (release date: 2026-03-03)
 ======================================
 New Features
