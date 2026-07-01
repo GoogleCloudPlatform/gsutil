@@ -27,10 +27,14 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import email
+import hashlib
+from gslib.cloud_api import BadRequestException
 from gslib.gcs_json_media import BytesTransferredContainer
+from gslib.gcs_json_media import DownloadCallbackConnectionClassFactory
 from gslib.gcs_json_media import HttpWithDownloadStream
 from gslib.gcs_json_media import UploadCallbackConnectionClassFactory
 import gslib.tests.testcase as testcase
+from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 import httplib2
 import io
 import six
@@ -175,3 +179,53 @@ class TestHttpWithDownloadStream(testcase.GsUtilUnitTestCase):
     # content-length header.
     self.assertEqual(int(http_response.msg['content-length']),
                      len(bytes_returned_by_server))
+
+
+class TestDownloadCallbackConnection(testcase.GsUtilUnitTestCase):
+
+  def setUp(self):
+    super(TestDownloadCallbackConnection, self).setUp()
+    self.bytes_container = BytesTransferredContainer()
+    self.digesters = {'md5': hashlib.md5()}
+    self.callback_mock = mock.Mock()
+    self.class_factory = DownloadCallbackConnectionClassFactory(
+        self.bytes_container,
+        buffer_size=50,
+        total_size=11,
+        progress_callback=self.callback_mock,
+        digesters=self.digesters)
+    self.instance = self.class_factory.GetConnectionClass()('host')
+
+  @mock.patch('six.moves.http_client.HTTPConnection.getresponse')
+  def testReadInvalidAmtRaisesBadRequest(self, mock_getresponse):
+    mock_response = mock.Mock()
+    mock_response.status = http_client.OK
+    mock_getresponse.return_value = mock_response
+
+    wrapped_response = self.instance.getresponse()
+
+    # 1. Size exceeding TRANSFER_BUFFER_SIZE should raise BadRequestException
+    with self.assertRaises(BadRequestException):
+      wrapped_response.read(TRANSFER_BUFFER_SIZE + 1)
+
+    # 2. None size should raise BadRequestException
+    with self.assertRaises(BadRequestException):
+      wrapped_response.read(None)
+
+  @mock.patch('six.moves.http_client.HTTPConnection.getresponse')
+  def testReadUpdatesDigesterAndCallback(self, mock_getresponse):
+    mock_response = mock.Mock()
+    mock_response.status = http_client.OK
+    mock_response.read.return_value = b'sample-data'
+    mock_getresponse.return_value = mock_response
+
+    wrapped_response = self.instance.getresponse()
+    data = wrapped_response.read(11)
+
+    self.assertEqual(data, b'sample-data')
+    # Check digester updated
+    expected_md5 = hashlib.md5(b'sample-data').digest()
+    self.assertEqual(self.digesters['md5'].digest(), expected_md5)
+    # Check callback updated
+    self.assertTrue(self.callback_mock.called)
+    self.callback_mock.assert_called_once_with(11, 11)

@@ -17,14 +17,18 @@
 from __future__ import absolute_import
 
 import re
+from unittest import mock
 
 import gslib.tests.testcase as testcase
 from gslib import exception
+from gslib.commands import autoclass
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForJSON
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 
 
 class TestAutoclassUnit(testcase.GsUtilUnitTestCase):
@@ -56,6 +60,11 @@ class TestAutoclassUnit(testcase.GsUtilUnitTestCase):
                              return_stdout=True)
     self.assertIn(bucket_uri1.bucket_name, stdout)
     self.assertIn(bucket_uri2.bucket_name, stdout)
+
+  def test_set_invalid_mode_fails(self):
+    with self.assertRaisesRegex(exception.CommandException,
+                                'Only on and off values allowed'):
+      self.RunCommand('autoclass', ['set', 'invalid_mode', 'gs://bucket'])
 
 
 class TestAutoclassE2E(testcase.GsUtilIntegrationTestCase):
@@ -167,3 +176,114 @@ class TestAutoclassE2E(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('command can only be used for GCS Buckets', stderr)
+
+  @SkipForXML('Autoclass only runs on GCS JSON API.')
+  def test_get_nonexistent_bucket(self):
+    stderr = self.RunGsUtil(self._get_autoclass_cmd + ['gs://' + self.nonexistent_bucket_name],
+                            return_stderr=True,
+                            expected_status=1)
+    self.assertRegex(stderr, r'(BucketNotFoundException|404)')
+
+  @SkipForXML('Autoclass only runs on GCS JSON API.')
+  def test_set_nonexistent_bucket(self):
+    stderr = self.RunGsUtil(self._set_autoclass_cmd + ['on', 'gs://' + self.nonexistent_bucket_name],
+                            return_stderr=True,
+                            expected_status=1)
+    self.assertRegex(stderr, r'(BucketNotFoundException|404)')
+
+  @SkipForXML('Autoclass only runs on GCS JSON API.')
+  def test_set_multiple_buckets(self):
+    bucket_uri1 = self.CreateBucket()
+    bucket_uri2 = self.CreateBucket()
+
+    # Set both to 'on'.
+    self.RunGsUtil(self._set_autoclass_cmd + ['on', suri(bucket_uri1), suri(bucket_uri2)])
+
+    # Verify both are 'on'.
+    stdout = self.RunGsUtil(self._get_autoclass_cmd + [suri(bucket_uri1), suri(bucket_uri2)],
+                            return_stdout=True)
+    self.assertRegex(stdout, r'{}:\n\s+Enabled: True'.format(suri(bucket_uri1)))
+    self.assertRegex(stdout, r'{}:\n\s+Enabled: True'.format(suri(bucket_uri2)))
+
+    # Set both to 'off'.
+    self.RunGsUtil(self._set_autoclass_cmd + ['off', suri(bucket_uri1), suri(bucket_uri2)])
+
+    # Verify both are 'off'.
+    stdout = self.RunGsUtil(self._get_autoclass_cmd + [suri(bucket_uri1), suri(bucket_uri2)],
+                            return_stdout=True)
+    self.assertRegex(stdout, r'{}:\n\s+Enabled: False'.format(suri(bucket_uri1)))
+    self.assertRegex(stdout, r'{}:\n\s+Enabled: False'.format(suri(bucket_uri2)))
+
+
+class TestAutoclassShim(testcase.ShimUnitTestBase):
+
+  @mock.patch.object(autoclass.AutoclassCommand, '_get_autoclass', new=mock.Mock())
+  def test_shim_translates_get_command(self):
+    bucket_uri = self.CreateBucket()
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('autoclass', [
+            'get',
+            suri(bucket_uri),
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        expected_command = (
+            'Gcloud Storage Command: %s storage buckets list'
+            ' --format=value[separator="%s"](format("gs://{}:", name),'
+            ' format("  Enabled: {}",autoclass.enabled.yesno(True, False)),'
+            ' format("  Toggle Time: {}",autoclass.toggleTime)) --raw %s'
+        ) % (
+            shim_util._get_gcloud_binary_path('fake_dir'),
+            shim_util.get_format_flag_newline(),
+            suri(bucket_uri),
+        )
+        self.assertIn(expected_command, info_lines)
+
+  @mock.patch.object(autoclass.AutoclassCommand, '_set_autoclass', new=mock.Mock())
+  def test_shim_translates_set_on_command(self):
+    bucket_uri = self.CreateBucket()
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('autoclass', [
+            'set',
+            'on',
+            suri(bucket_uri),
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        expected_command = (
+            'Gcloud Storage Command: %s storage buckets update'
+            ' --enable-autoclass %s'
+        ) % (shim_util._get_gcloud_binary_path('fake_dir'), suri(bucket_uri))
+        self.assertIn(expected_command, info_lines)
+
+  @mock.patch.object(autoclass.AutoclassCommand, '_set_autoclass', new=mock.Mock())
+  def test_shim_translates_set_off_command(self):
+    bucket_uri = self.CreateBucket()
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('autoclass', [
+            'set',
+            'off',
+            suri(bucket_uri),
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        expected_command = (
+            'Gcloud Storage Command: %s storage buckets update'
+            ' --no-enable-autoclass %s'
+        ) % (shim_util._get_gcloud_binary_path('fake_dir'), suri(bucket_uri))
+        self.assertIn(expected_command, info_lines)

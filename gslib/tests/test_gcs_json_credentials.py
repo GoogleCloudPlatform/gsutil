@@ -230,3 +230,29 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
                                  })):
       with self.assertRaises(CommandException):
         gcs_json_api.GcsJsonApi(None, None, None, None)
+
+  def testServiceAccountJsonInvalidJsonRaises(self):
+    tmpfile = self.CreateTempFile(contents=b'{"invalid_json": ')
+    with SetBotoConfigForTest(
+        getBotoCredentialsConfig(service_account_creds={
+            "keyfile": tmpfile,
+            "client_id": "?",
+        })):
+      with self.assertRaisesRegex(Exception, 'Could not parse JSON keyfile'):
+        gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+
+  def testServiceAccountJsonMissingFieldsRaises(self):
+    # Missing private_key field
+    tmpfile = self.CreateTempFile(contents=b'{"client_id": "123", "client_email": "a@b.com", "private_key_id": "456"}')
+    with SetBotoConfigForTest(
+        getBotoCredentialsConfig(service_account_creds={
+            "keyfile": tmpfile,
+            "client_id": "?",
+        })):
+      with self.assertRaisesRegex(Exception, 'did not contain the required entry: private_key'):
+        gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+
+  @unittest.skipUnless(HAS_CRYPTO, 'p12credentials requires cryptography.')
+  def testPKCS12SignerInvalidKeyfileRaises(self):
+    with self.assertRaisesRegex(CommandException, 'Unable to load the keyfile'):
+      gcs_json_credentials.CreateP12ServiceAccount(b'invalid-p12-data', b'password')

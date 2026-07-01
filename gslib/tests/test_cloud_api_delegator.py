@@ -19,11 +19,14 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+from boto import config
 from gslib import cloud_api
 from gslib import cloud_api_delegator
 from gslib import context_config
 from gslib import cs_api_map
+from gslib.exception import CommandException
 from gslib.tests import testcase
+from gslib.utils import boto_util
 from gslib.tests.testcase import base
 from gslib.tests.util import unittest
 
@@ -51,3 +54,61 @@ class TestCloudApiDelegator(testcase.GsUtilUnitTestCase):
 
     with self.assertRaises(cloud_api.ArgumentException):
       delegator.GetApiSelector(provider='s3')
+
+  @mock.patch.object(boto_util, 'UsingGsHmac')
+  @mock.patch.object(config, 'has_option')
+  def testRaisesErrorIfHmacAndEncryptionBothUsed(self, mock_has_option, mock_using_gs_hmac):
+    mock_using_gs_hmac.return_value = True
+    mock_has_option.return_value = True
+
+    api_map = cs_api_map.GsutilApiMapFactory.GetApiMap(
+        gsutil_api_class_map_factory=cs_api_map.GsutilApiClassMapFactory,
+        support_map={'gs': [cs_api_map.ApiSelector.JSON, cs_api_map.ApiSelector.XML]},
+        default_map={'gs': cs_api_map.ApiSelector.JSON})
+    delegator = cloud_api_delegator.CloudApiDelegator(None, api_map, None, None)
+
+    with self.assertRaisesRegex(CommandException, 'does not support HMAC credentials with customer-supplied'):
+      delegator.GetApiSelector(provider='gs')
+
+  @mock.patch.object(boto_util, 'UsingGsHmac')
+  @mock.patch.object(config, 'has_option')
+  def testReturnsXmlIfHmacUsed(self, mock_has_option, mock_using_gs_hmac):
+    mock_using_gs_hmac.return_value = True
+    mock_has_option.return_value = False
+
+    api_map = cs_api_map.GsutilApiMapFactory.GetApiMap(
+        gsutil_api_class_map_factory=cs_api_map.GsutilApiClassMapFactory,
+        support_map={'gs': [cs_api_map.ApiSelector.JSON, cs_api_map.ApiSelector.XML]},
+        default_map={'gs': cs_api_map.ApiSelector.JSON})
+    delegator = cloud_api_delegator.CloudApiDelegator(None, api_map, None, None)
+
+    self.assertEqual(delegator.GetApiSelector(provider='gs'), cs_api_map.ApiSelector.XML)
+
+  @mock.patch.object(boto_util, 'UsingGsHmac')
+  @mock.patch.object(config, 'has_option')
+  def testReturnsJsonIfEncryptionUsed(self, mock_has_option, mock_using_gs_hmac):
+    mock_using_gs_hmac.return_value = False
+    mock_has_option.return_value = True
+
+    api_map = cs_api_map.GsutilApiMapFactory.GetApiMap(
+        gsutil_api_class_map_factory=cs_api_map.GsutilApiClassMapFactory,
+        support_map={'gs': [cs_api_map.ApiSelector.JSON, cs_api_map.ApiSelector.XML]},
+        default_map={'gs': cs_api_map.ApiSelector.JSON})
+    delegator = cloud_api_delegator.CloudApiDelegator(None, api_map, None, None)
+
+    self.assertEqual(delegator.GetApiSelector(provider='gs'), cs_api_map.ApiSelector.JSON)
+
+  @mock.patch.object(boto_util, 'UsingGsHmac')
+  @mock.patch.object(config, 'has_option')
+  def testReturnsPreferApiIfSupported(self, mock_has_option, mock_using_gs_hmac):
+    mock_using_gs_hmac.return_value = False
+    mock_has_option.return_value = False
+
+    api_map = cs_api_map.GsutilApiMapFactory.GetApiMap(
+        gsutil_api_class_map_factory=cs_api_map.GsutilApiClassMapFactory,
+        support_map={'gs': [cs_api_map.ApiSelector.JSON, cs_api_map.ApiSelector.XML]},
+        default_map={'gs': cs_api_map.ApiSelector.JSON})
+    delegator = cloud_api_delegator.CloudApiDelegator(None, api_map, None, None)
+    delegator.prefer_api = cs_api_map.ApiSelector.XML
+
+    self.assertEqual(delegator.GetApiSelector(provider='gs'), cs_api_map.ApiSelector.XML)
