@@ -139,3 +139,23 @@ class TestPublicAccessPrevention(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('Invalid subcommand', stderr)
+
+  @SkipForXML('Public access prevention only runs on GCS JSON API')
+  def test_set_invalid_mode_fails(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(self._set_pap_cmd + ['invalid', suri(bucket_uri)],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('invalid is not a valid value', stderr)
+
+  @SkipForXML('Public access prevention only runs on GCS JSON API')
+  def test_target_object_fails(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(self._get_pap_cmd + [suri(bucket_uri) + '/obj'],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('must specify a bucket', stderr.lower())
+
+    stderr = self.RunGsUtil(self._set_pap_cmd + ['enforced', suri(bucket_uri) + '/obj'],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('must specify a bucket', stderr.lower())
+
+

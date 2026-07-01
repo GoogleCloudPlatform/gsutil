@@ -259,3 +259,110 @@ class TestHashingFileUploadWrapper(testcase.GsUtilUnitTestCase):
         self.assertIn(
             'Read called on hashing file pointer in an unknown position',
             str(e))
+
+  def testWrapperInitializationErrors(self):
+    tmp_file = self._GetTestFile()
+    with open(tmp_file, 'rb') as stream:
+      try:
+        HashingFileUploadWrapper(stream, {}, {'md5': GetMd5}, self._dummy_url, self.logger)
+        self.fail('Expected CommandException for empty digesters.')
+      except CommandException as e:
+        self.assertIn('used with no digesters', str(e))
+
+      try:
+        HashingFileUploadWrapper(stream, {'md5': GetMd5()}, {}, self._dummy_url, self.logger)
+        self.fail('Expected CommandException for empty hash_algs.')
+      except CommandException as e:
+        self.assertIn('used with no hash_algs', str(e))
+
+
+class TestCrcMath(testcase.GsUtilUnitTestCase):
+  """Unit tests for ConcatCrc32c and helper functions."""
+
+  def testConcatCrc32c(self):
+    import crcmod
+    from gslib.utils.hashing_helper import ConcatCrc32c
+
+    crc_class = crcmod.predefined.Crc('crc-32c')
+
+    a = b"Hello, "
+    b = b"world!"
+    ab = a + b
+
+    crc_a = crc_class.copy()
+    crc_a.update(a)
+    crc_a_val = crc_a.crcValue
+
+    crc_b = crc_class.copy()
+    crc_b.update(b)
+    crc_b_val = crc_b.crcValue
+
+    crc_ab = crc_class.copy()
+    crc_ab.update(ab)
+    crc_ab_val = crc_ab.crcValue
+
+    concat_val = ConcatCrc32c(crc_a_val, crc_b_val, len(b))
+    self.assertEqual(concat_val, crc_ab_val)
+
+
+class TestHashHelpers(testcase.GsUtilUnitTestCase):
+  """Unit tests for conversion and hash calculation helpers."""
+
+  def testHashConversions(self):
+    from gslib.utils.hashing_helper import Base64EncodeHash, Base64ToHexHash
+    hex_digest = 'f447b20a7fcbf53a5d5be013ea0b15af'
+    base64_digest = '9EeyCn/L9TpdW+AT6gsVrw=='
+
+    self.assertEqual(Base64EncodeHash(hex_digest), base64_digest)
+    self.assertEqual(Base64ToHexHash(base64_digest), hex_digest.encode('ascii'))
+
+  def testCalculateB64EncodedHashes(self):
+    from gslib.utils.hashing_helper import (
+        CalculateB64EncodedCrc32cFromContents,
+        CalculateB64EncodedMd5FromContents
+    )
+    contents = b'123456\n'
+    tmp_file = self.CreateTempFile(contents=contents)
+
+    with open(tmp_file, 'rb') as fp:
+      crc = CalculateB64EncodedCrc32cFromContents(fp)
+    with open(tmp_file, 'rb') as fp:
+      md5 = CalculateB64EncodedMd5FromContents(fp)
+
+    self.assertEqual(crc, 'nYmSiA==')
+    self.assertEqual(md5, '9EeyCn/L9TpdW+AT6gsVrw==')
+
+
+class TestHashConfig(testcase.GsUtilUnitTestCase):
+  """Unit tests for config-based upload/download hash functions."""
+
+  def testGetUploadHashAlgs(self):
+    from gslib.tests.util import SetBotoConfigForTest
+    from gslib.utils import hashing_helper
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      self.assertEqual(hashing_helper.GetUploadHashAlgs(), {})
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'always')]):
+      algs = hashing_helper.GetUploadHashAlgs()
+      self.assertIn('md5', algs)
+      self.assertEqual(algs['md5']().hexdigest(), GetMd5().hexdigest())
+
+  def testGetDownloadHashAlgs(self):
+    from gslib.tests.util import SetBotoConfigForTest
+    from gslib.utils import hashing_helper
+    # Test CHECK_HASH_NEVER
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      self.assertEqual(hashing_helper.GetDownloadHashAlgs(self.logger, consider_md5=True), {})
+
+    # Test MD5 always preferred
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'always')]):
+      algs = hashing_helper.GetDownloadHashAlgs(self.logger, consider_md5=True)
+      self.assertIn('md5', algs)
+
+    # Test misconfigured option raises CommandException
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'invalid_option')]):
+      try:
+        hashing_helper.GetDownloadHashAlgs(self.logger, consider_crc32c=True)
+        self.fail('Expected CommandException for invalid check_hashes config.')
+      except CommandException as e:
+        self.assertIn('option is misconfigured', str(e))
+

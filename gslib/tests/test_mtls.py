@@ -49,3 +49,33 @@ class TestMtls(testcase.GsUtilIntegrationTestCase):
     self.assertIn('storage.mtls.googleapis.com', stdout)
     # # If bucket was successfully listed, it implies successful authentication.
     self.assertIn(bucket_uri, stdout)
+
+  @unittest.skipIf(
+      not config.getbool('Credentials', 'use_client_certificate'),
+      'mTLS requires "use_client_certificate" to be "True" in .boto config.')
+  @integration_testcase.SkipForXML(MTLS_AVAILABILITY_MESSAGE)
+  @integration_testcase.SkipForS3(MTLS_AVAILABILITY_MESSAGE)
+  def test_can_copy_object_with_mtls_authentication(self):
+    # Cannot use self.CreateBucket because testing framework's authentication
+    # doesn't work with mTLS.
+    bucket_uri = 'gs://{}'.format(self.MakeTempName('bucket'))
+    self.RunGsUtil(['mb', bucket_uri])
+
+    tmp_file = self.CreateTempFile(contents=b'mtls-test-content')
+    obj_uri = '{}/test_obj'.format(bucket_uri)
+
+    try:
+      # Upload object
+      self.RunGsUtil(['cp', tmp_file, obj_uri])
+
+      # Download object with debug output enabled to verify endpoint
+      stdout, stderr = self.RunGsUtil(
+          ['-D', 'cp', obj_uri, '-'], return_stdout=True, return_stderr=True)
+      combined_output = stdout + stderr
+
+      self.assertIn('storage.mtls.googleapis.com', combined_output)
+      self.assertIn('mtls-test-content', stdout)
+    finally:
+      self.RunGsUtil(['rm', obj_uri])
+      self.RunGsUtil(['rb', bucket_uri])
+

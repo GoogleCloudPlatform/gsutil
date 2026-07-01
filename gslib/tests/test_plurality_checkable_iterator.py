@@ -240,3 +240,28 @@ class PluralityCheckableIteratorTests(testcase.GsUtilUnitTestCase):
       self.fail('Expected StopIteration')
     except StopIteration:
       pass
+
+  def testPeekExceptionOnEmptyIterator(self):
+    pcit = PluralityCheckableIterator(iter([]))
+    # Should not raise any exception
+    pcit.PeekException()
+
+  def testPluralityCheckOnPartiallyConsumedIterator(self):
+    input_list = [1, 2, 3]
+    pcit = PluralityCheckableIterator(iter(input_list))
+
+    self.assertEqual(next(pcit), 1)
+    # Remaining: [2, 3]
+    self.assertTrue(pcit.HasPlurality())
+    self.assertFalse(pcit.IsEmpty())
+
+    self.assertEqual(next(pcit), 2)
+    # Remaining: [3]
+    self.assertFalse(pcit.HasPlurality())
+    self.assertFalse(pcit.IsEmpty())
+
+    self.assertEqual(next(pcit), 3)
+    # Remaining: []
+    self.assertFalse(pcit.HasPlurality())
+    self.assertTrue(pcit.IsEmpty())
+

@@ -84,6 +84,43 @@ class TestLogging(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['logging'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
 
+  def testLoggingGetNoConfig(self):
+    bucket_uri = self.CreateBucket()
+    bucket_suri = suri(bucket_uri)
+    stdout = self.RunGsUtil(['logging', 'get', bucket_suri], return_stdout=True)
+    self.assertIn('has no logging configuration', stdout)
+
+  def testLoggingSpanningProvidersFails(self):
+    stderr = self.RunGsUtil(['logging', 'set', 'on', '-b', 'gs://logbucket', 'gs://bucket', 's3://bucket'],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('spanning providers not allowed', stderr)
+
+  def testLoggingMissingLogBucketFails(self):
+    bucket_uri = self.CreateBucket()
+    bucket_suri = suri(bucket_uri)
+    stderr = self.RunGsUtil(['logging', 'set', 'on', bucket_suri],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('requires \'-b <log_bucket>\'', stderr)
+
+  def testLoggingNonBucketLogBucketFails(self):
+    bucket_uri = self.CreateBucket()
+    bucket_suri = suri(bucket_uri)
+    stderr = self.RunGsUtil(['logging', 'set', 'on', '-b', bucket_suri + '/obj', bucket_suri],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('must specify a bucket URL', stderr)
+
+  def testInvalidSubcommandsFails(self):
+    bucket_uri = self.CreateBucket()
+    bucket_suri = suri(bucket_uri)
+    stderr = self.RunGsUtil(['logging', 'invalid', bucket_suri],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('Invalid subcommand "invalid"', stderr)
+
+    stderr = self.RunGsUtil(['logging', 'set', 'invalid', bucket_suri],
+                            return_stderr=True, expected_status=1)
+    self.assertIn('Invalid subcommand "invalid" for the "logging set"', stderr)
+
+
 
 class TestLoggingOldAlias(TestLogging):
   _enable_log_cmd = ['enablelogging']
