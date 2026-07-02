@@ -229,3 +229,31 @@ class TestDownloadCallbackConnection(testcase.GsUtilUnitTestCase):
     # Check callback updated
     self.assertTrue(self.callback_mock.called)
     self.callback_mock.assert_called_once_with(11, 11)
+
+  @mock.patch('six.moves.http_client.HTTPConnection.getresponse')
+  def testReadUpdatesDigesterAndCallbackSequentialChunked(self, mock_getresponse):
+    mock_response = mock.Mock()
+    mock_response.status = http_client.OK
+    mock_response.read.side_effect = [b'sampl', b'e-data']
+    mock_getresponse.return_value = mock_response
+
+    wrapped_response = self.instance.getresponse()
+
+    # 1. Read first chunk of 5 bytes
+    data1 = wrapped_response.read(5)
+    self.assertEqual(data1, b'sampl')
+    # MD5 should be updated with 'sampl'
+    self.assertEqual(self.digesters['md5'].digest(), hashlib.md5(b'sampl').digest())
+    # Callback should not have been called yet
+    self.assertFalse(self.callback_mock.called)
+
+    # 2. Read second chunk of 6 bytes
+    data2 = wrapped_response.read(6)
+    self.assertEqual(data2, b'e-data')
+    # MD5 should now match the full concatenated 'sample-data'
+    expected_md5 = hashlib.md5(b'sample-data').digest()
+    self.assertEqual(self.digesters['md5'].digest(), expected_md5)
+    # Callback should have been called once at the end
+    self.assertTrue(self.callback_mock.called)
+    self.callback_mock.assert_called_once_with(11, 11)
+

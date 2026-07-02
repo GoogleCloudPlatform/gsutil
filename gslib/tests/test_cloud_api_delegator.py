@@ -59,7 +59,10 @@ class TestCloudApiDelegator(testcase.GsUtilUnitTestCase):
   @mock.patch.object(config, 'has_option')
   def testRaisesErrorIfHmacAndEncryptionBothUsed(self, mock_has_option, mock_using_gs_hmac):
     mock_using_gs_hmac.return_value = True
-    mock_has_option.return_value = True
+    mock_has_option.side_effect = (
+        lambda section, option: (section == 'GSUtil' and
+                                 option in ('encryption_key', 'decryption_key1'))
+    )
 
     api_map = cs_api_map.GsutilApiMapFactory.GetApiMap(
         gsutil_api_class_map_factory=cs_api_map.GsutilApiClassMapFactory,
@@ -88,7 +91,10 @@ class TestCloudApiDelegator(testcase.GsUtilUnitTestCase):
   @mock.patch.object(config, 'has_option')
   def testReturnsJsonIfEncryptionUsed(self, mock_has_option, mock_using_gs_hmac):
     mock_using_gs_hmac.return_value = False
-    mock_has_option.return_value = True
+    mock_has_option.side_effect = (
+        lambda section, option: (section == 'GSUtil' and
+                                 option in ('encryption_key', 'decryption_key1'))
+    )
 
     api_map = cs_api_map.GsutilApiMapFactory.GetApiMap(
         gsutil_api_class_map_factory=cs_api_map.GsutilApiClassMapFactory,

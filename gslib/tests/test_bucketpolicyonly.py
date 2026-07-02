@@ -22,6 +22,7 @@ from gslib import exception
 from gslib.commands import bucketpolicyonly
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
+from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
@@ -59,15 +60,13 @@ class TestBucketPolicyOnly(testcase.GsUtilIntegrationTestCase):
     bucket_policy_only_val = bucket_policy_only_match.group('enabled_val')
     self.assertEqual(str(value), bucket_policy_only_val)
 
+  @SkipForXML('XML API has no concept of Bucket Policy Only')
   def test_off_on_default_buckets(self):
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('XML API has no concept of Bucket Policy Only')
     bucket_uri = self.CreateBucket()
     self._AssertEnabled(bucket_uri, False)
 
+  @SkipForXML('XML API has no concept of Bucket Policy Only')
   def test_turning_off_on_enabled_buckets(self):
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('XML API has no concept of Bucket Policy Only')
     bucket_uri = self.CreateBucket(bucket_policy_only=True,
                                    prefer_json_api=True)
     self._AssertEnabled(bucket_uri, True)
@@ -75,19 +74,15 @@ class TestBucketPolicyOnly(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(self._set_bpo_cmd + ['off', suri(bucket_uri)])
     self._AssertEnabled(bucket_uri, False)
 
+  @SkipForXML('XML API has no concept of Bucket Policy Only')
   def test_turning_on(self):
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('XML API has no concept of Bucket Policy Only')
-
     bucket_uri = self.CreateBucket()
     self.RunGsUtil(self._set_bpo_cmd + ['on', suri(bucket_uri)])
 
     self._AssertEnabled(bucket_uri, True)
 
+  @SkipForXML('XML API has no concept of Bucket Policy Only')
   def test_turning_on_and_off(self):
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('XML API has no concept of Bucket Policy Only')
-
     bucket_uri = self.CreateBucket()
 
     self.RunGsUtil(self._set_bpo_cmd + ['on', suri(bucket_uri)])
@@ -116,25 +111,22 @@ class TestBucketPolicyOnly(testcase.GsUtilIntegrationTestCase):
                             expected_status=1)
     self.assertIn('command requires at least', stderr)
 
+  @SkipForXML('XML API has no concept of Bucket Policy Only')
   def test_get_nonexistent_bucket(self):
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('XML API has no concept of Bucket Policy Only')
     stderr = self.RunGsUtil(self._get_bpo_cmd + ['gs://' + self.nonexistent_bucket_name],
                             return_stderr=True,
                             expected_status=1)
     self.assertRegex(stderr, r'(BucketNotFoundException|404)')
 
+  @SkipForXML('XML API has no concept of Bucket Policy Only')
   def test_set_nonexistent_bucket(self):
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('XML API has no concept of Bucket Policy Only')
     stderr = self.RunGsUtil(self._set_bpo_cmd + ['on', 'gs://' + self.nonexistent_bucket_name],
                             return_stderr=True,
                             expected_status=1)
     self.assertRegex(stderr, r'(BucketNotFoundException|404)')
 
+  @SkipForXML('XML API has no concept of Bucket Policy Only')
   def test_set_multiple_buckets(self):
-    if self.test_api == ApiSelector.XML:
-      return unittest.skip('XML API has no concept of Bucket Policy Only')
     bucket_uri1 = self.CreateBucket()
     bucket_uri2 = self.CreateBucket()
 
