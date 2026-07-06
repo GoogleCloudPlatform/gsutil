@@ -249,3 +249,24 @@ class TestStat(testcase.GsUtilIntegrationTestCase):
         self.assertIn(TEST_ENCRYPTION_CONTENT3_CRC32C, stdout)
 
       _StatExpectMixed()
+
+  def test_stat_of_non_object_uri_prints_error(self):
+    """Tests stat command outputs error message on non-object URLs."""
+    bucket_uri = self.CreateBucket()
+
+    # 1. Provider URL
+    stderr = self.RunGsUtil(['stat', 'gs://'], expected_status=1, return_stderr=True)
+    self.assertIn('does not support provider-only URLs', stderr)
+
+    # 2. Bucket URL
+    stderr = self.RunGsUtil(['stat', suri(bucket_uri)], expected_status=1, return_stderr=True)
+    self.assertIn('only works with object URLs', stderr)
+
+  def test_stat_nonexistent_object_stderr(self):
+    """Tests stat command outputs 'No URLs matched' warning on nonexistent object."""
+    bucket_uri = self.CreateBucket()
+    nonexistent_object_uri = suri(bucket_uri, 'nonexistent')
+
+    stderr = self.RunGsUtil(['stat', nonexistent_object_uri], expected_status=1, return_stderr=True)
+    self.assertIn(NO_URLS_MATCHED_TARGET % nonexistent_object_uri, stderr)
+

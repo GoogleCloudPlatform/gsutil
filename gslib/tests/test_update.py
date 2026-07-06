@@ -267,3 +267,44 @@ class UpdateUnitTest(testcase.GsUtilUnitTestCase):
       self.assertIn('gsutil.tar.gz', GsutilPubTarball())
       version_info.major = 2
       self.assertIn('gsutil4.tar.gz', GsutilPubTarball())
+
+  def test_EnsureDirsSafeForUpdate(self):
+    from gslib.commands.update import UpdateCommand
+    from gslib.exception import CommandException
+
+    class DummyUpdateCommand(UpdateCommand):
+      def __init__(self):
+        pass
+
+    cmd = DummyUpdateCommand()
+
+    # 1. Safe directories should pass
+    cmd._EnsureDirsSafeForUpdate(['/tmp/gsutil-temp-dir', 'my-safe-dir'])
+
+    # 2. Unsafe directories should raise CommandException
+    for unsafe_dir in ('/usr', '/etc', 'BOOT', '/lib32'):
+      with self.assertRaises(CommandException) as ctx:
+        cmd._EnsureDirsSafeForUpdate(['/tmp/gsutil-temp-dir', unsafe_dir])
+      self.assertIn('encountered unsafe directory', str(ctx.exception))
+
+    # 3. Empty string / null check
+    with self.assertRaises(CommandException) as ctx:
+      cmd._EnsureDirsSafeForUpdate([''])
+    self.assertIn('encountered unsafe directory (null)', str(ctx.exception))
+
+  @mock.patch('gslib.commands.update.CERTIFICATE_VALIDATION_ENABLED', False)
+  @mock.patch('gslib.IS_PACKAGE_INSTALL', False)
+  @mock.patch('gslib.utils.system_util.InvokedViaCloudSdk', return_value=False)
+  def test_update_disabled_certificates_raises(self, mock_cloudsdk):
+    from gslib.commands.update import UpdateCommand
+    from gslib.exception import CommandException
+
+    class DummyUpdateCommand(UpdateCommand):
+      command_name = 'update'
+      def __init__(self):
+        pass
+
+    cmd = DummyUpdateCommand()
+
+    with self.assertRaisesRegex(CommandException, 'https_validate_certificates = False'):
+      cmd.RunCommand()

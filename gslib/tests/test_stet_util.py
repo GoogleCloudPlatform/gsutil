@@ -184,3 +184,17 @@ class TestStetUtil(testcase.GsUtilUnitTestCase):
     mock_expanduser.assert_has_calls(
         [mock.call('fake_binary_path'),
          mock.call(fake_config_path)])
+
+  @mock.patch.object(execution_util, 'ExecuteExternalCommand')
+  def test_stet_util_propagates_external_binary_error(self, mock_execute_external_command):
+    from gslib.exception import ExternalBinaryError
+
+    mock_execute_external_command.side_effect = ExternalBinaryError('Simulated failure')
+    source_url = storage_url.StorageUrlFromString('in')
+    destination_url = storage_url.StorageUrlFromString('gs://bucket/obj')
+    with util.SetBotoConfigForTest([
+        ('GSUtil', 'stet_binary_path', 'fake_binary_path'),
+    ]):
+      with self.assertRaisesRegex(ExternalBinaryError, 'Simulated failure'):
+        stet_util.encrypt_upload(source_url, destination_url, mock.Mock())
+

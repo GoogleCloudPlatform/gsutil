@@ -235,3 +235,66 @@ class TestTrackerFile(GsUtilUnitTestCase):
     self.assertEqual(True, command_obj.delete_called)
     self.assertEqual(None, actual_prefix)
     self.assertEqual([], actual_objects)
+
+  def test_GetTrackerFilePath_routing_and_errors(self):
+    from gslib.tracker_file import GetTrackerFilePath, TrackerFileType
+
+    dst_url = StorageUrlFromString('gs://bucket/obj')
+    # 1. UPLOAD
+    path = GetTrackerFilePath(dst_url, TrackerFileType.UPLOAD, self.test_api)
+    self.assertIn('upload', os.path.basename(path))
+
+    # 2. DOWNLOAD
+    dst_file_url = StorageUrlFromString('file:///tmp/file.txt')
+    path = GetTrackerFilePath(dst_file_url, TrackerFileType.DOWNLOAD, self.test_api)
+    self.assertIn('download', os.path.basename(path))
+
+    # 3. REWRITE -> expect NotImplementedError
+    with self.assertRaises(NotImplementedError):
+      GetTrackerFilePath(dst_url, TrackerFileType.REWRITE, self.test_api)
+
+  def test_GetUploadTrackerData_behavior(self):
+    from gslib.tracker_file import GetUploadTrackerData, WriteJsonDataToTrackerFile
+
+    tracker_file_name = self.CreateTempFile()
+
+    # 1. Key matches -> returns serialization data
+    data = {
+        'encryption_key_sha256': 'my-key',
+        'serialization_data': 'my-serialization-data'
+    }
+    WriteJsonDataToTrackerFile(tracker_file_name, data)
+    res = GetUploadTrackerData(tracker_file_name, self.logger, 'my-key')
+    self.assertEqual(res, 'my-serialization-data')
+
+    # 2. Key does not match -> deletes tracker file and returns None
+    res = GetUploadTrackerData(tracker_file_name, self.logger, 'different-key')
+    self.assertIsNone(res)
+    self.assertFalse(os.path.exists(tracker_file_name))
+
+  def test_ReadOrCreateDownloadTrackerFile(self):
+    from gslib.tracker_file import ReadOrCreateDownloadTrackerFile
+    from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+
+    dst_url = StorageUrlFromString('file:///tmp/download.txt')
+    # Use a large size to satisfy ResumableThreshold()
+    src_obj_metadata = apitools_messages.Object(
+        bucket='bucket', name='obj', etag='etag123', size=20 * 1024 * 1024)
+
+    # 1. Tracker file doesn't exist -> creates tracker file and returns start_byte
+    tracker_file_name, start_byte = ReadOrCreateDownloadTrackerFile(
+        src_obj_metadata, dst_url, self.logger, self.test_api,
+        start_byte=0, existing_file_size=0)
+
+    self.assertTrue(os.path.exists(tracker_file_name))
+    self.assertEqual(start_byte, 0)
+
+    # 2. Tracker file matches etag -> returns existing_file_size
+    _, start_byte = ReadOrCreateDownloadTrackerFile(
+        src_obj_metadata, dst_url, self.logger, self.test_api,
+        start_byte=0, existing_file_size=5000)
+    self.assertEqual(start_byte, 5000)
+
+    # Clean up
+    DeleteTrackerFile(tracker_file_name)
+

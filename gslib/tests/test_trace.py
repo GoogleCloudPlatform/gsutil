@@ -42,3 +42,15 @@ class TestTraceTokenOption(testcase.GsUtilIntegrationTestCase):
       self.assertRegex(
           stderr, r'.*GET.*b/%s/o/%s\?.*trace=token%%3ATHISISATOKEN' %
           (key_uri.bucket_name, key_uri.object_name))
+
+  def test_minus_perf_tracetoken_cat(self):
+    """Tests cat command with perf-trace-token option."""
+    key_uri = self.CreateObject(contents=b'0123456789')
+    (_, stderr) = self.RunGsUtil(
+        ['-D', '--perf-trace-token=THISISAPERFTOKEN', 'cat',
+         suri(key_uri)],
+        return_stdout=True,
+        return_stderr=True)
+    # The cookie should be present in the request headers printed in debug logs.
+    self.assertRegex(stderr, r'(?i)cookie:\s*THISISAPERFTOKEN')
+

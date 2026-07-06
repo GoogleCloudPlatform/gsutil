@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 
+from unittest import mock
+
 import gslib.tests.testcase as testcase
 from gslib.utils.retention_util import _RetentionPeriodToString
 from gslib.utils.retention_util import DaysToSeconds
@@ -155,3 +157,151 @@ class TestRetentionUtil(testcase.GsUtilUnitTestCase):
     retention_str = _RetentionPeriodToString(SECONDS_IN_YEAR + 1)
     self.assertRegex(retention_str,
                      r'Duration: 31557601 Seconds \(~365 Day\(s\)\)')
+
+  def testRetentionInSecondsInvalidRaises(self):
+    from gslib.exception import CommandException
+
+    with self.assertRaisesRegex(CommandException, 'Incorrect retention period specified'):
+      RetentionInSeconds('10')
+
+    with self.assertRaisesRegex(CommandException, 'Incorrect retention period specified'):
+      RetentionInSeconds('5h')
+
+    with self.assertRaisesRegex(CommandException, 'Incorrect retention period specified'):
+      RetentionInSeconds('abc')
+
+  def testRetentionPolicyToString(self):
+    from gslib.utils.retention_util import RetentionPolicyToString
+    import datetime
+
+    # 1. No Policy
+    self.assertEqual(
+        RetentionPolicyToString(None, 'gs://my-bucket'),
+        'gs://my-bucket has no Retention Policy.'
+    )
+
+    # Mock policy object
+    class MockRetentionPolicy(object):
+      def __init__(self, period, is_locked, effective_time):
+        self.retentionPeriod = period
+        self.isLocked = is_locked
+        self.effectiveTime = effective_time
+
+    # 2. Unlocked Policy
+    unlocked_policy = MockRetentionPolicy(
+        period=86400,
+        is_locked=False,
+        effective_time=datetime.datetime(2026, 7, 3, 12, 0, 0)
+    )
+    unlocked_str = RetentionPolicyToString(unlocked_policy, 'gs://my-bucket')
+    self.assertIn('Retention Policy (UNLOCKED)', unlocked_str)
+    self.assertIn('Duration: 1 Day(s)', unlocked_str)
+    self.assertIn('Effective Time: Fri, 03 Jul 2026 12:00:00 GMT', unlocked_str)
+
+    # 3. Locked Policy
+    locked_policy = MockRetentionPolicy(
+        period=86400,
+        is_locked=True,
+        effective_time=datetime.datetime(2026, 7, 3, 12, 0, 0)
+    )
+    locked_str = RetentionPolicyToString(locked_policy, 'gs://my-bucket')
+    self.assertIn('Retention Policy (LOCKED)', locked_str)
+
+  @mock.patch('gslib.utils.retention_util.input')
+  def testConfirmLockRequest(self, mock_input):
+    from gslib.utils.retention_util import ConfirmLockRequest
+    import datetime
+
+    class MockRetentionPolicy(object):
+      def __init__(self, period, is_locked, effective_time):
+        self.retentionPeriod = period
+        self.isLocked = is_locked
+        self.effectiveTime = effective_time
+
+    policy = MockRetentionPolicy(
+        period=86400,
+        is_locked=False,
+        effective_time=datetime.datetime(2026, 7, 3, 12, 0, 0)
+    )
+
+    # Test confirmation accepted (yes)
+    mock_input.return_value = 'yes'
+    self.assertTrue(ConfirmLockRequest('gs://my-bucket', policy))
+
+    # Test confirmation rejected (no)
+    mock_input.return_value = 'no'
+    self.assertFalse(ConfirmLockRequest('gs://my-bucket', policy))
+
+    # Test confirmation accepted with capital Y
+    mock_input.return_value = 'Y'
+    self.assertTrue(ConfirmLockRequest('gs://my-bucket', policy))
+
+  def testUpdateObjectMetadataExceptionHandler(self):
+    from gslib.utils.retention_util import UpdateObjectMetadataExceptionHandler
+
+    class MockClass(object):
+      def __init__(self):
+        self.logger = mock.Mock()
+        self.everything_set_okay = True
+
+    cls_instance = MockClass()
+    exception = Exception('test exception')
+    UpdateObjectMetadataExceptionHandler(cls_instance, exception)
+
+    cls_instance.logger.error.assert_called_once_with(exception)
+    self.assertFalse(cls_instance.everything_set_okay)
+
+  def testHoldFuncWrappers(self):
+    from gslib.utils.retention_util import (
+        SetTempHoldFuncWrapper,
+        ReleaseTempHoldFuncWrapper,
+        SetEventHoldFuncWrapper,
+        ReleaseEventHoldFuncWrapper
+    )
+    from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+
+    class MockClass(object):
+      def __init__(self):
+        self.calls = []
+
+      def ObjectUpdateMetadataFunc(self, metadata_update, log_template, name_expansion_result, thread_state=None):
+        self.calls.append((metadata_update, log_template, name_expansion_result, thread_state))
+
+    # 1. Set Temp Hold
+    cls_instance = MockClass()
+    SetTempHoldFuncWrapper(cls_instance, 'result', 'state')
+    self.assertEqual(len(cls_instance.calls), 1)
+    metadata_update, log_template, res, state = cls_instance.calls[0]
+    self.assertTrue(metadata_update.temporaryHold)
+    self.assertIsNone(metadata_update.eventBasedHold)
+    self.assertIn('Setting Temporary Hold', log_template)
+    self.assertEqual(res, 'result')
+    self.assertEqual(state, 'state')
+
+    # 2. Release Temp Hold
+    cls_instance = MockClass()
+    ReleaseTempHoldFuncWrapper(cls_instance, 'result', 'state')
+    self.assertEqual(len(cls_instance.calls), 1)
+    metadata_update, log_template, res, state = cls_instance.calls[0]
+    self.assertFalse(metadata_update.temporaryHold)
+    self.assertIsNone(metadata_update.eventBasedHold)
+    self.assertIn('Releasing Temporary Hold', log_template)
+
+    # 3. Set Event Hold
+    cls_instance = MockClass()
+    SetEventHoldFuncWrapper(cls_instance, 'result', 'state')
+    self.assertEqual(len(cls_instance.calls), 1)
+    metadata_update, log_template, res, state = cls_instance.calls[0]
+    self.assertTrue(metadata_update.eventBasedHold)
+    self.assertIsNone(metadata_update.temporaryHold)
+    self.assertIn('Setting Event-Based Hold', log_template)
+
+    # 4. Release Event Hold
+    cls_instance = MockClass()
+    ReleaseEventHoldFuncWrapper(cls_instance, 'result', 'state')
+    self.assertEqual(len(cls_instance.calls), 1)
+    metadata_update, log_template, res, state = cls_instance.calls[0]
+    self.assertFalse(metadata_update.eventBasedHold)
+    self.assertIsNone(metadata_update.temporaryHold)
+    self.assertIn('Releasing Event-Based Hold', log_template)
+
