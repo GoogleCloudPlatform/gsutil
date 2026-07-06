@@ -320,6 +320,7 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
                                        object_name,
                                        obj_metadata,
                                        provider=provider)
+
   def ClearPOSIXMetadata(self, obj):
     """Uses the setmeta command to clear POSIX attributes from user metadata.
 
@@ -336,7 +337,6 @@ class GsUtilIntegrationTestCase(base.GsUtilTestCase):
         'x-%s-meta-%s' % (provider_meta_string, MODE_ATTR),
         suri(obj)
     ])
-
 
   def _ServiceAccountCredentialsPresent(self):
     # TODO: Currently, service accounts cannot be project owners (unless
