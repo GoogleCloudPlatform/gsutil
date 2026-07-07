@@ -56,6 +56,11 @@ class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
   _get_acl_command = ['acl', 'get']
   _set_defacl_command = ['defacl', 'set']
   _get_defacl_command = ['defacl', 'get']
+  _set_ver_command = ['versioning', 'set']
+  _get_ver_command = ['versioning', 'get']
+  _set_web_command = ['web', 'set']
+  _get_web_command = ['web', 'get']
+  web_json_obj = json.loads('{"notFoundPage": "404", "mainPageSuffix": "main"}\n')
 
   @SkipForS3('A number of configs in this test are not supported by S3')
   def test_set_multi_config(self):
@@ -116,3 +121,38 @@ class TestBucketConfig(testcase.GsUtilIntegrationTestCase):
       acl_out = self.RunGsUtil(self._get_acl_command + [suri(bucket_uri)],
                                return_stdout=True)
       self.assertIn('allAuthenticatedUsers', acl_out)
+
+  @SkipForS3('A number of configs in this test are not supported by S3')
+  def test_set_multi_config_additional(self):
+    """Tests that bucket config patching handles versioning and website configs correctly."""
+    bucket_uri = self.CreateBucket()
+
+    # 1. Enable versioning.
+    self.RunGsUtil(self._set_ver_command + ['on', suri(bucket_uri)])
+    ver_out = self.RunGsUtil(self._get_ver_command + [suri(bucket_uri)],
+                             return_stdout=True)
+    self.assertEqual(ver_out.strip(), '%s: Enabled' % suri(bucket_uri))
+
+    # 2. Set website config.
+    self.RunGsUtil(self._set_web_command + ['-m', 'main', '-e', '404', suri(bucket_uri)])
+    web_out = self.RunGsUtil(self._get_web_command + [suri(bucket_uri)],
+                             return_stdout=True)
+    self.assertEqual(json.loads(web_out), self.web_json_obj)
+
+    # 3. Verify versioning is still enabled.
+    ver_out = self.RunGsUtil(self._get_ver_command + [suri(bucket_uri)],
+                             return_stdout=True)
+    self.assertEqual(ver_out.strip(), '%s: Enabled' % suri(bucket_uri))
+
+    # 4. Set CORS config.
+    cors_path = self.CreateTempFile(contents=self.cors_doc.encode(UTF8))
+    self.RunGsUtil(self._set_cors_command + [cors_path, suri(bucket_uri)])
+
+    # 5. Verify website config and versioning are still preserved.
+    web_out = self.RunGsUtil(self._get_web_command + [suri(bucket_uri)],
+                             return_stdout=True)
+    self.assertEqual(json.loads(web_out), self.web_json_obj)
+
+    ver_out = self.RunGsUtil(self._get_ver_command + [suri(bucket_uri)],
+                             return_stdout=True)
+    self.assertEqual(ver_out.strip(), '%s: Enabled' % suri(bucket_uri))

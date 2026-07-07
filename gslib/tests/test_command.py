@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 from unittest import mock
 
 from gslib import command
+from gslib.exception import CommandException
 from gslib.tests import testcase
 from gslib.utils import constants
 
@@ -90,3 +91,53 @@ class TestParseSubOpts(testcase.GsUtilUnitTestCase):
         gsutil_api_class_map_factory=mock.MagicMock())
     self.assertTrue(self._fake_command.quiet_mode)
     mock_logger.assert_called_once_with('fake_gsutil')
+
+  def test_check_arguments_fails_with_file_url_when_not_ok(self):
+    class FakeNoFileUrlCommand(FakeGsutilCommand):
+      command_spec = command.Command.CreateCommandSpec('fake_no_file',
+                                                       min_args=1,
+                                                       max_args=constants.NO_MAX,
+                                                       supported_sub_args='',
+                                                       file_url_ok=False)
+
+    with self.assertRaisesRegex(CommandException, 'does not support "file://" URLs'):
+      FakeNoFileUrlCommand(
+          command_runner=mock.ANY,
+          args=['file://local/file.txt'],
+          headers={},
+          debug=mock.ANY,
+          trace_token=mock.ANY,
+          parallel_operations=mock.ANY,
+          bucket_storage_uri_class=mock.ANY,
+          gsutil_api_class_map_factory=mock.MagicMock())
+
+  def test_check_arguments_fails_with_provider_url_when_not_ok(self):
+    class FakeNoProviderUrlCommand(FakeGsutilCommand):
+      command_spec = command.Command.CreateCommandSpec('fake_no_provider',
+                                                       min_args=1,
+                                                       max_args=constants.NO_MAX,
+                                                       supported_sub_args='',
+                                                       provider_url_ok=False)
+
+    with self.assertRaisesRegex(CommandException, 'does not support provider-only URLs'):
+      FakeNoProviderUrlCommand(
+          command_runner=mock.ANY,
+          args=['gs://'],
+          headers={},
+          debug=mock.ANY,
+          trace_token=mock.ANY,
+          parallel_operations=mock.ANY,
+          bucket_storage_uri_class=mock.ANY,
+          gsutil_api_class_map_factory=mock.MagicMock())
+
+  def test_init_raises_error_with_wrong_number_of_arguments(self):
+    with self.assertRaisesRegex(CommandException, 'requires at least 1 argument'):
+      FakeGsutilCommand(
+          command_runner=mock.ANY,
+          args=[],
+          headers={},
+          debug=mock.ANY,
+          trace_token=mock.ANY,
+          parallel_operations=mock.ANY,
+          bucket_storage_uri_class=mock.ANY,
+          gsutil_api_class_map_factory=mock.MagicMock())

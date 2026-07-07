@@ -23,7 +23,7 @@ import os
 import sys
 
 from gslib.cs_api_map import ApiSelector
-from gslib.exception import NO_URLS_MATCHED_TARGET
+from gslib.exception import CommandException, NO_URLS_MATCHED_TARGET
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import GenerationFromURI as urigen
@@ -208,6 +208,42 @@ class TestCat(testcase.GsUtilIntegrationTestCase):
           ['cat', '-r', '1-3', suri(object_uri)], return_stdout=True)
       self.assertEqual(stdout, '123')
 
+  def test_cat_nonexistent(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['cat', suri(bucket_uri) + 'nonexistent'],
+                            return_stderr=True,
+                            expected_status=1)
+    if self._use_gcloud_storage:
+      self.assertIn('The following URLs matched no objects or files', stderr)
+    else:
+      self.assertIn('NotFoundException', stderr)
+
+  def test_cat_header(self):
+    bucket_uri = self.CreateBucket()
+    obj_uri1 = self.CreateObject(bucket_uri=bucket_uri, contents=b'data1')
+    obj_uri2 = self.CreateObject(bucket_uri=bucket_uri, contents=b'data2')
+
+    # Test single object header
+    stdout, stderr = self.RunGsUtil(['cat', '-h', suri(obj_uri1)],
+                                    return_stdout=True,
+                                    return_stderr=True)
+    self.assertEqual(stdout, 'data1')
+    self.assertIn('==> %s <==' % suri(obj_uri1), stderr)
+
+    # Test multiple objects header.
+    stdout, stderr = self.RunGsUtil(['cat', '-h', suri(obj_uri1), suri(obj_uri2)],
+                                    return_stdout=True,
+                                    return_stderr=True)
+    self.assertEqual(stdout, 'data1data2')
+    self.assertIn('==> %s <==' % suri(obj_uri1), stderr)
+    self.assertIn('==> %s <==' % suri(obj_uri2), stderr)
+
+  def test_cat_special_range_dash(self):
+    bucket_uri = self.CreateBucket()
+    obj_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'hello')
+    stdout = self.RunGsUtil(['cat', '-r', '-', suri(obj_uri)], return_stdout=True)
+    self.assertEqual(stdout, 'hello')
+
 
 class TestShimCatFlags(testcase.ShimUnitTestBase):
   """Unit tests for shimming cat flags"""
@@ -292,3 +328,10 @@ class TestCatHelper(testcase.GsUtilUnitTestCase):
                   [mock_part_one, mock_part_two])
     self.assertIn(write_flush_collector_mock.call_args_list[2:4],
                   [mock_part_one, mock_part_two])
+
+
+class TestCatUnit(testcase.GsUtilUnitTestCase):
+
+  def test_cat_invalid_range_raises_error(self):
+    with self.assertRaisesRegex(CommandException, 'Invalid range'):
+      self.RunCommand('cat', ['-r', 'invalid', 'gs://bucket/obj'])

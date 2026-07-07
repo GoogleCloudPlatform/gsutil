@@ -69,3 +69,24 @@ class TestGcsJsonApi(testcase.GsUtilUnitTestCase):
                                ('Credentials', 'gs_host', None)]):
       client = gcs_json_api.GcsJsonApi(None, None, None, None)
       self.assertEqual(client.host_base, gcs_json_api.DEFAULT_HOST)
+
+  def testRaisesErrorIfGsHostSetButNotGsJsonHost(self):
+    with SetBotoConfigForTest([('Credentials', 'gs_json_host', None),
+                               ('Credentials', 'gs_host', 'xml-host')]):
+      with self.assertRaisesRegex(cloud_api.ArgumentException,
+                                  'gs_json_host is not configured'):
+        gcs_json_api.GcsJsonApi(None, None, None, None)
+
+  def testRaisesErrorIfGsPortSetButNotGsJsonPort(self):
+    with SetBotoConfigForTest([('Credentials', 'gs_json_port', None),
+                               ('Credentials', 'gs_port', '8080')]):
+      with self.assertRaisesRegex(cloud_api.ArgumentException,
+                                  'gs_json_port is not configured'):
+        gcs_json_api.GcsJsonApi(None, None, None, None)
+
+  def testSetsCustomHostHeader(self):
+    with SetBotoConfigForTest([('Credentials', 'gs_json_host', 'host'),
+                               ('Credentials', 'gs_json_host_header', 'custom-header')]):
+      client = gcs_json_api.GcsJsonApi(None, None, None, None)
+      self.assertEqual(client.api_client.additional_http_headers.get('Host'),
+                       'custom-header')
