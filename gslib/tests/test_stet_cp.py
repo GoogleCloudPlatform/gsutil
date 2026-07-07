@@ -154,9 +154,10 @@ class TestStetCp(testcase.GsUtilIntegrationTestCase):
 
   def test_stet_failure_raises(self):
     # Create a STET binary that exits with error code 1
-    failing_stet_binary = """#!/bin/sh
-echo "Simulated STET binary failure" >&2
-exit 2
+    failing_stet_binary = """#!/usr/bin/env python
+import sys
+sys.stderr.write("Simulated STET binary failure\\n")
+sys.exit(2)
 """
     failing_binary_path = self.CreateTempFile(contents=failing_stet_binary)
     current_stat = os.stat(failing_binary_path)

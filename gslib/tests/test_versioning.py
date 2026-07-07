@@ -19,6 +19,10 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
 from gslib.commands import versioning
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
@@ -26,7 +30,6 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.utils import shim_util
 from gslib.utils.retry_util import Retry
-from unittest import mock
 
 
 class TestVersioning(testcase.GsUtilIntegrationTestCase):
@@ -103,15 +106,22 @@ class TestVersioning(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
 
     # 1. Invalid subcommand
-    stderr = self.RunGsUtil(['versioning', 'invalid', suri(bucket_uri)], expected_status=1, return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['versioning', 'invalid', suri(bucket_uri)],
+        expected_status=1,
+        return_stderr=True)
     self.assertIn('Invalid subcommand "invalid"', stderr)
 
     # 2. Invalid setting value
-    stderr = self.RunGsUtil(['versioning', 'set', 'maybe', suri(bucket_uri)], expected_status=1, return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['versioning', 'set', 'maybe', suri(bucket_uri)],
+        expected_status=1,
+        return_stderr=True)
     self.assertIn('must be either <on|off>', stderr)
 
     # 3. Provider URL
-    stderr = self.RunGsUtil(['versioning', 'get', 'gs://'], expected_status=1, return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['versioning', 'get', 'gs://'], expected_status=1, return_stderr=True)
     self.assertIn('does not support provider-only URLs', stderr)
 
 

@@ -114,21 +114,33 @@ class TestUbla(testcase.GsUtilIntegrationTestCase):
           ('Credentials', 'gs_service_client_id', None),
           ('Credentials', 'gs_service_key_file', None),
       ]):
-        stderr = self.RunGsUtil(['ubla', 'get', 'gs://foo'], expected_status=1, return_stderr=True)
+        stderr = self.RunGsUtil(
+            ['ubla', 'get', 'gs://foo'],
+            expected_status=1,
+            return_stderr=True)
       self.assertIn('can only be used with the Cloud Storage JSON API', stderr)
       return
 
     bucket_uri = self.CreateBucket()
 
     # 1. Invalid subcommand
-    stderr = self.RunGsUtil(['ubla', 'invalid', suri(bucket_uri)], expected_status=1, return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['ubla', 'invalid', suri(bucket_uri)],
+        expected_status=1,
+        return_stderr=True)
     self.assertIn('Invalid subcommand "invalid", use get|set instead', stderr)
 
     # 2. Invalid setting value
-    stderr = self.RunGsUtil(['ubla', 'set', 'maybe', suri(bucket_uri)], expected_status=1, return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['ubla', 'set', 'maybe', suri(bucket_uri)],
+        expected_status=1,
+        return_stderr=True)
     self.assertIn('Only on and off values allowed for set option', stderr)
 
     # 3. Non-GCS bucket URL
-    stderr = self.RunGsUtil(['ubla', 'get', 's3://some-bucket'], expected_status=1, return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['ubla', 'get', 's3://some-bucket'],
+        expected_status=1,
+        return_stderr=True)
     self.assertTrue('AccessDenied' in stderr or 'only be used with gs://' in stderr)
 

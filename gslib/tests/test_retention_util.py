@@ -16,20 +16,33 @@
 
 from __future__ import absolute_import
 
-from unittest import mock
+import datetime
 
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
+from gslib.exception import CommandException
+from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
 import gslib.tests.testcase as testcase
 from gslib.utils.retention_util import _RetentionPeriodToString
+from gslib.utils.retention_util import ConfirmLockRequest
 from gslib.utils.retention_util import DaysToSeconds
 from gslib.utils.retention_util import MonthsToSeconds
+from gslib.utils.retention_util import ReleaseEventHoldFuncWrapper
+from gslib.utils.retention_util import ReleaseTempHoldFuncWrapper
 from gslib.utils.retention_util import RetentionInDaysMatch
 from gslib.utils.retention_util import RetentionInMonthsMatch
 from gslib.utils.retention_util import RetentionInSeconds
 from gslib.utils.retention_util import RetentionInSecondsMatch
 from gslib.utils.retention_util import RetentionInYearsMatch
+from gslib.utils.retention_util import RetentionPolicyToString
 from gslib.utils.retention_util import SECONDS_IN_DAY
 from gslib.utils.retention_util import SECONDS_IN_MONTH
 from gslib.utils.retention_util import SECONDS_IN_YEAR
+from gslib.utils.retention_util import SetEventHoldFuncWrapper
+from gslib.utils.retention_util import SetTempHoldFuncWrapper
+from gslib.utils.retention_util import UpdateObjectMetadataExceptionHandler
 from gslib.utils.retention_util import YearsToSeconds
 
 
@@ -159,8 +172,6 @@ class TestRetentionUtil(testcase.GsUtilUnitTestCase):
                      r'Duration: 31557601 Seconds \(~365 Day\(s\)\)')
 
   def testRetentionInSecondsInvalidRaises(self):
-    from gslib.exception import CommandException
-
     with self.assertRaisesRegex(CommandException, 'Incorrect retention period specified'):
       RetentionInSeconds('10')
 
@@ -171,9 +182,6 @@ class TestRetentionUtil(testcase.GsUtilUnitTestCase):
       RetentionInSeconds('abc')
 
   def testRetentionPolicyToString(self):
-    from gslib.utils.retention_util import RetentionPolicyToString
-    import datetime
-
     # 1. No Policy
     self.assertEqual(
         RetentionPolicyToString(None, 'gs://my-bucket'),
@@ -209,9 +217,6 @@ class TestRetentionUtil(testcase.GsUtilUnitTestCase):
 
   @mock.patch('gslib.utils.retention_util.input')
   def testConfirmLockRequest(self, mock_input):
-    from gslib.utils.retention_util import ConfirmLockRequest
-    import datetime
-
     class MockRetentionPolicy(object):
       def __init__(self, period, is_locked, effective_time):
         self.retentionPeriod = period
@@ -237,8 +242,6 @@ class TestRetentionUtil(testcase.GsUtilUnitTestCase):
     self.assertTrue(ConfirmLockRequest('gs://my-bucket', policy))
 
   def testUpdateObjectMetadataExceptionHandler(self):
-    from gslib.utils.retention_util import UpdateObjectMetadataExceptionHandler
-
     class MockClass(object):
       def __init__(self):
         self.logger = mock.Mock()
@@ -252,14 +255,6 @@ class TestRetentionUtil(testcase.GsUtilUnitTestCase):
     self.assertFalse(cls_instance.everything_set_okay)
 
   def testHoldFuncWrappers(self):
-    from gslib.utils.retention_util import (
-        SetTempHoldFuncWrapper,
-        ReleaseTempHoldFuncWrapper,
-        SetEventHoldFuncWrapper,
-        ReleaseEventHoldFuncWrapper
-    )
-    from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
-
     class MockClass(object):
       def __init__(self):
         self.calls = []

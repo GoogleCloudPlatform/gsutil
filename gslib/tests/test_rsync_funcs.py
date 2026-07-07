@@ -21,7 +21,9 @@ from __future__ import unicode_literals
 
 import logging
 import os
-from unittest import mock
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 from gslib.commands.rsync import _ComputeNeededFileChecksums
 from gslib.commands.rsync import _NA
@@ -102,7 +104,6 @@ class TestRsyncFuncs(GsUtilUnitTestCase):
 
   def test_batch_sort(self):
     from gslib.commands.rsync import _BatchSort
-    import tempfile
 
     lines = [
         'gs://bucket/object_c 10 123456789 - - - - - -\n',
@@ -110,22 +111,19 @@ class TestRsyncFuncs(GsUtilUnitTestCase):
         'gs://bucket/object_b 30 123456789 - - - - - -\n',
     ]
 
-    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as out_file:
-      filename = out_file.name
-      try:
-        # Sort lines
-        _BatchSort(iter(lines), out_file)
-        out_file.seek(0)
-        sorted_lines = out_file.readlines()
+    filename = self.CreateTempFile()
+    with open(filename, 'w+') as out_file:
+      # Sort lines
+      _BatchSort(iter(lines), out_file)
+      out_file.seek(0)
+      sorted_lines = out_file.readlines()
 
-        expected_sorted = [
-            'gs://bucket/object_a 20 123456789 - - - - - -\n',
-            'gs://bucket/object_b 30 123456789 - - - - - -\n',
-            'gs://bucket/object_c 10 123456789 - - - - - -\n',
-        ]
-        self.assertEqual(sorted_lines, expected_sorted)
-      finally:
-        os.unlink(filename)
+      expected_sorted = [
+          'gs://bucket/object_a 20 123456789 - - - - - -\n',
+          'gs://bucket/object_b 30 123456789 - - - - - -\n',
+          'gs://bucket/object_c 10 123456789 - - - - - -\n',
+      ]
+      self.assertEqual(sorted_lines, expected_sorted)
 
   @mock.patch('os.path.islink')
   def test_diff_to_apply_arg_checker(self, mock_islink):

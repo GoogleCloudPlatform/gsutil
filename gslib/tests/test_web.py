@@ -98,11 +98,15 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
     bucket_uri = self.CreateBucket()
 
     # 1. Invalid subcommand
-    stderr = self.RunGsUtil(['web', 'invalid', suri(bucket_uri)], expected_status=1, return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['web', 'invalid', suri(bucket_uri)],
+        expected_status=1,
+        return_stderr=True)
     self.assertIn('Invalid subcommand "invalid"', stderr)
 
     # 2. Provider URL
-    stderr = self.RunGsUtil(['web', 'get', 'gs://'], expected_status=1, return_stderr=True)
+    stderr = self.RunGsUtil(
+        ['web', 'get', 'gs://'], expected_status=1, return_stderr=True)
     self.assertTrue('does not support provider-only' in stderr or 'TypeError' in stderr)
 
 
