@@ -105,7 +105,7 @@ class TestLogging(testcase.GsUtilIntegrationTestCase):
   def testLoggingNonBucketLogBucketFails(self):
     bucket_uri = self.CreateBucket()
     bucket_suri = suri(bucket_uri)
-    stderr = self.RunGsUtil(['logging', 'set', 'on', '-b', bucket_suri + '/obj', bucket_suri],
+    stderr = self.RunGsUtil(['logging', 'set', 'on', '-b', suri(bucket_uri, 'obj'), bucket_suri],
                             return_stderr=True, expected_status=1)
     self.assertIn('must specify a bucket URL', stderr)
 

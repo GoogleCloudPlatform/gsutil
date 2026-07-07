@@ -28,7 +28,9 @@ from gslib.exception import CommandException
 from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
 import gslib.tests.testcase as testcase
 from gslib.utils.boto_util import GetJsonResumableChunkSize
-from unittest import mock
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 from gslib.utils.hashing_helper import CalculateHashesFromContents
 from gslib.utils.hashing_helper import CalculateMd5FromContents

@@ -150,11 +150,11 @@ class TestPublicAccessPrevention(testcase.GsUtilIntegrationTestCase):
   @SkipForXML('Public access prevention only runs on GCS JSON API')
   def test_target_object_fails(self):
     bucket_uri = self.CreateBucket()
-    stderr = self.RunGsUtil(self._get_pap_cmd + [suri(bucket_uri) + '/obj'],
+    stderr = self.RunGsUtil(self._get_pap_cmd + [suri(bucket_uri, 'obj')],
                             return_stderr=True, expected_status=1)
     self.assertIn('must specify a bucket', stderr.lower())
 
-    stderr = self.RunGsUtil(self._set_pap_cmd + ['enforced', suri(bucket_uri) + '/obj'],
+    stderr = self.RunGsUtil(self._set_pap_cmd + ['enforced', suri(bucket_uri, 'obj')],
                             return_stderr=True, expected_status=1)
     self.assertIn('must specify a bucket', stderr.lower())
 

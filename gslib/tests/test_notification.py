@@ -82,7 +82,7 @@ class TestNotificationUnit(testcase.GsUtilUnitTestCase):
     bucket_uri = self.CreateBucket()
     with self.assertRaisesRegex(exception.CommandException,
                                 'can only be used with gs:// bucket URLs'):
-      self.RunCommand('notification', ['watchbucket', 'https://example.com', suri(bucket_uri) + '/obj'])
+      self.RunCommand('notification', ['watchbucket', 'https://example.com', suri(bucket_uri, 'obj')])
 
   def test_create_invalid_payload_format_fails(self):
     bucket_uri = self.CreateBucket()

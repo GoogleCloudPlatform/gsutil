@@ -326,7 +326,7 @@ class TestHashHelpers(testcase.GsUtilUnitTestCase):
 
     with open(tmp_file, 'rb') as fp:
       crc = CalculateB64EncodedCrc32cFromContents(fp)
-    with open(tmp_file, 'rb') as fp:
+      fp.seek(0)
       md5 = CalculateB64EncodedMd5FromContents(fp)
 
     self.assertEqual(crc, 'nYmSiA==')

@@ -94,7 +94,7 @@ class TestPosixUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(deserialized.mode.permissions, 644)
 
   @mock.patch.object(logging.Logger, 'warning')
-  @mock.patch.object(logging.Logger, 'warn')
+  @mock.patch.object(logging.Logger, 'warn', create=True)
   def test_deserialize_invalid_attributes(self, mock_warn, mock_warning):
     # Some logging versions/configurations call .warning instead of .warn
     from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages

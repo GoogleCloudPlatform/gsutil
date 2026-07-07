@@ -131,11 +131,7 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
     mock_wildcard_iterator.return_value = mock_iterator
 
     mock_logger = mock.Mock()
-    def get_logger_side_effect(name=None):
-      if name is None:
-        return mock_logger
-      return mock.MagicMock()
-    mock_get_logger.side_effect = get_logger_side_effect
+    mock_get_logger.return_value = mock_logger
 
     self.RunCommand('hash', args=['gs://b/obj_no_hashes'])
     mock_logger.warn.assert_called_with('No hashes present for %s', 'gs://b/obj_no_hashes')
