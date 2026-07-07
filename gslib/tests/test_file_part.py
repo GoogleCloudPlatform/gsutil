@@ -101,3 +101,31 @@ class TestFilePart(testcase.GsUtilUnitTestCase):
 
     empty_file = fp.read()
     self.assertEqual(b'', empty_file)
+
+  def test_context_manager(self):
+    fpath = self.CreateTempFile(contents=b'abcdefg')
+    fp = FilePart(fpath, 1, 3)
+    with fp:
+      self.assertEqual(fp.read(), b'bcd')
+      underlying_fp = fp._fp
+      self.assertFalse(underlying_fp.closed)
+    self.assertTrue(underlying_fp.closed)
+
+  def test_close(self):
+    fpath = self.CreateTempFile(contents=b'abcdefg')
+    fp = FilePart(fpath, 1, 3)
+    fp.close()
+    with self.assertRaises(ValueError):
+      fp.read()
+
+  def test_unsupported_operations_raise_not_implemented_error(self):
+    fpath = self.CreateTempFile(contents=b'abcdefg')
+    fp = FilePart(fpath, 1, 3)
+    unsupported_methods = [
+        'flush', 'fileno', 'isatty', 'next', 'readline', 'readlines',
+        'xreadlines', 'truncate', 'write', 'writelines'
+    ]
+    for method_name in unsupported_methods:
+      method = getattr(fp, method_name)
+      with self.assertRaises(NotImplementedError):
+        method()

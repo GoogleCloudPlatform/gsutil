@@ -20,12 +20,37 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import re
+from unittest import mock
 from unittest import skipIf
 
+from gslib import exception
+from gslib.commands import defstorageclass
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
+from gslib.tests.util import unittest
+from gslib.utils import shim_util
+
+
+class TestDefStorageClassUnit(testcase.GsUtilUnitTestCase):
+
+  def test_s3_fails_validation(self):
+    with self.assertRaisesRegex(exception.CommandException,
+                                'does not support the URL "s3://bucket"'):
+      self.RunCommand('defstorageclass', ['get', 's3://bucket'])
+
+  def test_too_few_arguments_get_fails(self):
+    with self.assertRaisesRegex(exception.CommandException,
+                                'requires at least 2 arguments'):
+      self.RunCommand('defstorageclass', ['get'])
+
+  def test_too_few_arguments_set_fails(self):
+    with self.assertRaisesRegex(exception.CommandException,
+                                'requires at least 2 arguments'):
+      self.RunCommand('defstorageclass', ['set'])
 
 
 @SkipForS3('S3 does not support storage class at bucket level.')
@@ -136,3 +161,54 @@ class TestDefStorageClass(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True,
                             expected_status=1)
     self.assertIn(failure_msg, stderr)
+
+
+class TestDefStorageClassShim(testcase.ShimUnitTestBase):
+
+  @mock.patch.object(defstorageclass.DefStorageClassCommand, '_GetDefStorageClass', new=mock.Mock())
+  def test_shim_translates_get_command(self):
+    bucket_uri = self.CreateBucket()
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('defstorageclass', [
+            'get',
+            suri(bucket_uri),
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        expected_command = (
+            'Gcloud Storage Command: %s storage buckets list'
+            ' --format=value[separator=": "](name.sub("%s", "gs://"),storageClass)'
+            ' --raw %s'
+        ) % (
+            shim_util._get_gcloud_binary_path('fake_dir'),
+            shim_util.get_format_flag_caret(),
+            suri(bucket_uri),
+        )
+        self.assertIn(expected_command, info_lines)
+
+  @mock.patch.object(defstorageclass.DefStorageClassCommand, '_SetDefStorageClass', new=mock.Mock())
+  def test_shim_translates_set_command(self):
+    bucket_uri = self.CreateBucket()
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('defstorageclass', [
+            'set',
+            'nearline',
+            suri(bucket_uri),
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        expected_command = (
+            'Gcloud Storage Command: %s storage buckets update'
+            ' --default-storage-class nearline %s'
+        ) % (shim_util._get_gcloud_binary_path('fake_dir'), suri(bucket_uri))
+        self.assertIn(expected_command, info_lines)
