@@ -30,6 +30,9 @@ from gslib.tests.util import SetBotoConfigForTest
 from gslib.utils.encryption_helper import Base64Sha256FromBase64EncryptionKey
 from gslib.utils.encryption_helper import CryptoKeyWrapperFromKey
 from gslib.utils.encryption_helper import FindMatchingCSEKInBotoConfig
+from gslib.utils.encryption_helper import GetEncryptionKeyWrapper
+from gslib.utils.encryption_helper import ValidateCMEK
+from gslib.utils.encryption_helper import _GetAndVerifyBase64EncryptionKey
 
 
 class TestEncryptionHelper(GsUtilUnitTestCase):
@@ -113,3 +116,37 @@ class TestEncryptionHelper(GsUtilUnitTestCase):
     self.assertIn(
         'Configured encryption_key or decryption_key looked like a CMEK',
         cm.exception.reason)
+
+  def testValidateCMEKLeadingSlashRaises(self):
+    invalid_key = (
+        '/projects/my-project/locations/some-location/keyRings/keyring/'
+        'cryptoKeys/somekey')
+    with self.assertRaisesRegex(CommandException, 'should not start with leading slash'):
+      ValidateCMEK(invalid_key)
+
+  def testGetEncryptionKeyWrapper(self):
+    # 1. No key configured.
+    with SetBotoConfigForTest([]):
+      self.assertIsNone(GetEncryptionKeyWrapper(boto.config))
+
+    # 2. Valid key configured.
+    key = base64.b64encode(os.urandom(32)).decode('ascii')
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', key)]):
+      wrapper = GetEncryptionKeyWrapper(boto.config)
+      self.assertIsNotNone(wrapper)
+      self.assertEqual(wrapper.crypto_key, key)
+
+  def testGetAndVerifyBase64EncryptionKey(self):
+    # 1. No key configured.
+    with SetBotoConfigForTest([]):
+      self.assertIsNone(_GetAndVerifyBase64EncryptionKey(boto.config))
+
+    # 2. Valid key configured.
+    key = base64.b64encode(os.urandom(32)).decode('ascii')
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', key)]):
+      self.assertEqual(_GetAndVerifyBase64EncryptionKey(boto.config), key)
+
+    # 3. Invalid base64 key configured.
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', 'invalid!!!')]):
+      with self.assertRaisesRegex(CommandException, 'is not a valid base64 string'):
+        _GetAndVerifyBase64EncryptionKey(boto.config)

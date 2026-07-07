@@ -98,3 +98,14 @@ class TestExecutionUtil(testcase.GsUtilUnitTestCase):
 
     with self.assertRaisesRegex(exception.ExternalBinaryError, 'error'):
       execution_util.ExecuteExternalCommand(['fake-command'])
+
+  @mock.patch.object(subprocess, 'Popen')
+  def testExternalCommandRaisesOSError(self, mock_Popen):
+    mock_Popen.side_effect = OSError('No such file or directory')
+
+    with self.assertRaises(OSError):
+      execution_util.ExecuteExternalCommand(['fake-command'])
+
+    mock_Popen.assert_called_once_with(['fake-command'],
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)

@@ -113,3 +113,21 @@ class TestCopyObjectsIterator(testcase.GsUtilUnitTestCase):
     self.assertEqual(len(copy_objects_iterator.provider_types), 3)
     self.assertTrue('s3' in copy_objects_iterator.provider_types)
     self.assertTrue(copy_objects_iterator.is_daisy_chain)
+
+  def test_iterator_explicit_daisy_chain(self):
+    src_strings_array = [['gs://bucket1'], ['gs://bucket2']]
+    dst_strings = ['gs://bucket3', 'gs://bucket4']
+
+    # Initialize with is_daisy_chain=True.
+    copy_objects_iterator = CopyObjectsIterator(
+        _ConstrcutNameExpansionIteratorDestinationTupleIterator(
+            src_strings_array, dst_strings), True)
+
+    self.assertTrue(copy_objects_iterator.is_daisy_chain)
+
+    next(copy_objects_iterator)
+    # Even though both source and destination are gs://, is_daisy_chain should remain True.
+    self.assertTrue(copy_objects_iterator.is_daisy_chain)
+
+    next(copy_objects_iterator)
+    self.assertTrue(copy_objects_iterator.is_daisy_chain)

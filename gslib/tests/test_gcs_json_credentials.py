@@ -230,3 +230,76 @@ class TestGcsJsonCredentials(testcase.GsUtilUnitTestCase):
                                  })):
       with self.assertRaises(CommandException):
         gcs_json_api.GcsJsonApi(None, None, None, None)
+
+  def testServiceAccountJsonInvalidJsonRaises(self):
+    tmpfile = self.CreateTempFile(contents=b'{"invalid_json": ')
+    with SetBotoConfigForTest(
+        getBotoCredentialsConfig(service_account_creds={
+            "keyfile": tmpfile,
+            "client_id": "?",
+        })):
+      with self.assertRaisesRegex(Exception, 'Could not parse JSON keyfile'):
+        gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+
+  def testServiceAccountJsonMissingFieldsRaises(self):
+    import json
+    required_fields = ['client_id', 'client_email', 'private_key_id', 'private_key']
+    base_dict = {
+        'client_id': '123',
+        'client_email': 'a@b.com',
+        'private_key_id': '456',
+        'private_key': 'abc'
+    }
+
+    for missing_field in required_fields:
+      test_dict = base_dict.copy()
+      del test_dict[missing_field]
+
+      tmpfile = self.CreateTempFile(contents=json.dumps(test_dict).encode('utf-8'))
+      with SetBotoConfigForTest(
+          getBotoCredentialsConfig(service_account_creds={
+              "keyfile": tmpfile,
+              "client_id": "?",
+          })):
+        with self.assertRaisesRegex(Exception, 'did not contain the required entry: %s' % missing_field):
+          gcs_json_api.GcsJsonApi(None, logging.getLogger(), None, None)
+
+  @unittest.skipUnless(HAS_CRYPTO, 'p12credentials requires cryptography.')
+  def testPKCS12SignerInvalidKeyfileRaises(self):
+    with self.assertRaisesRegex(CommandException, 'Unable to load the keyfile'):
+      gcs_json_credentials.CreateP12ServiceAccount(b'invalid-p12-data', b'password')
+
+  @unittest.skipUnless(HAS_CRYPTO, 'p12credentials requires cryptography.')
+  def testPKCS12SignerInvalidPasswordRaises(self):
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.serialization import pkcs12
+    from cryptography.hazmat.primitives import serialization
+    import datetime
+
+    # 1. Generate private key and self-signed certificate
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = issuer = x509.Name([])
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - datetime.timedelta(days=1))
+        .not_valid_after(now + datetime.timedelta(days=1))
+        .sign(private_key, hashes.SHA256())
+    )
+
+    # 2. Serialize to PKCS12 format with password b'correct-password'
+    p12_data = pkcs12.serialize_key_and_certificates(
+        b'test', private_key, cert, None,
+        serialization.BestAvailableEncryption(b'correct-password')
+    )
+
+    # 3. Assert that attempting to create a signer/credentials with incorrect password fails
+    with self.assertRaisesRegex(CommandException, 'Unable to load the keyfile'):
+      gcs_json_credentials.CreateP12ServiceAccount(p12_data, b'incorrect-password')
+
