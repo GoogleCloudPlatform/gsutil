@@ -97,6 +97,46 @@ class TestHashUnit(testcase.GsUtilUnitTestCase):
     self.assertNotIn('md5', stdout_crc)
     self.assertNotIn('crc32c', stdout_md5)
 
+  @mock.patch('gslib.utils.boto_util.UsingCrcmodExtension')
+  def testSlowCrcmodWarning(self, mock_using_crcmod):
+    from gslib.utils import hashing_helper
+    mock_using_crcmod.return_value = False
+    tmp_file = self.CreateTempFile(contents=_TEST_FILE_CONTENTS)
+    mock_log_handler = self.RunCommand('hash',
+                                       args=['-c', tmp_file],
+                                       return_log_handler=True)
+    warning_lines = '\n'.join(mock_log_handler.messages['warning'])
+    self.assertIn(hashing_helper.SLOW_CRCMOD_WARNING, warning_lines)
+
+  @mock.patch('gslib.commands.hash.StorageUrlFromString')
+  @mock.patch.object(hash.HashCommand, 'WildcardIterator')
+  @mock.patch('logging.getLogger')
+  def testHashCloudObjectNoHashes(self, mock_get_logger, mock_wildcard_iterator, mock_storage_url_from_string):
+    mock_url = mock.Mock()
+    mock_url.IsFileUrl.return_value = False
+    mock_url.object_name = 'obj_no_hashes'
+    mock_storage_url_from_string.return_value = mock_url
+
+    mock_obj_metadata = mock.Mock()
+    mock_obj_metadata.size = 100
+    mock_obj_metadata.md5Hash = None
+    mock_obj_metadata.crc32c = None
+
+    mock_file_ref = mock.Mock()
+    mock_file_ref.storage_url = mock_url
+    mock_file_ref.root_object = mock_obj_metadata
+
+    mock_iterator = mock.Mock()
+    mock_iterator.IterObjects.return_value = [mock_file_ref]
+    mock_wildcard_iterator.return_value = mock_iterator
+
+    mock_logger = mock.Mock()
+    mock_get_logger.return_value = mock_logger
+
+    self.RunCommand('hash', args=['gs://b/obj_no_hashes'])
+    mock_logger.warn.assert_called_with('No hashes present for %s', 'gs://b/obj_no_hashes')
+
+
 
 class TestHash(testcase.GsUtilIntegrationTestCase):
   """Integration tests for hash command."""
@@ -212,3 +252,20 @@ class TestHashShim(testcase.ShimUnitTestBase):
                        ' --skip-md5 gs://b/o').format(
                            shim_util._get_gcloud_binary_path('fake_dir'),
                            hash._GCLOUD_FORMAT_STRING), info_lines)
+
+  @mock.patch.object(hash.HashCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_hex_flag(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('hash', ['-h', 'gs://b/o'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage hash {}'
+                       ' --hex gs://b/o').format(
+                           shim_util._get_gcloud_binary_path('fake_dir'),
+                           hash._GCLOUD_FORMAT_STRING), info_lines)
+
