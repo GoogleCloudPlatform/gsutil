@@ -24,6 +24,7 @@ from random import randint
 from unittest import mock
 
 from gslib.cloud_api import AccessDeniedException
+from gslib.exception import CommandException
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForJSON
@@ -254,6 +255,37 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
       self.fail('Did not get expected AccessDeniedException')
     except AccessDeniedException as e:
       self.assertIn('Permission denied', e.reason)
+
+  def test_kms_invalid_subcommand(self):
+    try:
+      self.RunCommand('kms', ['invalid_subcommand'])
+      self.fail('Did not get expected CommandException')
+    except CommandException as e:
+      self.assertIn('Invalid subcommand "invalid_subcommand" for the kms command.', e.reason)
+
+  def test_warn_without_encryption_subcommand_fails(self):
+    try:
+      self.RunCommand('kms', ['authorize', '-w', '-k', _DUMMY_KEYNAME])
+      self.fail('Did not get expected CommandException')
+    except CommandException as e:
+      self.assertIn('option should only be specified for the "encryption"', e.reason)
+
+  def test_warn_without_key_option_fails(self):
+    bucket_uri = self.CreateBucket()
+    try:
+      self.RunCommand('kms', ['encryption', '-w', suri(bucket_uri)])
+      self.fail('Did not get expected CommandException')
+    except CommandException as e:
+      self.assertIn('must be used with the "-k" option', e.reason)
+
+  def test_authorize_without_key_fails(self):
+    try:
+      self.RunCommand('kms', ['authorize'])
+      self.fail('Did not get expected CommandException')
+    except CommandException as e:
+      self.assertIn('requires a key to be specified with -k', e.reason)
+
+
 
 
 class TestKmsUnitTestsWithShim(testcase.ShimUnitTestBase):
