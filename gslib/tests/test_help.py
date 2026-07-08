@@ -67,6 +67,16 @@ class HelpUnitTests(testcase.GsUtilUnitTestCase):
     stdout = self.RunCommand('cp', ['foo', 'bar', '--help'], return_stdout=True)
     self.assertIn('cp - Copy files and objects', stdout)
 
+  def test_help_invalid_command_arg(self):
+    stdout = self.RunCommand('help', ['nonexistent-command-xyz'], return_stdout=True)
+    self.assertIn('No help available for "nonexistent-command-xyz"', stdout)
+
+  def test_help_deprecation_warning(self):
+    stdout = self.RunCommand('help', ['chacl'], return_stdout=True)
+    self.assertIn('DEPRECATION WARNING', stdout)
+    self.assertIn('alias is deprecated', stdout)
+
+
 
 class HelpIntegrationTests(testcase.GsUtilIntegrationTestCase):
   """Help command integration test suite."""

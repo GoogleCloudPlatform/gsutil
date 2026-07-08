@@ -28,6 +28,9 @@ from gslib.exception import CommandException
 from gslib.resumable_streaming_upload import ResumableStreamingJsonUploadWrapper
 import gslib.tests.testcase as testcase
 from gslib.utils.boto_util import GetJsonResumableChunkSize
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 from gslib.utils.constants import TRANSFER_BUFFER_SIZE
 from gslib.utils.hashing_helper import CalculateHashesFromContents
 from gslib.utils.hashing_helper import CalculateMd5FromContents
@@ -266,3 +269,30 @@ class TestResumableStreamingJsonUploadWrapper(testcase.GsUtilUnitTestCase):
               self.fail('Got unexpected CommandException "%s" for '
                         'seek_back size %s, buffer size %s' %
                         (str(e), seek_back, buffer_size))
+
+  def testModeProperty(self):
+    mock_stream = mock.Mock()
+    mock_stream.mode = 'rb'
+    wrapper = ResumableStreamingJsonUploadWrapper(mock_stream,
+                                                  TRANSFER_BUFFER_SIZE,
+                                                  test_small_buffer=True)
+    self.assertEqual(wrapper.mode, 'rb')
+
+  def testCloseDelegatesToStream(self):
+    mock_stream = mock.Mock()
+    wrapper = ResumableStreamingJsonUploadWrapper(mock_stream,
+                                                  TRANSFER_BUFFER_SIZE,
+                                                  test_small_buffer=True)
+    wrapper.close()
+    mock_stream.close.assert_called_once_with()
+
+  def testInvalidSeekWhenceRaises(self):
+    mock_stream = mock.Mock()
+    wrapper = ResumableStreamingJsonUploadWrapper(mock_stream,
+                                                  TRANSFER_BUFFER_SIZE,
+                                                  test_small_buffer=True)
+    with self.assertRaises(CommandException) as cm:
+      # SEEK_CUR (1) is not supported
+      wrapper.seek(10, whence=os.SEEK_CUR)
+    self.assertIn('Invalid seek mode on streaming upload', str(cm.exception))
+

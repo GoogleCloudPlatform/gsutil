@@ -43,6 +43,7 @@ import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SequentialAndParallelTransfer
+from gslib.tests.util import SetBotoConfigForTest
 from gslib.utils.retry_util import Retry
 
 
@@ -243,3 +244,31 @@ class TestParallelCp(testcase.GsUtilIntegrationTestCase):
       self.assertEqual(suri(dst_bucket_uri, 'd1', 'd3', 'd4', 'nested', 'f1'),
                        lines[2])
       self.assertEqual(suri(dst_bucket_uri, 'd1', 'placeholder'), lines[3])
+
+  @SkipForS3('Parallel composite uploads are only supported for GCS')
+  def testParallelCompositeUploadThresholdRespected(self):
+    dst_bucket_uri = self.CreateBucket()
+    # Create a 2-byte file (larger than 1-byte threshold)
+    src_file = self.CreateTempFile(contents=b'ab')
+
+    # 1. Upload with parallel composite upload threshold = 0 (disabled).
+    with SetBotoConfigForTest([('GSUtil', 'parallel_composite_upload_threshold', '0')]):
+      self.RunGsUtil(['cp', src_file, suri(dst_bucket_uri, 'obj_simple')])
+
+    # 2. Upload with parallel composite upload threshold = 1 (enabled, 1 byte threshold).
+    with SetBotoConfigForTest([('GSUtil', 'parallel_composite_upload_threshold', '1')]):
+      self.RunGsUtil(['cp', src_file, suri(dst_bucket_uri, 'obj_composite')])
+
+    # 3. Retrieve metadata using ls -L
+    stdout_simple = self.RunGsUtil(['ls', '-L', suri(dst_bucket_uri, 'obj_simple')], return_stdout=True)
+    stdout_composite = self.RunGsUtil(['ls', '-L', suri(dst_bucket_uri, 'obj_composite')], return_stdout=True)
+
+    # 4. Assertions:
+    # The simple object must have an MD5 hash, and NO Component-Count.
+    self.assertIn('Hash (md5):', stdout_simple)
+    self.assertNotIn('Component-Count:', stdout_simple)
+
+    # The composite object must have NO MD5 hash, and must have a Component-Count.
+    self.assertNotIn('Hash (md5):', stdout_composite)
+    self.assertIn('Component-Count:', stdout_composite)
+

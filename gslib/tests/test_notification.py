@@ -25,6 +25,7 @@ import uuid
 
 import boto
 
+from gslib import exception
 from gslib.cloud_api_delegator import CloudApiDelegator
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
@@ -51,7 +52,7 @@ class TestNotificationUnit(testcase.GsUtilUnitTestCase):
                      autospec=True)
   def test_notification_splits_dash_m_value_correctly(self,
                                                       mock_create_notification):
-    bucket_uri = self.CreateBucket(bucket_name='foo_notification')
+    bucket_uri = self.CreateBucket()
     stdout = self.RunCommand(
         'notification',
         ['create', '-f', 'none', '-s', '-m', 'foo:bar:baz',
@@ -59,13 +60,41 @@ class TestNotificationUnit(testcase.GsUtilUnitTestCase):
         return_stdout=True)
     mock_create_notification.assert_called_once_with(
         mock.ANY,  # Client instance.
-        'foo_notification',
+        bucket_uri.bucket_name,
         pubsub_topic=mock.ANY,
         payload_format=mock.ANY,
         custom_attributes={'foo': 'bar:baz'},
         event_types=None,
         object_name_prefix=mock.ANY,
         provider=mock.ANY)
+
+  def test_watch_bucket_invalid_url_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(exception.CommandException,
+                                'application URL must be an https:// URL'):
+      self.RunCommand('notification', ['watchbucket', 'http://example.com', suri(bucket_uri)])
+
+  def test_watch_bucket_invalid_target_fails(self):
+    with self.assertRaisesRegex(exception.CommandException,
+                                'can only be used with gs:// bucket URLs'):
+      self.RunCommand('notification', ['watchbucket', 'https://example.com', 's3://somebucket'])
+
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(exception.CommandException,
+                                'can only be used with gs:// bucket URLs'):
+      self.RunCommand('notification', ['watchbucket', 'https://example.com', suri(bucket_uri, 'obj')])
+
+  def test_create_invalid_payload_format_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(exception.CommandException,
+                                'Must provide a payload format with -f'):
+      self.RunCommand('notification', ['create', '-f', 'xml', suri(bucket_uri)])
+
+  def test_create_invalid_metadata_syntax_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(exception.CommandException,
+                                'Custom attributes specified with -m should be of the form'):
+      self.RunCommand('notification', ['create', '-f', 'json', '-m', 'invalidKeyVal', suri(bucket_uri)])
 
 
 class TestNotification(testcase.GsUtilIntegrationTestCase):
