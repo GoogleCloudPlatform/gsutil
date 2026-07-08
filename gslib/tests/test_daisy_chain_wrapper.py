@@ -24,6 +24,9 @@ import os
 import pkgutil
 
 import six
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 import gslib.cloud_api
 from gslib.daisy_chain_wrapper import DaisyChainWrapper
 from gslib.storage_url import StorageUrlFromString
@@ -351,3 +354,29 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
       self.fail('Expected exception')
     except IOError as e:
       self.assertIn('Invalid seek during daisy chain', str(e))
+
+  def testInvalidReadSize(self):
+    daisy_chain_wrapper = DaisyChainWrapper(self._dummy_url,
+                                            self.test_data_file_len,
+                                            self.MockDownloadCloudApi([]))
+    with self.assertRaisesRegex(gslib.cloud_api.BadRequestException, 'Invalid HTTP read size'):
+      daisy_chain_wrapper.read(TRANSFER_BUFFER_SIZE + 1)
+
+    with self.assertRaisesRegex(gslib.cloud_api.BadRequestException, 'Invalid HTTP read size'):
+      daisy_chain_wrapper.read(None)
+
+  def testReadBoundaryConditions(self):
+    daisy_chain_wrapper = DaisyChainWrapper(self._dummy_url,
+                                            self.test_data_file_len,
+                                            self.MockDownloadCloudApi([]))
+    self.assertEqual(daisy_chain_wrapper.read(0), '')
+    daisy_chain_wrapper.seek(0, whence=os.SEEK_END)
+    self.assertEqual(daisy_chain_wrapper.read(1), '')
+
+  @mock.patch('threading.Event.wait')
+  def testDownloadThreadStartTimeout(self, mock_wait):
+    mock_wait.return_value = False
+    with self.assertRaisesRegex(Exception, 'Could not start download thread after 60 seconds.'):
+      DaisyChainWrapper(self._dummy_url,
+                        self.test_data_file_len,
+                        self.MockDownloadCloudApi([]))
