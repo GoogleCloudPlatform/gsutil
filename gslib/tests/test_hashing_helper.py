@@ -360,9 +360,10 @@ class TestHashConfig(testcase.GsUtilUnitTestCase):
 
     # Test misconfigured option raises CommandException
     with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'invalid_option')]):
-      try:
-        hashing_helper.GetDownloadHashAlgs(self.logger, consider_crc32c=True)
-        self.fail('Expected CommandException for invalid check_hashes config.')
-      except CommandException as e:
-        self.assertIn('option is misconfigured', str(e))
+      with mock.patch.object(hashing_helper, 'UsingCrcmodExtension', return_value=False):
+        try:
+          hashing_helper.GetDownloadHashAlgs(self.logger, consider_crc32c=True)
+          self.fail('Expected CommandException for invalid check_hashes config.')
+        except CommandException as e:
+          self.assertIn('option is misconfigured', str(e))
 
