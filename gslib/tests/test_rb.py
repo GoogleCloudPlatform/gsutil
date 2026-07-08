@@ -79,3 +79,19 @@ class TestRb(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True,
                             expected_status=1)
     self.assertIn('404', stderr)
+
+  def test_rb_object_target_fails(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['rb', suri(bucket_uri, 'obj')],
+                            return_stderr=True,
+                            expected_status=1,
+                            force_gsutil=True)
+    self.assertIn('requires a provider or bucket URL', stderr)
+
+  def test_rb_wildcard_no_match_fails(self):
+    stderr = self.RunGsUtil(['rb', 'gs://nonexistent-bucket-wildcard-pattern*'],
+                            return_stderr=True,
+                            expected_status=1,
+                            force_gsutil=True)
+    self.assertIn('No URLs matched', stderr)
+

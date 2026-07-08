@@ -32,6 +32,9 @@ add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
 
+import logging
+import time
+
 class TestPosixUtil(testcase.GsUtilUnitTestCase):
   """Unit tests for POSIX utils."""
 
@@ -52,3 +55,109 @@ class TestPosixUtil(testcase.GsUtilUnitTestCase):
     with self.assertRaises(ValueError):
       posix_util.InitializeDefaultMode()
     mock_umask.assert_called_once_with(0o177)
+
+  def test_convert_mode_to_base8(self):
+    self.assertEqual(posix_util.ConvertModeToBase8(33188), 644)
+    self.assertEqual(posix_util.ConvertModeToBase8(33261), 755)
+
+  def test_validate_posix_mode(self):
+    self.assertTrue(posix_util.ValidatePOSIXMode(0o644))
+    self.assertTrue(posix_util.ValidatePOSIXMode(0o755))
+    self.assertTrue(posix_util.ValidatePOSIXMode(0o604))
+    self.assertFalse(posix_util.ValidatePOSIXMode(0o000))
+    self.assertFalse(posix_util.ValidatePOSIXMode(0o300))
+
+  def test_serialize_deserialize_attributes(self):
+    from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+
+    # Create POSIXAttributes
+    posix_attrs = posix_util.POSIXAttributes(
+        atime=1000, mtime=2000, uid=100, gid=200, mode=644)
+
+    # Serialize
+    custom_metadata = apitools_messages.Object.MetadataValue(additionalProperties=[])
+    posix_util.SerializeFileAttributesToObjectMetadata(
+        posix_attrs, custom_metadata, preserve_posix=True)
+
+    # Mock GCS object metadata message containing the serialized custom metadata
+    obj_metadata = apitools_messages.Object(metadata=custom_metadata)
+
+    # Deserialize
+    deserialized = posix_util.DeserializeFileAttributesFromObjectMetadata(
+        obj_metadata, 'gs://bucket/obj')
+
+    # Assertions
+    self.assertEqual(deserialized.atime, 1000)
+    self.assertEqual(deserialized.mtime, posix_util.NA_TIME)
+    self.assertEqual(deserialized.uid, 100)
+    self.assertEqual(deserialized.gid, 200)
+    self.assertEqual(deserialized.mode.permissions, 644)
+
+  @mock.patch.object(logging.Logger, 'warning')
+  @mock.patch.object(logging.Logger, 'warn', create=True)
+  def test_deserialize_invalid_attributes(self, mock_warn, mock_warning):
+    # Some logging versions/configurations call .warning instead of .warn
+    from gslib.third_party.storage_apitools import storage_v1_messages as apitools_messages
+
+    # Case 1: Negative UID/GID
+    custom_metadata = apitools_messages.Object.MetadataValue(additionalProperties=[])
+    posix_util.CreateCustomMetadata(
+        entries={posix_util.UID_ATTR: -10, posix_util.GID_ATTR: -20},
+        custom_metadata=custom_metadata)
+    obj_metadata = apitools_messages.Object(metadata=custom_metadata)
+
+    deserialized = posix_util.DeserializeFileAttributesFromObjectMetadata(
+        obj_metadata, 'gs://bucket/obj')
+    self.assertEqual(deserialized.uid, posix_util.NA_ID)
+    self.assertEqual(deserialized.gid, posix_util.NA_ID)
+    self.assertEqual(mock_warn.call_count + mock_warning.call_count, 2)
+    mock_warn.reset_mock()
+    mock_warning.reset_mock()
+
+    # Case 2: Future Timestamp
+    custom_metadata = apitools_messages.Object.MetadataValue(additionalProperties=[])
+    future_time = int(time.time()) + 1000000
+    posix_util.CreateCustomMetadata(
+        entries={posix_util.ATIME_ATTR: future_time},
+        custom_metadata=custom_metadata)
+    obj_metadata = apitools_messages.Object(metadata=custom_metadata)
+
+    deserialized = posix_util.DeserializeFileAttributesFromObjectMetadata(
+        obj_metadata, 'gs://bucket/obj')
+    self.assertEqual(deserialized.atime, posix_util.NA_TIME)
+    self.assertEqual(mock_warn.call_count + mock_warning.call_count, 1)
+    mock_warn.reset_mock()
+    mock_warning.reset_mock()
+
+    # Case 3: Invalid Non-Integer Value
+    custom_metadata = apitools_messages.Object.MetadataValue(additionalProperties=[])
+    posix_util.CreateCustomMetadata(
+        entries={posix_util.UID_ATTR: 'abc'},
+        custom_metadata=custom_metadata)
+    obj_metadata = apitools_messages.Object(metadata=custom_metadata)
+
+    deserialized = posix_util.DeserializeFileAttributesFromObjectMetadata(
+        obj_metadata, 'gs://bucket/obj')
+    self.assertEqual(deserialized.uid, posix_util.NA_ID)
+    self.assertEqual(mock_warn.call_count + mock_warning.call_count, 1)
+
+  def test_needs_posix_attribute_update(self):
+    # Case 1: Source has atime, dest does not
+    posix_attrs, needs_update = posix_util.NeedsPOSIXAttributeUpdate(
+        src_atime=1000, dst_atime=posix_util.NA_TIME,
+        src_mtime=posix_util.NA_TIME, dst_mtime=posix_util.NA_TIME,
+        src_uid=posix_util.NA_ID, dst_uid=posix_util.NA_ID,
+        src_gid=posix_util.NA_ID, dst_gid=posix_util.NA_ID,
+        src_mode=posix_util.NA_MODE, dst_mode=posix_util.NA_MODE)
+    self.assertTrue(needs_update)
+    self.assertEqual(posix_attrs.atime, 1000)
+
+    # Case 2: Source has same attributes as dest
+    _, needs_update = posix_util.NeedsPOSIXAttributeUpdate(
+        src_atime=1000, dst_atime=1000,
+        src_mtime=2000, dst_mtime=2000,
+        src_uid=100, dst_uid=100,
+        src_gid=200, dst_gid=200,
+        src_mode=0o644, dst_mode=0o644)
+    self.assertFalse(needs_update)
+
