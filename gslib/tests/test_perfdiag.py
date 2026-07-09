@@ -251,6 +251,40 @@ class TestPerfDiag(testcase.GsUtilIntegrationTestCase):
                                             2,
                                             compression_ratio=50)
 
+  def test_invalid_parallelism_strategy_fails(self):
+    stderr = self.RunGsUtil(['perfdiag', '-p', 'invalid', 'gs://foobar'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('not a valid parallelism strategy', stderr)
+
+  def test_invalid_test_name_fails(self):
+    stderr = self.RunGsUtil(['perfdiag', '-t', 'invalid_test', 'gs://foobar'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('contains invalid test name', stderr)
+
+  def test_nonexistent_input_file_fails(self):
+    stderr = self.RunGsUtil(['perfdiag', '-i', '/nonexistent/file.json'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Invalid input file', stderr)
+
+  def test_invalid_ratio_fails(self):
+    stderr = self.RunGsUtil(['perfdiag', '-j', '101', 'gs://foobar'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('must be between 0 and 100', stderr)
+
+    stderr = self.RunGsUtil(['perfdiag', '-j', '-1', 'gs://foobar'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('must be between 0 and 100', stderr)
+
+    stderr = self.RunGsUtil(['perfdiag', '-j', 'abc', 'gs://foobar'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('must be between 0 and 100', stderr)
+
 
 class TestPerfDiagUnitTests(testcase.GsUtilUnitTestCase):
   """Unit tests for perfdiag command."""

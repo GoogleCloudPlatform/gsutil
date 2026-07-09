@@ -21,13 +21,21 @@ from __future__ import unicode_literals
 
 import re
 
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
+from gslib.commands import requesterpays
 import gslib.tests.testcase as testcase
 from gslib.project_id import PopulateProjectId
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.utils.retry_util import Retry
 from gslib.utils.constants import UTF8
+from gslib.utils import shim_util
 
 OBJECT_CONTENTS = b'innards'
 
@@ -308,3 +316,73 @@ class TestRequesterPays(testcase.GsUtilIntegrationTestCase):
         ['stat', suri(self.requester_pays_object_uri)])
     self._run_non_requester_pays_test(
         ['stat', suri(self.non_requester_pays_object_uri)])
+
+  def test_invalid_subcommand(self):
+    stderr = self.RunGsUtil(['requesterpays', 'invalid', 'gs://foobar'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Invalid subcommand', stderr)
+
+  def test_invalid_set_argument(self):
+    stderr = self.RunGsUtil(['requesterpays', 'set', 'invalid', 'gs://foobar'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('must be either <on|off>', stderr)
+
+  def test_non_cloud_url_fails(self):
+    stderr = self.RunGsUtil(['requesterpays', 'get', 'file://somefile'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('does not support "file://" URLs', stderr)
+
+
+class TestRequesterPaysShim(testcase.ShimUnitTestBase):
+
+  @mock.patch.object(requesterpays.RequesterPaysCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_get(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('requesterpays', ['get', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets list'
+                       ' --format=value[separator=": "](name.sub("^", "gs://"),requester_pays.yesno("Enabled", "Disabled"))'
+                       ' gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(requesterpays.RequesterPaysCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_set_on(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('requesterpays', ['set', 'on', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                       ' --requester-pays gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(requesterpays.RequesterPaysCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_set_off(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('requesterpays', ['set', 'off', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                       ' --no-requester-pays gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)

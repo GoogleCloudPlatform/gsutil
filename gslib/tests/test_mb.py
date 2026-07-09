@@ -429,6 +429,30 @@ class TestMb(testcase.GsUtilIntegrationTestCase):
     stdout = self.RunGsUtil(['ls', '-Lb', suri(bucket_uri)], return_stdout=True)
     self.assertRegex(stdout, r"Storage\sclass:\s*NEARLINE")
 
+  def test_create_object_fails(self):
+    stderr = self.RunGsUtil(['mb', 'gs://bucket/object'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('requires a URL that specifies a bucket', stderr)
+
+  def test_create_invalid_bucket_name_fails(self):
+    stderr = self.RunGsUtil(['mb', 'gs://a'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Invalid bucket name', stderr)
+
+  def test_invalid_uniform_bucket_level_access_fails(self):
+    stderr = self.RunGsUtil(['mb', '-b', 'yes', 'gs://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Only on and off values allowed', stderr)
+
+  def test_missing_arguments_fails(self):
+    stderr = self.RunGsUtil(['mb'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('command requires at least', stderr)
+
 
 class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
   """Unit tests for gsutil mb with shim."""
@@ -512,3 +536,67 @@ class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
                        ' --default-storage-class nearline gs://fake-bucket-3').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
+
+  def test_shim_translates_uniform_bucket_level_access_flag(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('mb',
+                                           args=[
+                                               '-b',
+                                               'on',
+                                               'gs://fake-bucket-4',
+                                           ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets create'
+                       ' --uniform-bucket-level-access gs://fake-bucket-4').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @SkipForXML('The --pap flag only works for GCS JSON API.')
+  def test_shim_translates_public_access_prevention_flag(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('mb',
+                                           args=[
+                                               '--pap',
+                                               'enforced',
+                                               'gs://fake-bucket-5',
+                                           ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets create'
+                       ' --public-access-prevention gs://fake-bucket-5').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @SkipForXML('The --placement flag only works for GCS JSON API.')
+  def test_shim_translates_placement_flag(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('mb',
+                                           args=[
+                                               '--placement',
+                                               'us-central1,us-west1',
+                                               'gs://fake-bucket-6',
+                                           ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets create'
+                       ' --placement us-central1,us-west1 gs://fake-bucket-6').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+
