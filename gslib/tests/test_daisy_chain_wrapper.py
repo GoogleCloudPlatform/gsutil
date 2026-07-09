@@ -359,10 +359,12 @@ class TestDaisyChainWrapper(testcase.GsUtilUnitTestCase):
     daisy_chain_wrapper = DaisyChainWrapper(self._dummy_url,
                                             self.test_data_file_len,
                                             self.MockDownloadCloudApi([]))
-    with self.assertRaisesRegex(gslib.cloud_api.BadRequestException, 'Invalid HTTP read size'):
+    with self.assertRaisesRegex(
+        gslib.cloud_api.BadRequestException, 'Invalid HTTP read size'):
       daisy_chain_wrapper.read(TRANSFER_BUFFER_SIZE + 1)
 
-    with self.assertRaisesRegex(gslib.cloud_api.BadRequestException, 'Invalid HTTP read size'):
+    with self.assertRaisesRegex(
+        gslib.cloud_api.BadRequestException, 'Invalid HTTP read size'):
       daisy_chain_wrapper.read(None)
 
   def testReadBoundaryConditions(self):

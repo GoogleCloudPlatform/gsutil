@@ -872,40 +872,42 @@ class TestExpandUrlToSingleBlr(GsUtilUnitTestCase):
                         src_obj_metadata=FakeObject(md5Hash='a'),
                         dst_obj_metadata=FakeObject(md5Hash='b'))
 
+  def _CallConstructDstUrl(self, src_url, exp_src_url, exp_dst_url,
+                           src_url_names_container=False,
+                           have_multiple_srcs=False,
+                           has_multiple_top_level_srcs=False,
+                           have_existing_dest_subdir=False,
+                           recursion_requested=False,
+                           preserve_posix=False):
+    return copy_helper.ConstructDstUrl(
+        src_url=src_url,
+        exp_src_url=exp_src_url,
+        src_url_names_container=src_url_names_container,
+        have_multiple_srcs=have_multiple_srcs,
+        has_multiple_top_level_srcs=has_multiple_top_level_srcs,
+        exp_dst_url=exp_dst_url,
+        have_existing_dest_subdir=have_existing_dest_subdir,
+        recursion_requested=recursion_requested,
+        preserve_posix=preserve_posix
+    )
+
   def testConstructDstUrlStreamDisallowedWithPosix(self):
-    # If exp_dst_url is a stream and preserve_posix=True, should raise CommandException
+    # If exp_dst_url is a stream and preserve_posix=True, should raise
+    # CommandException.
     src_url = StorageUrlFromString('file:///tmp/src')
     exp_src_url = StorageUrlFromString('file:///tmp/src')
-    exp_dst_url = StorageUrlFromString('file://-')  # stream representation in gsutil
-    with self.assertRaisesRegex(CommandException, 'Cannot preserve POSIX attributes with a stream.'):
-      copy_helper.ConstructDstUrl(
-          src_url=src_url,
-          exp_src_url=exp_src_url,
-          src_url_names_container=False,
-          have_multiple_srcs=False,
-          has_multiple_top_level_srcs=False,
-          exp_dst_url=exp_dst_url,
-          have_existing_dest_subdir=False,
-          recursion_requested=False,
-          preserve_posix=True
-      )
+    exp_dst_url = StorageUrlFromString('file://-')  # stream representation
+    with self.assertRaisesRegex(
+        CommandException, 'Cannot preserve POSIX attributes with a stream.'):
+      self._CallConstructDstUrl(
+          src_url, exp_src_url, exp_dst_url, preserve_posix=True)
 
   def testConstructDstUrlSingletonTarget(self):
     # Simple file-to-file copy should return exp_dst_url unchanged
     src_url = StorageUrlFromString('file:///tmp/src')
     exp_src_url = StorageUrlFromString('file:///tmp/src')
     exp_dst_url = StorageUrlFromString('gs://bucket/dest')
-    res_url = copy_helper.ConstructDstUrl(
-        src_url=src_url,
-        exp_src_url=exp_src_url,
-        src_url_names_container=False,
-        have_multiple_srcs=False,
-        has_multiple_top_level_srcs=False,
-        exp_dst_url=exp_dst_url,
-        have_existing_dest_subdir=False,
-        recursion_requested=False,
-        preserve_posix=False
-    )
+    res_url = self._CallConstructDstUrl(src_url, exp_src_url, exp_dst_url)
     self.assertEqual(res_url.url_string, 'gs://bucket/dest')
 
   def testConstructDstUrlSingleFileToDirectory(self):
@@ -913,17 +915,8 @@ class TestExpandUrlToSingleBlr(GsUtilUnitTestCase):
     src_url = StorageUrlFromString('file:///tmp/src_dir/obj.txt')
     exp_src_url = StorageUrlFromString('file:///tmp/src_dir/obj.txt')
     exp_dst_url = StorageUrlFromString('gs://bucket/dest_dir/')
-    res_url = copy_helper.ConstructDstUrl(
-        src_url=src_url,
-        exp_src_url=exp_src_url,
-        src_url_names_container=False,
-        have_multiple_srcs=False,
-        has_multiple_top_level_srcs=False,
-        exp_dst_url=exp_dst_url,
-        have_existing_dest_subdir=True,  # dest directory already exists
-        recursion_requested=False,
-        preserve_posix=False
-    )
+    res_url = self._CallConstructDstUrl(
+        src_url, exp_src_url, exp_dst_url, have_existing_dest_subdir=True)
     self.assertEqual(res_url.url_string, 'gs://bucket/dest_dir/obj.txt')
 
   def testConstructDstUrlRecursivePreservingHierarchy(self):
@@ -931,33 +924,21 @@ class TestExpandUrlToSingleBlr(GsUtilUnitTestCase):
     src_url = StorageUrlFromString('file:///tmp/src_dir/')
     exp_src_url = StorageUrlFromString('file:///tmp/src_dir/nested/obj.txt')
     exp_dst_url = StorageUrlFromString('gs://bucket/dest_dir/')
-    res_url = copy_helper.ConstructDstUrl(
-        src_url=src_url,
-        exp_src_url=exp_src_url,
-        src_url_names_container=True,
-        have_multiple_srcs=False,
-        has_multiple_top_level_srcs=False,
-        exp_dst_url=exp_dst_url,
-        have_existing_dest_subdir=False,
-        recursion_requested=True,
-        preserve_posix=False
-    )
+    res_url = self._CallConstructDstUrl(
+        src_url, exp_src_url, exp_dst_url,
+        src_url_names_container=True, recursion_requested=True)
     self.assertEqual(res_url.url_string, 'gs://bucket/dest_dir/nested/obj.txt')
 
   def testConstructDstUrlRecursivePreservingParentDir(self):
-    # If destination exists or there are multiple top level sources, it preserves the source parent directory
+    # If destination exists or there are multiple top level sources, it
+    # preserves the source parent directory.
     src_url = StorageUrlFromString('file:///tmp/src_dir/')
     exp_src_url = StorageUrlFromString('file:///tmp/src_dir/nested/obj.txt')
     exp_dst_url = StorageUrlFromString('gs://bucket/dest_dir/')
-    res_url = copy_helper.ConstructDstUrl(
-        src_url=src_url,
-        exp_src_url=exp_src_url,
-        src_url_names_container=True,
-        have_multiple_srcs=True,
-        has_multiple_top_level_srcs=True,
-        exp_dst_url=exp_dst_url,
-        have_existing_dest_subdir=True,
-        recursion_requested=True,
-        preserve_posix=False
-    )
-    self.assertEqual(res_url.url_string, 'gs://bucket/dest_dir/src_dir/nested/obj.txt')
+    res_url = self._CallConstructDstUrl(
+        src_url, exp_src_url, exp_dst_url,
+        src_url_names_container=True, have_multiple_srcs=True,
+        has_multiple_top_level_srcs=True, have_existing_dest_subdir=True,
+        recursion_requested=True)
+    self.assertEqual(
+        res_url.url_string, 'gs://bucket/dest_dir/src_dir/nested/obj.txt')

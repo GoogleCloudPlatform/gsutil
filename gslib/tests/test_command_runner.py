@@ -46,6 +46,7 @@ import gslib.tests.util as util
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+from gslib.utils import boto_util
 from gslib.utils import system_util
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.text_util import InsistAscii
@@ -481,32 +482,30 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     with self.assertRaisesRegex(CommandException, r'Invalid non-ASCII'):
       HandleHeaderCoding(headers)
 
-  def test_skip_update_check(self):
-    from gslib.utils import boto_util
+  @mock.patch.object(boto_util, 'HasUserSpecifiedGsHost', autospec=True)
+  def test_skip_update_check(self, mock_has_host):
+    mock_has_host.return_value = False
     prev_loglevel = logging.getLogger().getEffectiveLevel()
     try:
       # Scenario 1: Standard interactive + INFO logging -> returns False
       self.running_interactively = True
       logging.getLogger().setLevel(logging.INFO)
-      with mock.patch.object(boto_util, 'HasUserSpecifiedGsHost', return_value=False):
-        self.assertFalse(self.command_runner.SkipUpdateCheck())
+      self.assertFalse(self.command_runner.SkipUpdateCheck())
 
       # Scenario 2: Non-interactive -> returns True
       self.running_interactively = False
-      with mock.patch.object(boto_util, 'HasUserSpecifiedGsHost', return_value=False):
-        self.assertTrue(self.command_runner.SkipUpdateCheck())
+      self.assertTrue(self.command_runner.SkipUpdateCheck())
 
       # Scenario 3: Interactive but quiet log level -> returns True
       self.running_interactively = True
       logging.getLogger().setLevel(logging.WARNING)
-      with mock.patch.object(boto_util, 'HasUserSpecifiedGsHost', return_value=False):
-        self.assertTrue(self.command_runner.SkipUpdateCheck())
+      self.assertTrue(self.command_runner.SkipUpdateCheck())
 
       # Scenario 4: User specified custom GS host -> returns True
       self.running_interactively = True
       logging.getLogger().setLevel(logging.INFO)
-      with mock.patch.object(boto_util, 'HasUserSpecifiedGsHost', return_value=True):
-        self.assertTrue(self.command_runner.SkipUpdateCheck())
+      mock_has_host.return_value = True
+      self.assertTrue(self.command_runner.SkipUpdateCheck())
     finally:
       logging.getLogger().setLevel(prev_loglevel)
 

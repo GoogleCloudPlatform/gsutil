@@ -238,9 +238,10 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
     self.assertIn('Invalid subcommand "invalid"', stderr)
 
   def test_defacl_set_on_object_fails(self):
-    stderr = self.RunGsUtil(self._defacl_set_prefix + ['public-read', 'gs://bucket/object'],
-                            expected_status=1,
-                            return_stderr=True)
+    stderr = self.RunGsUtil(
+        self._defacl_set_prefix + ['public-read', 'gs://bucket/object'],
+        expected_status=1,
+        return_stderr=True)
     self.assertIn('URL must name a bucket', stderr)
 
   def test_defacl_get_on_object_fails(self):
@@ -252,15 +253,18 @@ class TestDefacl(case.GsUtilIntegrationTestCase):
   def test_defacl_ch_on_object_fails(self):
     bucket_uri = self.CreateBucket()
     self.CreateObject(bucket_uri, object_name='object', contents=b'foo')
-    stderr = self.RunGsUtil(self._defacl_ch_prefix + ['-u', 'allUsers:READ', suri(bucket_uri) + '/object'],
-                            expected_status=1,
-                            return_stderr=True)
+    stderr = self.RunGsUtil(
+        self._defacl_ch_prefix + ['-u', 'allUsers:READ',
+                                  suri(bucket_uri) + '/object'],
+        expected_status=1,
+        return_stderr=True)
     self.assertIn('can only be applied to buckets', stderr)
 
   def test_defacl_ch_non_gs_fails(self):
-    stderr = self.RunGsUtil(self._defacl_ch_prefix + ['-u', 'allUsers:READ', 's3://bucket'],
-                            expected_status=1,
-                            return_stderr=True)
+    stderr = self.RunGsUtil(
+        self._defacl_ch_prefix + ['-u', 'allUsers:READ', 's3://bucket'],
+        expected_status=1,
+        return_stderr=True)
     self.assertIn('can only be used with gs:// URLs', stderr)
 
 

@@ -33,9 +33,9 @@ from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 from gslib.utils.constants import UTF8
 from gslib.utils.retry_util import Retry
-from gslib.utils import shim_util
 
 
 class TestDu(testcase.GsUtilIntegrationTestCase):
@@ -358,10 +358,13 @@ class TestDuShim(testcase.ShimUnitTestBase):
           'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
           'CLOUDSDK_ROOT_DIR': 'fake_dir',
       }):
-        mock_log_handler = self.RunCommand('du', ['-e', '*.tmp', '-X', 'exclude.txt', 'gs://bucket'],
-                                           return_log_handler=True)
+        mock_log_handler = self.RunCommand(
+            'du', ['-e', '*.tmp', '-X', 'exclude.txt', 'gs://bucket'],
+            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage du'
-                       ' --exclude-name-pattern *.tmp --exclude-name-pattern-file exclude.txt gs://bucket').format(
+                       ' --exclude-name-pattern *.tmp'
+                       ' --exclude-name-pattern-file exclude.txt'
+                       ' gs://bucket').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)

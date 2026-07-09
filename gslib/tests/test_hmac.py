@@ -392,7 +392,9 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['hmac', 'invalid_subcommand'],
                             expected_status=1,
                             return_stderr=True)
-    self.assertIn('Invalid subcommand "invalid_subcommand" for the hmac command.', stderr)
+    self.assertIn(
+        'Invalid subcommand "invalid_subcommand" for the hmac command.',
+        stderr)
 
 
 @SkipForS3('S3 does not have an equivalent API')

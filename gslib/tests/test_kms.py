@@ -257,33 +257,27 @@ class TestKmsUnitTests(testcase.GsUtilUnitTestCase):
       self.assertIn('Permission denied', e.reason)
 
   def test_kms_invalid_subcommand(self):
-    try:
+    with self.assertRaisesRegex(
+        CommandException,
+        r'Invalid subcommand "invalid_subcommand" for the kms command\.'):
       self.RunCommand('kms', ['invalid_subcommand'])
-      self.fail('Did not get expected CommandException')
-    except CommandException as e:
-      self.assertIn('Invalid subcommand "invalid_subcommand" for the kms command.', e.reason)
 
   def test_warn_without_encryption_subcommand_fails(self):
-    try:
+    with self.assertRaisesRegex(
+        CommandException,
+        r'option should only be specified for the "encryption"'):
       self.RunCommand('kms', ['authorize', '-w', '-k', _DUMMY_KEYNAME])
-      self.fail('Did not get expected CommandException')
-    except CommandException as e:
-      self.assertIn('option should only be specified for the "encryption"', e.reason)
 
   def test_warn_without_key_option_fails(self):
     bucket_uri = self.CreateBucket()
-    try:
+    with self.assertRaisesRegex(
+        CommandException, r'must be used with the "-k" option'):
       self.RunCommand('kms', ['encryption', '-w', suri(bucket_uri)])
-      self.fail('Did not get expected CommandException')
-    except CommandException as e:
-      self.assertIn('must be used with the "-k" option', e.reason)
 
   def test_authorize_without_key_fails(self):
-    try:
+    with self.assertRaisesRegex(
+        CommandException, r'requires a key to be specified with -k'):
       self.RunCommand('kms', ['authorize'])
-      self.fail('Did not get expected CommandException')
-    except CommandException as e:
-      self.assertIn('requires a key to be specified with -k', e.reason)
 
 
 
