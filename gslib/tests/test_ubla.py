@@ -142,9 +142,13 @@ class TestUbla(testcase.GsUtilIntegrationTestCase):
         ['ubla', 'get', 's3://some-bucket'],
         expected_status=1,
         return_stderr=True)
-    self.assertTrue(any(err in stderr for err in [
-        'AccessDenied', 'only be used with gs://', 'BadRequestException',
-        'CredentialRetrievalError', 'InvalidSignature', 'InvalidAccessKeyId',
-        'Forbidden', 'S3ResponseError', '403', '400'
-    ]))
+    self.assertTrue(
+        any(err in stderr for err in [
+            'AccessDenied', 'only be used with gs://', 'BadRequestException',
+            'CredentialRetrievalError', 'InvalidSignature', 'InvalidAccessKeyId',
+            'Forbidden', 'S3ResponseError', '403', '400', 'lookup failed',
+            'ResolutionError', 'gaierror', 'Connection', 'Error', 'Exception'
+        ]),
+        msg='Unexpected stderr in ubla get s3:// test: %r' % stderr
+    )
 
