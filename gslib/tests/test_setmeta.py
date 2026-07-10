@@ -26,6 +26,7 @@ from unittest import mock
 import six
 
 from gslib.commands import setmeta
+from gslib.exception import CommandException
 from gslib.cs_api_map import ApiSelector
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -305,6 +306,66 @@ class TestSetMeta(testcase.GsUtilIntegrationTestCase):
     self.assertIn(
         'gsutil setmeta requires one or more headers to be provided with the'
         ' -h flag. See "gsutil help setmeta" for more information.', stderr)
+
+
+class TestSetMetaUnit(testcase.GsUtilUnitTestCase):
+  """Unit tests for gsutil setmeta command."""
+
+  def test_setmeta_no_headers_raises(self):
+    with self.assertRaisesRegex(
+        CommandException, r'requires one or more headers to be provided'):
+      self.RunCommand('setmeta', ['gs://bucket/obj'])
+
+  def test_setmeta_bucket_url_raises(self):
+    with self.assertRaisesRegex(
+        CommandException, r'must name an object'):
+      self.RunCommand(
+          'setmeta', ['-h', 'Content-Type:text/html', 'gs://bucket'])
+
+  def test_setmeta_canned_acl_disallowed(self):
+    with self.assertRaisesRegex(
+        CommandException, r'no longer allows canned ACLs'):
+      self.RunCommand(
+          'setmeta', ['-h', 'x-goog-acl:public-read', 'gs://bucket/obj'])
+
+    with self.assertRaisesRegex(
+        CommandException, r'no longer allows canned ACLs'):
+      self.RunCommand(
+          'setmeta', ['-h', 'x-amz-acl:public-read', 'gs://bucket/obj'])
+
+  def test_setmeta_duplicate_headers_raises(self):
+    with self.assertRaisesRegex(
+        CommandException, r'Each header must appear at most once\.'):
+      self.RunCommand(
+          'setmeta',
+          ['-h', 'Content-Type:text/html', '-h', 'content-type:text/plain',
+           'gs://bucket/obj'])
+
+    with self.assertRaisesRegex(
+        CommandException, r'Each header must appear at most once\.'):
+      self.RunCommand(
+          'setmeta',
+          ['-h', 'Content-Type:text/html', '-h', 'Content-Type',
+           'gs://bucket/obj'])
+
+  def test_setmeta_invalid_header_raises(self):
+    with self.assertRaisesRegex(
+        CommandException, r'Invalid or disallowed header'):
+      self.RunCommand(
+          'setmeta', ['-h', 'Invalid-Header:val', 'gs://bucket/obj'])
+
+  def test_setmeta_non_ascii_header_raises(self):
+    with self.assertRaisesRegex(
+        CommandException, r'Invalid non-ASCII'):
+      self.RunCommand(
+          'setmeta', ['-h', 'x-goog-meta-héader:val', 'gs://bucket/obj'])
+
+  def test_setmeta_non_ascii_standard_value_raises(self):
+    with self.assertRaisesRegex(
+        CommandException, r'Invalid non-ASCII'):
+      self.RunCommand(
+          'setmeta',
+          ['-h', 'Cache-Control:public, max-age=3600ã', 'gs://bucket/obj'])
 
 
 class TestSetMetaShim(testcase.ShimUnitTestBase):

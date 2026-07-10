@@ -171,3 +171,66 @@ class TestStorageUrl(base.GsUtilTestCase):
     urls = list(map(storage_url.StorageUrlFromString, ['gs://b/o', 'gs://b/p']))
     storage_url.RaiseErrorIfUrlsAreMixOfBucketsAndObjects(
         urls, recursion_requested=True)
+
+  def test_urls_are_for_single_provider(self):
+    self.assertTrue(
+        storage_url.UrlsAreForSingleProvider(['gs://b1', 'gs://b2/o']))
+    self.assertFalse(
+        storage_url.UrlsAreForSingleProvider(['gs://b1', 's3://b2']))
+    self.assertFalse(
+        storage_url.UrlsAreForSingleProvider([]))
+
+  def test_storage_url_with_generation_or_version(self):
+    url = storage_url.StorageUrlFromString('gs://bucket/obj#12345')
+    self.assertTrue(url.IsCloudUrl())
+    self.assertEqual(url.generation, '12345')
+    self.assertEqual(url.object_name, 'obj')
+
+    url = storage_url.StorageUrlFromString('s3://bucket/obj#versionid')
+    self.assertTrue(url.IsCloudUrl())
+    self.assertEqual(url.generation, 'versionid')
+    self.assertEqual(url.object_name, 'obj')
+
+  def test_raises_error_for_invalid_root_level_object_name(self):
+    with self.assertRaises(InvalidUrlError):
+      storage_url.StorageUrlFromString('gs://bucket/.')
+    with self.assertRaises(InvalidUrlError):
+      storage_url.StorageUrlFromString('gs://bucket/..')
+
+  def test_raises_error_for_unrecognized_scheme(self):
+    with self.assertRaisesRegex(
+        InvalidUrlError, r'Unrecognized scheme "http"'):
+      storage_url.StorageUrlFromString('http://example.com/file')
+
+  def test_storage_url_equality_and_hashing(self):
+    url1 = storage_url.StorageUrlFromString('gs://bucket/obj')
+    url2 = storage_url.StorageUrlFromString('gs://bucket/obj')
+    url3 = storage_url.StorageUrlFromString('gs://bucket/other')
+
+    self.assertEqual(url1, url2)
+    self.assertNotEqual(url1, url3)
+    self.assertEqual(hash(url1), hash(url2))
+    self.assertNotEqual(hash(url1), hash(url3))
+
+  def test_file_url_stream(self):
+    url = storage_url.StorageUrlFromString('-')
+    self.assertTrue(url.IsStream())
+
+    url2 = storage_url.StorageUrlFromString('file://-')
+    self.assertTrue(url2.IsStream())
+
+    url3 = storage_url.StorageUrlFromString('gs://bucket/obj')
+    with self.assertRaises(NotImplementedError):
+      url3.IsStream()
+
+  @mock.patch('os.stat')
+  def test_file_url_fifo(self, mock_os_stat):
+    import stat
+    mock_os_stat.return_value.st_mode = stat.S_IFIFO
+    url = storage_url.StorageUrlFromString('file:///tmp/fake-fifo')
+    self.assertTrue(url.IsFifo())
+
+    # CloudUrl does not support IsFifo
+    url2 = storage_url.StorageUrlFromString('gs://bucket/obj')
+    with self.assertRaises(NotImplementedError):
+      url2.IsFifo()

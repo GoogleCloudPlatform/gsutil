@@ -428,3 +428,20 @@ class TestUtil(testcase.GsUtilUnitTestCase):
     self.assertEqual(boto_util.GetMaxConcurrentCompressedUploads(), 1)
     mock_config.return_value = -1
     self.assertEqual(boto_util.GetMaxConcurrentCompressedUploads(), 1)
+
+  def testCalculateThroughput(self):
+    self.assertEqual(unit_util.CalculateThroughput(100, 10.0), 10.0)
+    # Elapsed time < 0.01 is treated as 0.01
+    self.assertEqual(unit_util.CalculateThroughput(100, 0.005), 10000.0)
+
+  def testDivideAndCeil(self):
+    self.assertEqual(unit_util.DivideAndCeil(10, 3), 4)
+    self.assertEqual(unit_util.DivideAndCeil(10, 5), 2)
+    self.assertEqual(unit_util.DivideAndCeil(0, 5), 0)
+
+  def testPercentile(self):
+    self.assertEqual(unit_util.Percentile([10, 20, 30], 0.5), 20.0)
+    self.assertEqual(unit_util.Percentile([10, 20, 30], 0.25), 15.0)
+    self.assertEqual(unit_util.Percentile([10, 20, 30], 0.0), 10.0)
+    self.assertEqual(unit_util.Percentile([10, 20, 30], 1.0), 30.0)
+    self.assertIsNone(unit_util.Percentile([], 0.5))

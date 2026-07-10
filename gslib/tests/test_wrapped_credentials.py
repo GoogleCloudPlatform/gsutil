@@ -16,6 +16,8 @@
 
 import datetime
 import json
+import os
+import tempfile
 import httplib2
 
 from google.auth import aws
@@ -348,6 +350,49 @@ class TestWrappedCredentials(testcase.GsUtilUnitTestCase):
             }
         }))
 
+    self.assertIsInstance(creds, WrappedCredentials)
+    self.assertIsInstance(creds._base,
+                          external_account_authorized_user.Credentials)
+
+  def testInvalidCredentialsRaiseTypeError(self):
+    with self.assertRaises(TypeError):
+      WrappedCredentials(None)
+    with self.assertRaises(TypeError):
+      WrappedCredentials(object())
+
+  def testForExternalAccountFromFile(self):
+    info = {
+        "type": "external_account",
+        "audience": "foo",
+        "subject_token_type": "bar",
+        "token_url": "https://sts.googleapis.com",
+        "credential_source": {"url": "google.com"}
+    }
+    temp_dir = self.CreateTempDir()
+    temp_file = os.path.join(temp_dir, 'creds.json')
+    with open(temp_file, 'w') as f:
+      json.dump(info, f)
+
+    creds = WrappedCredentials.for_external_account(temp_file)
+    self.assertIsInstance(creds, WrappedCredentials)
+    self.assertIsInstance(creds._base, identity_pool.Credentials)
+
+  def testForExternalAccountAuthorizedUserFromFile(self):
+    info = {
+        "type": "external_account_authorized_user",
+        "audience": "//iam.googleapis.com/locations/global/workforcePools/1",
+        "refresh_token": "refreshToken",
+        "token_url": "https://sts.googleapis.com/v1/oauth/token",
+        "token_info_url": "https://sts.googleapis.com/v1/instrospect",
+        "client_id": "clientId",
+        "client_secret": "clientSecret"
+    }
+    temp_dir = self.CreateTempDir()
+    temp_file = os.path.join(temp_dir, 'creds.json')
+    with open(temp_file, 'w') as f:
+      json.dump(info, f)
+
+    creds = WrappedCredentials.for_external_account_authorized_user(temp_file)
     self.assertIsInstance(creds, WrappedCredentials)
     self.assertIsInstance(creds._base,
                           external_account_authorized_user.Credentials)
