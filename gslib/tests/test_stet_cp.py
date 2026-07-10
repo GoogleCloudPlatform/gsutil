@@ -151,3 +151,30 @@ class TestStetCp(testcase.GsUtilIntegrationTestCase):
       # Post-encryption total file size:
       # +-0.1 KiB b/c of rounding and different platforms.
       self.assertRegex(stderr, r'2\.\d KiB]')
+
+  def test_stet_failure_raises(self):
+    # Create a STET binary that exits with error code 1
+    failing_stet_binary = """#!/usr/bin/env python
+import sys
+sys.stderr.write("Simulated STET binary failure\\n")
+sys.exit(2)
+"""
+    failing_binary_path = self.CreateTempFile(contents=failing_stet_binary)
+    current_stat = os.stat(failing_binary_path)
+    os.chmod(failing_binary_path, current_stat.st_mode | stat.S_IEXEC)
+
+    object_uri = self.CreateObject()
+    test_file = self.CreateTempFile(contents='will be rewritten')
+
+    stderr = self.RunGsUtil([
+        '-o', 'GSUtil:stet_binary_path={}'.format(failing_binary_path), '-o',
+        'GSUtil:stet_config_path={}'.format(
+            self.stet_config_path), 'cp', '--stet', test_file,
+        suri(object_uri)
+    ],
+                            expected_status=1,
+                            return_stderr=True)
+
+    self.assertIn('ExternalBinaryError', stderr)
+    self.assertIn('Simulated STET binary failure', stderr)
+

@@ -239,3 +239,32 @@ class TestSeekAheadThread(testcase.GsUtilUnitTestCase):
         message,
         'Estimated work for this command: objects: %s, total size: %s\n' %
         (num_files, unit_util.MakeHumanReadable(total_size)))
+
+  def testHandlesOSErrorGracefully(self):
+    """Tests that SeekAheadThread handles OSError in iterator and exits silently."""
+
+    class ErrorRaisingIterator(object):
+      def __iter__(self):
+        yield SeekAheadResult()
+        raise OSError('Simulated OS error during listing')
+
+    cancel_event = threading.Event()
+    status_queue = Queue.Queue()
+    stream = six.StringIO()
+    ui_controller = UIController()
+    ui_thread = UIThread(status_queue, stream, ui_controller)
+
+    seek_ahead_iterator = ErrorRaisingIterator()
+    seek_ahead_thread = SeekAheadThread(seek_ahead_iterator, cancel_event,
+                                        status_queue)
+    seek_ahead_thread.join(self.thread_wait_time)
+    status_queue.put(_ZERO_TASKS_TO_DO_ARGUMENT)
+    ui_thread.join(self.thread_wait_time)
+
+    if seek_ahead_thread.is_alive():
+      seek_ahead_thread.terminate = True
+      self.fail('SeekAheadThread is still alive after raising OSError.')
+
+    message = stream.getvalue()
+    self.assertEqual(message, '')
+
