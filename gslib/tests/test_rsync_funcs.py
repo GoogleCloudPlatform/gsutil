@@ -21,6 +21,9 @@ from __future__ import unicode_literals
 
 import logging
 import os
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 from gslib.commands.rsync import _ComputeNeededFileChecksums
 from gslib.commands.rsync import _NA
@@ -80,3 +83,102 @@ class TestRsyncFuncs(GsUtilUnitTestCase):
     self.assertEqual(md5, src_md5)
     self.assertEqual(_NA, src_crc32c)
     self.assertEqual(md5, src_md5)
+
+  def test_encode_decode_url(self):
+    from gslib.commands.rsync import _EncodeUrl, _DecodeUrl
+
+    # 1. Simple ASCII url
+    url = 'gs://my-bucket/path/to/object.txt'
+    enc = _EncodeUrl(url)
+    self.assertEqual(url, _DecodeUrl(enc))
+
+    # 2. Spaces and special characters
+    url = 'gs://my-bucket/path to/object name.txt'
+    enc = _EncodeUrl(url)
+    self.assertEqual(url, _DecodeUrl(enc))
+
+    # 3. Unicode characters
+    url = 'gs://my-bucket/path/è_中文_object.txt'
+    enc = _EncodeUrl(url)
+    self.assertEqual(url, _DecodeUrl(enc))
+
+  def test_batch_sort(self):
+    from gslib.commands.rsync import _BatchSort
+
+    lines = [
+        'gs://bucket/object_c 10 123456789 - - - - - -\n',
+        'gs://bucket/object_a 20 123456789 - - - - - -\n',
+        'gs://bucket/object_b 30 123456789 - - - - - -\n',
+    ]
+
+    filename = self.CreateTempFile()
+    with open(filename, 'w+') as out_file:
+      # Sort lines
+      _BatchSort(iter(lines), out_file)
+      out_file.seek(0)
+      sorted_lines = out_file.readlines()
+
+      expected_sorted = [
+          'gs://bucket/object_a 20 123456789 - - - - - -\n',
+          'gs://bucket/object_b 30 123456789 - - - - - -\n',
+          'gs://bucket/object_c 10 123456789 - - - - - -\n',
+      ]
+      self.assertEqual(sorted_lines, expected_sorted)
+
+  @mock.patch('os.path.islink')
+  def test_diff_to_apply_arg_checker(self, mock_islink):
+    from gslib.commands.rsync import _DiffToApplyArgChecker
+    from gslib.utils.rsync_util import RsyncDiffToApply, DiffAction
+
+    class MockCommand(object):
+      def __init__(self, exclude_symlinks):
+        self.exclude_symlinks = exclude_symlinks
+        self.logger = mock.Mock()
+
+    # 1. Action is REMOVE -> should always return True
+    cmd = MockCommand(exclude_symlinks=True)
+    diff = RsyncDiffToApply(
+        src_url_str=None,
+        dst_url_str='file:///tmp/dest',
+        src_posix_attrs=None,
+        diff_action=DiffAction.REMOVE,
+        copy_size=None
+    )
+    self.assertTrue(_DiffToApplyArgChecker(cmd, diff))
+
+    # 2. Exclude symlinks is False -> should return True
+    cmd = MockCommand(exclude_symlinks=False)
+    diff = RsyncDiffToApply(
+        src_url_str='file:///tmp/src',
+        dst_url_str='gs://bucket/dest',
+        src_posix_attrs=None,
+        diff_action=DiffAction.COPY,
+        copy_size=10
+    )
+    self.assertTrue(_DiffToApplyArgChecker(cmd, diff))
+
+    # 3. Exclude symlinks is True, and file is a symlink -> should return False
+    cmd = MockCommand(exclude_symlinks=True)
+    diff = RsyncDiffToApply(
+        src_url_str='file:///tmp/src-link',
+        dst_url_str='gs://bucket/dest',
+        src_posix_attrs=None,
+        diff_action=DiffAction.COPY,
+        copy_size=10
+    )
+    mock_islink.return_value = True
+    self.assertFalse(_DiffToApplyArgChecker(cmd, diff))
+    self.assertTrue(cmd.logger.info.called)
+
+    # 4. Exclude symlinks is True, and file is NOT a symlink -> should return True
+    cmd = MockCommand(exclude_symlinks=True)
+    diff = RsyncDiffToApply(
+        src_url_str='file:///tmp/src-file',
+        dst_url_str='gs://bucket/dest',
+        src_posix_attrs=None,
+        diff_action=DiffAction.COPY,
+        copy_size=10
+    )
+    mock_islink.return_value = False
+    self.assertTrue(_DiffToApplyArgChecker(cmd, diff))
+

@@ -93,6 +93,23 @@ class TestWeb(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['web'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
 
+  def test_web_invalid_arguments(self):
+    """Tests web command failure modes with invalid subcommands or URLs."""
+    bucket_uri = self.CreateBucket()
+
+    # 1. Invalid subcommand
+    stderr = self.RunGsUtil(
+        ['web', 'invalid', suri(bucket_uri)],
+        expected_status=1,
+        return_stderr=True)
+    self.assertIn('Invalid subcommand "invalid"', stderr)
+
+    # 2. Provider URL
+    stderr = self.RunGsUtil(
+        ['web', 'get', 'gs://'], expected_status=1, return_stderr=True)
+    self.assertTrue('does not support provider-only' in stderr or 'TypeError' in stderr)
+
+
 
 class TestWebShim(testcase.ShimUnitTestBase):
 
@@ -156,6 +173,53 @@ class TestWebShim(testcase.ShimUnitTestBase):
                        ' gs://bucket').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
+
+  @mock.patch.object(web.WebCommand, '_SetWeb', new=mock.Mock())
+  def test_shim_translates_set_main_only(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('web', [
+            'set',
+            '-m',
+            'main',
+            'gs://bucket',
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage buckets update'
+             ' --web-main-page-suffix main gs://bucket'
+            ).format(shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
+        self.assertNotIn('--web-error-page', info_lines)
+        self.assertNotIn('--clear-web-error-page', info_lines)
+
+  @mock.patch.object(web.WebCommand, '_SetWeb', new=mock.Mock())
+  def test_shim_translates_set_error_only(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('web', [
+            'set',
+            '-e',
+            '404',
+            'gs://bucket',
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage buckets update'
+             ' --web-error-page 404 gs://bucket'
+            ).format(shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
+        self.assertNotIn('--web-main-page-suffix', info_lines)
+        self.assertNotIn('--clear-web-main-page-suffix', info_lines)
+
 
 
 class TestWebOldAlias(TestWeb):
