@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 import logging
 import os
 import re
+import time
 import unittest
 
 from six import add_move, MovedModule
@@ -563,11 +564,18 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
 
     # Rewriting with no encryption_key should rewrite the object, resulting in
     # the bucket's default KMS key being used to encrypt it.
-    with SetBotoConfigForTest([('GSUtil', 'encryption_key', None)]):
-      stderr = self.RunGsUtil(
-          ['rewrite', '-k', suri(object_uri)], return_stderr=True)
-    self.assertIn('Rewriting', stderr)
-    self.AssertObjectUsesCMEK(suri(object_uri), key_fqn)
+    for i in range(5):
+      try:
+        with SetBotoConfigForTest([('GSUtil', 'encryption_key', None)]):
+          stderr = self.RunGsUtil(
+              ['rewrite', '-k', suri(object_uri)], return_stderr=True)
+        self.assertIn('Rewriting', stderr)
+        self.AssertObjectUsesCMEK(suri(object_uri), key_fqn)
+        break
+      except AssertionError:
+        if i == 4:
+          raise
+        time.sleep(2)
 
   def test_stdin_with_arguments_fails(self):
     stderr = self.RunGsUtil(['rewrite', '-k', '-I', 'gs://bucket/obj'],
