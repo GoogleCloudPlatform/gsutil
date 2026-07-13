@@ -537,6 +537,7 @@ class TestMbUnitTestsWithShim(testcase.ShimUnitTestBase):
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)
 
+  @SkipForXML('The -b flag only works for GCS JSON API.')
   def test_shim_translates_uniform_bucket_level_access_flag(self):
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
                                ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
