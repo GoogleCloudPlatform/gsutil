@@ -21,10 +21,19 @@ from __future__ import unicode_literals
 
 import os
 
+import six
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
+from gslib.commands import du
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import GenerationFromURI as urigen
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 from gslib.utils.constants import UTF8
 from gslib.utils.retry_util import Retry
 
@@ -292,3 +301,70 @@ class TestDu(testcase.GsUtilIntegrationTestCase):
           ]))
 
     _Check()
+
+  def test_du_local_url_fails(self):
+    stderr = self.RunGsUtil(['du', 'file:///tmp/dir'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('does not support "file://" URLs', stderr)
+
+  def test_excludes_file_stdin(self):
+    """Tests file exclusion with the -X flag reading from stdin."""
+    bucket_uri, obj_uris = self._create_nested_subdir()
+    stdin_data = '*sub2/five*\n*sub1材/four\n'
+
+    # Use @Retry as hedge against bucket listing eventual consistency.
+    @Retry(AssertionError, tries=3, timeout_secs=1)
+    def _Check():
+      stdout = self.RunGsUtil(
+          ['du', '-X', '-', suri(bucket_uri)],
+          stdin=stdin_data,
+          return_stdout=True)
+      self.assertSetEqual(
+          set(stdout.splitlines()),
+          set([
+              '%-11s  %s' % (5, suri(obj_uris[0])),
+              '%-11s  %s' % (4, suri(obj_uris[3])),
+              '%-11s  %s/sub1材/sub2/' % (4, suri(bucket_uri)),
+              '%-11s  %s/sub1材/' % (9, suri(bucket_uri)),
+          ]))
+
+    _Check()
+
+
+class TestDuShim(testcase.ShimUnitTestBase):
+
+  @mock.patch.object(du.DuCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_du(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('du', ['-h', '-c', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage du'
+                       ' --readable-sizes --total gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(du.DuCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_du_excludes(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'du', ['-e', '*.tmp', '-X', 'exclude.txt', 'gs://bucket'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage du'
+                       ' --exclude-name-pattern *.tmp'
+                       ' --exclude-name-pattern-file exclude.txt'
+                       ' gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)

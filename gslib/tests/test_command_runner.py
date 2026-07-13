@@ -46,6 +46,7 @@ import gslib.tests.util as util
 from gslib.tests.util import ARGCOMPLETE_AVAILABLE
 from gslib.tests.util import SetBotoConfigForTest
 from gslib.tests.util import unittest
+from gslib.utils import boto_util
 from gslib.utils import system_util
 from gslib.utils.constants import GSUTIL_PUB_TARBALL
 from gslib.utils.text_util import InsistAscii
@@ -480,6 +481,50 @@ class TestCommandRunnerUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
     headers = {'content-type': 'bãr'}
     with self.assertRaisesRegex(CommandException, r'Invalid non-ASCII'):
       HandleHeaderCoding(headers)
+
+  @mock.patch.object(boto_util, 'HasUserSpecifiedGsHost', autospec=True)
+  def test_skip_update_check(self, mock_has_host):
+    mock_has_host.return_value = False
+    prev_loglevel = logging.getLogger().getEffectiveLevel()
+    try:
+      # Scenario 1: Standard interactive + INFO logging -> returns False
+      self.running_interactively = True
+      logging.getLogger().setLevel(logging.INFO)
+      self.assertFalse(self.command_runner.SkipUpdateCheck())
+
+      # Scenario 2: Non-interactive -> returns True
+      self.running_interactively = False
+      self.assertTrue(self.command_runner.SkipUpdateCheck())
+
+      # Scenario 3: Interactive but quiet log level -> returns True
+      self.running_interactively = True
+      logging.getLogger().setLevel(logging.WARNING)
+      self.assertTrue(self.command_runner.SkipUpdateCheck())
+
+      # Scenario 4: User specified custom GS host -> returns True
+      self.running_interactively = True
+      logging.getLogger().setLevel(logging.INFO)
+      mock_has_host.return_value = True
+      self.assertTrue(self.command_runner.SkipUpdateCheck())
+    finally:
+      logging.getLogger().setLevel(prev_loglevel)
+
+  def test_run_invalid_command_suggests_match(self):
+    import io
+    mock_stderr = io.StringIO()
+    with mock.patch('sys.stderr', mock_stderr):
+      with self.assertRaisesRegex(CommandException, 'Invalid command "lss".'):
+        self.command_runner.RunNamedCommand('lss')
+    self.assertIn('Did you mean this?', mock_stderr.getvalue())
+    self.assertIn('\tls', mock_stderr.getvalue())
+
+  def test_run_named_command_translates_help(self):
+    mock_help_class = mock.Mock()
+    with mock.patch.dict(self.command_runner.command_map, {'help': mock_help_class}):
+      self.command_runner.RunNamedCommand('ls', args=[command_runner._StringToSysArgType('--help')])
+      mock_help_class.assert_called_once()
+      args, _ = mock_help_class.call_args
+      self.assertEqual(args[1], ['ls'])
 
 
 class TestCommandRunnerIntegrationTests(testcase.GsUtilIntegrationTestCase):

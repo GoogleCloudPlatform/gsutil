@@ -22,9 +22,10 @@ from __future__ import unicode_literals
 import json
 import os
 import subprocess
-from unittest import mock
-
 import six
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
 
 from gslib import context_config
 from gslib import exception
@@ -449,3 +450,14 @@ class TestContextConfig(testcase.GsUtilUnitTestCase):
       # Test deletes certificate file.
       context_config._singleton_config._unprovision_client_cert()
       mock_remove.assert_called_once_with(test_config.client_cert_path)
+
+  def test_get_context_config_returns_none_before_creation(self):
+    self.assertIsNone(context_config.get_context_config())
+
+  @mock.patch.object(os, 'remove')
+  def test_unprovision_logs_debug_on_success(self, mock_remove):
+    context_config.create_context_config(self.mock_logger)
+    context_config._singleton_config.client_cert_path = 'some/path'
+    context_config._singleton_config._unprovision_client_cert()
+    mock_remove.assert_called_once_with('some/path')
+    self.mock_logger.debug.assert_called_once_with('Unprovisioned client cert: some/path')
