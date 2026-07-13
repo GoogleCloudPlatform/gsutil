@@ -292,6 +292,19 @@ class TestCors(testcase.GsUtilIntegrationTestCase):
     stderr = self.RunGsUtil(['cors'], return_stderr=True, expected_status=1)
     self.assertIn('command requires at least', stderr)
 
+  def test_cors_invalid_subcommand(self):
+    stderr = self.RunGsUtil(['cors', 'invalid', 'gs://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Invalid subcommand "invalid"', stderr)
+
+  def test_cors_set_multi_provider_fails(self):
+    fpath = self.CreateTempFile(contents=self.cors_doc.encode(UTF8))
+    stderr = self.RunGsUtil(['cors', 'set', fpath, 'gs://bucket', 's3://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('command spanning providers not allowed', stderr)
+
 
 class TestCorsOldAlias(TestCors):
   _set_cmd_prefix = ['setcors']

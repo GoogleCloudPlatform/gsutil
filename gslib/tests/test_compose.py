@@ -345,6 +345,17 @@ class TestCompose(testcase.GsUtilIntegrationTestCase):
     self.RunGsUtil(['compose'] + components + [composite.uri])
     self.assertEqual(composite.get_contents_as_string(), b''.join(data_list))
 
+  def test_compose_wildcard_no_matches(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(
+        ['compose', suri(bucket_uri, 'nonexistent*'), suri(bucket_uri, 'composite-obj')],
+        expected_status=1,
+        return_stderr=True)
+    if self._use_gcloud_storage:
+      self.assertIn('The following URLs matched no objects or files:', stderr)
+    else:
+      self.assertIn('CommandException: "compose" requires at least 1 component object.', stderr)
+
 
 class TestCompatibleCompose(testcase.GsUtilIntegrationTestCase):
 

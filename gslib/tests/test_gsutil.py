@@ -261,3 +261,43 @@ class TestGsUtilUnit(testcase.GsUtilUnitTestCase):
           'Your credentials are invalid. For more help, see '
           '"gsutil help creds", or re-run the gsutil config command (see '
           '"gsutil help config").', fake_error)
+
+  @mock.patch.object(system_util, 'InvokedViaCloudSdk', autospec=True)
+  @mock.patch.object(gslib.__main__, '_OutputAndExit', autospec=True)
+  def test_translates_saml_error(self, mock_output_and_exit,
+                                 mock_invoke_via_cloud_sdk):
+    try:
+      from google_reauth import errors as reauth_errors
+    except ImportError:
+      self.skipTest('google_reauth library is required.')
+
+    test_cases = [
+        (True,
+         'You must re-authenticate with your SAML IdP. Please run\n'
+         '$ gcloud auth login'),
+        (False,
+         'You must re-authenticate with your SAML IdP. Please run\n'
+         '$ gsutil config')
+    ]
+
+    for is_cloudsdk, expected_msg in test_cases:
+      mock_output_and_exit.reset_mock()
+      mock_invoke_via_cloud_sdk.return_value = is_cloudsdk
+      command_runner = CommandRunner()
+      with mock.patch.object(command_runner, 'RunNamedCommand') as mock_run:
+        fake_error = reauth_errors.ReauthSamlLoginRequiredError()
+        mock_run.side_effect = fake_error
+        gslib.__main__._RunNamedCommandAndHandleExceptions(
+            command_runner, command_name='fake')
+        mock_output_and_exit.assert_called_once_with(expected_msg)
+
+  @mock.patch.object(gslib.__main__, '_OutputAndExit', autospec=True)
+  def test_translates_invalid_url_error(self, mock_output_and_exit):
+    command_runner = CommandRunner()
+    with mock.patch.object(command_runner, 'RunNamedCommand') as mock_run:
+      fake_error = gslib.exception.InvalidUrlError('fake error message')
+      mock_run.side_effect = fake_error
+      gslib.__main__._RunNamedCommandAndHandleExceptions(command_runner,
+                                                         command_name='fake')
+      mock_output_and_exit.assert_called_once_with(
+          message='InvalidUrlError: fake error message.', exception=fake_error)
