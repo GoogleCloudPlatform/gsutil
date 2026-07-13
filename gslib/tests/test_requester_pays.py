@@ -350,7 +350,9 @@ class TestRequesterPaysShim(testcase.ShimUnitTestBase):
                                            return_log_handler=True)
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage buckets list'
-                       ' --format=value[separator=": "](name.sub("^", "gs://"),requester_pays.yesno("Enabled", "Disabled"))'
+                       ' --format=value[separator=": "]('
+                       'name.sub("^", "gs://"),'
+                       'requester_pays.yesno("Enabled", "Disabled"))'
                        ' gs://bucket').format(
                            shim_util._get_gcloud_binary_path('fake_dir')),
                       info_lines)

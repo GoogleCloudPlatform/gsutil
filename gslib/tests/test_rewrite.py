@@ -29,6 +29,8 @@ add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
 from gslib.commands import rewrite
+from gslib.exception import CommandException
+from gslib.storage_url import StorageUrlFromString
 from gslib.tests.util import SetEnvironmentForTest
 from gslib.utils import shim_util
 
@@ -705,77 +707,53 @@ class TestRewriteShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(rewrite.RewriteCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_storage_class(self):
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
-                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
-      with SetEnvironmentForTest({
-          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
-          'CLOUDSDK_ROOT_DIR': 'fake_dir',
-      }):
-        mock_log_handler = self.RunCommand('rewrite', ['-s', 'nearline', 'gs://bucket/obj'],
-                                           return_log_handler=True)
-        info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} storage objects update'
-                       ' -s nearline gs://bucket/obj').format(
-                           shim_util._get_gcloud_binary_path('fake_dir')),
-                      info_lines)
+    mock_log_handler = self.RunShimCommand(
+        'rewrite', ['-s', 'nearline', 'gs://bucket/obj'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                   ' -s nearline gs://bucket/obj').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
 
   @mock.patch.object(rewrite.RewriteCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_no_preserve_acl(self):
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
-                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
-      with SetEnvironmentForTest({
-          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
-          'CLOUDSDK_ROOT_DIR': 'fake_dir',
-      }):
-        mock_log_handler = self.RunCommand('rewrite', ['-s', 'standard', '-O', 'gs://bucket/obj'],
-                                           return_log_handler=True)
-        info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} storage objects update'
-                       ' -s standard --no-preserve-acl gs://bucket/obj').format(
-                           shim_util._get_gcloud_binary_path('fake_dir')),
-                      info_lines)
+    mock_log_handler = self.RunShimCommand(
+        'rewrite', ['-s', 'standard', '-O', 'gs://bucket/obj'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                   ' -s standard --no-preserve-acl gs://bucket/obj').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
 
   @mock.patch.object(rewrite.RewriteCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_recursive(self):
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
-                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
-      with SetEnvironmentForTest({
-          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
-          'CLOUDSDK_ROOT_DIR': 'fake_dir',
-      }):
-        mock_log_handler = self.RunCommand('rewrite', ['-s', 'archive', '-r', 'gs://bucket'],
-                                           return_log_handler=True)
-        info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} storage objects update'
-                       ' -s archive -r gs://bucket').format(
-                           shim_util._get_gcloud_binary_path('fake_dir')),
-                      info_lines)
+    mock_log_handler = self.RunShimCommand(
+        'rewrite', ['-s', 'archive', '-r', 'gs://bucket'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                   ' -s archive -r gs://bucket').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
 
   @mock.patch.object(rewrite.RewriteCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_clear_encryption(self):
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
-                               ('GSUtil', 'hidden_shim_mode', 'dry_run'),
-                               ('GSUtil', 'encryption_key', None)]):
-      with SetEnvironmentForTest({
-          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
-          'CLOUDSDK_ROOT_DIR': 'fake_dir',
-      }):
-        mock_log_handler = self.RunCommand('rewrite', ['-k', 'gs://bucket/obj'],
-                                           return_log_handler=True)
-        info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} storage objects update'
-                       ' --clear-encryption-key gs://bucket/obj').format(
-                           shim_util._get_gcloud_binary_path('fake_dir')),
-                      info_lines)
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', None)]):
+      mock_log_handler = self.RunShimCommand(
+          'rewrite', ['-k', 'gs://bucket/obj'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                   ' --clear-encryption-key gs://bucket/obj').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
 
 
 class TestRewriteUnitTests(testcase.GsUtilUnitTestCase):
 
   def test_check_provider(self):
-    from gslib.storage_url import StorageUrlFromString
-    from gslib.exception import CommandException
     # Should succeed for gs URLs.
-    rewrite.RewriteCommand.CheckProvider(None, StorageUrlFromString('gs://bucket/obj'))
+    rewrite.RewriteCommand.CheckProvider(
+        None, StorageUrlFromString('gs://bucket/obj'))
     # Should fail for s3 URLs.
     with self.assertRaises(CommandException):
-      rewrite.RewriteCommand.CheckProvider(None, StorageUrlFromString('s3://bucket/obj'))
+      rewrite.RewriteCommand.CheckProvider(
+          None, StorageUrlFromString('s3://bucket/obj'))

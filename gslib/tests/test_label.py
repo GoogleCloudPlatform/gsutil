@@ -353,50 +353,36 @@ class TestLabelShim(testcase.ShimUnitTestBase):
 
   @mock.patch.object(label.LabelCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_label_get(self):
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
-                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
-      with SetEnvironmentForTest({
-          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
-          'CLOUDSDK_ROOT_DIR': 'fake_dir',
-      }):
-        mock_log_handler = self.RunCommand('label', ['get', 'gs://bucket'],
-                                           return_log_handler=True)
-        info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} storage buckets describe'
-                       ' --format=gsutiljson[key=labels,empty=\' has no label'
-                       ' configuration.\',empty_prefix_key=storage_url,indent=2]'
-                       ' gs://bucket').format(
-                           shim_util._get_gcloud_binary_path('fake_dir')),
-                      info_lines)
+    mock_log_handler = self.RunShimCommand('label', ['get', 'gs://bucket'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage buckets describe'
+                   ' --format=gsutiljson['
+                   'key=labels,'
+                   'empty=\' has no label configuration.\','
+                   'empty_prefix_key=storage_url,'
+                   'indent=2]'
+                   ' gs://bucket').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
 
   @mock.patch.object(label.LabelCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_label_set(self):
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
-                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
-      with SetEnvironmentForTest({
-          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
-          'CLOUDSDK_ROOT_DIR': 'fake_dir',
-      }):
-        mock_log_handler = self.RunCommand('label', ['set', 'labels.json', 'gs://bucket'],
-                                           return_log_handler=True)
-        info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
-                       ' --labels-file labels.json gs://bucket').format(
-                           shim_util._get_gcloud_binary_path('fake_dir')),
-                      info_lines)
+    mock_log_handler = self.RunShimCommand(
+        'label', ['set', 'labels.json', 'gs://bucket'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                   ' --labels-file labels.json gs://bucket').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
 
   @mock.patch.object(label.LabelCommand, 'RunCommand', new=mock.Mock())
   def test_shim_translates_label_ch(self):
-    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
-                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
-      with SetEnvironmentForTest({
-          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
-          'CLOUDSDK_ROOT_DIR': 'fake_dir',
-      }):
-        mock_log_handler = self.RunCommand('label', ['ch', '-l', 'env:prod', '-d', 'dept', 'gs://bucket'],
-                                           return_log_handler=True)
-        info_lines = '\n'.join(mock_log_handler.messages['info'])
-        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
-                       ' gs://bucket --update-labels=env=prod --remove-labels=dept').format(
-                           shim_util._get_gcloud_binary_path('fake_dir')),
-                      info_lines)
+    mock_log_handler = self.RunShimCommand(
+        'label', ['ch', '-l', 'env:prod', '-d', 'dept', 'gs://bucket'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(
+        ('Gcloud Storage Command: {} storage buckets update'
+         ' gs://bucket --update-labels=env=prod'
+         ' --remove-labels=dept').format(
+             shim_util._get_gcloud_binary_path('fake_dir')),
+        info_lines)

@@ -18,6 +18,8 @@ import subprocess
 from unittest import mock
 
 from gslib.tests.testcase.unit_testcase import GsUtilUnitTestCase
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 
 
 class ShimUnitTestBase(GsUtilUnitTestCase):
@@ -45,3 +47,13 @@ class ShimUnitTestBase(GsUtilUnitTestCase):
     if self._subprocess_run_patcher is not None:
       self._subprocess_run_patcher.stop()
     super().tearDown()
+
+  def RunShimCommand(self, command_name, args):
+    """Runs a gsutil command with the shim enabled in dry-run mode."""
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        return self.RunCommand(command_name, args, return_log_handler=True)

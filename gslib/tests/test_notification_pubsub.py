@@ -176,6 +176,22 @@ class TestNotificationPubSub(testcase.GsUtilIntegrationTestCase):
                             return_stderr=True)
     self.assertIn('command requires at least', stderr)
 
+  def test_list_object_fails(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(
+        ['notification', 'list', suri(bucket_uri, 'obj')],
+        expected_status=1,
+        return_stderr=True)
+    self.assertIn('cannot be used on cloud objects, only buckets', stderr)
+
+  def test_delete_object_fails(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(
+        ['notification', 'delete', suri(bucket_uri, 'obj')],
+        expected_status=1,
+        return_stderr=True)
+    self.assertIn('cannot be used on cloud objects, only buckets', stderr)
+
 
 class TestNotificationShim(testcase.ShimUnitTestBase):
 
