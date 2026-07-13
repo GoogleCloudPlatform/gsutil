@@ -538,6 +538,10 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_with_no_encryption_key_operates_on_unencrypted_objects(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
+    if self._use_gcloud_storage:
+      raise unittest.SkipTest(
+          'gcloud storage objects update optimizes out redundant updates for '
+          'unencrypted objects, and does not support forcing a rewrite.')
     # Since the introduction of default KMS keys for GCS buckets, rewriting
     # with no explicitly specified CSEK/CMEK can still result in the rewritten
     # objects being encrypted. Before KMS support, this would always result in
