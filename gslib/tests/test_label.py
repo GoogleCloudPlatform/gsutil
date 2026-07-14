@@ -29,13 +29,21 @@ import boto
 from boto import handler
 from boto.s3.tagging import Tags
 
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
+from gslib.commands import label
 from gslib.exception import CommandException
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
-from gslib.utils.retry_util import Retry
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
 from gslib.utils.constants import UTF8
+from gslib.utils.retry_util import Retry
+from gslib.utils import shim_util
 
 KEY1 = 'key_one'
 KEY2 = 'key_two'
@@ -310,3 +318,71 @@ class TestLabelGS(testcase.GsUtilIntegrationTestCase):
         return_stderr=True,
         expected_status=1)
     self.assertIn('Please specify at least one label change', stderr)
+
+  def test_label_invalid_subcommand(self):
+    stderr = self.RunGsUtil(['label', 'invalid_sub', 'gs://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Invalid subcommand "invalid_sub" for the label command.', stderr)
+
+  def test_label_set_non_existent_file_fails(self):
+    stderr = self.RunGsUtil(['label', 'set', 'non_existent.json', 'gs://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Could not find the file "non_existent.json".', stderr)
+
+  def test_ch_label_malformed_add_fails(self):
+    stderr = self.RunGsUtil(['label', 'ch', '-l', 'key', 'gs://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Found incorrectly formatted option for "gsutil label ch"', stderr)
+
+    stderr = self.RunGsUtil(['label', 'ch', '-l', 'key:value:extra', 'gs://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Found incorrectly formatted option for "gsutil label ch"', stderr)
+
+  def test_ch_label_malformed_del_fails(self):
+    stderr = self.RunGsUtil(['label', 'ch', '-d', 'key:value', 'gs://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('To delete a label, provide only its key.', stderr)
+
+
+class TestLabelShim(testcase.ShimUnitTestBase):
+
+  @mock.patch.object(label.LabelCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_label_get(self):
+    mock_log_handler = self.RunShimCommand('label', ['get', 'gs://bucket'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage buckets describe'
+                   ' --format=gsutiljson['
+                   'key=labels,'
+                   'empty=\' has no label configuration.\','
+                   'empty_prefix_key=storage_url,'
+                   'indent=2]'
+                   ' gs://bucket').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
+
+  @mock.patch.object(label.LabelCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_label_set(self):
+    mock_log_handler = self.RunShimCommand(
+        'label', ['set', 'labels.json', 'gs://bucket'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                   ' --labels-file labels.json gs://bucket').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
+
+  @mock.patch.object(label.LabelCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_label_ch(self):
+    mock_log_handler = self.RunShimCommand(
+        'label', ['ch', '-l', 'env:prod', '-d', 'dept', 'gs://bucket'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(
+        ('Gcloud Storage Command: {} storage buckets update'
+         ' gs://bucket --update-labels=env=prod'
+         ' --remove-labels=dept').format(
+             shim_util._get_gcloud_binary_path('fake_dir')),
+        info_lines)

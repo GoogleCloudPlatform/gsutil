@@ -19,10 +19,18 @@ from __future__ import absolute_import
 import datetime
 import re
 
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
+from gslib.commands import retention
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.testcase.integration_testcase import SkipForXML
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 
 _SECONDS_IN_DAY = 24 * 60 * 60
 _DAYS_IN_MONTH = 31
@@ -568,6 +576,24 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     self._VerifyDefaultEventBasedHold(bucket2_uri,
                                       expected_default_event_based_hold=True)
 
+  def test_invalid_subcommand(self):
+    stderr = self.RunGsUtil(['retention', 'invalid', 'gs://foobar'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Invalid subcommand', stderr)
+
+  def test_invalid_event_default_argument(self):
+    stderr = self.RunGsUtil(['retention', 'event-default', 'invalid', 'gs://foobar'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('for the "retention event-default" command', stderr)
+
+  def test_non_cloud_url_fails(self):
+    stderr = self.RunGsUtil(['retention', 'get', 'file://somefile'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('must specify a bucket', stderr)
+
   def _VerifyObjectHoldAndRetentionStatus(self,
                                           bucket_uri,
                                           object_uri,
@@ -639,3 +665,166 @@ class TestRetention(testcase.GsUtilIntegrationTestCase):
     converted_time = datetime.datetime.strptime(time_string,
                                                 '%a, %d %b %Y %H:%M:%S GMT')
     return self.DateTimeToSeconds(converted_time)
+
+
+class TestRetentionShim(testcase.ShimUnitTestBase):
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_set(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['set', '1y', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                       ' --retention-period=31557600s gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_clear(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['clear', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                       ' --clear-retention-period gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_get(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['get', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets describe'
+                       ' --format=yaml(retentionPolicy) --raw gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_lock(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['lock', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                       ' --lock-retention-period gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_event_default_set(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['event-default', 'set', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                       ' --default-event-based-hold gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_event_default_release(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['event-default', 'release', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets update'
+                       ' --no-default-event-based-hold gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_event_set(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['event', 'set', 'gs://bucket/obj'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                       ' --event-based-hold gs://bucket/obj').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_event_release(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['event', 'release', 'gs://bucket/obj'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                       ' --no-event-based-hold gs://bucket/obj').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_temp_set(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['temp', 'set', 'gs://bucket/obj'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                       ' --temporary-hold gs://bucket/obj').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(retention.RetentionCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_temp_release(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('retention', ['temp', 'release', 'gs://bucket/obj'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                       ' --no-temporary-hold gs://bucket/obj').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)

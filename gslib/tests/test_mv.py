@@ -327,3 +327,19 @@ class TestMvE2ETests(testcase.GsUtilIntegrationTestCase):
     self.assertIn('{}{}dir2{}file.txt'.format(tmpdir, os.sep, os.sep),
                   file_list)
     self.AssertNObjectsInBucket(bucket_uri, 0)
+
+  def test_move_source_bucket_fails(self):
+    bucket1_uri = self.CreateBucket()
+    bucket2_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['mv', suri(bucket1_uri), suri(bucket2_uri)],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('You cannot move a source bucket using the mv command', stderr)
+
+  def test_missing_arguments_fails(self):
+    stderr = self.RunGsUtil(['mv'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('command requires at least', stderr)
+
+

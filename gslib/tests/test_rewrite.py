@@ -22,7 +22,18 @@ from __future__ import unicode_literals
 import logging
 import os
 import re
+import time
 import unittest
+
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
+from gslib.commands import rewrite
+from gslib.exception import CommandException
+from gslib.storage_url import StorageUrlFromString
+from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 
 from boto.storage_uri import BucketStorageUri
 
@@ -528,6 +539,10 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
   def test_rewrite_with_no_encryption_key_operates_on_unencrypted_objects(self):
     if self.test_api == ApiSelector.XML:
       return unittest.skip('Rewrite API is only supported in JSON.')
+    if self._use_gcloud_storage:
+      raise unittest.SkipTest(
+          'gcloud storage objects update optimizes out redundant updates for '
+          'unencrypted objects, and does not support forcing a rewrite.')
     # Since the introduction of default KMS keys for GCS buckets, rewriting
     # with no explicitly specified CSEK/CMEK can still result in the rewritten
     # objects being encrypted. Before KMS support, this would always result in
@@ -549,11 +564,24 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
 
     # Rewriting with no encryption_key should rewrite the object, resulting in
     # the bucket's default KMS key being used to encrypt it.
-    with SetBotoConfigForTest([('GSUtil', 'encryption_key', None)]):
-      stderr = self.RunGsUtil(
-          ['rewrite', '-k', suri(object_uri)], return_stderr=True)
-    self.assertIn('Rewriting', stderr)
-    self.AssertObjectUsesCMEK(suri(object_uri), key_fqn)
+    for i in range(5):
+      try:
+        with SetBotoConfigForTest([('GSUtil', 'encryption_key', None)]):
+          stderr = self.RunGsUtil(
+              ['rewrite', '-k', suri(object_uri)], return_stderr=True)
+        self.assertIn('Rewriting', stderr)
+        self.AssertObjectUsesCMEK(suri(object_uri), key_fqn)
+        break
+      except AssertionError:
+        if i == 4:
+          raise
+        time.sleep(2)
+
+  def test_stdin_with_arguments_fails(self):
+    stderr = self.RunGsUtil(['rewrite', '-k', '-I', 'gs://bucket/obj'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('No arguments allowed with the -I flag', stderr)
 
   def _test_rewrite_resume_or_restart(self,
                                       initial_dec_key,
@@ -685,3 +713,59 @@ class TestRewrite(testcase.GsUtilIntegrationTestCase):
     finally:
       # Clean up if something went wrong.
       DeleteTrackerFile(tracker_file_name)
+
+
+class TestRewriteShim(testcase.ShimUnitTestBase):
+
+  @mock.patch.object(rewrite.RewriteCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_storage_class(self):
+    mock_log_handler = self.RunShimCommand(
+        'rewrite', ['-s', 'nearline', 'gs://bucket/obj'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                   ' -s nearline gs://bucket/obj').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
+
+  @mock.patch.object(rewrite.RewriteCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_no_preserve_acl(self):
+    mock_log_handler = self.RunShimCommand(
+        'rewrite', ['-s', 'standard', '-O', 'gs://bucket/obj'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                   ' -s standard --no-preserve-acl gs://bucket/obj').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
+
+  @mock.patch.object(rewrite.RewriteCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_recursive(self):
+    mock_log_handler = self.RunShimCommand(
+        'rewrite', ['-s', 'archive', '-r', 'gs://bucket'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                   ' -s archive -r gs://bucket').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
+
+  @mock.patch.object(rewrite.RewriteCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_clear_encryption(self):
+    with SetBotoConfigForTest([('GSUtil', 'encryption_key', None)]):
+      mock_log_handler = self.RunShimCommand(
+          'rewrite', ['-k', 'gs://bucket/obj'])
+    info_lines = '\n'.join(mock_log_handler.messages['info'])
+    self.assertIn(('Gcloud Storage Command: {} storage objects update'
+                   ' --clear-encryption-key gs://bucket/obj').format(
+                       shim_util._get_gcloud_binary_path('fake_dir')),
+                  info_lines)
+
+
+class TestRewriteUnitTests(testcase.GsUtilUnitTestCase):
+
+  def test_check_provider(self):
+    # Should succeed for gs URLs.
+    rewrite.RewriteCommand.CheckProvider(
+        None, StorageUrlFromString('gs://bucket/obj'))
+    # Should fail for s3 URLs.
+    with self.assertRaises(CommandException):
+      rewrite.RewriteCommand.CheckProvider(
+          None, StorageUrlFromString('s3://bucket/obj'))

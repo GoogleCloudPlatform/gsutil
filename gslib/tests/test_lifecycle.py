@@ -259,6 +259,37 @@ class TestSetLifecycle(testcase.GsUtilIntegrationTestCase):
         ['lifecycle', 'get', suri(bucket2_uri)], return_stdout=True)
     self.assertEqual(json.loads(stdout), self.lifecycle_json_obj)
 
+  def test_lifecycle_invalid_subcommand(self):
+    stderr = self.RunGsUtil(['lifecycle', 'invalid_sub', 'gs://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('Invalid subcommand "invalid_sub" for the lifecycle command.', stderr)
+
+  def test_set_non_existent_file_fails(self):
+    stderr = self.RunGsUtil(['lifecycle', 'set', 'non_existent.json', 'gs://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('No such file', stderr)
+
+  def test_set_multi_provider_fails(self):
+    fpath = self.CreateTempFile(contents=self.lifecycle_doc.encode('ascii'))
+    stderr = self.RunGsUtil(['lifecycle', 'set', fpath, 'gs://bucket', 's3://bucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('spanning providers not allowed', stderr)
+
+  def test_set_missing_bucket_fails(self):
+    fpath = self.CreateTempFile(contents=self.lifecycle_doc.encode('ascii'))
+    stderr = self.RunGsUtil(['lifecycle', 'set', fpath],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('spanning providers not allowed', stderr)
+
+    stderr = self.RunGsUtil(['lifecycle', 'set'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('command requires at least', stderr)
+
 
 class TestLifecycleUnitTestsWithShim(testcase.ShimUnitTestBase):
   """Unit tests for gsutil lifecycle with shim."""
