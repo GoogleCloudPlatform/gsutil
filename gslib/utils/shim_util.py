@@ -275,8 +275,10 @@ def _get_gcs_json_endpoint_from_boto_config(config):
     gs_json_port = config.get('Credentials', 'gs_json_port')
     port = ':' + gs_json_port if gs_json_port else ''
     json_api_version = config.get('Credentials', 'json_api_version', 'v1')
-    return 'https://{}{}/storage/{}'.format(gs_json_host, port,
-                                            json_api_version)
+    # Note that the json endpoint must start with https://
+    # and end with a trailing forward slash.
+    return 'https://{}{}/storage/{}/'.format(gs_json_host, port,
+                                             json_api_version)
   return None
 
 
