@@ -22,12 +22,20 @@ from __future__ import unicode_literals
 import logging
 import unittest
 
+from six import add_move, MovedModule
+add_move(MovedModule('mock', 'mock', 'unittest.mock'))
+from six.moves import mock
+
+from gslib.commands import notification
 from gslib.cs_api_map import ApiSelector
 from gslib.project_id import PopulateProjectId
 from gslib.pubsub_api import PubsubApi
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
 from gslib.tests.util import ObjectToURI as suri
+from gslib.tests.util import SetBotoConfigForTest
+from gslib.tests.util import SetEnvironmentForTest
+from gslib.utils import shim_util
 
 
 @SkipForS3('gsutil doesn\'t support S3 notifications')
@@ -143,3 +151,97 @@ class TestNotificationPubSub(testcase.GsUtilIntegrationTestCase):
     self._RegisterDefaultTopicCreation(bucket_uri.bucket_name)
     self.RunGsUtil(['notification', 'create', '-f', 'json', suri(bucket_uri)])
     self.RunGsUtil(['notification', 'delete', suri(bucket_uri)])
+
+  def test_create_object_fails(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(['notification', 'create', '-f', 'json', suri(bucket_uri, 'obj')],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('requires a GCS bucket name', stderr)
+
+  def test_create_s3_bucket_fails(self):
+    stderr = self.RunGsUtil(['notification', 'create', '-f', 'json', 's3://somebucket'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('only be used with gs:// bucket URLs', stderr)
+
+  def test_missing_arguments_fails(self):
+    stderr = self.RunGsUtil(['notification'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('command requires at least', stderr)
+
+    stderr = self.RunGsUtil(['notification', 'create'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn('command requires at least', stderr)
+
+  def test_list_object_fails(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(
+        ['notification', 'list', suri(bucket_uri, 'obj')],
+        expected_status=1,
+        return_stderr=True)
+    self.assertIn('cannot be used on cloud objects, only buckets', stderr)
+
+  def test_delete_object_fails(self):
+    bucket_uri = self.CreateBucket()
+    stderr = self.RunGsUtil(
+        ['notification', 'delete', suri(bucket_uri, 'obj')],
+        expected_status=1,
+        return_stderr=True)
+    self.assertIn('cannot be used on cloud objects, only buckets', stderr)
+
+
+class TestNotificationShim(testcase.ShimUnitTestBase):
+
+  @mock.patch.object(notification.NotificationCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_create(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('notification',
+                                           ['create', '-f', 'json', '-t', 'mytopic', '-p', 'prefix', '-m', 'key:value', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets notifications create'
+                       ' --payload-format json --topic mytopic --object-prefix prefix'
+                       ' gs://bucket --custom-attributes=key=value').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(notification.NotificationCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_list(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('notification', ['list', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets notifications list'
+                       ' --human-readable gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
+  @mock.patch.object(notification.NotificationCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_delete(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('notification', ['delete', 'gs://bucket'],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(('Gcloud Storage Command: {} storage buckets notifications delete'
+                       ' gs://bucket').format(
+                           shim_util._get_gcloud_binary_path('fake_dir')),
+                      info_lines)
+
