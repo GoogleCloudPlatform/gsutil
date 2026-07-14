@@ -4895,6 +4895,14 @@ class TestCp(testcase.GsUtilIntegrationTestCase):
     self.assertEqual(len(os.listdir(temporary_directory)), test_file_count)
 
 
+_original_run_named_command = None
+
+
+def _MockRunNamedCommand(runner, *args, **kwargs):
+  kwargs['parallel_operations'] = True
+  return _original_run_named_command(runner, *args, **kwargs)
+
+
 class TestCpUnitTests(testcase.GsUtilUnitTestCase):
   """Unit tests for gsutil cp."""
 
@@ -5005,7 +5013,151 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(sub_opts, [('--flag-key', 'flag-value'),
                                 ('-a', 'publicRead'), ('-a', 'does-not-exist')])
 
+  def test_cp_too_few_arguments_fails(self):
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'Wrong number of arguments for "cp" command'):
+      self.RunCommand('cp', ['gs://bucket'])
 
+  def test_provider_only_source_url_fails(self):
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'does not support provider-only URLs'):
+      self.RunCommand('cp', ['gs://', 'gs://bucket/object'])
+
+  def test_preserve_posix_on_stream_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'Cannot preserve POSIX attributes with a stream'):
+      self.RunCommand('cp', ['-P', '-', suri(bucket_uri, 'object')])
+
+  def test_upload_stream_parallel_fails(self):
+    bucket_uri = self.CreateBucket()
+    from gslib.command_runner import CommandRunner
+    global _original_run_named_command
+    _original_run_named_command = CommandRunner.RunNamedCommand
+    with mock.patch.object(
+        CommandRunner, 'RunNamedCommand', _MockRunNamedCommand):
+      with mock.patch(
+          'gslib.command.Command._GetProcessAndThreadCount',
+          return_value=(1, 3)):
+        with mock.patch('logging.Logger.error') as mock_log_error:
+          try:
+            self.RunCommand('cp', ['-', suri(bucket_uri, 'object')])
+          except exception.CommandException as e:
+            self.assertIn('file/object could not be transferred', str(e))
+          called_args = [
+              call[0][0] for call in mock_log_error.call_args_list
+          ]
+          self.assertTrue(any(
+              'Cannot upload from a stream when using gsutil -m' in arg
+              for arg in called_args))
+
+  def test_version_specific_destination_url_fails(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(
+        bucket_uri=bucket_uri, object_name='src', contents=b'foo')
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'cannot be the destination for gsutil cp'):
+      self.RunCommand('cp', [
+          suri(bucket_uri, 'src'),
+          suri(bucket_uri, 'dst') + '#123'
+      ])
+
+  def test_storage_class_on_local_destination_fails(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(
+        bucket_uri=bucket_uri, object_name='object', contents=b'foo')
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'Cannot specify storage class for a non-cloud destination'):
+      self.RunCommand('cp', [
+          '-s', 'NEARLINE',
+          suri(bucket_uri, 'object'), 'local_file'
+      ])
+
+  def test_read_args_from_stdin_with_source_urls_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'Source URLs cannot be specified with -I option'):
+      self.RunCommand('cp', [
+          '-I',
+          suri(bucket_uri, 'src'),
+          suri(bucket_uri, 'dst')
+      ])
+
+  def test_preserve_acl_and_canned_acl_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'Specifying both the -p and -a options together is invalid.'):
+      self.RunCommand('cp', [
+          '-p', '-a', 'public-read', 'local_file',
+          suri(bucket_uri)
+      ])
+
+  def test_all_versions_with_parallel_fails(self):
+    bucket_uri = self.CreateBucket()
+    from gslib.command_runner import CommandRunner
+    global _original_run_named_command
+    _original_run_named_command = CommandRunner.RunNamedCommand
+    with mock.patch.object(
+        CommandRunner, 'RunNamedCommand', _MockRunNamedCommand):
+      with self.assertRaisesRegex(
+          exception.CommandException,
+          'The gsutil -m option is not supported with the cp -A flag'):
+        self.RunCommand('cp', [
+            '-A', 'local_file',
+            suri(bucket_uri)
+        ])
+
+  def test_gzip_in_flight_and_local_together_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'Specifying both the -j/-J and -z/-Z options together is invalid.'):
+      self.RunCommand('cp', [
+          '-j', 'html', '-z', 'txt', 'local_file',
+          suri(bucket_uri)
+      ])
+
+  def test_gzip_multiple_in_flight_options_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'Specifying both the -j and -J options together is invalid.'):
+      self.RunCommand('cp', [
+          '-j', 'html', '-J', 'local_file',
+          suri(bucket_uri)
+      ])
+
+  def test_gzip_multiple_local_options_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'Specifying both the -z and -Z options together is invalid.'):
+      self.RunCommand('cp', [
+          '-z', 'html', '-Z', 'local_file',
+          suri(bucket_uri)
+      ])
+
+  def test_copy_same_file_fails(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(
+        bucket_uri=bucket_uri, object_name='object', contents=b'foo')
+    with self.assertRaisesRegex(
+        exception.CommandException,
+        'are the same file - abort'):
+      self.RunCommand('cp', [
+          suri(bucket_uri, 'object'),
+          suri(bucket_uri, 'object')
+      ])
+
+
+@mock.patch('gslib.commands.cp.CpCommand.RunCommand', new=mock.Mock())
 class TestCpShimUnitTests(testcase.ShimUnitTestBase):
   """Unit tests for shimming cp flags"""
 
@@ -5033,3 +5185,121 @@ class TestCpShimUnitTests(testcase.ShimUnitTestBase):
                 suri(bucket_uri)), info_lines)
         warn_lines = '\n'.join(mock_log_handler.messages['warning'])
         self.assertIn('Use the -m flag to enable parallelism', warn_lines)
+
+  def test_shim_translates_other_flags(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=b'abcd')
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('cp', [
+            '-A', '-c', '-D', '-P', '-p', '-L', 'manifest.log',
+            '-j', 'html,txt', fpath,
+            suri(bucket_uri)
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage cp'
+             ' --all-versions --continue-on-error --daisy-chain'
+             ' --preserve-posix --preserve-acl'
+             ' --manifest-path manifest.log --gzip-in-flight html,txt'
+             ' {} {}').format(
+                 shim_util._get_gcloud_binary_path('fake_dir'),
+                 fpath,
+                 suri(bucket_uri)),
+            info_lines)
+
+  def test_shim_translates_gzip_local_flag(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=b'abcd')
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('cp', [
+            '-z', 'js,css', fpath, suri(bucket_uri)
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage cp'
+             ' --gzip-local js,css'
+             ' {} {}').format(
+                 shim_util._get_gcloud_binary_path('fake_dir'),
+                 fpath,
+                 suri(bucket_uri)),
+            info_lines)
+
+  def test_shim_translates_gzip_in_flight_all_flag(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=b'abcd')
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('cp', [
+            '-J', fpath, suri(bucket_uri)
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage cp'
+             ' --gzip-in-flight-all'
+             ' {} {}').format(
+                 shim_util._get_gcloud_binary_path('fake_dir'),
+                 fpath,
+                 suri(bucket_uri)),
+            info_lines)
+
+  def test_shim_translates_gzip_local_all_flag(self):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempFile(contents=b'abcd')
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand('cp', [
+            '-Z', fpath, suri(bucket_uri)
+        ],
+                                           return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage cp'
+             ' --gzip-local-all'
+             ' {} {}').format(
+                 shim_util._get_gcloud_binary_path('fake_dir'),
+                 fpath,
+                 suri(bucket_uri)),
+            info_lines)
+
+  def test_shim_translates_stdin_flag(self):
+    bucket_uri = self.CreateBucket()
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        with mock.patch('sys.stdin', mock.Mock()):
+          mock_log_handler = self.RunCommand('cp', [
+              '-I', suri(bucket_uri)
+          ],
+                                             return_log_handler=True)
+          info_lines = '\n'.join(mock_log_handler.messages['info'])
+          self.assertIn(
+              ('Gcloud Storage Command: {} storage cp'
+               ' --read-paths-from-stdin'
+               ' {}').format(
+                   shim_util._get_gcloud_binary_path('fake_dir'),
+                   suri(bucket_uri)),
+              info_lines)

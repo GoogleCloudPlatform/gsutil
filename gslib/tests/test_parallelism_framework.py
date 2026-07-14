@@ -858,6 +858,170 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self.assertIsNone(StorageUri.connection)
     self.assertFalse(StorageUri.provider_pool)
 
+  def test_atomic_dict_operations(self):
+    from gslib.utils.parallelism_framework_util import AtomicDict
+
+    # 1. Thread-safe lock style (without manager)
+    ad = AtomicDict()
+    ad['foo'] = 'bar'
+    self.assertEqual(ad['foo'], 'bar')
+    self.assertEqual(ad.get('foo'), 'bar')
+    self.assertEqual(ad.get('nonexistent', 'default'), 'default')
+
+    ad.Increment('count', 5, default_value=10)
+    self.assertEqual(ad['count'], 15)
+
+    self.assertEqual(list(ad.values()), ['bar', 15])
+    ad.delete('foo')
+    self.assertEqual(ad.get('foo'), None)
+
+  def test_atomic_dict_with_manager(self):
+    from gslib.utils.parallelism_framework_util import AtomicDict
+    from gslib.utils.parallelism_framework_util import (
+        CheckMultiprocessingAvailableAndInit)
+
+    res = CheckMultiprocessingAvailableAndInit()
+    if res.is_available:
+      from gslib.utils.parallelism_framework_util import top_level_manager
+      ad = AtomicDict(manager=top_level_manager)
+      ad['foo'] = 123
+      ad.Increment('foo', 1)
+      self.assertEqual(ad['foo'], 124)
+
+  def test_process_and_thread_safe_int_operations(self):
+    from gslib.utils.parallelism_framework_util import ProcessAndThreadSafeInt
+
+    for multiprocessing_available in (True, False):
+      safe_int = ProcessAndThreadSafeInt(multiprocessing_available)
+      self.assertEqual(safe_int.GetValue(), 0)
+      safe_int.Increment()
+      safe_int.Increment()
+      self.assertEqual(safe_int.GetValue(), 2)
+      safe_int.Decrement()
+      self.assertEqual(safe_int.GetValue(), 1)
+      safe_int.Reset(10)
+      self.assertEqual(safe_int.GetValue(), 10)
+
+  def test_should_prohibit_multiprocessing(self):
+    from gslib.utils.parallelism_framework_util import (
+        ShouldProhibitMultiprocessing)
+
+    # 1. Test Windows case
+    with mock.patch('gslib.utils.system_util.IS_WINDOWS', True):
+      with mock.patch('gslib.utils.system_util.IS_OSX', False):
+        prohibit, name = ShouldProhibitMultiprocessing()
+        self.assertTrue(prohibit)
+        self.assertEqual(name, 'Windows')
+
+    # 2. Test macOS case
+    with mock.patch('gslib.utils.system_util.IS_WINDOWS', False):
+      with mock.patch('gslib.utils.system_util.IS_OSX', True):
+        prohibit, name = ShouldProhibitMultiprocessing()
+        self.assertFalse(prohibit)
+        self.assertEqual(name, 'macOS')
+
+    # 3. Test Alpine Linux case
+    with mock.patch('gslib.utils.system_util.IS_WINDOWS', False):
+      with mock.patch('gslib.utils.system_util.IS_OSX', False):
+        mock_data = 'NAME="Alpine Linux"\nID=alpine\n'
+        with mock.patch('builtins.open', mock.mock_open(read_data=mock_data)):
+          prohibit, name = ShouldProhibitMultiprocessing()
+          self.assertTrue(prohibit)
+          self.assertEqual(name, 'Alpine Linux')
+
+    # 4. Test Other Linux case
+    with mock.patch('gslib.utils.system_util.IS_WINDOWS', False):
+      with mock.patch('gslib.utils.system_util.IS_OSX', False):
+        mock_data = 'NAME="Ubuntu"\nID=ubuntu\n'
+        with mock.patch('builtins.open', mock.mock_open(read_data=mock_data)):
+          prohibit, name = ShouldProhibitMultiprocessing()
+          self.assertFalse(prohibit)
+          self.assertEqual(name, 'Ubuntu')
+
+  def test_check_multiprocessing_available_and_init_failures(self):
+    from gslib.utils import parallelism_framework_util
+    from gslib.utils.parallelism_framework_util import (
+        CheckMultiprocessingAvailableAndInit)
+
+    orig_cached_available = (
+        parallelism_framework_util._cached_multiprocessing_is_available)
+    try:
+      # 1. Test when Value raises exception (e.g. shm not writable)
+      parallelism_framework_util._cached_multiprocessing_is_available = None
+      with mock.patch.object(
+          parallelism_framework_util.multiprocessing_context,
+          'Value',
+          side_effect=Exception('Fake error')):
+        res = CheckMultiprocessingAvailableAndInit()
+        self.assertFalse(res.is_available)
+        self.assertIn('Fake error', res.stack_trace)
+
+      # 2. Test when resource limit is too low
+      parallelism_framework_util._cached_multiprocessing_is_available = None
+      with mock.patch.object(
+          parallelism_framework_util,
+          '_IncreaseSoftLimitForResource',
+          return_value=10):
+        res = CheckMultiprocessingAvailableAndInit()
+        self.assertFalse(res.is_available)
+        self.assertIn('too low', res.stack_trace)
+    finally:
+      parallelism_framework_util._cached_multiprocessing_is_available = (
+          orig_cached_available)
+
+  def test_increase_soft_limit_for_resource(self):
+    from gslib.utils import parallelism_framework_util
+    if parallelism_framework_util._HAS_RESOURCE_MODULE:
+      import resource
+      # Case 1: getrlimit returns (100, 2000) and setrlimit succeeds
+      with mock.patch('resource.getrlimit', return_value=(100, 2000)):
+        with mock.patch('resource.setrlimit') as mock_setrlimit:
+          limit = (
+              parallelism_framework_util._IncreaseSoftLimitForResource(
+                  resource.RLIMIT_NOFILE, 1000))
+          self.assertEqual(limit, 2000)
+          mock_setrlimit.assert_called_once_with(
+              resource.RLIMIT_NOFILE, (2000, 2000))
+
+  def test_put_to_queue_with_timeout(self):
+    from gslib.utils.parallelism_framework_util import PutToQueueWithTimeout
+    from six.moves import queue as Queue
+
+    mock_queue = mock.Mock()
+    # Raise Queue.Full once, then succeed
+    mock_queue.put.side_effect = [Queue.Full, None]
+
+    PutToQueueWithTimeout(mock_queue, 'message', timeout=0.01)
+    self.assertEqual(mock_queue.put.call_count, 2)
+    mock_queue.put.assert_has_calls([
+        mock.call('message', timeout=0.01),
+        mock.call('message', timeout=0.01)
+    ])
+
+  def test_create_lock(self):
+    from gslib.utils.parallelism_framework_util import CreateLock
+    from gslib.utils import parallelism_framework_util
+
+    # 1. When multiprocessing is available
+    with mock.patch.object(
+        parallelism_framework_util,
+        'CheckMultiprocessingAvailableAndInit') as mock_check:
+      mock_check.return_value = mock.Mock(is_available=True)
+      with mock.patch.object(
+          parallelism_framework_util,
+          'top_level_manager') as mock_manager:
+        CreateLock()
+        mock_manager.Lock.assert_called_once()
+
+    # 2. When multiprocessing is not available
+    with mock.patch.object(
+        parallelism_framework_util,
+        'CheckMultiprocessingAvailableAndInit') as mock_check:
+      mock_check.return_value = mock.Mock(is_available=False)
+      with mock.patch('threading.Lock') as mock_thread_lock:
+        CreateLock()
+        mock_thread_lock.assert_called_once()
+
 
 # _ResetConnectionPool is only called in child processes, so we need a queue
 # to track calls.

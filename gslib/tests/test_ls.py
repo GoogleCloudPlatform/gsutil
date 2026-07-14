@@ -193,6 +193,44 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
                                return_stdout=True)
     self.assertNotRegex(stdout, 'Placement locations:')
 
+  def test_ls_file_url_fails(self):
+    from gslib.exception import CommandException
+    with self.assertRaisesRegex(
+        CommandException,
+        'does not support "file://" URLs'):
+      self.RunCommand('ls', ['file://some_file'])
+
+  def test_ls_non_ascii_project_id_fails(self):
+    from gslib.exception import CommandException
+    with self.assertRaisesRegex(
+        CommandException,
+        'Invalid non-ASCII character found in project ID'):
+      self.RunCommand('ls', ['-p', 'proj-é', 'gs://bucket'])
+
+  def test_ls_non_existent_bucket_with_b_fails(self):
+    from gslib.cloud_api import NotFoundException
+    with self.assertRaisesRegex(
+        NotFoundException,
+        'bucket does not exist.'):
+      self.RunCommand('ls', ['-b', 'gs://non_existent_bucket_xyz'])
+
+  @mock.patch.object(ls.LsCommand, 'WildcardIterator')
+  def test_s3_bucket_prints_s3_note(self, mock_wildcard):
+    bucket_uri = self.CreateBucket(provider='s3')
+    bucket_metadata = apitools_messages.Bucket(name=bucket_uri.bucket_name)
+    bucket_uri.root_object = bucket_metadata
+    bucket_uri.url_string = bucket_uri.bucket_name
+    # We must mock storage_url to have scheme == 's3'
+    mock_storage_url = mock.Mock()
+    mock_storage_url.scheme = 's3'
+    bucket_uri.storage_url = mock_storage_url
+
+    mock_wildcard.return_value.IterBuckets.return_value = [bucket_uri]
+    with SetBotoConfigForTest([('GSUtil', 'check_hashes', 'never')]):
+      stdout = self.RunCommand('ls', ['-Lb', suri(bucket_uri)],
+                               return_stdout=True)
+    self.assertIn('Note: this is an S3 bucket', stdout)
+
 
 class TestLsUnitWithShim(testcase.ShimUnitTestBase):
   """Unit tests for ls command with shim."""
