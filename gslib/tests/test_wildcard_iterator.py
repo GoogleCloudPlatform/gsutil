@@ -26,6 +26,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
 import re
 import six
 import tempfile
@@ -563,7 +564,6 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
 
   @unittest.skipIf(system_util.IS_WINDOWS, 'Symlinks not supported on Windows')
   def testSymlinkHandling(self):
-    import os
     # 1. Create a symlink to 'abcd'
     target_path = os.path.join(self.test_dir, 'abcd')
     link_path = os.path.join(self.test_dir, 'link_abcd')

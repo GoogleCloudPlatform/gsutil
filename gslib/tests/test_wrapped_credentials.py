@@ -17,7 +17,6 @@
 import datetime
 import json
 import os
-import tempfile
 import httplib2
 
 from google.auth import aws

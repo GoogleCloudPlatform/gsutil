@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
+import stat
 import sys
 
 from gslib.exception import CommandException
@@ -225,7 +226,6 @@ class TestStorageUrl(base.GsUtilTestCase):
 
   @mock.patch('os.stat')
   def test_file_url_fifo(self, mock_os_stat):
-    import stat
     mock_os_stat.return_value.st_mode = stat.S_IFIFO
     url = storage_url.StorageUrlFromString('file:///tmp/fake-fifo')
     self.assertTrue(url.IsFifo())
