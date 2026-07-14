@@ -388,6 +388,14 @@ class TestHmacIntegration(testcase.GsUtilIntegrationTestCase):
     finally:
       self.CleanupHelper(access_id)
 
+  def test_hmac_invalid_subcommand(self):
+    stderr = self.RunGsUtil(['hmac', 'invalid_subcommand'],
+                            expected_status=1,
+                            return_stderr=True)
+    self.assertIn(
+        'Invalid subcommand "invalid_subcommand" for the hmac command.',
+        stderr)
+
 
 @SkipForS3('S3 does not have an equivalent API')
 class TestHmacXmlIntegration(testcase.GsUtilIntegrationTestCase):
@@ -584,3 +592,30 @@ class TestHmacUnitShim(testcase.ShimUnitTestBase):
                            shim_util._get_gcloud_binary_path('fake_dir'),
                            hmac._DESCRIBE_COMMAND_FORMAT, etag, project,
                            'deactivate', access_id), info_lines)
+
+
+class TestHmacUnit(testcase.GsUtilUnitTestCase):
+
+  def test_key_metadata_output(self):
+    import datetime
+    from gslib.commands.hmac import _KeyMetadataOutput
+    metadata = mock.Mock()
+    metadata.accessId = 'GOOG123456789'
+    metadata.state = 'ACTIVE'
+    metadata.serviceAccountEmail = 'test@project.iam.gserviceaccount.com'
+    metadata.projectId = 'project-1'
+    metadata.timeCreated = datetime.datetime(2026, 7, 8, 12, 0, 0)
+    metadata.updated = datetime.datetime(2026, 7, 8, 13, 30, 0)
+    metadata.etag = 'etag123'
+
+    output = _KeyMetadataOutput(metadata)
+    expected_output = (
+        'Access ID GOOG123456789:\n'
+        '\tState:                 ACTIVE\n'
+        '\tService Account:       test@project.iam.gserviceaccount.com\n'
+        '\tProject:               project-1\n'
+        '\tTime Created:          Wed, 08 Jul 2026 12:00:00 GMT\n'
+        '\tTime Last Updated:     Wed, 08 Jul 2026 13:30:00 GMT\n'
+        '\tEtag:                  etag123'
+    )
+    self.assertEqual(output, expected_output)
