@@ -351,10 +351,11 @@ class TestRequesterPaysShim(testcase.ShimUnitTestBase):
         info_lines = '\n'.join(mock_log_handler.messages['info'])
         self.assertIn(('Gcloud Storage Command: {} storage buckets list'
                        ' --format=value[separator=": "]('
-                       'name.sub("^", "gs://"),'
+                       'name.sub("{}", "gs://"),'
                        'requester_pays.yesno("Enabled", "Disabled"))'
                        ' gs://bucket').format(
-                           shim_util._get_gcloud_binary_path('fake_dir')),
+                           shim_util._get_gcloud_binary_path('fake_dir'),
+                           shim_util.get_format_flag_caret()),
                       info_lines)
 
   @mock.patch.object(requesterpays.RequesterPaysCommand, 'RunCommand', new=mock.Mock())
