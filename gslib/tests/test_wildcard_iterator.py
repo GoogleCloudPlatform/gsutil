@@ -26,6 +26,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
+import os
 import re
 import six
 import tempfile
@@ -33,10 +34,13 @@ import tempfile
 from gslib import wildcard_iterator
 from gslib.exception import InvalidUrlError
 from gslib.storage_url import ContainsWildcard
+from gslib.utils import system_util
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.util import ObjectToURI as suri
 from gslib.tests.util import SetDummyProjectForUnitTest
+from gslib.tests.util import unittest
+from unittest import mock
 
 
 class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
@@ -366,6 +370,38 @@ class CloudWildcardIteratorTests(testcase.GsUtilUnitTestCase):
     self.assertEqual(expected_prefixes, actual_prefixes)
     self.assertEqual(expected_uri_strs, actual_uri_strs)
 
+  def testWildcardWithGenerationMatch(self):
+    """Tests that wildcard matching works with a specific generation."""
+    bucket_uri = self.CreateBucket()
+    key_uri = self.CreateObject(bucket_uri=bucket_uri,
+                                object_name='abcd',
+                                contents=b'test contents')
+
+    boto_key = key_uri.get_key()
+    boto_key.generation = 123456
+
+    # Get the object and its generation
+    blrs = list(self._test_wildcard_iterator(
+        bucket_uri.clone_replace_name('abcd')).IterAll())
+    self.assertEqual(1, len(blrs))
+    blr = blrs[0]
+    self.assertTrue(blr.IsObject())
+    generation = blr.root_object.generation
+    self.assertEqual(generation, 123456)
+
+    # 1. Query with exact generation
+    url_with_gen = '%s/abc*#%s' % (suri(bucket_uri), generation)
+    blrs_match = list(self._test_wildcard_iterator(url_with_gen).IterAll())
+    self.assertEqual(1, len(blrs_match))
+    self.assertEqual('%s/abcd#%s' % (suri(bucket_uri), generation),
+                     blrs_match[0].url_string)
+
+    # 2. Query with wrong generation
+    url_with_wrong_gen = '%s/abc*#999999' % suri(bucket_uri)
+    blrs_mismatch = list(self._test_wildcard_iterator(
+        url_with_wrong_gen).IterAll())
+    self.assertEqual(0, len(blrs_mismatch))
+
 
 class FileIteratorTests(testcase.GsUtilUnitTestCase):
   """Unit tests for FileWildcardIterator."""
@@ -525,3 +561,55 @@ class FileIteratorTests(testcase.GsUtilUnitTestCase):
         for u in self._test_wildcard_iterator(uri, exclude_tuple=exclude_tuple).
         IterAll(expand_top_level_buckets=True))
     self.assertEqual(exp_uri_strs, actual_uri_strs)
+
+  @unittest.skipIf(system_util.IS_WINDOWS, 'Symlinks not supported on Windows')
+  def testSymlinkHandling(self):
+    # 1. Create a symlink to 'abcd'
+    target_path = os.path.join(self.test_dir, 'abcd')
+    link_path = os.path.join(self.test_dir, 'link_abcd')
+    os.symlink(target_path, link_path)
+
+    # Create a symlink to 'dir1'
+    dir_target_path = os.path.join(self.test_dir, 'dir1')
+    dir_link_path = os.path.join(self.test_dir, 'link_dir1')
+    os.symlink(dir_target_path, dir_link_path)
+
+    # 2. Iterate without ignore_symlinks=True (default is False)
+    wildcard_url_str = suri(self.test_dir, '*')
+    iterator = wildcard_iterator.CreateWildcardIterator(
+        wildcard_url_str, self.MakeGsUtilApi())
+    results = set(blr.url_string for blr in iterator)
+
+    # It should include the symlink files
+    self.assertIn(suri(link_path), results)
+    self.assertIn(suri(dir_link_path), results)
+
+    # 3. Iterate with ignore_symlinks=True
+    mock_logger = mock.Mock()
+    iterator_ignored = wildcard_iterator.CreateWildcardIterator(
+        wildcard_url_str, self.MakeGsUtilApi(), ignore_symlinks=True,
+        logger=mock_logger)
+    results_ignored = set(blr.url_string for blr in iterator_ignored)
+
+    # It should NOT include the symlink files
+    self.assertNotIn(suri(link_path), results_ignored)
+    self.assertNotIn(suri(dir_link_path), results_ignored)
+
+    # Verify that info log was called for skipping
+    mock_logger.info.assert_any_call(
+        'Skipping symbolic link %s...', link_path)
+    mock_logger.info.assert_any_call(
+        'Skipping symbolic link %s...', dir_link_path)
+
+    # 4. Check recursive walk log output when it skips dir symlink
+    mock_logger.reset_mock()
+    recursive_wildcard_str = suri(self.test_dir, '**', '*')
+    recursive_iterator = wildcard_iterator.CreateWildcardIterator(
+        recursive_wildcard_str, self.MakeGsUtilApi(), ignore_symlinks=True,
+        logger=mock_logger)
+
+    list(recursive_iterator)
+
+    # Ensure it logged skipped symlink directories during walk
+    mock_logger.info.assert_any_call(
+        'Skipping symlink directory "%s"', dir_link_path)

@@ -20,6 +20,7 @@ import os
 import textwrap
 
 from gslib.commands.rpo import RpoCommand
+from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.gcs_json_api import GcsJsonApi
 from gslib.storage_url import StorageUrlFromString
@@ -85,6 +86,40 @@ class TestRpoUnit(testcase.GsUtilUnitTestCase):
     with self.assertRaisesRegex(
         CommandException, 'Invalid subcommand "blah", use get|set instead'):
       self.RunCommand('rpo', ['blah', 'DEFAULT', 'gs://boo*'])
+
+  def test_rpo_xml_api_disabled_raises(self):
+    # Mock api selector to return XML for gs.
+    with mock.patch(
+        'gslib.cloud_api_delegator.CloudApiDelegator.GetApiSelector',
+        return_value=ApiSelector.XML):
+      with self.assertRaisesRegex(
+          CommandException,
+          r'command can only be with the Cloud Storage JSON API'):
+        self.RunCommand('rpo', ['get', 'gs://bucket'])
+
+  def test_rpo_missing_args_raises(self):
+    # Min args is 2 (action subcommand + URL).
+    with self.assertRaisesRegex(
+        CommandException, r'requires at least 2 arguments'):
+      self.RunCommand('rpo', [])
+
+    with self.assertRaisesRegex(
+        CommandException, r'requires at least 2 arguments'):
+      self.RunCommand('rpo', ['get'])
+
+    with self.assertRaisesRegex(
+        CommandException, r'requires at least 2 arguments'):
+      self.RunCommand('rpo', ['set', 'ASYNC_TURBO'])
+
+  def test_rpo_non_gcs_rejection(self):
+    s3_bucket = self.CreateBucket(provider='s3')
+    with self.assertRaisesRegex(
+        CommandException, r'command can only be used for GCS buckets'):
+      self.RunCommand('rpo', ['get', suri(s3_bucket)])
+
+    with self.assertRaisesRegex(
+        CommandException, r'command can only be used for GCS buckets'):
+      self.RunCommand('rpo', ['set', 'ASYNC_TURBO', suri(s3_bucket)])
 
 
 class TestRpoUnitWithShim(testcase.ShimUnitTestBase):

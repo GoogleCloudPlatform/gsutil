@@ -28,6 +28,7 @@ from __future__ import unicode_literals
 
 import os
 import pickle
+from unittest import mock
 
 import crcmod
 import six
@@ -52,6 +53,7 @@ from gslib.thread_message import FinalMessage
 from gslib.thread_message import MetadataMessage
 from gslib.thread_message import ProducerThreadMessage
 from gslib.thread_message import ProgressMessage
+from gslib.thread_message import RetryableErrorMessage
 from gslib.thread_message import SeekAheadMessage
 from gslib.tracker_file import DeleteTrackerFile
 from gslib.tracker_file import GetSlicedDownloadTrackerFilePaths
@@ -59,6 +61,7 @@ from gslib.tracker_file import GetTrackerFilePath
 from gslib.tracker_file import TrackerFileType
 from gslib.ui_controller import BytesToFixedWidthString
 from gslib.ui_controller import DataManager
+from gslib.ui_controller import EstimationSource
 from gslib.ui_controller import MainThreadUIQueue
 from gslib.ui_controller import MetadataManager
 from gslib.ui_controller import UIController
@@ -1570,3 +1573,70 @@ class TestUiUnitTests(testcase.GsUtilUnitTestCase):
     # old_spinner3.
     self.assertNotEqual(old_spinner3, current_spinner)
     self.assertNotEqual(old_spinner1, current_spinner)
+
+  def test_ui_estimation_source_priority(self):
+    stream = six.StringIO()
+    start_time = self.start_time
+    ui_controller = UIController(custom_time=start_time)
+    status_queue = MainThreadUIQueue(stream, ui_controller)
+
+    # 1. Initialize data manager using a FileMessage
+    PutToQueueWithTimeout(
+        status_queue,
+        FileMessage(StorageUrlFromString('foo'),
+                    None,
+                    start_time,
+                    message_type=FileMessage.FILE_UPLOAD,
+                    size=100))
+    self.assertEqual(ui_controller.manager.num_objects, 1)
+    self.assertEqual(ui_controller.manager.total_size, 100)
+    self.assertEqual(ui_controller.manager.num_objects_source,
+                     EstimationSource.INDIVIDUAL_MESSAGES)
+
+    # 2. Put a SeekAheadMessage (higher priority than INDIVIDUAL_MESSAGES)
+    PutToQueueWithTimeout(
+        status_queue, SeekAheadMessage(5, 500, start_time + 1))
+    self.assertEqual(ui_controller.manager.num_objects, 5)
+    self.assertEqual(ui_controller.manager.total_size, 500)
+    self.assertEqual(ui_controller.manager.num_objects_source,
+                     EstimationSource.SEEK_AHEAD_THREAD)
+
+    # 3. Put a lower-priority ProducerThreadMessage.
+    # finished=False -> PRODUCER_THREAD_ESTIMATE (3), which has lower
+    # priority than SEEK_AHEAD_THREAD (2), so it should be ignored.
+    PutToQueueWithTimeout(
+        status_queue,
+        ProducerThreadMessage(10, 1000, start_time + 2, finished=False))
+    self.assertEqual(ui_controller.manager.num_objects, 5)
+    self.assertEqual(ui_controller.manager.total_size, 500)
+    self.assertEqual(ui_controller.manager.num_objects_source,
+                     EstimationSource.SEEK_AHEAD_THREAD)
+
+    # 4. Put a higher-priority ProducerThreadMessage.
+    # finished=True -> PRODUCER_THREAD_FINAL (1), which has higher
+    # priority than SEEK_AHEAD_THREAD (2), so it should overwrite.
+    PutToQueueWithTimeout(
+        status_queue,
+        ProducerThreadMessage(20, 2000, start_time + 3, finished=True))
+    self.assertEqual(ui_controller.manager.num_objects, 20)
+    self.assertEqual(ui_controller.manager.total_size, 2000)
+    self.assertEqual(ui_controller.manager.num_objects_source,
+                     EstimationSource.PRODUCER_THREAD_FINAL)
+
+  @mock.patch('gslib.ui_controller.LogRetryableError')
+  def test_ui_retryable_error_message(self, mock_log_retryable):
+    stream = six.StringIO()
+    start_time = self.start_time
+    ui_controller = UIController(custom_time=start_time)
+    status_queue = MainThreadUIQueue(stream, ui_controller)
+
+    # Put a metadata message first to initialize the manager
+    PutToQueueWithTimeout(status_queue, MetadataMessage(start_time))
+
+    # Send a RetryableErrorMessage
+    error_msg = RetryableErrorMessage(
+        Exception('fake error'), start_time + 1, num_retries=1)
+    PutToQueueWithTimeout(status_queue, error_msg)
+
+    # Verify that the metrics log handler was invoked
+    mock_log_retryable.assert_called_once_with(error_msg)
