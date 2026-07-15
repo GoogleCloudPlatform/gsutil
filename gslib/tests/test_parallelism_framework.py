@@ -946,25 +946,29 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     orig_cached_available = (
         parallelism_framework_util._cached_multiprocessing_is_available)
     try:
-      # 1. Test when Value raises exception (e.g. shm not writable)
-      parallelism_framework_util._cached_multiprocessing_is_available = None
-      with mock.patch.object(
-          parallelism_framework_util.multiprocessing_context,
-          'Value',
-          side_effect=Exception('Fake error')):
-        res = CheckMultiprocessingAvailableAndInit()
-        self.assertFalse(res.is_available)
-        self.assertIn('Fake error', res.stack_trace)
-
-      # 2. Test when resource limit is too low
-      parallelism_framework_util._cached_multiprocessing_is_available = None
       with mock.patch.object(
           parallelism_framework_util,
-          '_IncreaseSoftLimitForResource',
-          return_value=10):
-        res = CheckMultiprocessingAvailableAndInit()
-        self.assertFalse(res.is_available)
-        self.assertIn('too low', res.stack_trace)
+          'ShouldProhibitMultiprocessing',
+          return_value=(False, 'Unknown')):
+        # 1. Test when Value raises exception (e.g. shm not writable)
+        parallelism_framework_util._cached_multiprocessing_is_available = None
+        with mock.patch.object(
+            parallelism_framework_util.multiprocessing_context,
+            'Value',
+            side_effect=Exception('Fake error')):
+          res = CheckMultiprocessingAvailableAndInit()
+          self.assertFalse(res.is_available)
+          self.assertIn('Fake error', res.stack_trace)
+
+        # 2. Test when resource limit is too low
+        parallelism_framework_util._cached_multiprocessing_is_available = None
+        with mock.patch.object(
+            parallelism_framework_util,
+            '_IncreaseSoftLimitForResource',
+            return_value=10):
+          res = CheckMultiprocessingAvailableAndInit()
+          self.assertFalse(res.is_available)
+          self.assertIn('too low', res.stack_trace)
     finally:
       parallelism_framework_util._cached_multiprocessing_is_available = (
           orig_cached_available)
@@ -1009,7 +1013,8 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
       mock_check.return_value = mock.Mock(is_available=True)
       with mock.patch.object(
           parallelism_framework_util,
-          'top_level_manager') as mock_manager:
+          'top_level_manager',
+          create=True) as mock_manager:
         CreateLock()
         mock_manager.Lock.assert_called_once()
 
