@@ -140,3 +140,12 @@ class TestUserAgentHelper(testcase.GsUtilUnitTestCase):
     mock_invoked.return_value = False
     mock_version.return_value = '500.1'
     self.assertRegex(GetUserAgent(['help']), r"command/help$")
+
+  @mock.patch.object(system_util, 'CloudSdkVersion')
+  @mock.patch.object(system_util, 'InvokedViaCloudSdk')
+  def testCloudSdkNoVersion(self, mock_invoked, mock_version):
+    mock_invoked.return_value = True
+    mock_version.return_value = None
+    ua = GetUserAgent(['help'])
+    self.assertRegex(ua, r"google-cloud-sdk$")
+    self.assertNotRegex(ua, r"google-cloud-sdk/")

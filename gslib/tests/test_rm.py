@@ -24,6 +24,7 @@ import re
 import sys
 from unittest import mock
 
+from gslib.exception import CommandException
 from gslib.exception import NO_URLS_MATCHED_PREFIX
 from gslib.exception import NO_URLS_MATCHED_TARGET
 import gslib.tests.testcase as testcase
@@ -749,6 +750,25 @@ class TestRm(testcase.GsUtilIntegrationTestCase):
               nonexistent_object1, nonexistent_object2), stderr)
     else:
       self.assertIn('2 files/objects could not be removed.', stderr)
+
+
+class TestRmUnitTests(testcase.GsUtilUnitTestCase):
+  """Unit tests for gsutil rm command."""
+
+  def test_rm_no_arguments_raises(self):
+    with self.assertRaisesRegex(
+        CommandException, r'expects at least one URL\.'):
+      self.RunCommand('rm', [])
+
+  def test_rm_stdin_with_arguments_raises(self):
+    with self.assertRaisesRegex(
+        CommandException, r'No arguments allowed with the -I flag\.'):
+      self.RunCommand('rm', ['-I', 'gs://bucket/obj'])
+
+  def test_rm_local_file_fails(self):
+    with self.assertRaisesRegex(
+        CommandException, r'does not support "file://" URLs'):
+      self.RunCommand('rm', ['file:///tmp/foo.txt'])
 
 
 class TestRmUnitTestsWithShim(testcase.ShimUnitTestBase):

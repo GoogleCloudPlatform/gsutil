@@ -277,6 +277,23 @@ class TestSignUrl(testcase.GsUtilIntegrationTestCase):
     self.assertIn('The command requires a key file argument and one or more '
                   'URL arguments', stderr)
 
+  def testSignUrlNonGsUrlRaises(self):
+    """Tests signurl with a non-gs:// URL."""
+    stderr = self.RunGsUtil(
+        ['signurl', self._GetJSONKsFile(), 's3://bucket/obj'],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('Can only create signed urls from gs:// urls', stderr)
+
+  def testSignUrlResumableBucketRaises(self):
+    """Tests signurl with RESUMABLE method on a bucket URL."""
+    stderr = self.RunGsUtil(
+        ['signurl', '-m', 'RESUMABLE', '-r', 'us-east1',
+         self._GetJSONKsFile(), 'gs://bucket'],
+        return_stderr=True,
+        expected_status=1)
+    self.assertIn('Resumable signed URLs require an object name.', stderr)
+
 
 @unittest.skipUnless(HAVE_CRYPTO, 'signurl requires cryptography library.')
 class UnitTestSignUrl(testcase.GsUtilUnitTestCase):

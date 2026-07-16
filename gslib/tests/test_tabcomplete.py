@@ -20,11 +20,18 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
-import time
 import sys
+import time
+from unittest import mock
 
 from gslib.command import CreateOrGetGsutilLogger
 from gslib.tab_complete import CloudObjectCompleter
+from gslib.tab_complete import CloudOrLocalObjectCompleter
+from gslib.tab_complete import CompleterType
+from gslib.tab_complete import LocalObjectCompleter
+from gslib.tab_complete import LocalObjectOrCannedACLCompleter
+from gslib.tab_complete import MakeCompleter
+from gslib.tab_complete import NoOpCompleter
 from gslib.tab_complete import TAB_COMPLETE_CACHE_TTL
 from gslib.tab_complete import TabCompletionCache
 import gslib.tests.testcase as testcase
@@ -366,3 +373,63 @@ class TestTabCompleteUnitTests(testcase.unit_testcase.GsUtilUnitTestCase):
       results = completer(request)
 
       self.assertEqual([str(object_uri)], results)
+
+  def test_make_completer(self):
+    api = self.MakeGsUtilApi()
+    self.assertIsInstance(
+        MakeCompleter(CompleterType.NO_OP, api), NoOpCompleter)
+    self.assertIsInstance(
+        MakeCompleter(CompleterType.LOCAL_OBJECT, api), LocalObjectCompleter)
+    self.assertIsInstance(
+        MakeCompleter(CompleterType.LOCAL_OBJECT_OR_CANNED_ACL, api),
+        LocalObjectOrCannedACLCompleter)
+    self.assertIsInstance(
+        MakeCompleter(CompleterType.CLOUD_OR_LOCAL_OBJECT, api),
+        CloudOrLocalObjectCompleter)
+
+    with self.assertRaisesRegex(RuntimeError, 'Unknown completer'):
+      MakeCompleter('invalid_completer', api)
+
+  def test_no_op_completer(self):
+    completer = NoOpCompleter()
+    self.assertEqual([], completer('any_prefix'))
+
+  @mock.patch.object(LocalObjectCompleter, '__call__', autospec=True)
+  def test_local_object_or_canned_acl_completer(self, mock_local_completer):
+    mock_local_completer.return_value = ['/tmp/pubfile']
+    completer = LocalObjectOrCannedACLCompleter()
+    results = completer('pub')
+    # Should contain local file and canned ACLs starting with 'pub':
+    self.assertIn('/tmp/pubfile', results)
+    self.assertIn('public-read', results)
+    self.assertIn('public-read-write', results)
+
+  @mock.patch.object(LocalObjectCompleter, '__call__', autospec=True)
+  @mock.patch.object(CloudObjectCompleter, '__call__', autospec=True)
+  def test_cloud_or_local_object_completer(self, mock_cloud_completer,
+                                           mock_local_completer):
+    completer = CloudOrLocalObjectCompleter(self.MakeGsUtilApi())
+
+    # Cloud URL prefix -> routes to CloudObjectCompleter
+    completer('gs://')
+    mock_cloud_completer.assert_called_once()
+    mock_local_completer.assert_not_called()
+
+    # Local file path prefix -> routes to LocalObjectCompleter
+    mock_cloud_completer.reset_mock()
+    completer('/tmp/')
+    mock_local_completer.assert_called_once()
+    mock_cloud_completer.assert_not_called()
+
+  @mock.patch('gslib.tab_complete.CloudListingRequestThread', autospec=True)
+  @mock.patch('argcomplete.warn')
+  def test_cloud_object_completer_timeout(self, mock_warn, mock_thread_class):
+    mock_thread_class.return_value.is_alive.return_value = True
+
+    completer = CloudObjectCompleter(self.MakeGsUtilApi())
+    with SetBotoConfigForTest([('GSUtil', 'tab_completion_timeout', '1'),
+                               ('GSUtil', 'state_dir', self.CreateTempDir())]):
+      results = completer('gs://prefix')
+
+    self.assertEqual([], results)
+    mock_warn.assert_called_once()
