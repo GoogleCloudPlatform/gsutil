@@ -27,6 +27,9 @@ from gslib.command import CreateOrGetGsutilLogger
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
+from gslib.cloud_api import BadRequestException, PreconditionException
+from gslib.third_party.storage_apitools import (
+    storage_v1_messages as apitools_messages)
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -48,6 +51,181 @@ add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock
 
 PUBLIC_READ_JSON_ACL_TEXT = '"entity":"allUsers","role":"READER"'
+
+
+class TestAclUnit(testcase.GsUtilUnitTestCase):
+  """Unit tests for acl command validation logic."""
+
+  def test_ch_no_changes_fails_validation(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Please specify at least one access change'):
+      self.RunCommand('acl', ['ch', 'gs://bucket/object'])
+
+  def test_ch_service_account_group_fails_validation(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Service accounts are considered users, not groups'):
+      self.RunCommand('acl', [
+          'ch', '-g', 'service-acct@gserviceaccount.com:R', 'gs://bucket/object'
+      ])
+
+  def test_ch_non_gs_url_fails_validation(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'command can only be used with gs:// URLs'):
+      self.RunCommand('acl', ['ch', '-u', 'user@example.com:R', 's3://bucket'])
+
+  def test_set_multi_provider_fails_validation(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'command spanning providers not allowed'):
+      self.RunCommand('acl', ['set', 'private', 'gs://bucket', 's3://bucket'])
+
+  def test_invalid_subcommand_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Invalid subcommand "invalid"'):
+      self.RunCommand('acl', ['invalid', 'gs://bucket'])
+
+  def test_change_subcommand_alias(self):
+    with mock.patch.object(acl.AclCommand, 'ApplyAclFunc') as mock_apply:
+      self.RunCommand(
+          'acl', ['change', '-u', 'user@example.com:R', 'gs://bucket/object'])
+      mock_apply.assert_called_once()
+
+  def test_ch_invalid_grant_fails_validation(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'is an invalid change description'):
+      self.RunCommand(
+          'acl', ['ch', '-u', 'invalid_user_format', 'gs://bucket'])
+
+  def test_ch_invalid_permission_fails_validation(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Allowed permissions are'):
+      self.RunCommand(
+          'acl',
+          ['ch', '-u', 'user@example.com:INVALID_PERM', 'gs://bucket'])
+
+  def test_ch_raise_for_access_denied_when_no_acl_returned(self):
+    class DummyAclCommand(acl.AclCommand):
+      def __init__(self):
+        self.changes = [
+            acl_helper.AclChange('user@example.com:R',
+                                 acl_helper.ChangeType.USER)
+        ]
+        self.logger = mock.Mock()
+
+    command = DummyAclCommand()
+
+    mock_gsutil_api = mock.Mock()
+    mock_bucket = mock.Mock()
+    mock_bucket.acl = None
+    mock_gsutil_api.GetBucket.return_value = mock_bucket
+
+    name_expansion_result = mock.Mock()
+    name_expansion_result.expanded_storage_url = StorageUrlFromString(
+        'gs://bucket')
+
+    with self.assertRaisesRegex(
+        CommandException,
+        'Please ensure you have OWNER-role access to this resource'):
+      command.ApplyAclChanges(name_expansion_result, thread_state=mock_gsutil_api)
+
+  def test_ch_retries_on_precondition_exception_for_object(self):
+
+    class DummyAclCommand(acl.AclCommand):
+      def __init__(self):
+        self.changes = [
+            acl_helper.AclChange('user@example.com:R',
+                                 acl_helper.ChangeType.USER)
+        ]
+        self.logger = mock.Mock()
+
+    command = DummyAclCommand()
+
+    mock_gsutil_api = mock.Mock()
+    mock_object = mock.Mock()
+    mock_object.acl = [
+        apitools_messages.ObjectAccessControl(entity='allUsers', role='READER')
+    ]
+    mock_object.generation = 123
+    mock_object.metageneration = 1
+
+    # First get metadata
+    mock_gsutil_api.GetObjectMetadata.return_value = mock_object
+
+    # PatchObjectMetadata raises PreconditionException on first call, succeeds on second
+    mock_gsutil_api.PatchObjectMetadata.side_effect = [
+        PreconditionException('Generation mismatch'),
+        None
+    ]
+
+    name_expansion_result = mock.Mock()
+    name_expansion_result.expanded_storage_url = StorageUrlFromString(
+        'gs://bucket/object')
+    name_expansion_result.expanded_result = (
+        '{"generation": 123, "metageneration": 1, '
+        '"acl": [{"entity": "allUsers", "role": "READER"}]}')
+
+    # This should not raise an exception because the retry succeeds
+    command.ApplyAclChanges(name_expansion_result, thread_state=mock_gsutil_api)
+
+    # Verify GetObjectMetadata was called to refetch metadata
+    mock_gsutil_api.GetObjectMetadata.assert_called_once_with(
+        'bucket',
+        'object',
+        provider='gs',
+        fields=['acl', 'generation', 'metageneration'])
+    # Verify PatchObjectMetadata was called twice
+    self.assertEqual(mock_gsutil_api.PatchObjectMetadata.call_count, 2)
+
+  def test_ch_raise_on_invalid_acls_could_not_be_set(self):
+    def mock_apply_func(command_inst, cls_wrapper, err_handler, *args, **kwargs):
+      err_handler(command_inst, Exception('error'))
+
+    bucket_uri = self.CreateBucket()
+    with mock.patch.object(
+        acl.AclCommand, 'ApplyAclFunc', autospec=True, side_effect=mock_apply_func):
+      with self.assertRaisesRegex(
+          CommandException,
+          'ACLs for some objects could not be set.'):
+        self.RunCommand('acl', ['ch', '-u', 'user@example.com:R', bucket_uri.uri])
+
+  def test_apply_acl_changes_raises_command_exception_on_bad_request(self):
+    class DummyAclCommand(acl.AclCommand):
+      def __init__(self):
+        self.changes = [
+            acl_helper.AclChange('user@example.com:R',
+                                 acl_helper.ChangeType.USER)
+        ]
+        self.logger = mock.Mock()
+
+    command = DummyAclCommand()
+    mock_gsutil_api = mock.Mock()
+    mock_object = mock.Mock()
+    mock_object.acl = [
+        apitools_messages.ObjectAccessControl(entity='allUsers', role='READER')
+    ]
+    mock_object.generation = 123
+    mock_object.metageneration = 1
+
+    name_expansion_result = mock.Mock()
+    name_expansion_result.expanded_storage_url = StorageUrlFromString(
+        'gs://bucket/object')
+    name_expansion_result.expanded_result = (
+        '{"generation": 123, "metageneration": 1, '
+        '"acl": [{"entity": "allUsers", "role": "READER"}]}')
+
+    mock_gsutil_api.PatchObjectMetadata.side_effect = BadRequestException(
+        'Invalid email')
+
+    with self.assertRaisesRegex(
+        CommandException,
+        'Received bad request from server:.*Invalid email'):
+      command.ApplyAclChanges(name_expansion_result, thread_state=mock_gsutil_api)
 
 
 class TestAclBase(testcase.GsUtilIntegrationTestCase):
@@ -768,6 +946,28 @@ class TestAcl(TestAclBase):
                                  return_stdout=True)
     self.assertNotEqual(acl_string, acl_string2)
 
+  def test_ch_writer_on_object_is_skipped(self):
+    """Tests that setting WRITER on an object is skipped client-side with a warning."""
+    if self._use_gcloud_storage:
+      raise unittest.SkipTest(
+          "gcloud storage doesn't skip WRITER on objects client-side.")
+    bucket_uri = self.CreateBucket()
+    obj_uri = suri(self.CreateObject(bucket_uri=bucket_uri, contents=b'foo'))
+
+    # Get original ACL.
+    orig_acl = self.RunGsUtil(['acl', 'get', obj_uri], return_stdout=True)
+
+    # Try to set WRITER on the object.
+    stderr = self.RunGsUtil(['acl', 'ch', '-u', 'user@example.com:W', obj_uri],
+                            return_stderr=True)
+
+    # Make sure it warns.
+    self.assertIn('as WRITER does not apply to objects', stderr)
+
+    # Make sure the ACL did not change.
+    new_acl = self.RunGsUtil(['acl', 'get', obj_uri], return_stdout=True)
+    self.assertEqual(orig_acl, new_acl)
+
 
 class TestS3CompatibleAcl(TestAclBase):
   """ACL integration tests that work for s3 and gs URLs."""
@@ -1248,3 +1448,47 @@ class TestAclShim(testcase.ShimUnitTestBase):
                          ' gs://bucket1/o').format(
                              shim_util._get_gcloud_binary_path('fake_dir'),
                              inpath), info_lines)
+
+  @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_acl_ch_flags(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'acl',
+            ['ch', '-f', '-r', '-a', '-u', 'user@example.com:R', 'gs://bucket'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage objects update'
+             ' --continue-on-error --recursive --all-versions'
+             ' --add-acl-grant entity=user-user@example.com,role=READER'
+             ' gs://bucket').format(
+                 shim_util._get_gcloud_binary_path('fake_dir')),
+            info_lines)
+
+  @mock.patch.object(acl.AclCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_acl_ch_multiple_changes(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'acl',
+            ['ch', '-u', 'user@example.com:R', '-g', 'group@example.com:W',
+             '-d', 'domain-example.com', 'gs://bucket/o'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage objects update'
+             ' --add-acl-grant entity=user-user@example.com,role=READER'
+             ' --add-acl-grant entity=group-group@example.com,role=WRITER'
+             ' --remove-acl-grant domain-example.com'
+             ' gs://bucket/o').format(
+                 shim_util._get_gcloud_binary_path('fake_dir')),
+            info_lines)

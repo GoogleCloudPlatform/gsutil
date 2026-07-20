@@ -26,6 +26,7 @@ import subprocess
 
 from gslib.commands import iam
 from gslib.exception import CommandException
+from gslib.cloud_api import ServiceException
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -517,6 +518,77 @@ class TestIamHelpers(testcase.GsUtilUnitTestCase):
       bstt(True, 'user:foo@bar.com:r:nonsense')
     with self.assertRaises(CommandException):
       bstt(True, 'deleted:user:foo@bar.com?uid=1234:r:nonsense')
+
+
+class TestIamUnitTests(testcase.GsUtilUnitTestCase):
+  """Unit tests for gsutil iam command."""
+
+  def test_iam_invalid_subcommand_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Invalid subcommand "foo" for the iam command.'):
+      self.RunCommand('iam', ['foo', 'gs://bucket'])
+
+  def test_iam_get_no_matches_fails(self):
+    bucket_uri = self.CreateBucket()
+    with self.assertRaisesRegex(
+        CommandException,
+        'matched no URLs'):
+      self.RunCommand('iam', ['get', bucket_uri.uri + 'non_existent_object*'])
+
+  def test_iam_get_multiple_matches_fails(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, object_name='obj1', contents=b'a')
+    self.CreateObject(bucket_uri=bucket_uri, object_name='obj2', contents=b'b')
+    with self.assertRaisesRegex(
+        CommandException,
+        'matched more than one URL'):
+      self.RunCommand('iam', ['get', bucket_uri.uri + 'obj*'])
+
+  def test_iam_ch_on_resource_with_conditions_fails(self):
+    bucket_uri = self.CreateBucket()
+    mock_policy = apitools_messages.Policy(
+        bindings=[
+            apitools_messages.Policy.BindingsValueListEntry(
+                role='roles/storage.objectViewer',
+                members=['user:test@example.com'],
+                condition=apitools_messages.Expr(
+                    title='condition-title',
+                    expression=(
+                        'resource.name.startsWith('
+                        '"projects/_/buckets/bucket/objects/prefix")'))
+            )
+        ],
+        etag=b'etag-value'
+    )
+    with mock.patch.object(
+        iam.IamCommand, 'GetIamHelper', return_value=mock_policy):
+      with self.assertRaisesRegex(
+          CommandException,
+          'The resource had conditions present in its IAM policy bindings'):
+        self.RunCommand('iam', [
+            'ch', 'user:john.doe@example.com:objectViewer',
+            bucket_uri.uri
+        ])
+
+  def test_iam_ch_no_bindings_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Must specify at least one binding.'):
+      self.RunCommand('iam', ['ch', 'gs://bucket'])
+
+  def test_iam_set_some_policies_could_not_be_set(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    policy_file = self.CreateTempFile(contents=b'{"bindings": []}')
+    with mock.patch.object(
+        iam.IamCommand, 'SetIamHelper',
+        side_effect=ServiceException('Fake set iam failure')):
+      with self.assertRaisesRegex(
+          CommandException,
+          'Some IAM policies could not be set.'):
+        self.RunCommand(
+            'iam', ['set', '-f', '-r', policy_file, bucket_uri.uri])
 
 
 @SkipForS3('Tests use GS IAM model.')
@@ -2204,3 +2276,37 @@ class TestIamShim(testcase.ShimUnitTestBase):
       error_lines = '\n'.join(mock_log_handler.messages['error'])
       self.assertIn('An error.', error_lines)
       self.assertIn('Another error.', error_lines)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_iam_set_all_versions(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'iam', ['set', '-a', 'policy-file', 'gs://b/o1'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage objects set-iam-policy'
+             ' --format=json --all-versions gs://b/o1 policy-file').format(
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)
+
+  @mock.patch.object(iam.IamCommand, 'RunCommand', new=mock.Mock())
+  def test_shim_translates_iam_set_continue_on_error(self):
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'iam', ['set', '-f', 'policy-file', 'gs://b1'],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage buckets set-iam-policy'
+             ' --format=json --continue-on-error gs://b1 policy-file').format(
+                 shim_util._get_gcloud_binary_path('fake_dir')), info_lines)

@@ -1467,6 +1467,13 @@ class GsUtilCommandTests(testcase.GsUtilUnitTestCase):
       del os.environ['PAGER']
     self.RunCommand('help', [])
 
+  def testHelpNamingContent(self):
+    """Test that 'help naming' displays the expected help content."""
+    stdout = self.RunCommand('help', ['naming'], return_stdout=True)
+    self.assertIn('BUCKET NAME REQUIREMENTS', stdout)
+    self.assertIn('OBJECT NAME REQUIREMENTS', stdout)
+    self.assertIn('DOMAIN NAMED BUCKETS', stdout)
+
   def testCatCommandRuns(self):
     """Test that the cat command basically runs."""
     src_uri = self.CreateObject(contents='foo')

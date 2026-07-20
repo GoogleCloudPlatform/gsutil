@@ -28,6 +28,7 @@ import six
 from gslib import command
 from gslib.commands import rsync
 from gslib.project_id import PopulateProjectId
+from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
@@ -136,10 +137,58 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
         print_macos_warning=False,
     )
 
+  def test_rsync_too_few_args_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'requires at least 2 arguments'):
+      self.RunCommand('rsync', ['gs://bucket'])
+
+  def test_rsync_too_many_args_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'accepts at most 2 arguments'):
+      self.RunCommand('rsync', ['gs://b1', 'gs://b2', 'gs://b3'])
+
+  def test_rsync_non_directory_local_path_fails(self):
+    fpath = self.CreateTempFile(contents=b'foo')
+    with self.assertRaisesRegex(
+        CommandException,
+        'does not name a directory, bucket, or bucket subdir'):
+      self.RunCommand('rsync', [fpath, 'gs://bucket'])
+
+  def test_rsync_blank_exclude_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Invalid blank exclude filter'):
+      self.RunCommand('rsync', ['-x', '', 'gs://b1', 'gs://b2'])
+
+  def test_rsync_invalid_exclude_regex_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Invalid exclude filter'):
+      self.RunCommand('rsync', ['-x', '[', 'gs://b1', 'gs://b2'])
+
+  def test_rsync_p_and_a_options_together_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Specifying both the -p and -a options together is invalid.'):
+      self.RunCommand('rsync', [
+          '-p', '-a', 'public-read', 'gs://b1', 'gs://b2'
+      ])
+
+  def test_rsync_j_and_J_options_together_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Specifying both the -j and -J options together is invalid.'):
+      self.RunCommand('rsync', [
+          '-j', 'html', '-J', 'gs://b1', 'gs://b2'
+      ])
+
 
 class TestRsyncUnitWithShim(testcase.ShimUnitTestBase):
 
-  def testShimTranslatesFlags(self):
+  @mock.patch.object(rsync.RsyncCommand, 'RunCommand', return_value=0)
+  def testShimTranslatesFlags(self, mock_run):
     bucket_uri = self.CreateBucket()
     fpath = self.CreateTempDir()
     with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
@@ -162,6 +211,33 @@ class TestRsyncUnitWithShim(testcase.ShimUnitTestBase):
         warn_lines = '\n'.join(mock_log_handler.messages['warning'])
         self.assertIn('By default, gsutil copies file symlinks', warn_lines)
         self.assertIn('For preserving POSIX with rsync downloads', warn_lines)
+
+  @mock.patch.object(rsync.RsyncCommand, 'RunCommand', return_value=0)
+  def testShimTranslatesAllRemainingFlags(self, mock_run):
+    bucket_uri = self.CreateBucket()
+    fpath = self.CreateTempDir()
+    with SetBotoConfigForTest([('GSUtil', 'use_gcloud_storage', 'True'),
+                               ('GSUtil', 'hidden_shim_mode', 'dry_run')]):
+      with SetEnvironmentForTest({
+          'CLOUDSDK_CORE_PASS_CREDENTIALS_TO_GSUTIL': 'True',
+          'CLOUDSDK_ROOT_DIR': 'fake_dir',
+      }):
+        mock_log_handler = self.RunCommand(
+            'rsync', [
+                '-c', '-C', '-d', '-e', '-i', '-J', '-n', '-p', '-R', '-U',
+                '-u', '-x', 'txt$', suri(bucket_uri), fpath
+            ],
+            return_log_handler=True)
+        info_lines = '\n'.join(mock_log_handler.messages['info'])
+        self.assertIn(
+            ('Gcloud Storage Command: {} storage rsync'
+             ' --checksums-only --continue-on-error'
+             ' --delete-unmatched-destination-objects --ignore-symlinks'
+             ' --no-clobber --gzip-in-flight-all --dry-run --preserve-acl'
+             ' --recursive --skip-unsupported --skip-if-dest-has-newer-mtime'
+             ' --exclude txt$ {} {}').format(
+                 shim_util._get_gcloud_binary_path('fake_dir'),
+                 suri(bucket_uri), fpath), info_lines)
 
 
 # TODO: Add inspection to the retry wrappers in this test suite where the state
