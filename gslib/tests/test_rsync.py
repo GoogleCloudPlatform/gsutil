@@ -149,6 +149,13 @@ class TestRsyncUnit(testcase.GsUtilUnitTestCase):
         'accepts at most 2 arguments'):
       self.RunCommand('rsync', ['gs://b1', 'gs://b2', 'gs://b3'])
 
+  def test_rsync_non_directory_local_path_fails(self):
+    fpath = self.CreateTempFile(contents=b'foo')
+    with self.assertRaisesRegex(
+        CommandException,
+        'does not name a directory, bucket, or bucket subdir'):
+      self.RunCommand('rsync', [fpath, 'gs://bucket'])
+
   def test_rsync_blank_exclude_fails(self):
     with self.assertRaisesRegex(
         CommandException,

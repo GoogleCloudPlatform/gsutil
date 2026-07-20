@@ -27,7 +27,7 @@ from gslib.command import CreateOrGetGsutilLogger
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
-from gslib.cloud_api import PreconditionException
+from gslib.cloud_api import BadRequestException, PreconditionException
 from gslib.third_party.storage_apitools import (
     storage_v1_messages as apitools_messages)
 import gslib.tests.testcase as testcase
@@ -181,6 +181,51 @@ class TestAclUnit(testcase.GsUtilUnitTestCase):
         fields=['acl', 'generation', 'metageneration'])
     # Verify PatchObjectMetadata was called twice
     self.assertEqual(mock_gsutil_api.PatchObjectMetadata.call_count, 2)
+
+  def test_ch_raise_on_invalid_acls_could_not_be_set(self):
+    def mock_apply_func(command_inst, cls_wrapper, err_handler, *args, **kwargs):
+      err_handler(command_inst, Exception('error'))
+
+    bucket_uri = self.CreateBucket()
+    with mock.patch.object(
+        acl.AclCommand, 'ApplyAclFunc', autospec=True, side_effect=mock_apply_func):
+      with self.assertRaisesRegex(
+          CommandException,
+          'ACLs for some objects could not be set.'):
+        self.RunCommand('acl', ['ch', '-u', 'user@example.com:R', bucket_uri.uri])
+
+  def test_apply_acl_changes_raises_command_exception_on_bad_request(self):
+    class DummyAclCommand(acl.AclCommand):
+      def __init__(self):
+        self.changes = [
+            acl_helper.AclChange('user@example.com:R',
+                                 acl_helper.ChangeType.USER)
+        ]
+        self.logger = mock.Mock()
+
+    command = DummyAclCommand()
+    mock_gsutil_api = mock.Mock()
+    mock_object = mock.Mock()
+    mock_object.acl = [
+        apitools_messages.ObjectAccessControl(entity='allUsers', role='READER')
+    ]
+    mock_object.generation = 123
+    mock_object.metageneration = 1
+
+    name_expansion_result = mock.Mock()
+    name_expansion_result.expanded_storage_url = StorageUrlFromString(
+        'gs://bucket/object')
+    name_expansion_result.expanded_result = (
+        '{"generation": 123, "metageneration": 1, '
+        '"acl": [{"entity": "allUsers", "role": "READER"}]}')
+
+    mock_gsutil_api.PatchObjectMetadata.side_effect = BadRequestException(
+        'Invalid email')
+
+    with self.assertRaisesRegex(
+        CommandException,
+        'Received bad request from server:.*Invalid email'):
+      command.ApplyAclChanges(name_expansion_result, thread_state=mock_gsutil_api)
 
 
 class TestAclBase(testcase.GsUtilIntegrationTestCase):

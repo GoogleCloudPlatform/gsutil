@@ -36,6 +36,7 @@ import sys
 import threading
 from unittest import mock
 
+from apitools.base.py import encoding
 from apitools.base.py import exceptions as apitools_exceptions
 import boto
 from boto import storage_uri
@@ -48,6 +49,7 @@ from gslib import exception
 from gslib import name_expansion
 from gslib.command_runner import CommandRunner
 from gslib.cloud_api import ResumableUploadStartOverException
+from gslib.plurality_checkable_iterator import PluralityCheckableIterator
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.commands.cp import ShimTranslatePredefinedAclSubOptForCopy
 from gslib.cs_api_map import ApiSelector
@@ -4934,6 +4936,43 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
     with self.assertRaises(InvalidUrlError) as error:
       self.RunCommand('cp', [suri(object_uri), destination_path])
       self.assertEqual(str(error), 'Invalid destination path: random_dir/')
+
+  def test_cp_orphan_files_validation_fails(self):
+    bucket_uri = self.CreateBucket()
+    object_uri = self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    dst_dir = self.CreateTempDir()
+    dst_file = os.path.join(dst_dir, 'dest_file')
+
+    metadata = apitools_messages.Object.MetadataValue(
+        additionalProperties=[
+            apitools_messages.Object.MetadataValue.AdditionalProperty(
+                key='goog-reserved-file-mtime', value='1234567'),
+            apitools_messages.Object.MetadataValue.AdditionalProperty(
+                key='goog-reserved-file-uid', value='1000'),
+            apitools_messages.Object.MetadataValue.AdditionalProperty(
+                key='goog-reserved-file-gid', value='1000'),
+            apitools_messages.Object.MetadataValue.AdditionalProperty(
+                key='goog-reserved-file-mode', value='442')
+        ])
+    obj = apitools_messages.Object(metadata=metadata, size=3)
+    dummy_result = name_expansion.NameExpansionResult(
+        StorageUrlFromString(suri(object_uri)),
+        False,
+        False,
+        False,
+        StorageUrlFromString(suri(object_uri)),
+        obj)
+
+    with mock.patch(
+        'gslib.commands.cp.NameExpansionIterator',
+        return_value=PluralityCheckableIterator(iter([dummy_result]))):
+      with mock.patch(
+          'gslib.commands.cp.ValidateFilePermissionAccess',
+          return_value=(False, 'Fake permission error')):
+        with self.assertRaisesRegex(
+            exception.CommandException,
+            'This sync will orphan file'):
+          self.RunCommand('cp', ['-P', suri(object_uri), dst_file])
 
   def test_object_and_prefix_same_name(self):
     bucket_uri = self.CreateBucket()

@@ -26,6 +26,7 @@ import subprocess
 
 from gslib.commands import iam
 from gslib.exception import CommandException
+from gslib.cloud_api import ServiceException
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -569,6 +570,25 @@ class TestIamUnitTests(testcase.GsUtilUnitTestCase):
             'ch', 'user:john.doe@example.com:objectViewer',
             bucket_uri.uri
         ])
+
+  def test_iam_ch_no_bindings_fails(self):
+    with self.assertRaisesRegex(
+        CommandException,
+        'Must specify at least one binding.'):
+      self.RunCommand('iam', ['ch', 'gs://bucket'])
+
+  def test_iam_set_some_policies_could_not_be_set(self):
+    bucket_uri = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket_uri, contents=b'foo')
+    policy_file = self.CreateTempFile(contents=b'{"bindings": []}')
+    with mock.patch.object(
+        iam.IamCommand, 'SetIamHelper',
+        side_effect=ServiceException('Fake set iam failure')):
+      with self.assertRaisesRegex(
+          CommandException,
+          'Some IAM policies could not be set.'):
+        self.RunCommand(
+            'iam', ['set', '-f', '-r', policy_file, bucket_uri.uri])
 
 
 @SkipForS3('Tests use GS IAM model.')
