@@ -33,6 +33,12 @@ import six
 import threading
 import textwrap
 import time
+try:
+  import resource
+  _HAS_RESOURCE_MODULE = True
+except ImportError:
+  _HAS_RESOURCE_MODULE = False
+from six.moves import queue as Queue
 from unittest import mock
 
 import boto
@@ -48,8 +54,12 @@ from gslib.tests.mock_logging_handler import MockLoggingHandler
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.base import RequiresIsolation
 from gslib.tests.util import unittest
+from gslib.utils import parallelism_framework_util
 from gslib.utils.parallelism_framework_util import CheckMultiprocessingAvailableAndInit
 from gslib.utils.parallelism_framework_util import multiprocessing_context
+from gslib.utils.parallelism_framework_util import (
+    AtomicDict, CreateLock, ProcessAndThreadSafeInt, PutToQueueWithTimeout,
+    ShouldProhibitMultiprocessing)
 from gslib.utils.system_util import IS_OSX
 from gslib.utils.system_util import IS_WINDOWS
 
@@ -859,8 +869,6 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self.assertFalse(StorageUri.provider_pool)
 
   def test_atomic_dict_operations(self):
-    from gslib.utils.parallelism_framework_util import AtomicDict
-
     # 1. Thread-safe lock style (without manager)
     ad = AtomicDict()
     ad['foo'] = 'bar'
@@ -876,21 +884,14 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     self.assertEqual(ad.get('foo'), None)
 
   def test_atomic_dict_with_manager(self):
-    from gslib.utils.parallelism_framework_util import AtomicDict
-    from gslib.utils.parallelism_framework_util import (
-        CheckMultiprocessingAvailableAndInit)
-
     res = CheckMultiprocessingAvailableAndInit()
     if res.is_available:
-      from gslib.utils.parallelism_framework_util import top_level_manager
-      ad = AtomicDict(manager=top_level_manager)
+      ad = AtomicDict(manager=parallelism_framework_util.top_level_manager)
       ad['foo'] = 123
       ad.Increment('foo', 1)
       self.assertEqual(ad['foo'], 124)
 
   def test_process_and_thread_safe_int_operations(self):
-    from gslib.utils.parallelism_framework_util import ProcessAndThreadSafeInt
-
     for multiprocessing_available in (True, False):
       safe_int = ProcessAndThreadSafeInt(multiprocessing_available)
       self.assertEqual(safe_int.GetValue(), 0)
@@ -903,8 +904,6 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
       self.assertEqual(safe_int.GetValue(), 10)
 
   def test_should_prohibit_multiprocessing(self):
-    from gslib.utils.parallelism_framework_util import (
-        ShouldProhibitMultiprocessing)
 
     # 1. Test Windows case
     with mock.patch('gslib.utils.system_util.IS_WINDOWS', True):
@@ -939,10 +938,6 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
           self.assertEqual(name, 'Ubuntu')
 
   def test_check_multiprocessing_available_and_init_failures(self):
-    from gslib.utils import parallelism_framework_util
-    from gslib.utils.parallelism_framework_util import (
-        CheckMultiprocessingAvailableAndInit)
-
     orig_cached_available = (
         parallelism_framework_util._cached_multiprocessing_is_available)
     try:
@@ -974,9 +969,7 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
           orig_cached_available)
 
   def test_increase_soft_limit_for_resource(self):
-    from gslib.utils import parallelism_framework_util
-    if parallelism_framework_util._HAS_RESOURCE_MODULE:
-      import resource
+    if _HAS_RESOURCE_MODULE:
       # Case 1: getrlimit returns (100, 2000) and setrlimit succeeds
       with mock.patch('resource.getrlimit', return_value=(100, 2000)):
         with mock.patch('resource.setrlimit') as mock_setrlimit:
@@ -988,9 +981,6 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
               resource.RLIMIT_NOFILE, (2000, 2000))
 
   def test_put_to_queue_with_timeout(self):
-    from gslib.utils.parallelism_framework_util import PutToQueueWithTimeout
-    from six.moves import queue as Queue
-
     mock_queue = mock.Mock()
     # Raise Queue.Full once, then succeed
     mock_queue.put.side_effect = [Queue.Full, None]
@@ -1003,8 +993,6 @@ class TestParallelismFramework(testcase.GsUtilUnitTestCase):
     ])
 
   def test_create_lock(self):
-    from gslib.utils.parallelism_framework_util import CreateLock
-    from gslib.utils import parallelism_framework_util
 
     # 1. When multiprocessing is available
     with mock.patch.object(

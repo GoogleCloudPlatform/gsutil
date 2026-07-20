@@ -46,6 +46,7 @@ from boto.storage_uri import BucketStorageUri
 from gslib import command
 from gslib import exception
 from gslib import name_expansion
+from gslib.command_runner import CommandRunner
 from gslib.cloud_api import ResumableUploadStartOverException
 from gslib.commands.config import DEFAULT_SLICED_OBJECT_DOWNLOAD_THRESHOLD
 from gslib.commands.cp import ShimTranslatePredefinedAclSubOptForCopy
@@ -5034,7 +5035,6 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
 
   def test_upload_stream_parallel_fails(self):
     bucket_uri = self.CreateBucket()
-    from gslib.command_runner import CommandRunner
     global _original_run_named_command
     _original_run_named_command = CommandRunner.RunNamedCommand
     with mock.patch.object(
@@ -5101,7 +5101,6 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
 
   def test_all_versions_with_parallel_fails(self):
     bucket_uri = self.CreateBucket()
-    from gslib.command_runner import CommandRunner
     global _original_run_named_command
     _original_run_named_command = CommandRunner.RunNamedCommand
     with mock.patch.object(

@@ -31,6 +31,8 @@ import time
 import gslib
 from gslib.commands import ls
 from gslib.cs_api_map import ApiSelector
+from gslib.exception import CommandException
+from gslib.cloud_api import NotFoundException
 from gslib.project_id import PopulateProjectId
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
@@ -194,21 +196,18 @@ class TestLsUnit(testcase.GsUtilUnitTestCase):
     self.assertNotRegex(stdout, 'Placement locations:')
 
   def test_ls_file_url_fails(self):
-    from gslib.exception import CommandException
     with self.assertRaisesRegex(
         CommandException,
         'does not support "file://" URLs'):
       self.RunCommand('ls', ['file://some_file'])
 
   def test_ls_non_ascii_project_id_fails(self):
-    from gslib.exception import CommandException
     with self.assertRaisesRegex(
         CommandException,
         'Invalid non-ASCII character found in project ID'):
       self.RunCommand('ls', ['-p', 'proj-é', 'gs://bucket'])
 
   def test_ls_non_existent_bucket_with_b_fails(self):
-    from gslib.cloud_api import NotFoundException
     with self.assertRaisesRegex(
         NotFoundException,
         'bucket does not exist.'):

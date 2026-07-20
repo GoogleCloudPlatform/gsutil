@@ -27,6 +27,9 @@ from gslib.command import CreateOrGetGsutilLogger
 from gslib.cs_api_map import ApiSelector
 from gslib.exception import CommandException
 from gslib.storage_url import StorageUrlFromString
+from gslib.cloud_api import PreconditionException
+from gslib.third_party.storage_apitools import (
+    storage_v1_messages as apitools_messages)
 import gslib.tests.testcase as testcase
 from gslib.tests.testcase.integration_testcase import SkipForGS
 from gslib.tests.testcase.integration_testcase import SkipForS3
@@ -132,7 +135,6 @@ class TestAclUnit(testcase.GsUtilUnitTestCase):
       command.ApplyAclChanges(name_expansion_result, thread_state=mock_gsutil_api)
 
   def test_ch_retries_on_precondition_exception_for_object(self):
-    from gslib.cloud_api import PreconditionException
 
     class DummyAclCommand(acl.AclCommand):
       def __init__(self):
@@ -144,8 +146,6 @@ class TestAclUnit(testcase.GsUtilUnitTestCase):
 
     command = DummyAclCommand()
 
-    from gslib.third_party.storage_apitools import (
-        storage_v1_messages as apitools_messages)
     mock_gsutil_api = mock.Mock()
     mock_object = mock.Mock()
     mock_object.acl = [
