@@ -583,7 +583,7 @@ class HttpWithNoRetries(httplib2.Http):
       raise
     except socket.error as e:
       err = 0
-      if hasattr(e, 'args'):
+      if hasattr(e, 'args') and getattr(e, 'args'):
         err = getattr(e, 'args')[0]
       else:
         err = e.errno
