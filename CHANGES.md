@@ -1,3 +1,14 @@
+Release 5.38 (release date: 2026-10-21)
+======================================
+Bug Fixes
+------------------
+- Fixed SyntaxWarning in boto submodule for return inside finally block (#1941).
+
+Other Changes
+------------------
+- Updated bundled CA certificates and certifi submodule to 2026.10.19 (#1945).
+- Updated pyOpenSSL support to 26.4.0 (#1944).
+
 Release 5.37 (release date: 2026-04-28)
 ======================================
 New Features
