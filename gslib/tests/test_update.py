@@ -269,6 +269,10 @@ class UpdateUnitTest(testcase.GsUtilUnitTestCase):
       self.assertIn('gsutil4.tar.gz', GsutilPubTarball())
       
 
+  @unittest.skipUnless(
+      not gslib.IS_PACKAGE_INSTALL,
+      'Test is runnable only if gsutil dir is accessible, and update '
+      'command is not valid for package installs.')
   def test_EnsureDirsSafeForUpdate(self):
     from gslib.commands.update import UpdateCommand
     from gslib.exception import CommandException
@@ -293,6 +297,10 @@ class UpdateUnitTest(testcase.GsUtilUnitTestCase):
       cmd._EnsureDirsSafeForUpdate([''])
     self.assertIn('encountered unsafe directory (null)', str(ctx.exception))
 
+  @unittest.skipUnless(
+      not gslib.IS_PACKAGE_INSTALL,
+      'Test is runnable only if gsutil dir is accessible, and update '
+      'command is not valid for package installs.')
   @mock.patch('gslib.commands.update.CERTIFICATE_VALIDATION_ENABLED', False)
   @mock.patch('gslib.IS_PACKAGE_INSTALL', False)
   @mock.patch('gslib.utils.system_util.InvokedViaCloudSdk', return_value=False)
