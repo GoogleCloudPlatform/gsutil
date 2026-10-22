@@ -1043,8 +1043,15 @@ class CpCommand(Command):
       self.has_file_dst = self.has_file_dst or exp_dst_url.IsFileUrl()
       self.has_cloud_dst = self.has_cloud_dst or exp_dst_url.IsCloudUrl()
       self.provider_types.add(exp_dst_url.scheme)
-      self.combined_src_urls = list(itertools.chain(self.combined_src_urls,
-                                               src_url_str))
+      # combined_src_urls is only consumed by SeekAheadNameExpansionIterator,
+      # which is not used when reading sources from stdin (-I). Do not touch
+      # src_url_str in that case: it is a one-shot stdin iterator that is
+      # already being consumed by the NameExpansionIterator above, and
+      # materializing it here would silently drop every path that has not
+      # yet been read by the copy loop.
+      if not copy_helper_opts.read_args_from_stdin:
+        self.combined_src_urls = list(
+            itertools.chain(self.combined_src_urls, src_url_str))
 
       yield name_expansion_iterator_dst_tuple
 

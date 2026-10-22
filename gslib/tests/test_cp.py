@@ -24,6 +24,7 @@ import base64
 import binascii
 import datetime
 import gzip
+import io
 import logging
 import os
 import pickle
@@ -5116,6 +5117,32 @@ class TestCpUnitTests(testcase.GsUtilUnitTestCase):
           '-s', 'NEARLINE',
           suri(bucket_uri, 'object'), 'local_file'
       ])
+
+  def test_read_args_from_stdin_copies_all_paths(self):
+    """Tests that cp -I copies every path from stdin, not just the first two.
+
+    Regression test for a bug where the stdin iterator was materialized into a
+    list while the name expansion iterator (which had already buffered two
+    entries for its plurality check) still held a reference to it, causing
+    all paths after the second one to be silently dropped.
+    """
+    src_dir = self.CreateTempDir()
+    dst_dir = self.CreateTempDir()
+    num_files = 5
+    fpaths = [
+        self.CreateTempFile(tmpdir=src_dir,
+                            file_name='f%d' % i,
+                            contents=('data%d' % i).encode('ascii'))
+        for i in range(num_files)
+    ]
+    stdin_lines = '\n'.join(fpaths) + '\n'
+    with mock.patch('sys.stdin', io.StringIO(stdin_lines)):
+      self.RunCommand('cp', ['-I', dst_dir])
+    copied = sorted(os.listdir(dst_dir))
+    self.assertEqual(copied, ['f%d' % i for i in range(num_files)])
+    for i in range(num_files):
+      with open(os.path.join(dst_dir, 'f%d' % i), 'rb') as f:
+        self.assertEqual(f.read(), ('data%d' % i).encode('ascii'))
 
   def test_read_args_from_stdin_with_source_urls_fails(self):
     bucket_uri = self.CreateBucket()
