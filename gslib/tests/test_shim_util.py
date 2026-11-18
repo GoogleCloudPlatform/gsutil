@@ -1251,7 +1251,7 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
       self.assertEqual(
           env_vars, {
               'CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE':
-                  'https://foo_host:1234/storage/v2',
+                  'https://foo_host:1234/storage/v2/',
           })
 
   def test_gcs_json_endpoint_translation_with_missing_port(self):
@@ -1263,10 +1263,11 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
     }):
       flags, env_vars = self._fake_command._translate_boto_config()
       self.assertEqual(flags, [])
-      self.assertEqual(env_vars, {
-          'CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE':
-              'https://foo_host/storage/v2',
-      })
+      self.assertEqual(
+          env_vars, {
+              'CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE':
+                  'https://foo_host/storage/v2/',
+          })
 
   def test_gcs_json_endpoint_translation_usees_default_version_v1(self):
     with _mock_boto_config(
@@ -1276,10 +1277,12 @@ class TestBotoTranslation(testcase.GsUtilUnitTestCase):
         }}):
       flags, env_vars = self._fake_command._translate_boto_config()
       self.assertEqual(flags, [])
+      # Implicitly testing that the translation must start with
+      # https:// and end with a trailing forward slash.
       self.assertEqual(
           env_vars, {
               'CLOUDSDK_API_ENDPOINT_OVERRIDES_STORAGE':
-                  'https://foo_host:1234/storage/v1'
+                  'https://foo_host:1234/storage/v1/'
           })
 
   def test_s3_endpoint_translation(self):
