@@ -1230,6 +1230,20 @@ class _DiffIterator(object):
               exp_dst_url=self.base_dst_url,
               have_existing_dest_subdir=False,
               recursion_requested=self.recursion_requested).url_string
+          if self.base_src_url.IsCloudUrl() and self.base_dst_url.IsFileUrl():
+            try:
+              root = os.path.normcase(
+                  os.path.realpath(self.base_dst_url.object_name))
+              destination = os.path.normcase(os.path.realpath(
+                  StorageUrlFromString(dst_url_str_would_copy_to).object_name))
+              safe = (destination != root and
+                      os.path.commonpath([root, destination]) == root)
+            except (OSError, ValueError):
+              safe = False
+            if not safe:
+              raise CommandException(
+                  'Unsafe rsync destination: path escapes or names the '
+                  'sync root.')
       if dst_url_str is None:
         if not self.sorted_dst_urls_it.IsEmpty():
           # We don't need time created at the destination.
