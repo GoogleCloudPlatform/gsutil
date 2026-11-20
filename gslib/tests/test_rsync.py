@@ -97,6 +97,49 @@ if not UsingCrcmodExtension():
 class TestRsyncUnit(testcase.GsUtilUnitTestCase):
   """Unit tests for methods in the commands.rsync module."""
 
+  def test_rsync_rejects_download_outside_destination(self):
+    workdir = self.CreateTempDir()
+    destination = os.path.join(workdir, 'sync-root')
+    os.mkdir(destination)
+    outside_file = self.CreateTempFile(
+        tmpdir=workdir,
+        file_name=('escaped', 'owned.txt'),
+        contents=b'preserve existing content')
+
+    for name in ('x/../../escaped/owned.txt',
+                 'x/../../sync-root-other/owned.txt', 'x/..'):
+      with self.subTest(object_name=name):
+        bucket = self.CreateBucket()
+        self.CreateObject(bucket_uri=bucket,
+                          object_name=name,
+                          contents=b'payload')
+        with mock.patch.object(rsync.copy_helper, 'PerformCopy',
+                               return_value=(0, 0, None, None)) as perform_copy:
+          with self.assertRaisesRegex(CommandException,
+                                      'Unsafe rsync destination:'):
+            self.RunCommand('rsync', ['-r', suri(bucket), destination])
+          perform_copy.assert_not_called()
+        with open(outside_file, 'rb') as stream:
+          self.assertEqual(b'preserve existing content', stream.read())
+        self.assertFalse(
+            os.path.exists(os.path.join(workdir, 'sync-root-other')))
+
+  def test_rsync_dispatches_nested_file_inside_destination(self):
+    bucket = self.CreateBucket()
+    self.CreateObject(bucket_uri=bucket,
+                      object_name='safe/nested.txt',
+                      contents=b'expected content')
+    destination = self.CreateTempDir()
+
+    with mock.patch.object(rsync.copy_helper, 'PerformCopy',
+                           return_value=(0, 16, None, None)) as perform_copy:
+      self.RunCommand('rsync', ['-r', suri(bucket), destination])
+      perform_copy.assert_called_once()
+      actual_destination = perform_copy.call_args[0][2].object_name
+      self.assertEqual(
+          os.path.realpath(os.path.join(destination, 'safe', 'nested.txt')),
+          os.path.realpath(actual_destination))
+
   def testUrlEncodeAndDecode(self):
     # Test special URL chars as well as unicode:
     decoded_url = 'gs://bkt/space fslash/plus+tilde~unicodeeè'
