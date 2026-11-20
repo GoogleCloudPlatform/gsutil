@@ -63,7 +63,14 @@ class TestGsUtil(testcase.GsUtilIntegrationTestCase):
 class TestGsUtilBanner(testcase.GsUtilIntegrationTestCase):
   """Integration tests for the deprecation banner."""
 
-  BANNER_TEXT = 'Google recommends using Gcloud storage CLI'
+  BANNER_TEXT = (
+      'Action Required: gsutil is being deprecated and will be unbundled '
+      'from the Cloud SDK. While you will still be able to install it via '
+      'PyPI, it will no longer receive feature updates or bundled '
+      'security patches from 01-March-2027. Please migrate your workloads '
+      '(https://docs.cloud.google.com/storage/docs/gsutil-transition-to-gcloud) '
+      'to gcloud storage, which provides improved parallelization, faster '
+      'transfer speeds, and active security support.')
 
   def test_banner_displayed_forced(self):
     # Tests require forcing the banner because subprocess execution is non-interactive.
