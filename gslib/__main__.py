@@ -450,13 +450,12 @@ def main():
     # 3. AND (It's an interactive TTY OR We are forcing it for tests)
     if not quiet and not no_banner and (is_tty or force_banner):
       sys.stderr.write(
-          'Action Required: gsutil is being deprecated and will be unbundled '
-          'from the Cloud SDK. While you will still be able to install it via '
-          'PyPI, it will no longer receive feature updates or bundled '
-          'security patches from 01-March-2027. Please migrate your workloads '
-          '(https://docs.cloud.google.com/storage/docs/gsutil-transition-to-gcloud) '
-          'to gcloud storage, which provides improved parallelization, faster '
-          'transfer speeds, and active security support.\n')
+          'Action Required: gsutil will be unbundled from the Google Cloud CLI '
+          'installation package on March 1, 2027. Migrate your workloads to '
+          'gcloud storage to avoid disruptions, and for faster transfers and '
+          'active security support. Migration guide: '
+          'https://docs.cloud.google.com/storage/docs/gsutil-transition-to-gcloud\n'
+      )
 
     return _RunNamedCommandAndHandleExceptions(
         command_runner,
