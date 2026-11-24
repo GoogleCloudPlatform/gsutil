@@ -450,11 +450,12 @@ def main():
     # 3. AND (It's an interactive TTY OR We are forcing it for tests)
     if not quiet and not no_banner and (is_tty or force_banner):
       sys.stderr.write(
-          'Google recommends using Gcloud storage CLI '
-          '(https://docs.cloud.google.com/storage/docs/discover-object-storage-gcloud) '
-          'instead of gsutil. Please refer to migration guide '
-          '(https://docs.cloud.google.com/storage/docs/gsutil-transition-to-gcloud) '
-          'for assistance.\n')
+          'Action Required: gsutil will be unbundled from the Google Cloud CLI '
+          'installation package on March 1, 2027. Migrate your workloads to '
+          'gcloud storage to avoid disruptions, and for faster transfers and '
+          'active security support. Migration guide: '
+          'https://docs.cloud.google.com/storage/docs/gsutil-transition-to-gcloud\n'
+      )
 
     return _RunNamedCommandAndHandleExceptions(
         command_runner,
