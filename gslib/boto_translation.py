@@ -20,12 +20,10 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import base64
-import binascii
 import datetime
 import errno
 import json
 import os
-import pickle
 import random
 import re
 import socket
@@ -44,6 +42,7 @@ from boto import config
 from boto import handler
 from boto.gs.cors import Cors
 from boto.gs.lifecycle import LifecycleConfig
+from boto.s3.bucket import Bucket as S3Bucket
 from boto.s3.cors import CORSConfiguration as S3Cors
 from boto.s3.deletemarker import DeleteMarker
 from boto.s3.lifecycle import Lifecycle as S3Lifecycle
@@ -529,6 +528,78 @@ class BotoTranslation(CloudApi):
     """
     return lambda: digester_object
 
+  def _SerializeBotoKey(self, key):
+    """Serializes primitive boto Key fields into a URL-safe base64 JSON str."""
+    generation = getattr(key, 'generation', None)
+    if isinstance(generation, six.binary_type):
+      generation = six.ensure_text(generation)
+    version_id = getattr(key, 'version_id', None)
+    if isinstance(version_id, six.binary_type):
+      version_id = six.ensure_text(version_id)
+    payload = json.dumps({
+        'bucket': key.bucket.name,
+        'name': key.name,
+        'size': getattr(key, 'size', None),
+        'generation': generation,
+        'version_id': version_id,
+    }).encode(UTF8)
+    return base64.urlsafe_b64encode(payload).decode('ascii')
+
+  def _ParseSerializationData(self, serialization_data, generation=None):
+    """Parses download serialization_data JSON and reconstructs a boto Key."""
+    try:
+      serialization_dict = json.loads(six.ensure_text(serialization_data))
+      encoded_key = serialization_dict['url'].split('?', 1)[0]
+      key_data = json.loads(
+          base64.urlsafe_b64decode(
+              six.ensure_binary(encoded_key)).decode(UTF8))
+    except (AttributeError, KeyError, TypeError, ValueError) as e:
+      raise ArgumentException('Invalid serialization_data: %s' % e)
+
+    if (not isinstance(key_data, dict) or
+        not isinstance(key_data.get('bucket'), six.string_types) or
+        not key_data.get('bucket') or
+        not isinstance(key_data.get('name'), six.string_types) or
+        not key_data.get('name')):
+      raise ArgumentException(
+          'Invalid serialization_data: expected bucket and name strings.')
+
+    key_bucket_name = key_data['bucket']
+    key_object_name = key_data['name']
+    key_generation = key_data.get('generation')
+    key_version_id = key_data.get('version_id')
+    if self.provider == 'gs' and key_generation is None:
+      key_generation = generation
+    elif self.provider == 's3' and key_version_id is None:
+      key_version_id = generation
+    effective_generation = (
+        key_generation if self.provider == 'gs' else key_version_id)
+
+    try:
+      bucket = self._StorageUriForBucket(key_bucket_name).get_bucket(
+          validate=False)
+      if isinstance(bucket, S3Bucket):
+        key = bucket.new_key(key_object_name)
+      else:
+        key = bucket.get_key(key_object_name)
+        if not key:
+          raise CreateObjectNotFoundException(
+              '404', self.provider, key_bucket_name, key_object_name,
+              generation=effective_generation)
+    except TRANSLATABLE_BOTO_EXCEPTIONS as e:
+      self._TranslateExceptionAndRaise(
+          e, bucket_name=key_bucket_name, object_name=key_object_name,
+          generation=effective_generation)
+
+    if key_data.get('size') is not None:
+      key.size = key_data['size']
+    if self.provider == 'gs' and key_generation is not None:
+      key.generation = key_generation
+    elif self.provider == 's3' and key_version_id is not None:
+      key.version_id = key_version_id
+
+    return key, serialization_dict.get('total_size') or 0
+
   def GetObjectMedia(self,
                      bucket_name,
                      object_name,
@@ -558,11 +629,13 @@ class BotoTranslation(CloudApi):
       headers['range'] = 'bytes=%s' % (start_byte)
 
     # Since in most cases we already made a call to get the object metadata,
-    # here we avoid an extra HTTP call by unpickling the key.  This is coupled
-    # with the implementation in _BotoKeyToObject.
+    # here we avoid an extra HTTP call by reconstructing the key from
+    # JSON-serialized primitive attributes. This is coupled with the
+    # implementation in _BotoKeyToObject.
+    total_size = object_size or 0
     if serialization_data:
-      serialization_dict = json.loads(serialization_data)
-      key = pickle.loads(binascii.a2b_base64(serialization_dict['url']))
+      key, total_size = self._ParseSerializationData(
+          serialization_data, generation=generation)
       if self.provider == 'gs':
         _AddCustomEndpointToKey(key)
     else:
@@ -574,10 +647,6 @@ class BotoTranslation(CloudApi):
         hash_algs[alg] = self._CurryDigester(digesters[alg])
     else:
       hash_algs = {}
-
-    total_size = object_size or 0
-    if serialization_data:
-      total_size = json.loads(serialization_data)['total_size']
 
     if total_size:
       num_progress_callbacks = max(
@@ -1569,12 +1638,11 @@ class BotoTranslation(CloudApi):
             'Non-MD5 etag (%s) present for key %s, data integrity checks are '
             'not possible.', key.etag, key)
 
-    # Serialize the boto key in the media link if it is requested.  This
-    # way we can later access the key without adding an HTTP call.
+    # Serialize primitive boto key fields in the media link if requested so we
+    # can reconstruct the key later without an extra HTTP call.
     media_link = None
     if not fields or 'mediaLink' in fields:
-      media_link = binascii.b2a_base64(
-          pickle.dumps(key, pickle.HIGHEST_PROTOCOL))
+      media_link = self._SerializeBotoKey(key)
     size = None
     if not fields or 'size' in fields:
       size = key.size or 0
